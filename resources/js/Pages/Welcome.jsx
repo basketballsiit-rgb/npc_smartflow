@@ -54,20 +54,6 @@ export default function Welcome({ publicStats, recentProjects }) {
                 <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[450px] bg-purple-200/50 blur-[140px] rounded-full pointer-events-none"></div>
 
                 <div className="max-w-4xl mx-auto text-center relative z-10">
-                    {/* College Official Seal Badge */}
-                    <div className="mb-6 flex flex-col items-center justify-center">
-                        <div className="relative p-2 rounded-full bg-white/80 border border-purple-200 shadow-xl shadow-purple-500/10 backdrop-blur-md">
-                            <img
-                                src="LogoNPC_PNG.png?v=100"
-                                alt="ตราสัญลักษณ์ วิทยาลัยสารพัดช่างน่าน"
-                                className="h-36 w-36 object-contain"
-                            />
-                        </div>
-                        <span className="inline-flex items-center gap-x-2 rounded-full bg-purple-100/80 px-4 py-1.5 text-xs font-bold text-purple-900 border border-purple-200 mt-4 shadow-sm">
-                            🏛️ สถาบันการอาชีวศึกษา - วิทยาลัยสารพัดช่างน่าน
-                        </span>
-                    </div>
-
                     <h1 className="text-4xl sm:text-6xl font-black text-slate-900 tracking-tight leading-tight mb-6">
                         ระบบวางแผน งบประมาณ <br />
                         <span className="bg-gradient-to-r from-purple-700 via-indigo-600 to-red-600 bg-clip-text text-transparent">
