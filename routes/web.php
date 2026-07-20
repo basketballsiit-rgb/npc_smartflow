@@ -12,9 +12,15 @@ use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\AppendixController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\Auth\KeycloakController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+// Keycloak SSO Routes
+Route::get('/auth/keycloak', [KeycloakController::class, 'redirect'])->name('keycloak.redirect');
+Route::get('/auth/keycloak/callback', [KeycloakController::class, 'callback'])->name('keycloak.callback');
+
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [

@@ -315,10 +315,51 @@ export default function Login({ status, canResetPassword }) {
                                 </>
                             )}
                         </button>
+
+                        {/* Divider */}
+                        <div className="relative my-2">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t" style={{ borderColor: '#ede9fe' }}></div>
+                            </div>
+                            <div className="relative flex justify-center text-xs">
+                                <span className="px-3 text-slate-400" style={{ background: '#fff' }}>หรือเข้าสู่ระบบด้วย</span>
+                            </div>
+                        </div>
+
+                        {/* Keycloak SSO Button */}
+                        <a
+                            href="/npc_smartflow/auth/keycloak"
+                            id="keycloak-sso-btn"
+                            className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2.5"
+                            style={{
+                                background: '#ffffff',
+                                border: '1.5px solid #ddd6fe',
+                                color: '#5b21b6',
+                                boxShadow: '0 2px 8px rgba(109,40,217,0.08)',
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = '#f5f3ff';
+                                e.currentTarget.style.borderColor = '#7c3aed';
+                                e.currentTarget.style.boxShadow = '0 4px 14px rgba(109,40,217,0.18)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = '#ffffff';
+                                e.currentTarget.style.borderColor = '#ddd6fe';
+                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(109,40,217,0.08)';
+                            }}
+                        >
+                            {/* Keycloak Icon */}
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#6d28d9" opacity="0.15"/>
+                                <path d="M12 6a6 6 0 1 0 0 12A6 6 0 0 0 12 6zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" fill="#6d28d9"/>
+                                <circle cx="12" cy="12" r="2" fill="#6d28d9"/>
+                            </svg>
+                            เข้าสู่ระบบด้วย Email องค์กร (SSO)
+                        </a>
                     </form>
 
                     {/* Footer */}
-                    <p className="mt-10 text-center text-xs text-slate-400">
+                    <p className="mt-8 text-center text-xs text-slate-400">
                         © 2026 NPC SMART FLOW ERP System · วิทยาลัยสารพัดช่างน่าน
                     </p>
                 </div>
