@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserPosition;
 use App\Models\Role;
 use App\Models\Department;
 use Illuminate\Support\Facades\Auth;
@@ -78,6 +79,9 @@ class KeycloakController extends Controller
 
                 Log::info("Keycloak SSO: อัปเดตข้อมูล [{$email}] ฝ่าย: " . ($npcjobProfile['department_name'] ?? '-') . " ตำแหน่ง: " . ($resolvedPosition ?? '-'));
             }
+
+            // 5.5 Sync ตำแหน่งทั้งหมดจาก npcjob → user_positions
+            $this->syncUserPositions($user, $npcjobProfile);
 
             // 6. ตรวจสอบสถานะบัญชี
             if (!$user->is_active) {
@@ -201,5 +205,53 @@ class KeycloakController extends Controller
 
         // fallback: position string
         return $profile['position'] ?? null;
+    }
+
+    /**
+     * Sync ตำแหน่งทั้งหมดจาก npcjob all_positions → user_positions table
+     * ลบข้อมูลเก่าแล้ว insert ใหม่ทุกครั้งที่ Login
+     */
+    private function syncUserPositions(User $user, array $npcjobProfile): void
+    {
+        $allPositions = $npcjobProfile['all_positions'] ?? [];
+
+        if (empty($allPositions)) {
+            // ถ้าไม่มีข้อมูลจาก API ให้ใช้ position field เดี่ยว
+            if (!empty($npcjobProfile['position'])) {
+                $dept = $this->resolveOrCreateDepartment($npcjobProfile);
+                $user->userPositions()->delete();
+                $user->userPositions()->create([
+                    'position'      => $npcjobProfile['position'],
+                    'department_id' => $dept?->id,
+                    'job_level'     => $npcjobProfile['job_level'] ?? null,
+                    'is_primary'    => true,
+                ]);
+            }
+            return;
+        }
+
+        // ลบข้อมูลตำแหน่งเก่าทั้งหมดออกก่อน
+        $user->userPositions()->delete();
+
+        foreach ($allPositions as $index => $pos) {
+            $deptName = $pos['job_department'] ?? null;
+            $dept     = null;
+
+            if ($deptName) {
+                $dept = Department::firstOrCreate(
+                    ['name' => $deptName],
+                    ['code' => strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $deptName), 0, 10)) ?: 'DEPT' . rand(100, 999)]
+                );
+            }
+
+            $user->userPositions()->create([
+                'position'      => $pos['title'] ?? '',
+                'department_id' => $dept?->id,
+                'job_level'     => $pos['job_level'] ?? null,
+                'is_primary'    => ($index === 0), // อันแรกคือตำแหน่งหลัก
+            ]);
+        }
+
+        Log::info("Sync {$user->email}: " . count($allPositions) . " ตำแหน่ง เข้า user_positions");
     }
 }

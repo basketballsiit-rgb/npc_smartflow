@@ -69,6 +69,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get all positions/departments associated with the user (from npcjob sync).
+     */
+    public function userPositions()
+    {
+        return $this->hasMany(UserPosition::class)->with('department')->orderBy('is_primary', 'desc')->orderBy('job_level');
+    }
+
+    /**
      * Get the projects proposed by the user.
      */
     public function projects()
