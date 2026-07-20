@@ -994,7 +994,7 @@ export default function Dashboard({
                 <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm p-6">
                     <div className="border-b border-purple-100 pb-4 mb-6">
                         <h3 className="text-lg font-bold text-slate-900">🛠️ การตั้งค่าระบบ สารสนเทศ และพารามิเตอร์</h3>
-                        <p className="text-xs text-slate-600">กำหนดข้อมูลสถานศึกษา ปีการศึกษา ประกาศข่าวสาร และเปิด/ปิดฟีเจอร์การทำงานของระบบ</p>
+                        <p className="text-xs text-slate-600">กำหนดข้อมูลสถานศึกษา ปีงบประมาณ ปีการศึกษา ประกาศข่าวสาร และเปิด/ปิดฟีเจอร์การทำงานของระบบ</p>
                     </div>
 
                     <form onSubmit={handleSaveSettingsSubmit} className="space-y-6">
@@ -1023,17 +1023,27 @@ export default function Dashboard({
                             </div>
                         </div>
 
-                        {/* Academic Config */}
+                        {/* Academic & Fiscal Year Config */}
                         <div className="space-y-4 border-t border-purple-100 pt-6">
-                            <h4 className="text-sm font-bold text-purple-900 border-l-4 border-purple-600 pl-3">การตั้งค่าปีการศึกษาและภาคเรียน</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <h4 className="text-sm font-bold text-purple-900 border-l-4 border-purple-600 pl-3">การตั้งค่าปีงบประมาณ ปีการศึกษา และภาคเรียน</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">ปีงบประมาณปัจจุบัน (Fiscal Year)</label>
+                                    <input
+                                        type="text"
+                                        value={settingsForm.current_fiscal_year || settingsForm.current_academic_year || '2569'}
+                                        onChange={(e) => setSettingsForm({ ...settingsForm, current_fiscal_year: e.target.value })}
+                                        className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 font-semibold text-purple-950"
+                                        placeholder="เช่น 2569"
+                                    />
+                                </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-700 mb-1">ปีการศึกษาปัจจุบัน (Academic Year)</label>
                                     <input
                                         type="text"
                                         value={settingsForm.current_academic_year || ''}
                                         onChange={(e) => setSettingsForm({ ...settingsForm, current_academic_year: e.target.value })}
-                                        className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                        className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 font-semibold text-purple-950"
                                         placeholder="เช่น 2569"
                                     />
                                 </div>

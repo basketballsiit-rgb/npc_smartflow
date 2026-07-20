@@ -204,11 +204,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
                                                 : 'text-purple-100 hover:bg-white/10 hover:text-white'
                                         }`}
-                                        title="ตั้งค่าระบบ & ปีการศึกษา"
+                                        title="ตั้งค่าระบบ & ปีงบประมาณ/ปีการศึกษา"
                                     >
                                         <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
                                         <span className="text-sm">🛠️</span>
-                                        {isSidebarOpen && <span>ตั้งค่าระบบ & ปีการศึกษา</span>}
+                                        {isSidebarOpen && <span>ตั้งค่าระบบ & ปีงบประมาณ</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'all_projects' })}
