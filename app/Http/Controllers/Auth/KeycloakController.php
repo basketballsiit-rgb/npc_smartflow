@@ -109,17 +109,14 @@ class KeycloakController extends Controller
     {
         if (!$username) return [];
 
-        // ตัด @domain ออก: nipon@npc.ac.th → nipon
-        $usernameOnly = explode('@', $username)[0];
-
         try {
-            $apiBase  = config('services.npcjob.api_url', 'https://service.npc.ac.th/npcjob/api/user_profile.php');
+            $apiBase  = config('services.npcjob.api_url', 'https://service.npc.ac.th/npcjob/api_profile.php');
             $apiToken = config('services.npcjob.api_token', 'npc_sf_2026_api_key_x9k2m');
 
-            Log::info("npcjob API: กำลังดึงข้อมูล username={$usernameOnly} จาก {$apiBase}");
+            Log::info("npcjob API: กำลังดึงข้อมูล username={$username} จาก {$apiBase}");
 
             $response = Http::timeout(5)->get($apiBase, [
-                'username' => $usernameOnly,
+                'username' => $username,
                 'token'    => $apiToken,
             ]);
 
@@ -135,7 +132,7 @@ class KeycloakController extends Controller
                 Log::warning("npcjob API: HTTP " . $response->status() . " — " . $response->body());
             }
         } catch (\Exception $e) {
-            Log::warning("npcjob API ไม่ตอบสนอง สำหรับ username: {$usernameOnly} — " . $e->getMessage());
+            Log::warning("npcjob API ไม่ตอบสนอง สำหรับ username: {$username} — " . $e->getMessage());
         }
 
         return [];
