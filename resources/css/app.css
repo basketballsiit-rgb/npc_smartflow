@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,600;1,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body, input, button, select, textarea {
+    font-family: 'Kanit', sans-serif;
+}
+
+/* Minimal Sleek Thin Scrollbar */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(124, 58, 237, 0.25);
+    border-radius: 9999px;
+    transition: background 0.2s ease-in-out;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(124, 58, 237, 0.5);
+}
+
+/* Firefox Thin Scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(124, 58, 237, 0.3) transparent;
+}
+
+/* SweetAlert2 Dialog & Action Buttons Explicit Styling */
+.swal2-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.75rem !important;
+    margin-top: 1.5rem !important;
+}
+
+.swal2-confirm {
+    background-color: #7c3aed !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    padding: 0.625rem 1.5rem !important;
+    border-radius: 0.75rem !important;
+    border: none !important;
+    box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.25) !important;
+    cursor: pointer !important;
+    font-size: 0.875rem !important;
+    transition: all 0.15s ease-in-out !important;
+}
+
+.swal2-confirm:hover {
+    background-color: #6d28d9 !important;
+    transform: translateY(-1px) !important;
+}
+
+.swal2-cancel {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    font-weight: 600 !important;
+    padding: 0.625rem 1.5rem !important;
+    border-radius: 0.75rem !important;
+    border: 1px solid #cbd5e1 !important;
+    cursor: pointer !important;
+    font-size: 0.875rem !important;
+    transition: all 0.15s ease-in-out !important;
+}
+
+.swal2-cancel:hover {
+    background-color: #e2e8f0 !important;
+    color: #1e293b !important;
+}
+
+.swal2-popup {
+    border-radius: 1.25rem !important;
+    font-family: 'Kanit', sans-serif !important;
+    padding: 1.75rem !important;
+    border: 1px solid #f1f5f9 !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
