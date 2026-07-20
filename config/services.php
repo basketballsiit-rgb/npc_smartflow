@@ -40,7 +40,7 @@ return [
         'client_id'     => env('KEYCLOAK_CLIENT_ID', 'npc_smartflow'),
         'client_secret' => env('KEYCLOAK_CLIENT_SECRET'),
         'redirect'      => env('KEYCLOAK_REDIRECT_URI'),
-        'base_url'      => env('KEYCLOAK_BASE_URL', 'https://service.npc.ac.th/realms/NPC-SSO'),
+        'base_url'      => env('KEYCLOAK_BASE_URL', 'https://service.npc.ac.th'),
         'realms'        => env('KEYCLOAK_REALM', 'NPC-SSO'),
     ],
 
