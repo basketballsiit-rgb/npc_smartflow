@@ -216,7 +216,7 @@ export default function Welcome({ publicStats, recentProjects }) {
             {/* Footer */}
             <footer className="border-t border-purple-100 py-10 text-center text-xs text-slate-600 bg-white/80">
                 <div className="flex justify-center items-center gap-x-2 mb-2">
-                    <img src="/LogoNPC_PNG.png?v=100" alt="ตราสัญลักษณ์ วิทยาลัยสารพัดช่างน่าน" className="h-8 w-8 object-contain" />
+                    <img src="LogoNPC_PNG.png?v=100" alt="ตราสัญลักษณ์ วิทยาลัยสารพัดช่างน่าน" className="h-8 w-8 object-contain" />
                     <p className="font-bold text-purple-950">วิทยาลัยสารพัดช่างน่าน (Nan Polytechnic College)</p>
                 </div>
                 <p>© 2026 NPC SMART FLOW ERP System. All rights reserved.</p>
