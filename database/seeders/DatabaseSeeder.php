@@ -201,6 +201,7 @@ class DatabaseSeeder extends Seeder
             ['key' => 'college_name_th', 'value' => 'วิทยาลัยสารพัดช่างน่าน', 'group' => 'general', 'label' => 'ชื่อสถานศึกษา (ภาษาไทย)', 'type' => 'text'],
             ['key' => 'college_name_en', 'value' => 'Nan Polytechnic College', 'group' => 'general', 'label' => 'ชื่อสถานศึกษา (ภาษาอังกฤษ)', 'type' => 'text'],
             ['key' => 'current_fiscal_year', 'value' => '2569', 'group' => 'academic', 'label' => 'ปีงบประมาณปัจจุบัน', 'type' => 'text'],
+            ['key' => 'current_quarter', 'value' => 'auto', 'group' => 'academic', 'label' => 'ไตรมาสงบประมาณปัจจุบัน', 'type' => 'text'],
             ['key' => 'current_academic_year', 'value' => '2569', 'group' => 'academic', 'label' => 'ปีการศึกษาปัจจุบัน', 'type' => 'text'],
             ['key' => 'current_semester', 'value' => '1', 'group' => 'academic', 'label' => 'ภาคเรียนปัจจุบัน', 'type' => 'text'],
             ['key' => 'system_announcement', 'value' => 'ยินดีต้อนรับสู่ระบบวางแผน งบประมาณ และประเมินผลโครงการดิจิทัล (NPC SMART FLOW) วิทยาลัยสารพัดช่างน่าน', 'group' => 'general', 'label' => 'ประกาศระบบประจำวัน', 'type' => 'textarea'],

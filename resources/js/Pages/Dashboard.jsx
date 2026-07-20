@@ -1025,8 +1025,8 @@ export default function Dashboard({
 
                         {/* Academic & Fiscal Year Config */}
                         <div className="space-y-4 border-t border-purple-100 pt-6">
-                            <h4 className="text-sm font-bold text-purple-900 border-l-4 border-purple-600 pl-3">การตั้งค่าปีงบประมาณ ปีการศึกษา และภาคเรียน</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <h4 className="text-sm font-bold text-purple-900 border-l-4 border-purple-600 pl-3">การตั้งค่าปีงบประมาณ ไตรมาส ปีการศึกษา และภาคเรียน</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-700 mb-1">ปีงบประมาณปัจจุบัน (Fiscal Year)</label>
                                     <input
@@ -1036,6 +1036,20 @@ export default function Dashboard({
                                         className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 font-semibold text-purple-950"
                                         placeholder="เช่น 2569"
                                     />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">ไตรมาสงบประมาณ (Current Quarter)</label>
+                                    <select
+                                        value={settingsForm.current_quarter || 'auto'}
+                                        onChange={(e) => setSettingsForm({ ...settingsForm, current_quarter: e.target.value })}
+                                        className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 font-semibold text-purple-950"
+                                    >
+                                        <option value="auto">⚡ ปรับอัตโนมัติตามเดือนปัจจุบัน (Auto Detect)</option>
+                                        <option value="1">ไตรมาสที่ 1 (ต.ค. - ธ.ค.)</option>
+                                        <option value="2">ไตรมาสที่ 2 (ม.ค. - มี.ค.)</option>
+                                        <option value="3">ไตรมาสที่ 3 (เม.ย. - มิ.ย.)</option>
+                                        <option value="4">ไตรมาสที่ 4 (ก.ค. - ก.ย.)</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-700 mb-1">ปีการศึกษาปัจจุบัน (Academic Year)</label>
@@ -1058,6 +1072,47 @@ export default function Dashboard({
                                         <option value="2">ภาคเรียนที่ 2</option>
                                         <option value="3">ภาคเรียนที่ 3 (ฤดูร้อน)</option>
                                     </select>
+                                </div>
+                            </div>
+
+                            {/* Fiscal Quarters Standard Info Card */}
+                            <div className="rounded-2xl border border-purple-100 bg-purple-50/40 p-4 space-y-3">
+                                <span className="font-bold text-purple-900 block text-xs flex items-center gap-1.5">
+                                    <span>🏛️</span> รอบระยะเวลาไตรมาสงบประมาณแผ่นดิน (Fiscal Quarters Reference Guide):
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                    <div className="bg-white p-3 rounded-xl border border-purple-200/80 shadow-2xs">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="font-extrabold text-purple-950 text-xs">ไตรมาสที่ 1 (Q1)</span>
+                                            <span className="text-[10px] bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-md font-bold">ต.ค. - ธ.ค.</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-600 font-medium">ตุลาคม – ธันวาคม</p>
+                                        <p className="text-[10px] text-slate-500 mt-1">อนุมัติโครงการ & จัดสรรงบประมาณ</p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-blue-200/80 shadow-2xs">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="font-extrabold text-blue-950 text-xs">ไตรมาสที่ 2 (Q2)</span>
+                                            <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-md font-bold">ม.ค. - มี.ค.</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-600 font-medium">มกราคม – มีนาคม</p>
+                                        <p className="text-[10px] text-slate-500 mt-1">เริ่มจัดซื้อจัดจ้าง & ดำเนินงาน</p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-amber-200/80 shadow-2xs">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="font-extrabold text-amber-950 text-xs">ไตรมาสที่ 3 (Q3)</span>
+                                            <span className="text-[10px] bg-amber-100 text-amber-900 px-1.5 py-0.5 rounded-md font-bold">เม.ย. - มิ.ย.</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-600 font-medium">เมษายน – มิถุนายน</p>
+                                        <p className="text-[10px] text-slate-500 mt-1">ดำเนินโครงการ & ติดตามประเมินผล</p>
+                                    </div>
+                                    <div className="bg-white p-3 rounded-xl border border-emerald-200/80 shadow-2xs">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="font-extrabold text-emerald-950 text-xs">ไตรมาสที่ 4 (Q4)</span>
+                                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-md font-bold">ก.ค. - ก.ย.</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-600 font-medium">กรกฎาคม – กันยายน</p>
+                                        <p className="text-[10px] text-slate-500 mt-1">เบิกจ่ายงบประมาณ & สรุปผล</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
