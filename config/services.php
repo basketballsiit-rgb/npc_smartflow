@@ -46,7 +46,7 @@ return [
 
     // npcjob Internal API (ดึงข้อมูลตำแหน่ง/ฝ่ายของบุคลากร)
     'npcjob' => [
-        'api_url'   => env('NPCJOB_API_URL', 'https://service.npc.ac.th/npcjob/api/user_profile.php'),
+        'api_url'   => env('NPCJOB_API_URL', 'https://service.npc.ac.th/npcjob/api_profile.php'),
         'api_token' => env('NPCJOB_API_TOKEN', 'npc_sf_2026_api_key_x9k2m'),
     ],
 
