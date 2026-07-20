@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Department;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
@@ -23,51 +24,68 @@ class KeycloakController extends Controller
 
     /**
      * รับข้อมูลจาก Keycloak หลังยืนยันตัวตนสำเร็จ
+     * + ดึงข้อมูลตำแหน่ง/ฝ่าย จาก npcjob API
      */
     public function callback()
     {
         try {
-            // ดึงข้อมูล user จาก Keycloak
+            // 1. ดึงข้อมูล user จาก Keycloak
             $keycloakUser = Socialite::driver('keycloak')->stateless()->user();
 
             $email    = $keycloakUser->getEmail();
-            $name     = $keycloakUser->getName()
-                        ?? ($keycloakUser->user['given_name'] ?? '')
-                        . ' ' . ($keycloakUser->user['family_name'] ?? '');
-            $name     = trim($name) ?: $email;
+            $username = $keycloakUser->user['preferred_username'] ?? null;
 
-            // ค้นหา user ที่มีอยู่ในระบบด้วย email
+            // 2. ดึงข้อมูลเพิ่มเติมจาก npcjob API (ฝ่าย + ตำแหน่ง)
+            $npcjobProfile = $this->fetchNpcjobProfile($username);
+
+            // 3. ประกอบชื่อ-นามสกุล
+            $name = $this->buildDisplayName($keycloakUser, $npcjobProfile);
+
+            // 4. หา/สร้าง Department ใน npc_smartflow ตามข้อมูล npcjob
+            $department = $this->resolveOrCreateDepartment($npcjobProfile);
+
+            // 5. หา/สร้าง User ใน npc_smartflow
             $user = User::where('email', $email)->first();
 
             if (!$user) {
-                // Auto-provision: สร้าง user ใหม่จากข้อมูล Keycloak
-                $defaultRole = Role::where('name', 'teacher')->first()
-                               ?? Role::first();
-                $defaultDept = Department::first();
+                // Auto-provision: สร้าง user ใหม่
+                $defaultRole = Role::where('name', 'teacher')->first() ?? Role::first();
 
                 $user = User::create([
                     'name'          => $name,
                     'email'         => $email,
-                    'password'      => bcrypt(Str::random(32)), // random password ที่ไม่สามารถ login ตรงได้
+                    'password'      => bcrypt(Str::random(32)),
                     'role_id'       => $defaultRole?->id,
-                    'department_id' => $defaultDept?->id,
-                    'position'      => 'บุคลากร',
+                    'department_id' => $department?->id,
+                    'position'      => $npcjobProfile['position'] ?? 'บุคลากร',
                     'is_active'     => true,
                 ]);
 
-                Log::info("Keycloak SSO: สร้างบัญชีใหม่สำหรับ {$email}");
+                Log::info("Keycloak SSO: สร้างบัญชีใหม่ [{$email}] ฝ่าย: " . ($npcjobProfile['department_name'] ?? '-'));
+            } else {
+                // อัปเดตข้อมูลล่าสุดจาก npcjob ทุกครั้งที่ login
+                $updateData = ['name' => $name];
+
+                if ($department) {
+                    $updateData['department_id'] = $department->id;
+                }
+                if (!empty($npcjobProfile['position'])) {
+                    $updateData['position'] = $npcjobProfile['position'];
+                }
+
+                $user->update($updateData);
+
+                Log::info("Keycloak SSO: อัปเดตข้อมูล [{$email}] ฝ่าย: " . ($npcjobProfile['department_name'] ?? '-'));
             }
 
-            // ตรวจสอบว่าบัญชีถูก active อยู่
+            // 6. ตรวจสอบสถานะบัญชี
             if (!$user->is_active) {
                 return redirect()->route('login')
                     ->withErrors(['email' => 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ']);
             }
 
-            // เข้าสู่ระบบ
+            // 7. เข้าสู่ระบบ
             Auth::login($user, true);
-
-            Log::info("Keycloak SSO: {$email} เข้าสู่ระบบสำเร็จ");
 
             return redirect()->intended(route('dashboard'));
 
@@ -77,5 +95,82 @@ class KeycloakController extends Controller
             return redirect()->route('login')
                 ->withErrors(['email' => 'การเข้าสู่ระบบด้วย SSO ล้มเหลว: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * เรียก npcjob API เพื่อดึงข้อมูลตำแหน่ง/ฝ่ายของ user
+     */
+    private function fetchNpcjobProfile(?string $username): array
+    {
+        if (!$username) return [];
+
+        try {
+            $apiBase  = config('services.npcjob.api_url', 'https://service.npc.ac.th/npcjob/api/user_profile.php');
+            $apiToken = config('services.npcjob.api_token', 'npc_sf_2026_api_key_x9k2m');
+
+            $response = Http::timeout(5)->get($apiBase, [
+                'username' => $username,
+                'token'    => $apiToken,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                if ($data['success'] ?? false) {
+                    return $data['user'] ?? [];
+                }
+            }
+        } catch (\Exception $e) {
+            Log::warning("npcjob API ไม่ตอบสนอง สำหรับ username: {$username} — " . $e->getMessage());
+        }
+
+        return [];
+    }
+
+    /**
+     * ประกอบชื่อแสดงจากข้อมูล Keycloak หรือ npcjob
+     */
+    private function buildDisplayName($keycloakUser, array $npcjobProfile): string
+    {
+        // ถ้ามีข้อมูลจาก npcjob ให้ใช้ก่อน (มีคำนำหน้าชื่อ)
+        if (!empty($npcjobProfile['display_name'])) {
+            return $npcjobProfile['display_name'];
+        }
+
+        // fallback: ใช้ชื่อจาก Keycloak
+        $name = $keycloakUser->getName()
+                ?? trim(
+                    ($keycloakUser->user['given_name']  ?? '') . ' ' .
+                    ($keycloakUser->user['family_name'] ?? '')
+                );
+
+        return trim($name) ?: $keycloakUser->getEmail();
+    }
+
+    /**
+     * หา Department ที่ตรงกันใน npc_smartflow หรือสร้างใหม่
+     */
+    private function resolveOrCreateDepartment(array $npcjobProfile): ?Department
+    {
+        $departmentName = $npcjobProfile['department_name'] ?? null;
+
+        if (!$departmentName) return null;
+
+        // หา department ที่ชื่อตรงกัน
+        $dept = Department::where('name', $departmentName)->first();
+
+        if (!$dept) {
+            // สร้าง department ใหม่ถ้ายังไม่มี
+            $code = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $departmentName), 0, 10))
+                    ?: 'DEPT' . rand(100, 999);
+
+            $dept = Department::create([
+                'name' => $departmentName,
+                'code' => $code,
+            ]);
+
+            Log::info("สร้างฝ่ายใหม่จาก npcjob: {$departmentName} (code: {$code})");
+        }
+
+        return $dept;
     }
 }
