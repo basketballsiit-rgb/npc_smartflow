@@ -12,7 +12,7 @@ export default function Welcome({ publicStats, recentProjects }) {
                 <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
                     <div className="flex items-center gap-x-3.5">
                         <img
-                            src="/LogoNPC_PNG.png?v=100"
+                            src="LogoNPC_PNG.png?v=100"
                             alt="ตราสัญลักษณ์ วิทยาลัยสารพัดช่างน่าน"
                             className="h-12 w-12 object-contain hover:scale-105 transition-transform"
                         />
@@ -58,7 +58,7 @@ export default function Welcome({ publicStats, recentProjects }) {
                     <div className="mb-6 flex flex-col items-center justify-center">
                         <div className="relative p-2 rounded-full bg-white/80 border border-purple-200 shadow-xl shadow-purple-500/10 backdrop-blur-md">
                             <img
-                                src="/LogoNPC_PNG.png?v=100"
+                                src="LogoNPC_PNG.png?v=100"
                                 alt="ตราสัญลักษณ์ วิทยาลัยสารพัดช่างน่าน"
                                 className="h-36 w-36 object-contain"
                             />

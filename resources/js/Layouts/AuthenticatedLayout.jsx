@@ -59,7 +59,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             {/* App Logo & Title */}
                             <Link href={route('dashboard')} className="flex items-center gap-x-2.5">
                                 <img
-                                    src="/LogoNPC_PNG.png"
+                                    src="LogoNPC_PNG.png"
                                     alt="NPC Logo"
                                     className="h-10 w-auto drop-shadow-sm"
                                     onError={(e) => { e.target.onerror = null; e.target.src = '/build/assets/ApplicationLogo.png'; }}
