@@ -1,0 +1,28 @@
+name: Deploy NPC SmartFlow
+
+# สั่งให้ทำงานทุกครั้งที่มี Push โค้ดมาที่เส้นทาง main
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: เชื่อมต่อเซิร์ฟเวอร์และอัปเดตระบบ
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          # คำสั่งรันบนเซิร์ฟเวอร์เพื่อดึงโค้ดล่าสุดและ Build ระบบ
+          script: |
+            cd /var/www/npc_smartflow
+            git pull origin main
+            npm install
+            npm run build
+            php82 artisan config:clear
+            php82 artisan route:clear
+            php82 artisan view:clear
+            php82 artisan cache:clear
+            echo "✅ Deploy สำเร็จ!"
