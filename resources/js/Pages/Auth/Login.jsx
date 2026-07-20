@@ -70,18 +70,19 @@ export default function Login({ status, canResetPassword }) {
                     {/* Big Logo */}
                     <div className="flex justify-center mb-8">
                         <div
-                            className="rounded-full flex items-center justify-center shadow-2xl"
+                            className="rounded-full flex items-center justify-center shadow-2xl overflow-hidden"
                             style={{
                                 width: '160px', height: '160px',
                                 background: 'rgba(255,255,255,0.12)',
                                 border: '2px solid rgba(255,255,255,0.25)',
                                 backdropFilter: 'blur(10px)',
+                                padding: '8px',
                             }}
                         >
                             <img
                                 src="LogoNPC_PNG.png"
                                 alt="NPC Logo"
-                                className="h-28 w-28 object-contain drop-shadow-xl"
+                                className="w-full h-full object-contain drop-shadow-xl"
                             />
                         </div>
                     </div>
