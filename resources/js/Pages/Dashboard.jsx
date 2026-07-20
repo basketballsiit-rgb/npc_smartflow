@@ -1770,34 +1770,42 @@ export default function Dashboard({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-purple-100 text-sm">
-                            {procurementData.procurementQueue.map((p) => (
-                                <tr key={p.id}>
-                                    <td className="px-6 py-4 font-bold text-slate-900">{p.title}</td>
-                                    <td className="px-6 py-4 text-slate-600">{p.department?.name}</td>
-                                    <td className="px-6 py-4 font-bold text-purple-700">
-                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget)}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {p.procurement?.committees?.length > 0 ? (
-                                            <span className="inline-flex items-center rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 border border-emerald-200">
-                                                ✓ แต่งตั้งครบแล้ว ({p.procurement.committees.length} คน)
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center rounded-md bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 border border-amber-200">
-                                                ⏳ รอแต่งตั้งกรรมการ
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <Link
-                                            href={route('projects.show', p.id)}
-                                            className="inline-flex items-center rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm"
-                                        >
-                                            📦 จัดการพัสดุ ➔
-                                        </Link>
+                            {(!procurementData.procurementQueue || procurementData.procurementQueue.length === 0) ? (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
+                                        ไม่มีรายการคิวงานจัดซื้อจัดจ้างในระบบขณะนี้
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                procurementData.procurementQueue.map((p) => (
+                                    <tr key={p.id}>
+                                        <td className="px-6 py-4 font-bold text-slate-900">{p.title}</td>
+                                        <td className="px-6 py-4 text-slate-600">{p.department?.name || 'N/A'}</td>
+                                        <td className="px-6 py-4 font-bold text-purple-700">
+                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget || 0)}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {p.procurement?.committees?.length > 0 ? (
+                                                <span className="inline-flex items-center rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 border border-emerald-200">
+                                                    ✓ แต่งตั้งครบแล้ว ({p.procurement.committees.length} คน)
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center rounded-md bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 border border-amber-200">
+                                                    ⏳ รอแต่งตั้งกรรมการ
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <Link
+                                                href={route('projects.show', p.id)}
+                                                className="inline-flex items-center rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm"
+                                            >
+                                                📦 จัดการพัสดุ ➔
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -1924,22 +1932,30 @@ export default function Dashboard({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-purple-100 text-sm">
-                            {executiveData.completedProjects.map((project) => (
-                                <tr key={project.id}>
-                                    <td className="px-6 py-4 font-bold text-slate-900">{project.title}</td>
-                                    <td className="px-6 py-4 text-slate-600">{project.department}</td>
-                                    <td className="px-6 py-4 font-bold text-emerald-600">ประเมินแล้ว</td>
-                                    <td className="px-6 py-4 text-slate-600">{project.survey_responses_count} คน</td>
-                                    <td className="px-6 py-4">
-                                        <a 
-                                            href={route('projects.download_report', project.id)}
-                                            className="inline-flex items-center rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
-                                        >
-                                            📄 ดาวน์โหลดเล่มรายงาน PDF
-                                        </a>
+                            {(!executiveData.completedProjects || executiveData.completedProjects.length === 0) ? (
+                                <tr>
+                                    <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
+                                        ไม่มีรายการเล่มรายงานสรุปประเมินผลโครงการฉบับสมบูรณ์ขณะนี้
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                executiveData.completedProjects.map((project) => (
+                                    <tr key={project.id}>
+                                        <td className="px-6 py-4 font-bold text-slate-900">{project.title}</td>
+                                        <td className="px-6 py-4 text-slate-600">{project.department}</td>
+                                        <td className="px-6 py-4 font-bold text-emerald-600">ประเมินแล้ว</td>
+                                        <td className="px-6 py-4 text-slate-600">{project.survey_responses_count} คน</td>
+                                        <td className="px-6 py-4">
+                                            <a 
+                                                href={route('projects.download_report', project.id)}
+                                                className="inline-flex items-center rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                                            >
+                                                📄 ดาวน์โหลดเล่มรายงาน PDF
+                                            </a>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>
