@@ -19,10 +19,10 @@ jobs:
           script: |
             cd /var/www/npc_smartflow
             git pull origin main
-            npm install
-            npm run build
-            php82 artisan config:clear
-            php82 artisan route:clear
-            php82 artisan view:clear
-            php82 artisan cache:clear
-            echo "✅ Deploy สำเร็จ!"
+            /root/.nvm/versions/node/v20.20.2/bin/npm install
+            /root/.nvm/versions/node/v20.20.2/bin/npm run build
+            /usr/bin/php82 artisan config:clear
+            /usr/bin/php82 artisan route:clear
+            /usr/bin/php82 artisan view:clear
+            /usr/bin/php82 artisan cache:clear
+            echo "✅ Deploy NPC SmartFlow สำเร็จ!"
