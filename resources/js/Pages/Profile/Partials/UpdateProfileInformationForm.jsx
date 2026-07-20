@@ -20,7 +20,6 @@ export default function UpdateProfileInformation({
 
     const submit = (e) => {
         e.preventDefault();
-
         patch(route('profile.update'));
     };
 
@@ -28,18 +27,57 @@ export default function UpdateProfileInformation({
         <section className={className}>
             <header>
                 <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                    Profile Information
+                    ข้อมูลส่วนตัว
                 </h2>
-
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    Update your account's profile information and email address.
+                    ข้อมูลที่ซิงค์จากระบบ npcjob จะอัปเดตอัตโนมัติเมื่อ Login ด้วย SSO
                 </p>
             </header>
 
+            {/* ── ข้อมูลที่ sync จาก npcjob (read-only) ── */}
+            {(user.position || user.department_name) && (
+                <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                        <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                            ข้อมูลบุคลากร (ซิงค์จาก npcjob)
+                        </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {user.department_name && (
+                            <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-3 border border-blue-100 dark:border-blue-900">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ฝ่าย / งาน</p>
+                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                    {user.department_name}
+                                </p>
+                            </div>
+                        )}
+                        {user.position && (
+                            <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-3 border border-blue-100 dark:border-blue-900">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ตำแหน่ง</p>
+                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                    {user.position}
+                                </p>
+                            </div>
+                        )}
+                        {user.role_display && (
+                            <div className="bg-white dark:bg-gray-800 rounded-lg px-4 py-3 border border-blue-100 dark:border-blue-900">
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">สิทธิ์ในระบบ</p>
+                                <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                                    {user.role_display}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── Form แก้ไขข้อมูลทั่วไป ── */}
             <form onSubmit={submit} className="mt-6 space-y-6">
                 <div>
-                    <InputLabel htmlFor="name" value="Name" />
-
+                    <InputLabel htmlFor="name" value="ชื่อ-นามสกุล" />
                     <TextInput
                         id="name"
                         className="mt-1 block w-full"
@@ -49,13 +87,11 @@ export default function UpdateProfileInformation({
                         isFocused
                         autoComplete="name"
                     />
-
                     <InputError className="mt-2" message={errors.name} />
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
+                    <InputLabel htmlFor="email" value="อีเมล" />
                     <TextInput
                         id="email"
                         type="email"
@@ -65,35 +101,33 @@ export default function UpdateProfileInformation({
                         required
                         autoComplete="username"
                     />
-
                     <InputError className="mt-2" message={errors.email} />
                 </div>
 
                 {mustVerifyEmail && user.email_verified_at === null && (
                     <div>
                         <p className="mt-2 text-sm text-gray-800 dark:text-gray-200">
-                            Your email address is unverified.
+                            อีเมลยังไม่ได้รับการยืนยัน
                             <Link
                                 href={route('verification.send')}
                                 method="post"
                                 as="button"
-                                className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
+                                className="ml-2 rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-100 dark:focus:ring-offset-gray-800"
                             >
-                                Click here to re-send the verification email.
+                                คลิกเพื่อส่งลิงก์ยืนยันอีกครั้ง
                             </Link>
                         </p>
 
                         {status === 'verification-link-sent' && (
                             <div className="mt-2 text-sm font-medium text-green-600 dark:text-green-400">
-                                A new verification link has been sent to your
-                                email address.
+                                ส่งลิงก์ยืนยันใหม่แล้ว
                             </div>
                         )}
                     </div>
                 )}
 
                 <div className="flex items-center gap-4">
-                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
+                    <PrimaryButton disabled={processing}>บันทึก</PrimaryButton>
 
                     <Transition
                         show={recentlySuccessful}
@@ -103,7 +137,7 @@ export default function UpdateProfileInformation({
                         leaveTo="opacity-0"
                     >
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Saved.
+                            บันทึกแล้ว
                         </p>
                     </Transition>
                 </div>
