@@ -22,7 +22,10 @@ Route::get('/', function () {
             'totalProjects' => \App\Models\Project::count(),
             'approvedProjects' => \App\Models\Project::where('status', 'approved')->count(),
             'totalBudget' => (float)\App\Models\Project::sum('estimated_budget'),
-            'satisfactionRate' => 96.5,
+            'satisfactionRate' => (function() {
+                $avgScore = \App\Models\SurveyResponse::selectRaw('AVG((rating_q1 + rating_q2 + rating_q3 + rating_q4 + rating_q5) / 5.0) as avg_score')->value('avg_score');
+                return $avgScore ? round(($avgScore / 5.0) * 100, 1) : 0;
+            })(),
         ],
         'recentProjects' => \App\Models\Project::where('status', 'approved')
             ->with(['department', 'user'])

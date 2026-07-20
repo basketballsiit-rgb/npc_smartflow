@@ -115,7 +115,12 @@ export default function Welcome({ publicStats, recentProjects }) {
                     </div>
                     <div className="rounded-2xl border border-purple-100 bg-white/80 p-6 shadow-md shadow-purple-500/5 backdrop-blur-sm">
                         <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">ดัชนีความพึงพอใจเฉลี่ย</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">{publicStats?.satisfactionRate || 96.5}% <span className="text-sm font-normal text-slate-500">ระดับดีเยี่ยม</span></p>
+                        <p className="mt-2 text-3xl font-black text-slate-900">
+                            {publicStats?.satisfactionRate > 0 ? `${publicStats.satisfactionRate}%` : '0%'} 
+                            <span className="text-sm font-normal text-slate-500 ml-2">
+                                {publicStats?.satisfactionRate > 0 ? 'ระดับดีเยี่ยม' : '(รอผลการประเมิน)'}
+                            </span>
+                        </p>
                     </div>
                 </div>
             </section>
