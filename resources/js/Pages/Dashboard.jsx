@@ -706,62 +706,77 @@ export default function Dashboard({
                         </button>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                    <div className="w-full">
+                        <table className="w-full text-left border-collapse text-xs sm:text-sm">
                             <thead>
-                                <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
-                                    <th className="px-6 py-3.5 whitespace-nowrap">ชื่อ - นามสกุล</th>
-                                    <th className="px-6 py-3.5 whitespace-nowrap">อีเมล (Email)</th>
-                                    <th className="px-6 py-3.5 whitespace-nowrap">สังกัด / ฝ่ายงาน</th>
-                                    <th className="px-6 py-3.5 whitespace-nowrap">ตำแหน่งงาน (Position)</th>
-                                    <th className="px-6 py-3.5 whitespace-nowrap">สิทธิ์ระบบ (Role)</th>
-                                    <th className="px-6 py-3.5 whitespace-nowrap">สถานะ</th>
-                                    <th className="px-6 py-3.5 whitespace-nowrap">การจัดการ</th>
+                                <tr className="border-b border-purple-100 bg-purple-50/50 text-[11px] sm:text-xs font-bold uppercase text-purple-900">
+                                    <th className="px-3 py-3 w-[22%]">ชื่อ - นามสกุล</th>
+                                    <th className="px-3 py-3 w-[20%]">อีเมล (Email)</th>
+                                    <th className="px-3 py-3 w-[18%]">สังกัด / ฝ่ายงาน</th>
+                                    <th className="px-3 py-3 w-[20%]">ตำแหน่งงาน</th>
+                                    <th className="px-2 py-3 w-[10%] text-center">สิทธิ์ระบบ</th>
+                                    <th className="px-2 py-3 w-[5%] text-center">สถานะ</th>
+                                    <th className="px-2 py-3 w-[5%] text-center">การจัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-purple-100 text-sm">
+                            <tbody className="divide-y divide-purple-100">
                                 {adminData.users.map((u) => (
-                                    <tr key={u.id} className="hover:bg-purple-50/20 whitespace-nowrap">
-                                        <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap">{u.name}</td>
-                                        <td className="px-6 py-4 text-slate-600 whitespace-nowrap">{u.email}</td>
-                                        <td className="px-6 py-4 text-slate-700 whitespace-nowrap">{u.department_name}</td>
-                                        <td className="px-6 py-4 font-semibold text-purple-900 whitespace-nowrap">{u.position}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex items-center rounded-md bg-purple-100 px-2.5 py-1 text-xs font-bold text-purple-800 border border-purple-200">
+                                    <tr key={u.id} className="hover:bg-purple-50/20">
+                                        <td className="px-3 py-3">
+                                            <div className="font-bold text-slate-900 text-xs sm:text-sm">{u.name}</div>
+                                        </td>
+                                        <td className="px-3 py-3 text-slate-600 text-xs truncate max-w-[180px]" title={u.email}>
+                                            {u.email}
+                                        </td>
+                                        <td className="px-3 py-3 text-slate-700 text-xs truncate max-w-[160px]" title={u.department_name}>
+                                            {u.department_name}
+                                        </td>
+                                        <td className="px-3 py-3 font-medium text-purple-950 text-xs truncate max-w-[180px]" title={u.position}>
+                                            {u.position}
+                                        </td>
+                                        <td className="px-2 py-3 text-center">
+                                            <span className="inline-flex items-center rounded-md bg-purple-100 px-2 py-0.5 text-[11px] font-bold text-purple-800 border border-purple-200 whitespace-nowrap">
                                                 {u.role_display}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-2 py-3 text-center">
                                             {u.is_active ? (
-                                                <span className="inline-flex items-center rounded-md bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 border border-emerald-200">
-                                                    ✓ เปิดใช้งาน
+                                                <span className="inline-flex items-center rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 border border-emerald-200 whitespace-nowrap" title="เปิดใช้งาน">
+                                                    ✓ ปกติ
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center rounded-md bg-rose-100 px-2.5 py-1 text-xs font-bold text-rose-800 border border-rose-200">
-                                                    ✕ ถูกระงับ
+                                                <span className="inline-flex items-center rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800 border border-rose-200 whitespace-nowrap" title="ถูกระงับ">
+                                                    ✕ ระงับ
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="flex items-center gap-2 whitespace-nowrap">
+                                        <td className="px-2 py-3 text-center">
+                                            <div className="flex items-center justify-center gap-1.5">
                                                 <button
                                                     onClick={() => openEditUserModal(u)}
-                                                    className="inline-flex items-center gap-1 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1.5 text-xs font-bold transition-all shadow-xs border border-purple-200"
+                                                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 transition-all border border-purple-200 text-xs shadow-2xs hover:scale-110 active:scale-95"
+                                                    title="แก้ไขข้อมูลผู้ใช้"
                                                 >
-                                                    ✏️ แก้ไข
+                                                    ✏️
                                                 </button>
                                                 <button
                                                     onClick={() => handleToggleUserStatus(u)}
-                                                    className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold transition-all shadow-xs border ${u.is_active ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300' : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300'}`}
+                                                    className={`inline-flex items-center justify-center w-7 h-7 rounded-lg transition-all border text-xs shadow-2xs hover:scale-110 active:scale-95 ${
+                                                        u.is_active 
+                                                            ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300' 
+                                                            : 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300'
+                                                    }`}
+                                                    title={u.is_active ? 'ระงับการใช้งาน' : 'เปิดใช้งาน'}
                                                 >
-                                                    {u.is_active ? '🚫 สลับระงับ' : '⚡ เปิดใช้งาน'}
+                                                    {u.is_active ? '🚫' : '⚡'}
                                                 </button>
                                                 {u.id !== auth.user.id && (
                                                     <button
                                                         onClick={() => handleDeleteUser(u)}
-                                                        className="inline-flex items-center gap-1 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 px-3 py-1.5 text-xs font-bold transition-all shadow-xs border border-rose-200"
+                                                        className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-800 transition-all border border-rose-200 text-xs shadow-2xs hover:scale-110 active:scale-95"
+                                                        title="ลบผู้ใช้งาน"
                                                     >
-                                                        🗑️ ลบ
+                                                        🗑️
                                                     </button>
                                                 )}
                                             </div>
