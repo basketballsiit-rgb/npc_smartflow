@@ -57,11 +57,11 @@ class KeycloakController extends Controller
                     'password'      => bcrypt(Str::random(32)),
                     'role_id'       => $defaultRole?->id,
                     'department_id' => $department?->id,
-                    'position'      => $npcjobProfile['position'] ?? 'บุคลากร',
+                    'position'      => $this->resolvePosition($npcjobProfile),
                     'is_active'     => true,
                 ]);
 
-                Log::info("Keycloak SSO: สร้างบัญชีใหม่ [{$email}] ฝ่าย: " . ($npcjobProfile['department_name'] ?? '-'));
+                Log::info("Keycloak SSO: สร้างบัญชีใหม่ [{$email}] ฝ่าย: " . ($npcjobProfile['department_name'] ?? '-') . " ตำแหน่ง: " . ($npcjobProfile['position'] ?? '-'));
             } else {
                 // อัปเดตข้อมูลล่าสุดจาก npcjob ทุกครั้งที่ login
                 $updateData = ['name' => $name];
@@ -69,13 +69,14 @@ class KeycloakController extends Controller
                 if ($department) {
                     $updateData['department_id'] = $department->id;
                 }
-                if (!empty($npcjobProfile['position'])) {
-                    $updateData['position'] = $npcjobProfile['position'];
+                $resolvedPosition = $this->resolvePosition($npcjobProfile);
+                if ($resolvedPosition) {
+                    $updateData['position'] = $resolvedPosition;
                 }
 
                 $user->update($updateData);
 
-                Log::info("Keycloak SSO: อัปเดตข้อมูล [{$email}] ฝ่าย: " . ($npcjobProfile['department_name'] ?? '-'));
+                Log::info("Keycloak SSO: อัปเดตข้อมูล [{$email}] ฝ่าย: " . ($npcjobProfile['department_name'] ?? '-') . " ตำแหน่ง: " . ($resolvedPosition ?? '-'));
             }
 
             // 6. ตรวจสอบสถานะบัญชี
@@ -172,5 +173,23 @@ class KeycloakController extends Controller
         }
 
         return $dept;
+    }
+
+    /**
+     * แปลงข้อมูลตำแหน่งจาก npcjob API
+     * รองรับทั้งรูปแบบ all_positions array (ใหม่) และ position string (เก่า)
+     */
+    private function resolvePosition(array $profile): ?string
+    {
+        // รูปแบบใหม่: all_positions array จาก user_jobs table
+        if (!empty($profile['all_positions']) && is_array($profile['all_positions'])) {
+            $titles = array_filter(array_column($profile['all_positions'], 'title'));
+            if (!empty($titles)) {
+                return implode(' / ', $titles);
+            }
+        }
+
+        // fallback: position string
+        return $profile['position'] ?? null;
     }
 }
