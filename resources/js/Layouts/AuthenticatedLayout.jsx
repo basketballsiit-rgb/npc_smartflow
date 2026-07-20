@@ -172,7 +172,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                                 <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1">
                                     <Link
-                                        href="/dashboard?tab=admin_users"
+                                        href={route('dashboard', { tab: 'admin_users' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=admin_users') || (!url.includes('tab=') && route().current('dashboard'))
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -185,7 +185,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>จัดการผู้ใช้ & สิทธิ์</span>}
                                     </Link>
                                     <Link
-                                        href="/dashboard?tab=admin_strategies"
+                                        href={route('dashboard', { tab: 'admin_strategies' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=admin_strategies')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -198,7 +198,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>จัดการยุทธศาสตร์</span>}
                                     </Link>
                                     <Link
-                                        href="/dashboard?tab=admin_settings"
+                                        href={route('dashboard', { tab: 'admin_settings' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=admin_settings')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -211,7 +211,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>ตั้งค่าระบบ & ปีการศึกษา</span>}
                                     </Link>
                                     <Link
-                                        href="/dashboard?tab=all_projects"
+                                        href={route('dashboard', { tab: 'all_projects' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=all_projects')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -253,7 +253,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>เสนอโครงการใหม่</span>}
                                 </Link>
                                 <Link
-                                    href="/dashboard?tab=proposals"
+                                    href={route('dashboard', { tab: 'proposals' })}
                                     className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                         url.includes('tab=proposals')
                                             ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -282,7 +282,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                                 <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1">
                                     <Link
-                                        href="/dashboard?tab=budgets"
+                                        href={route('dashboard', { tab: 'budgets' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=budgets')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -295,7 +295,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>งบประมาณสถานศึกษา</span>}
                                     </Link>
                                     <Link
-                                        href="/dashboard?tab=reviews"
+                                        href={route('dashboard', { tab: 'reviews' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=reviews')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -308,7 +308,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>ตรวจสอบ & อนุมัติ</span>}
                                     </Link>
                                     <Link
-                                        href="/dashboard?tab=clearings"
+                                        href={route('dashboard', { tab: 'clearings' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=clearings')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -321,7 +321,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>เคลียร์เงินยืมทดรอง</span>}
                                     </Link>
                                     <Link
-                                        href="/dashboard?tab=all_projects"
+                                        href={route('dashboard', { tab: 'all_projects' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=all_projects')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -351,7 +351,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                                 <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1">
                                     <Link
-                                        href="/dashboard?tab=procurement"
+                                        href={route('dashboard', { tab: 'procurement' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=procurement')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
@@ -381,7 +381,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                                 <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1">
                                     <Link
-                                        href="/dashboard?tab=executive_overview"
+                                        href={route('dashboard', { tab: 'executive_overview' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=executive_overview')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
