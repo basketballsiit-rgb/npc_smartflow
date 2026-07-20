@@ -50,7 +50,8 @@ class KeycloakController extends Controller
 
             if (!$user) {
                 // Auto-provision: สร้าง user ใหม่
-                $defaultRole = Role::where('name', 'teacher')->first() ?? Role::first();
+                $resolvedRole = $this->resolveRole($npcjobProfile);
+                $defaultRole  = $resolvedRole ?? Role::where('name', 'teacher')->first() ?? Role::first();
 
                 $user = User::create([
                     'name'          => $name,
@@ -73,6 +74,14 @@ class KeycloakController extends Controller
                 $resolvedPosition = $this->resolvePosition($npcjobProfile);
                 if ($resolvedPosition) {
                     $updateData['position'] = $resolvedPosition;
+                }
+
+                // อัปเดต Role ตามตำแหน่งจาก npcjob (ถ้าไม่ใช่ admin)
+                if (!$user->isAdmin()) {
+                    $resolvedRole = $this->resolveRole($npcjobProfile, $user);
+                    if ($resolvedRole) {
+                        $updateData['role_id'] = $resolvedRole->id;
+                    }
                 }
 
                 $user->update($updateData);
@@ -250,5 +259,41 @@ class KeycloakController extends Controller
         }
 
         Log::info("Sync {$user->email}: " . count($allPositions) . " ตำแหน่ง เข้า user_positions");
+    }
+
+    /**
+     * แปลงตำแหน่งจาก npcjob เป็น Role ในระบบ npc_smartflow
+     */
+    private function resolveRole(array $npcjobProfile, ?User $existingUser = null): ?Role
+    {
+        if ($existingUser && $existingUser->isAdmin()) {
+            return $existingUser->role;
+        }
+
+        $allPosTitles = [];
+        if (!empty($npcjobProfile['all_positions']) && is_array($npcjobProfile['all_positions'])) {
+            foreach ($npcjobProfile['all_positions'] as $pos) {
+                if (!empty($pos['title'])) {
+                    $allPosTitles[] = $pos['title'];
+                }
+            }
+        }
+        if (!empty($npcjobProfile['position'])) {
+            $allPosTitles[] = $npcjobProfile['position'];
+        }
+
+        $combinedText = implode(' ', $allPosTitles);
+
+        if (mb_strpos($combinedText, 'ผู้อำนวยการ') !== false || mb_strpos($combinedText, 'รองผู้อำนวยการ') !== false) {
+            return Role::where('name', 'executive')->first();
+        }
+        if (mb_strpos($combinedText, 'หัวหน้างานแผน') !== false || mb_strpos($combinedText, 'งานวางแผน') !== false) {
+            return Role::where('name', 'plan_head')->first();
+        }
+        if (mb_strpos($combinedText, 'หัวหน้างานพัสดุ') !== false || mb_strpos($combinedText, 'งานพัสดุ') !== false) {
+            return Role::where('name', 'procurement_head')->first();
+        }
+
+        return Role::where('name', 'teacher')->first();
     }
 }

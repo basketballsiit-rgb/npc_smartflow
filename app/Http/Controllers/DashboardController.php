@@ -20,7 +20,10 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        $role = $user->role->name ?? 'teacher';
+        $role = $user->isAdmin() ? 'admin' :
+               ($user->isExecutive() ? 'executive' :
+               ($user->isPlanHead() ? 'plan_head' :
+               ($user->isProcurementHead() ? 'procurement_head' : 'teacher')));
 
         $data = [
             'role' => $role,
@@ -64,18 +67,16 @@ class DashboardController extends Controller
             ];
         }
 
-        // 1. Teacher Dashboard Data
-        if ($user->isTeacher() || $user->isAdmin()) {
-            $data['teacherData'] = [
-                'projects' => Project::where('user_id', $user->id)
-                    ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals'])
-                    ->latest()
-                    ->get(),
-                'proposalsCount' => Project::where('user_id', $user->id)->count(),
-                'approvedCount' => Project::where('user_id', $user->id)->where('status', 'approved')->count(),
-                'totalBudget' => Project::where('user_id', $user->id)->sum('estimated_budget'),
-            ];
-        }
+        // 1. Teacher / User Proposals Data (Always loaded for all users so anyone can view their own projects)
+        $data['teacherData'] = [
+            'projects' => Project::where('user_id', $user->id)
+                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals'])
+                ->latest()
+                ->get(),
+            'proposalsCount' => Project::where('user_id', $user->id)->count(),
+            'approvedCount' => Project::where('user_id', $user->id)->where('status', 'approved')->count(),
+            'totalBudget' => Project::where('user_id', $user->id)->sum('estimated_budget'),
+        ];
 
         // 2. Plan Head Dashboard Data
         if ($user->isPlanHead() || $user->isAdmin()) {

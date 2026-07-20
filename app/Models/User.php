@@ -107,17 +107,32 @@ class User extends Authenticatable
 
     public function isPlanHead(): bool
     {
-        return $this->role?->name === 'plan_head';
+        if ($this->role?->name === 'plan_head') return true;
+        return $this->userPositions()
+            ->where(function($q) {
+                $q->where('position', 'like', '%หัวหน้างานแผน%')
+                  ->orWhere('position', 'like', '%งานวางแผน%');
+            })->exists();
     }
 
     public function isProcurementHead(): bool
     {
-        return $this->role?->name === 'procurement_head';
+        if ($this->role?->name === 'procurement_head') return true;
+        return $this->userPositions()
+            ->where(function($q) {
+                $q->where('position', 'like', '%หัวหน้างานพัสดุ%')
+                  ->orWhere('position', 'like', '%งานพัสดุ%');
+            })->exists();
     }
 
     public function isExecutive(): bool
     {
-        return $this->role?->name === 'executive';
+        if ($this->role?->name === 'executive') return true;
+        return $this->userPositions()
+            ->where(function($q) {
+                $q->where('position', 'like', '%ผู้อำนวยการ%')
+                  ->orWhere('position', 'like', '%รองผู้อำนวยการ%');
+            })->exists();
     }
 
     /**

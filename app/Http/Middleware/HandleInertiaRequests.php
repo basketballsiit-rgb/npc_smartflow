@@ -44,6 +44,11 @@ class HandleInertiaRequests extends Middleware
                     'role'            => $user->role?->name,
                     'role_display'    => $user->role?->display_name,
                     'is_active'       => $user->is_active,
+                    'is_admin'           => $user->isAdmin(),
+                    'is_teacher'         => $user->isTeacher(),
+                    'is_plan_head'       => $user->isPlanHead(),
+                    'is_procurement_head'=> $user->isProcurementHead(),
+                    'is_executive'       => $user->isExecutive(),
                     // ทุกตำแหน่งจาก user_positions table
                     'all_positions'   => $user->userPositions->map(fn($p) => [
                         'position'        => $p->position,

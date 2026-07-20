@@ -1408,7 +1408,13 @@ export default function Dashboard({
 
     // 1. Teacher Component Rendering
     const renderProposalsTab = () => {
-        if (!teacherData) return null;
+        if (!teacherData) {
+            return (
+                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm">
+                    <p className="text-purple-900 font-bold text-base">กำลังโหลดข้อมูลโครงการ...</p>
+                </div>
+            );
+        }
         return (
             <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -1768,7 +1774,13 @@ export default function Dashboard({
 
     // 4. Executive Component Rendering
     const renderExecutiveOverviewTab = () => {
-        if (!executiveData) return null;
+        if (!executiveData) {
+            return (
+                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm">
+                    <p className="text-purple-900 font-bold text-base">กำลังโหลดข้อมูลภาพรวมผู้บริหาร...</p>
+                </div>
+            );
+        }
         return (
             <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -1855,7 +1867,13 @@ export default function Dashboard({
     };
 
     const renderExecutiveReportsTab = () => {
-        if (!executiveData) return null;
+        if (!executiveData) {
+            return (
+                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm">
+                    <p className="text-purple-900 font-bold text-base">กำลังโหลดรายงานผู้บริหาร...</p>
+                </div>
+            );
+        }
         return (
             <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
                 <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4">

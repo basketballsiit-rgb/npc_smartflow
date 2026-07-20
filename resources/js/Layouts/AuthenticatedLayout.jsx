@@ -11,17 +11,17 @@ export default function AuthenticatedLayout({ header, children }) {
     const [showingMobileMenu, setShowingMobileMenu] = useState(false);
 
     const userRoleName = user?.role?.name || (typeof user?.role === 'string' ? user.role : '');
-    const isAdmin = userRoleName === 'admin' || user?.is_admin;
-    const isPlanHead = userRoleName === 'plan_head' || isAdmin;
-    const isProcurementHead = userRoleName === 'procurement_head' || isAdmin;
-    const isExecutive = userRoleName === 'executive' || isAdmin;
+    const isAdmin = user?.is_admin || userRoleName === 'admin';
+    const isExecutive = user?.is_executive || userRoleName === 'executive' || isAdmin;
+    const isPlanHead = user?.is_plan_head || userRoleName === 'plan_head' || isAdmin;
+    const isProcurementHead = user?.is_procurement_head || userRoleName === 'procurement_head' || isAdmin;
 
     // Determine user role label for the top-right header display
     const getRoleLabel = () => {
         if (isAdmin) return 'ผู้ดูแลระบบ (Super Admin)';
-        if (userRoleName === 'plan_head') return 'หัวหน้างานแผนงาน';
-        if (userRoleName === 'procurement_head') return 'หัวหน้างานพัสดุ';
-        if (userRoleName === 'executive') return 'ผู้บริหาร';
+        if (isExecutive) return 'ผู้บริหาร';
+        if (isPlanHead) return 'หัวหน้างานแผนงาน';
+        if (isProcurementHead) return 'หัวหน้างานพัสดุ';
         return 'ครูผู้เสนอโครงการ';
     };
 
