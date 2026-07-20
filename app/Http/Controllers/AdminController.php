@@ -544,9 +544,20 @@ class AdminController extends Controller
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
         }
 
-        if ($department->users()->count() > 0) {
-            return redirect()->back()->with('error', 'ไม่สามารถลบได้ เนื่องจากมีบุคลากรสังกัดในฝ่ายนี้');
+        // Prevent deletion if there are active projects attached to this department
+        if (Project::where('department_id', $department->id)->count() > 0) {
+            return redirect()->back()->with('error', 'ไม่สามารถลบฝ่ายนี้ได้ เนื่องจากมีโครงการในระบบผูกอยู่กับฝ่ายนี้');
         }
+
+        // Safely reassign users to parent department or null before deleting
+        User::where('department_id', $department->id)->update([
+            'department_id' => $department->parent_id
+        ]);
+
+        // Safely reassign any child sub-departments to parent department
+        Department::where('parent_id', $department->id)->update([
+            'parent_id' => $department->parent_id
+        ]);
 
         $department->delete();
 

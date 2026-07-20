@@ -16,7 +16,16 @@ export default function Dashboard({
     systemSettings = [],
     currentTab
 }) {
-    const { auth } = usePage().props;
+    const { auth, flash } = usePage().props;
+
+    useEffect(() => {
+        if (flash?.error) {
+            Swal.fire('ไม่สามารถดำเนินการได้', flash.error, 'error');
+        }
+        if (flash?.success) {
+            Swal.fire('สำเร็จ', flash.success, 'success');
+        }
+    }, [flash]);
 
     const getDefaultTab = () => {
         if (currentTab) return currentTab;
