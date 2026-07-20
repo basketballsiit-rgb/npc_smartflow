@@ -8,6 +8,12 @@ body, input, button, select, textarea {
     font-family: 'Kanit', sans-serif;
 }
 
+/* Global Base Font Size — Tailwind ใช้ rem ดังนั้นทุกขนาดในระบบจะขยายตามสัดส่วน */
+html {
+    font-size: 17px; /* default คือ 16px, ปรับเป็น 17px เพื่อขยายทั้งระบบ ~6% */
+}
+
+
 /* Minimal Sleek Thin Scrollbar */
 ::-webkit-scrollbar {
     width: 5px;
