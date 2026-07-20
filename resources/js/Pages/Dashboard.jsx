@@ -57,7 +57,7 @@ export default function Dashboard({
 
     // Admin Settings State
     const initialSettingsObj = {};
-    systemSettings.forEach(s => {
+    (systemSettings || []).forEach(s => {
         initialSettingsObj[s.key] = s.type === 'boolean' ? (s.value === 'true') : s.value;
     });
     const [settingsForm, setSettingsForm] = useState(initialSettingsObj);
@@ -1527,7 +1527,13 @@ export default function Dashboard({
 
     // 2. Plan Head Component Rendering
     const renderBudgetsTab = () => {
-        if (!planHeadData) return null;
+        if (!planHeadData) {
+            return (
+                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm font-sans">
+                    <p className="text-purple-900 font-bold text-base">กำลังโหลดข้อมูลงบประมาณ...</p>
+                </div>
+            );
+        }
         return (
             <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -1555,7 +1561,13 @@ export default function Dashboard({
     };
 
     const renderReviewsTab = () => {
-        if (!planHeadData) return null;
+        if (!planHeadData) {
+            return (
+                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm font-sans">
+                    <p className="text-purple-900 font-bold text-base">กำลังโหลดคิวอนุมัติโครงการ...</p>
+                </div>
+            );
+        }
         return (
             <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm font-sans">
                 <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -1564,7 +1576,7 @@ export default function Dashboard({
                         <p className="text-xs text-slate-600 mt-0.5">ตรวจสอบรายละเอียดข้อเสนอโครงการ จัดสรรงบประมาณ และอนุมัติส่งต่อตามลำดับสายงาน 6 ขั้นตอน</p>
                     </div>
                     <div className="bg-purple-100/70 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
-                        รออนุมัติในระบบ: {planHeadData.planHeadQueue.length} รายการ
+                        รออนุมัติในระบบ: {planHeadData.planHeadQueue?.length || 0} รายการ
                     </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -1579,7 +1591,7 @@ export default function Dashboard({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-purple-100 text-sm">
-                            {planHeadData.planHeadQueue.length === 0 ? (
+                            {(!planHeadData.planHeadQueue || planHeadData.planHeadQueue.length === 0) ? (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
                                         ไม่มีรายการโครงการรออนุมัติในคิวงานขณะนี้
@@ -1668,7 +1680,13 @@ export default function Dashboard({
     };
 
     const renderClearingsTab = () => {
-        if (!planHeadData) return null;
+        if (!planHeadData) {
+            return (
+                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm font-sans">
+                    <p className="text-purple-900 font-bold text-base">กำลังโหลดรายการเงินยืม...</p>
+                </div>
+            );
+        }
         return (
             <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
                 <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4">
@@ -1685,7 +1703,7 @@ export default function Dashboard({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-purple-100 text-sm">
-                            {planHeadData.advancePayments.length === 0 ? (
+                            {(!planHeadData.advancePayments || planHeadData.advancePayments.length === 0) ? (
                                 <tr>
                                     <td colSpan="4" className="px-6 py-10 text-center text-sm text-slate-500">
                                         ไม่มีรายการค้างเคลียร์เงินยืมทดรองในระบบ
@@ -1719,7 +1737,13 @@ export default function Dashboard({
 
     // 3. Procurement Head Component Rendering
     const renderProcurementTab = () => {
-        if (!procurementData) return null;
+        if (!procurementData) {
+            return (
+                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm font-sans">
+                    <p className="text-purple-900 font-bold text-base">กำลังโหลดคิวงานจัดซื้อจัดจ้าง...</p>
+                </div>
+            );
+        }
         return (
             <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
                 <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4">
@@ -1925,9 +1949,9 @@ export default function Dashboard({
         }
 
         const filteredProjects = allProjectsMaster.filter((p) => {
-            const matchesSearch = p.title.toLowerCase().includes(projectSearch.toLowerCase()) ||
-                p.proposer_name.toLowerCase().includes(projectSearch.toLowerCase()) ||
-                p.department_name.toLowerCase().includes(projectSearch.toLowerCase());
+            const matchesSearch = (p.title || '').toLowerCase().includes((projectSearch || '').toLowerCase()) ||
+                (p.proposer_name || '').toLowerCase().includes((projectSearch || '').toLowerCase()) ||
+                (p.department_name || '').toLowerCase().includes((projectSearch || '').toLowerCase());
             
             const matchesStatus = projectStatusFilter === 'all' ? true :
                 projectStatusFilter === 'approved' ? p.status === 'approved' :
