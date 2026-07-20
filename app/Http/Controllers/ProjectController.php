@@ -21,9 +21,16 @@ class ProjectController extends Controller
      */
     public function create()
     {
-        $activeCategories = \App\Models\StrategyCategory::with(['items' => function($q) {
-            $q->where('is_active', true)->orderBy('order_index', 'asc');
-        }])->where('is_active', true)->orderBy('order_index', 'asc')->get();
+        $activeCategories = [];
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('strategy_categories')) {
+                $activeCategories = \App\Models\StrategyCategory::with(['items' => function($q) {
+                    $q->where('is_active', true)->orderBy('order_index', 'asc');
+                }])->where('is_active', true)->orderBy('order_index', 'asc')->get();
+            }
+        } catch (\Exception $e) {
+            $activeCategories = [];
+        }
 
         return Inertia::render('Projects/Create', [
             'strategyCategories' => $activeCategories,

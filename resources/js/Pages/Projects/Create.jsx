@@ -10,7 +10,7 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
 
     // Initialize dynamic strategy selections
     const initialSelections = {};
-    strategyCategories.forEach(cat => {
+    (strategyCategories || []).forEach(cat => {
         initialSelections[cat.id] = cat.items?.[0]?.id ? [cat.items[0].id] : [];
     });
 
