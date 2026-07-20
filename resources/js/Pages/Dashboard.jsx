@@ -709,22 +709,22 @@ export default function Dashboard({
                     <div className="w-full overflow-hidden">
                         <table className="w-full text-left border-collapse text-xs sm:text-sm">
                             <thead>
-                                <tr className="border-b border-purple-100 bg-purple-50/50 text-xs font-bold uppercase text-purple-900">
-                                    <th className="px-6 py-3.5">ชื่อ - นามสกุล</th>
-                                    <th className="px-6 py-3.5">อีเมล (Email)</th>
-                                    <th className="px-6 py-3.5 text-center">การจัดการ</th>
+                                <tr className="border-b border-purple-100 bg-purple-50/50 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
+                                    <th className="px-6 py-3.5 whitespace-nowrap">ชื่อ - นามสกุล</th>
+                                    <th className="px-6 py-3.5 whitespace-nowrap">อีเมล (Email)</th>
+                                    <th className="px-6 py-3.5 text-center whitespace-nowrap">การจัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-purple-100 text-sm">
                                 {adminData.users.map((u) => (
-                                    <tr key={u.id} className="hover:bg-purple-50/20">
-                                        <td className="px-6 py-4 font-bold text-slate-900">{u.name}</td>
-                                        <td className="px-6 py-4 text-slate-600 font-mono text-xs">{u.email}</td>
-                                        <td className="px-6 py-4 text-center">
-                                            <div className="flex items-center justify-center gap-2">
+                                    <tr key={u.id} className="hover:bg-purple-50/20 whitespace-nowrap">
+                                        <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap">{u.name}</td>
+                                        <td className="px-6 py-4 text-slate-600 font-mono text-xs whitespace-nowrap">{u.email}</td>
+                                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                                            <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                                                 <button
                                                     onClick={() => openEditUserModal(u)}
-                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-800 px-3.5 py-1.5 text-xs font-bold transition-all shadow-xs border border-purple-200 hover:scale-105"
+                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-800 px-3.5 py-1.5 text-xs font-bold transition-all shadow-xs border border-purple-200 hover:scale-105 whitespace-nowrap"
                                                     title="คลิกเพื่อเปิดดูและแก้ไขข้อมูลย่อยทั้งหมด (สังกัด, ตำแหน่ง, สิทธิ์)"
                                                 >
                                                     ✏️ แก้ไขข้อมูล
