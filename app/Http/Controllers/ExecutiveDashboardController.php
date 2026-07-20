@@ -55,10 +55,31 @@ class ExecutiveDashboardController extends Controller
                 ];
             });
 
+        // 4. โครงการทั้งหมดในฝ่ายที่ผู้บริหารดูแล (ทุกสถานะ เพื่อการติดตามตั้งแต่เริ่มต้น)
+        $user = $request->user();
+        $responsibleDeptIds = $user->getResponsibleDepartmentIds();
+
+        $departmentProjects = Project::whereIn('department_id', $responsibleDeptIds)
+            ->with(['user', 'department', 'budget'])
+            ->latest()
+            ->get()
+            ->map(function ($proj) {
+                return [
+                    'id'               => $proj->id,
+                    'title'            => $proj->title,
+                    'proposer'         => $proj->user?->name ?? 'N/A',
+                    'department'       => $proj->department?->name ?? 'N/A',
+                    'estimated_budget' => $proj->estimated_budget,
+                    'status'           => $proj->status,
+                    'created_at'       => $proj->created_at->format('d/m/Y'),
+                ];
+            });
+
         return Inertia::render('Executive/Dashboard', [
-            'departmentMetrics' => $departmentMetrics,
-            'budgetSummary' => $budgetSummary,
-            'completedProjects' => $completedProjects,
+            'departmentMetrics'  => $departmentMetrics,
+            'budgetSummary'      => $budgetSummary,
+            'completedProjects'  => $completedProjects,
+            'departmentProjects' => $departmentProjects, // ส่งโครงการของฝ่ายไปให้ UI
         ]);
     }
 }

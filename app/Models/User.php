@@ -119,4 +119,30 @@ class User extends Authenticatable
     {
         return $this->role?->name === 'executive';
     }
+
+    /**
+     * ดึง ID ฝ่ายทั้งหมดที่ผู้ใช้รายนี้รับผิดชอบ (จากทุกตำแหน่งใน user_positions)
+     */
+    public function getResponsibleDepartmentIds(): array
+    {
+        $ids = [];
+
+        // ถ้าเป็นแอดมินหรือหัวหน้างานแผน ให้เข้าถึงได้ทุกฝ่าย
+        if ($this->isAdmin() || $this->isPlanHead()) {
+            return \App\Models\Department::pluck('id')->toArray();
+        }
+
+        // ดึงจากฝ่ายหลักในตาราง users
+        if ($this->department_id) {
+            $ids[] = $this->department_id;
+        }
+
+        // ดึงจากทุกฝ่ายที่มีใน user_positions
+        $positionDeptIds = $this->userPositions()
+            ->whereNotNull('department_id')
+            ->pluck('department_id')
+            ->toArray();
+
+        return array_unique(array_merge($ids, $positionDeptIds));
+    }
 }

@@ -1,7 +1,23 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 
-export default function Dashboard({ departmentMetrics, budgetSummary, completedProjects }) {
+const StatusBadge = ({ status }) => {
+    const configs = {
+        draft: { text: 'แบบร่าง', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' },
+        submitted: { text: 'ยื่นเสนอแล้ว', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' },
+        pending_approval: { text: 'รออนุมัติ', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' },
+        approved: { text: 'อนุมัติแล้ว', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300' },
+        rejected: { text: 'ตีกลับ/ปฏิเสธ', color: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300' },
+    };
+    const config = configs[status] ?? { text: status, color: 'bg-gray-100 text-gray-800' };
+    return (
+        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${config.color}`}>
+            {config.text}
+        </span>
+    );
+};
+
+export default function Dashboard({ departmentMetrics, budgetSummary, completedProjects, departmentProjects = [] }) {
     const formatCurrency = (value) => {
         return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(value);
     };
@@ -36,7 +52,7 @@ export default function Dashboard({ departmentMetrics, budgetSummary, completedP
                     </div>
 
                     {/* Departmental Metrics Cards */}
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Divisional Breakdown (4 Departments)</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Divisional Breakdown</h3>
                     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
                         {departmentMetrics.map((dept) => {
                             const percent = dept.total_estimated_budget > 0 
@@ -72,6 +88,65 @@ export default function Dashboard({ departmentMetrics, budgetSummary, completedP
                                 </div>
                             );
                         })}
+                    </div>
+
+                    {/* 🆕 Section: ติดตามการเสนอขอโครงการในฝ่ายที่รับผิดชอบ */}
+                    <div className="mb-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                        <div className="border-b border-gray-200 bg-gray-50/50 px-6 py-4 dark:border-gray-700 dark:bg-gray-800/50 flex justify-between items-center flex-wrap gap-2">
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">แผนงานและคำขอโครงการของฝ่ายที่รับผิดชอบ</h3>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">ติดตามโครงการทุกสถานะภายใต้ฝ่ายกำกับดูแล เพื่อเตรียมการประชุมวางแผนและพิจารณางบประมาณ</p>
+                            </div>
+                            <span className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 px-3 py-1 rounded-full text-xs font-bold">
+                                {departmentProjects.length} โครงการทั้งหมด
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/30">
+                                        <th className="px-6 py-3.5 text-sm font-semibold text-gray-900 dark:text-gray-200">ชื่อโครงการ</th>
+                                        <th className="px-6 py-3.5 text-sm font-semibold text-gray-900 dark:text-gray-200">แผนก/งาน</th>
+                                        <th className="px-6 py-3.5 text-sm font-semibold text-gray-900 dark:text-gray-200">ผู้รับผิดชอบ</th>
+                                        <th className="px-6 py-3.5 text-sm font-semibold text-gray-900 dark:text-gray-200 text-right">งบประมาณเสนอขอ</th>
+                                        <th className="px-6 py-3.5 text-sm font-semibold text-gray-900 dark:text-gray-200 text-center">สถานะ</th>
+                                        <th className="px-6 py-3.5 text-sm font-semibold text-gray-900 dark:text-gray-200">วันที่ยื่นเรื่อง</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                                    {departmentProjects.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="px-6 py-10 text-center text-sm text-gray-500 dark:text-gray-400">
+                                                ยังไม่มีการยื่นเสนอโครงการใดๆ ในฝ่ายงานของคุณในขณะนี้
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        departmentProjects.map((project) => (
+                                            <tr key={project.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-700/20">
+                                                <td className="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">
+                                                    {project.title}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                    {project.department}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                    {project.proposer}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm font-bold text-gray-900 dark:text-white text-right">
+                                                    {formatCurrency(project.estimated_budget)}
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-center">
+                                                    <StatusBadge status={project.status} />
+                                                </td>
+                                                <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                    {project.created_at}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     {/* Final PDF Reports */}
