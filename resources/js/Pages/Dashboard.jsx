@@ -16,6 +16,7 @@ export default function Dashboard({
     systemSettings = [],
     routinePlans = [],
     allUsers = [],
+    centralAllocations = [],
     currentTab
 }) {
     const { auth, flash } = usePage().props;
@@ -48,6 +49,19 @@ export default function Dashboard({
         inspection_member1: '',
         inspection_member2: '',
         items: []
+    });
+
+    // Central allocations states
+    const [editingCentralAllocation, setEditingCentralAllocation] = useState(null);
+
+    // Form for Central Allocation
+    const { data: centralAllocationData, setData: setCentralAllocationData, post: postCentralAllocation, put: putCentralAllocation, reset: resetCentralAllocation, errors: centralAllocationErrors } = useForm({
+        fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+        document_number: '',
+        title: '',
+        funding_source_id: '',
+        amount: '',
+        description: '',
     });
 
     useEffect(() => {
@@ -1616,6 +1630,58 @@ export default function Dashboard({
         );
     };
 
+    // Central Allocation CRUD Actions
+    const handleCentralAllocationSubmit = (e) => {
+        e.preventDefault();
+        
+        // Ensure funding source is set
+        const defaultSourceId = centralAllocationData.funding_source_id || planHeadData?.fundingSources?.[0]?.id || '';
+        
+        if (editingCentralAllocation) {
+            router.put(route('admin.central_allocations.update', editingCentralAllocation.id), {
+                ...centralAllocationData,
+                funding_source_id: defaultSourceId
+            }, {
+                onSuccess: () => {
+                    Swal.fire('สำเร็จ!', 'แก้ไขข้อมูลการจัดสรรจากส่วนกลางเรียบร้อยแล้ว', 'success');
+                    setEditingCentralAllocation(null);
+                    resetCentralAllocation();
+                }
+            });
+        } else {
+            router.post(route('admin.central_allocations.store'), {
+                ...centralAllocationData,
+                funding_source_id: defaultSourceId
+            }, {
+                onSuccess: () => {
+                    Swal.fire('สำเร็จ!', 'บันทึกการจัดสรรงบประมาณจากส่วนกลางเรียบร้อยแล้ว', 'success');
+                    resetCentralAllocation();
+                }
+            });
+        }
+    };
+
+    const handleCentralAllocationDelete = (id) => {
+        Swal.fire({
+            title: 'ยืนยันการลบประวัติรับจัดสรร?',
+            text: 'การลบจะไม่ส่งผลต่องบประมาณโครงการในระบบ แต่จะลดวงเงินรับจัดสรรส่วนกลางลงในการคำนวณแดชบอร์ด!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ใช่, ต้องการลบ!',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.central_allocations.destroy', id), {
+                    onSuccess: () => {
+                        Swal.fire('ลบแล้ว!', 'ลบประวัติรับจัดสรรจากส่วนกลางเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
+
     // Routine Budget Plan CRUD Actions
     const handleRoutinePlanSubmit = (e) => {
         e.preventDefault();
@@ -1776,6 +1842,9 @@ export default function Dashboard({
         const totalSpentAll = parseFloat(planHeadData.globalSpent || 0) + routineSpent;
         const totalRemainingAll = totalAllocatedAll - totalSpentAll;
 
+        const totalCentralReceived = centralAllocations.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
+        const centralRemaining = totalCentralReceived - totalAllocatedAll;
+
         const isPlanHeadOrAdmin = role === 'admin' || role === 'plan_head' || auth.user.is_plan_head;
 
         return (
@@ -1784,28 +1853,34 @@ export default function Dashboard({
                 <div className="rounded-3xl bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 p-6 md:p-8 text-white shadow-lg space-y-6">
                     <div>
                         <span className="bg-amber-400/20 text-amber-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                            แดชบอร์ดงบประมาณรวมประจำปี
+                            แดชบอร์ดสรุปและจัดสรรงบประมาณจริงจากส่วนกลาง
                         </span>
-                        <h2 className="text-xl md:text-2xl font-black mt-2">สรุปงบประมาณตามแผนโครงการ & งบดำเนินงานประจำปี</h2>
+                        <h2 className="text-xl md:text-2xl font-black mt-2">สรุปงบจัดสรรจากต้นสังกัด เทียบแผนโครงการ & งบดำเนินงานประจำปี</h2>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 border-t border-white/10 pt-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 border-t border-white/10 pt-6">
                         <div className="bg-white/5 p-4 rounded-2xl">
-                            <span className="text-purple-200 text-xs block">งบจัดสรรทั้งหมด (Planned + Routine)</span>
-                            <span className="text-xl md:text-2xl font-black text-amber-300 mt-1 block">
+                            <span className="text-purple-200 text-xs block">งบได้รับจัดสรรจริงจากต้นสังกัดรวม</span>
+                            <span className="text-lg md:text-xl font-black text-amber-300 mt-1 block">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalCentralReceived)}
+                            </span>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-2xl">
+                            <span className="text-purple-200 text-xs block">งบที่นำไปจัดสรรลงแผนงานแล้ว</span>
+                            <span className="text-lg md:text-xl font-black text-blue-300 mt-1 block">
                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalAllocatedAll)}
                             </span>
                         </div>
                         <div className="bg-white/5 p-4 rounded-2xl">
-                            <span className="text-purple-200 text-xs block">เบิกจ่ายสะสมรวม (Spent)</span>
-                            <span className="text-xl md:text-2xl font-black text-red-300 mt-1 block">
-                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalSpentAll)}
+                            <span className="text-purple-200 text-xs block">งบต้นสังกัดคงเหลือ (รอจัดสรร)</span>
+                            <span className={`text-lg md:text-xl font-black mt-1 block ${centralRemaining >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(centralRemaining)}
                             </span>
                         </div>
                         <div className="bg-white/5 p-4 rounded-2xl">
-                            <span className="text-purple-200 text-xs block">งบประมาณคงเหลือรวมสุทธิ</span>
-                            <span className="text-xl md:text-2xl font-black text-emerald-300 mt-1 block">
-                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalRemainingAll)}
+                            <span className="text-purple-200 text-xs block">เบิกจ่ายสะสมรวมจริง (Spent)</span>
+                            <span className="text-lg md:text-xl font-black text-rose-300 mt-1 block">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalSpentAll)}
                             </span>
                         </div>
                     </div>
@@ -1898,6 +1973,184 @@ export default function Dashboard({
                                     style={{ width: `${routineAllocated > 0 ? Math.min((routineSpent / routineAllocated) * 100, 100) : 0}%` }}
                                 />
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2.5 Central Budget Allocations Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Creation / Edit Form (For plan_head and admin) */}
+                    {isPlanHeadOrAdmin && (
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-purple-100/50 space-y-4 self-start">
+                            <h3 className="font-extrabold text-gray-800 text-sm">
+                                {editingCentralAllocation ? '✏️ แก้ไขบันทึกรับงบจากส่วนกลาง' : '📥 บันทึกรับงบจัดสรรจากต้นสังกัด/ส่วนกลาง'}
+                            </h3>
+                            <form onSubmit={handleCentralAllocationSubmit} className="space-y-4 text-xs">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ปีงบประมาณ</label>
+                                    <input
+                                        type="text"
+                                        value={centralAllocationData.fiscal_year}
+                                        onChange={e => setCentralAllocationData('fiscal_year', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        placeholder="ตัวอย่าง 2569"
+                                        disabled={editingCentralAllocation}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">เลขที่หนังสือสั่งการ / อ้างอิง</label>
+                                    <input
+                                        type="text"
+                                        value={centralAllocationData.document_number}
+                                        onChange={e => setCentralAllocationData('document_number', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        placeholder="เช่น ศธ 0601/1234 หรือ อ้างอิงแผน"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">หมวดงบเงินทุนส่วนกลาง</label>
+                                    <select
+                                        value={centralAllocationData.funding_source_id}
+                                        onChange={e => setCentralAllocationData('funding_source_id', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                    >
+                                        <option value="">เลือกแหล่งเงินทุน...</option>
+                                        {planHeadData?.fundingSources?.map(src => (
+                                            <option key={src.id} value={src.id}>{src.name}</option>
+                                        ))}
+                                    </select>
+                                    {centralAllocationErrors.funding_source_id && <span className="text-red-500 text-[10px]">{centralAllocationErrors.funding_source_id}</span>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ชื่องาน/โครงการ/วัตถุประสงค์จากส่วนกลาง</label>
+                                    <input
+                                        type="text"
+                                        value={centralAllocationData.title}
+                                        onChange={e => setCentralAllocationData('title', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        placeholder="เช่น งบอุดหนุนทั่วไปรายหัว หรือ งบจัดตั้งศูนย์วิชาชีพ"
+                                    />
+                                    {centralAllocationErrors.title && <span className="text-red-500 text-[10px]">{centralAllocationErrors.title}</span>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">จำนวนงบประมาณแจ้งจัดสรรจริง (บาท)</label>
+                                    <input
+                                        type="number"
+                                        value={centralAllocationData.amount}
+                                        onChange={e => setCentralAllocationData('amount', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        placeholder="เช่น 100000"
+                                    />
+                                    {centralAllocationErrors.amount && <span className="text-red-500 text-[10px]">{centralAllocationErrors.amount}</span>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">รายละเอียดเพิ่มเติม / ภาระงานแนบ</label>
+                                    <textarea
+                                        value={centralAllocationData.description}
+                                        onChange={e => setCentralAllocationData('description', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        rows="2"
+                                        placeholder="รายละเอียดเพิ่มเติมเกี่ยวกับการเบิกจ่าย..."
+                                    />
+                                </div>
+
+                                <div className="flex gap-2 pt-2">
+                                    <button
+                                        type="submit"
+                                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all"
+                                    >
+                                        {editingCentralAllocation ? '💾 บันทึกแก้ไข' : '📥 บันทึกรับงบ'}
+                                    </button>
+                                    {editingCentralAllocation && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEditingCentralAllocation(null);
+                                                resetCentralAllocation();
+                                            }}
+                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl transition-all"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {/* Central Budget List Table */}
+                    <div className={`${isPlanHeadOrAdmin ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4`}>
+                        <h3 className="font-extrabold text-gray-800 text-sm">📥 รายการประวัติรับจัดสรรงบประมาณจากต้นสังกัด/ส่วนกลาง</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
+                                        <th className="py-2.5 px-2">ปี/หนังสือสั่งการ</th>
+                                        <th className="py-2.5 px-2">วัตถุประสงค์ / โครงการส่วนกลาง</th>
+                                        <th className="py-2.5 px-2 text-right">วงเงินรับจัดสรร</th>
+                                        <th className="py-2.5 px-2 text-center">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 text-[11px]">
+                                    {centralAllocations.map((alloc) => {
+                                        const amt = parseFloat(alloc.amount || 0);
+                                        return (
+                                            <tr key={alloc.id} className="hover:bg-gray-50/50">
+                                                <td className="py-3 px-2">
+                                                    <span className="font-bold text-gray-800 block">ปี {alloc.fiscal_year}</span>
+                                                    <span className="text-[10px] text-gray-400">📄 {alloc.document_number || 'ไม่มีเลขที่หนังสือ'}</span>
+                                                </td>
+                                                <td className="py-3 px-2">
+                                                    <span className="font-bold text-gray-800 block">{alloc.title}</span>
+                                                    <span className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-medium inline-block mt-0.5">
+                                                        💰 {alloc.funding_source?.name}
+                                                    </span>
+                                                    {alloc.description && <p className="text-[10px] text-gray-400 mt-1">{alloc.description}</p>}
+                                                </td>
+                                                <td className="py-3 px-2 text-right font-bold text-gray-800">{amt.toLocaleString()} บาท</td>
+                                                <td className="py-3 px-2 text-center space-x-1 whitespace-nowrap">
+                                                    {isPlanHeadOrAdmin && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingCentralAllocation(alloc);
+                                                                    setCentralAllocationData({
+                                                                        fiscal_year: alloc.fiscal_year,
+                                                                        document_number: alloc.document_number || '',
+                                                                        title: alloc.title,
+                                                                        funding_source_id: alloc.funding_source_id,
+                                                                        amount: alloc.amount,
+                                                                        description: alloc.description || '',
+                                                                    });
+                                                                }}
+                                                                className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleCentralAllocationDelete(alloc.id)}
+                                                                className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {centralAllocations.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="text-center py-6 text-gray-400">ยังไม่มีบันทึกรับงบจัดสรรจากส่วนกลางในระบบ</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

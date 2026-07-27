@@ -13,6 +13,7 @@ use App\Http\Controllers\AppendixController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\RoutineBudgetController;
+use App\Http\Controllers\CentralAllocationController;
 use App\Http\Controllers\Auth\KeycloakController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +80,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/admin/routine-budgets/{routineBudget}', [RoutineBudgetController::class, 'destroy'])->name('admin.routine_budgets.destroy');
     Route::post('/routine-budgets/{routineBudget}/procurement/save', [ProcurementController::class, 'saveRoutineProcurement'])->name('routine_procurements.save');
     Route::get('/routine-budgets/procurement/{procurement}/document/{type}', [ProcurementController::class, 'downloadRoutineDocument'])->name('routine_procurements.download_document');
+
+    // Central Budget Allocation Routes
+    Route::post('/admin/central-allocations', [CentralAllocationController::class, 'store'])->name('admin.central_allocations.store');
+    Route::put('/admin/central-allocations/{centralAllocation}', [CentralAllocationController::class, 'update'])->name('admin.central_allocations.update');
+    Route::delete('/admin/central-allocations/{centralAllocation}', [CentralAllocationController::class, 'destroy'])->name('admin.central_allocations.destroy');
 
     Route::post('/admin/departments', [AdminController::class, 'storeDepartment'])->name('admin.departments.store');
     Route::put('/admin/departments/{department}', [AdminController::class, 'updateDepartment'])->name('admin.departments.update');

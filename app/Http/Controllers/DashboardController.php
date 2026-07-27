@@ -47,6 +47,13 @@ class DashboardController extends Controller
                 ->get();
         }
 
+        // Fetch central allocations based on permissions
+        if ($user->isAdmin() || $user->isPlanHead()) {
+            $data['centralAllocations'] = \App\Models\CentralAllocation::with(['fundingSource'])->latest()->get();
+        } else {
+            $data['centralAllocations'] = [];
+        }
+
         // 0. Admin Dashboard Data
         if ($user->isAdmin()) {
             $data['adminData'] = [
