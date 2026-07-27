@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, usePage, router } from '@inertiajs/react';
+import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
 import { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 
@@ -14,9 +14,41 @@ export default function Dashboard({
     allRoles = [],
     allDepartments = [],
     systemSettings = [],
+    routinePlans = [],
+    allUsers = [],
     currentTab
 }) {
     const { auth, flash } = usePage().props;
+
+    // Routine budgets states
+    const [editingRoutinePlan, setEditingRoutinePlan] = useState(null);
+    const [selectedRoutinePlanForProc, setSelectedRoutinePlanForProc] = useState(null);
+    const [viewingRoutineHistoryPlan, setViewingRoutineHistoryPlan] = useState(null);
+
+    // Form for Creating / Editing Budget Plan
+    const { data: routinePlanData, setData: setRoutinePlanData, post: postRoutinePlan, put: putRoutinePlan, reset: resetRoutinePlan, errors: routinePlanErrors } = useForm({
+        fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+        department_id: allDepartments[0]?.id || '',
+        title: '',
+        allocated_amount: '',
+    });
+
+    // Form for Direct Procurement request
+    const [routineProcItems, setRoutineProcItems] = useState([
+        { description: '', quantity: 1, unit: 'ชิ้น', unit_price: 0 }
+    ]);
+    const { data: routineProcData, setData: setRoutineProcData, post: postRoutineProc, reset: resetRoutineProc, errors: routineProcErrors } = useForm({
+        procurement_id: null,
+        memo_subject: '',
+        tor_specifications: '',
+        purchasing_chair: '',
+        purchasing_member1: '',
+        purchasing_member2: '',
+        inspection_chair: '',
+        inspection_member1: '',
+        inspection_member2: '',
+        items: []
+    });
 
     useEffect(() => {
         if (flash?.error) {
@@ -1584,6 +1616,148 @@ export default function Dashboard({
         );
     };
 
+    // Routine Budget Plan CRUD Actions
+    const handleRoutinePlanSubmit = (e) => {
+        e.preventDefault();
+        if (editingRoutinePlan) {
+            putRoutinePlan(route('admin.routine_budgets.update', editingRoutinePlan.id), {
+                onSuccess: () => {
+                    Swal.fire('สำเร็จ!', 'แก้ไขข้อมูลแผนงบประมาณเรียบร้อยแล้ว', 'success');
+                    setEditingRoutinePlan(null);
+                    resetRoutinePlan();
+                }
+            });
+        } else {
+            postRoutinePlan(route('admin.routine_budgets.store'), {
+                onSuccess: () => {
+                    Swal.fire('สำเร็จ!', 'เพิ่มแผนงบประมาณประจำปีเรียบร้อยแล้ว', 'success');
+                    resetRoutinePlan();
+                }
+            });
+        }
+    };
+
+    const handleRoutinePlanDelete = (id) => {
+        Swal.fire({
+            title: 'ยืนยันการลบแผนงบประมาณ?',
+            text: 'การลบจะทำให้งบประมาณในระบบหายไป รวมถึงรายการจัดซื้อจัดจ้างที่ผูกกับงบนี้!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'ใช่, ต้องการลบ!',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.routine_budgets.destroy', id), {
+                    onSuccess: () => {
+                        Swal.fire('ลบแล้ว!', 'ลบแผนงบประมาณออกจากระบบเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
+
+    // Direct Procurement Items Actions
+    const addRoutineProcItem = () => {
+        setRoutineProcItems([...routineProcItems, { description: '', quantity: 1, unit: 'ชิ้น', unit_price: 0 }]);
+    };
+
+    const removeRoutineProcItem = (index) => {
+        if (routineProcItems.length === 1) return;
+        setRoutineProcItems(routineProcItems.filter((_, i) => i !== index));
+    };
+
+    const updateRoutineProcItem = (index, field, value) => {
+        const updated = [...routineProcItems];
+        updated[index][field] = value;
+        setRoutineProcItems(updated);
+    };
+
+    const calculateRoutineProcTotal = () => {
+        return routineProcItems.reduce((sum, item) => sum + (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)), 0);
+    };
+
+    const openRoutineProcurementModal = (plan) => {
+        setSelectedRoutinePlanForProc(plan);
+        setRoutineProcItems([{ description: '', quantity: 1, unit: 'ชิ้น', unit_price: 0 }]);
+        setRoutineProcData({
+            procurement_id: null,
+            memo_subject: `ขออนุมัติจัดซื้อจัดจ้างวัสดุ/บริการ หมวด${plan.title} แผนก${plan.department?.name}`,
+            tor_specifications: `รายละเอียดการกำหนดคุณลักษณะเฉพาะพัสดุ หมวด${plan.title}`,
+            purchasing_chair: '',
+            purchasing_member1: '',
+            purchasing_member2: '',
+            inspection_chair: '',
+            inspection_member1: '',
+            inspection_member2: '',
+            items: []
+        });
+    };
+
+    const openEditRoutineProcurementModal = (plan, proc) => {
+        setSelectedRoutinePlanForProc(plan);
+        setRoutineProcItems(proc.items.map(item => ({
+            description: item.description,
+            quantity: parseFloat(item.quantity),
+            unit: item.unit,
+            unit_price: parseFloat(item.unit_price)
+        })));
+
+        const pChair = proc.committees?.find(c => c.pivot.committee_type === 'purchasing' && c.pivot.role === 'chairperson')?.id || '';
+        const pMembers = proc.committees?.filter(c => c.pivot.committee_type === 'purchasing' && c.pivot.role === 'member') || [];
+        const iChair = proc.committees?.find(c => c.pivot.committee_type === 'inspection' && c.pivot.role === 'chairperson')?.id || '';
+        const iMembers = proc.committees?.filter(c => c.pivot.committee_type === 'inspection' && c.pivot.role === 'member') || [];
+
+        setRoutineProcData({
+            procurement_id: proc.id,
+            memo_subject: proc.memo_subject || '',
+            tor_specifications: proc.tor_specifications || '',
+            purchasing_chair: pChair,
+            purchasing_member1: pMembers[0]?.id || '',
+            purchasing_member2: pMembers[1]?.id || '',
+            inspection_chair: iChair,
+            inspection_member1: iMembers[0]?.id || '',
+            inspection_member2: iMembers[1]?.id || '',
+            items: []
+        });
+    };
+
+    const handleRoutineProcurementSubmit = (e) => {
+        e.preventDefault();
+        const totalSum = calculateRoutineProcTotal();
+        const remainingBudget = parseFloat(selectedRoutinePlanForProc.allocated_amount) - parseFloat(selectedRoutinePlanForProc.spent_amount);
+        
+        let oldTotal = 0;
+        if (routineProcData.procurement_id) {
+            const proc = selectedRoutinePlanForProc.procurements.find(p => p.id === routineProcData.procurement_id);
+            if (proc) {
+                oldTotal = proc.items.reduce((sum, item) => sum + (parseFloat(item.quantity) * parseFloat(item.unit_price)), 0);
+            }
+        }
+
+        if (totalSum > (remainingBudget + oldTotal)) {
+            Swal.fire('ข้อผิดพลาด!', `ยอดรวมใบจัดซื้อ (${totalSum.toLocaleString()} บาท) เกินวงเงินงบประมาณคงเหลือ (${(remainingBudget + oldTotal).toLocaleString()} บาท)`, 'error');
+            return;
+        }
+
+        const finalData = {
+            ...routineProcData,
+            items: routineProcItems
+        };
+
+        router.post(route('routine_procurements.save', selectedRoutinePlanForProc.id), finalData, {
+            onSuccess: () => {
+                Swal.fire('สำเร็จ!', 'บันทึกข้อมูลจัดซื้อจัดจ้าง และเบิกตัดแผนงบประมาณเรียบร้อยแล้ว', 'success');
+                setSelectedRoutinePlanForProc(null);
+                resetRoutineProc();
+            },
+            onError: (err) => {
+                Swal.fire('ข้อผิดพลาด!', Object.values(err).join('\n'), 'error');
+            }
+        });
+    };
+
     // 2. Plan Head Component Rendering
     const renderBudgetsTab = () => {
         if (!planHeadData) {
@@ -1593,28 +1767,721 @@ export default function Dashboard({
                 </div>
             );
         }
+
+        const routineAllocated = routinePlans.reduce((sum, p) => sum + parseFloat(p.allocated_amount || 0), 0);
+        const routineSpent = routinePlans.reduce((sum, p) => sum + parseFloat(p.spent_amount || 0), 0);
+        const routineRemaining = routineAllocated - routineSpent;
+
+        const totalAllocatedAll = parseFloat(planHeadData.globalAllocated || 0) + routineAllocated;
+        const totalSpentAll = parseFloat(planHeadData.globalSpent || 0) + routineSpent;
+        const totalRemainingAll = totalAllocatedAll - totalSpentAll;
+
+        const isPlanHeadOrAdmin = role === 'admin' || role === 'plan_head' || auth.user.is_plan_head;
+
         return (
-            <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600">งบประมาณได้รับจัดสรรรวม</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">
-                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(planHeadData.globalAllocated)}
-                        </p>
+            <div className="space-y-8 font-sans">
+                {/* 1. Global Combined Budget Header */}
+                <div className="rounded-3xl bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 p-6 md:p-8 text-white shadow-lg space-y-6">
+                    <div>
+                        <span className="bg-amber-400/20 text-amber-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                            แดชบอร์ดงบประมาณรวมประจำปี
+                        </span>
+                        <h2 className="text-xl md:text-2xl font-black mt-2">สรุปงบประมาณตามแผนโครงการ & งบดำเนินงานประจำปี</h2>
                     </div>
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-amber-600">ผูกพันงบประมาณแล้ว</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">
-                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(planHeadData.globalEncumbered)}
-                        </p>
-                    </div>
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">เบิกจ่ายจริงแล้ว</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">
-                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(planHeadData.globalSpent)}
-                        </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 border-t border-white/10 pt-6">
+                        <div className="bg-white/5 p-4 rounded-2xl">
+                            <span className="text-purple-200 text-xs block">งบจัดสรรทั้งหมด (Planned + Routine)</span>
+                            <span className="text-xl md:text-2xl font-black text-amber-300 mt-1 block">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalAllocatedAll)}
+                            </span>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-2xl">
+                            <span className="text-purple-200 text-xs block">เบิกจ่ายสะสมรวม (Spent)</span>
+                            <span className="text-xl md:text-2xl font-black text-red-300 mt-1 block">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalSpentAll)}
+                            </span>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-2xl">
+                            <span className="text-purple-200 text-xs block">งบประมาณคงเหลือรวมสุทธิ</span>
+                            <span className="text-xl md:text-2xl font-black text-emerald-300 mt-1 block">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalRemainingAll)}
+                            </span>
+                        </div>
                     </div>
                 </div>
+
+                {/* 2. Side-by-side comparison */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Project Budgets Card */}
+                    <div className="rounded-3xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-extrabold text-gray-800 text-base">📁 งบแผนงานโครงการ (Project Budgets)</h3>
+                            <span className="text-xs bg-purple-100 text-purple-800 px-2.5 py-0.5 rounded-full font-bold">ตามเสนออนุมัติ</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-2 text-center pt-2">
+                            <div className="p-2 bg-gray-50 rounded-xl">
+                                <span className="text-[10px] text-gray-500 block">จัดสรร</span>
+                                <span className="text-xs font-bold text-gray-800">
+                                    {new Intl.NumberFormat('th-TH').format(planHeadData.globalAllocated)}
+                                </span>
+                            </div>
+                            <div className="p-2 bg-gray-50 rounded-xl">
+                                <span className="text-[10px] text-gray-500 block">ผูกพัน</span>
+                                <span className="text-xs font-bold text-amber-600">
+                                    {new Intl.NumberFormat('th-TH').format(planHeadData.globalEncumbered)}
+                                </span>
+                            </div>
+                            <div className="p-2 bg-gray-50 rounded-xl">
+                                <span className="text-[10px] text-gray-500 block">เบิกจ่าย</span>
+                                <span className="text-xs font-bold text-red-600">
+                                    {new Intl.NumberFormat('th-TH').format(planHeadData.globalSpent)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5 pt-2">
+                            <div className="flex justify-between text-[11px] text-gray-500">
+                                <span>อัตราการเบิกจ่ายโครงการ</span>
+                                <span>
+                                    {planHeadData.globalAllocated > 0 ? ((planHeadData.globalSpent / planHeadData.globalAllocated) * 100).toFixed(1) : 0}%
+                                </span>
+                            </div>
+                            <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                <div 
+                                    className="bg-purple-600 h-full rounded-full" 
+                                    style={{ width: `${planHeadData.globalAllocated > 0 ? Math.min((planHeadData.globalSpent / planHeadData.globalAllocated) * 100, 100) : 0}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Routine Budgets Card */}
+                    <div className="rounded-3xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-extrabold text-gray-800 text-base">📅 งบประจำฝ่าย/วัสดุฝึก (Routine Budgets)</h3>
+                            <span className="text-xs bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full font-bold">จัดสรรย่อยโดยตรง</span>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-2 text-center pt-2">
+                            <div className="p-2 bg-gray-50 rounded-xl">
+                                <span className="text-[10px] text-gray-500 block">จัดสรร</span>
+                                <span className="text-xs font-bold text-gray-800">
+                                    {new Intl.NumberFormat('th-TH').format(routineAllocated)}
+                                </span>
+                            </div>
+                            <div className="p-2 bg-gray-50 rounded-xl">
+                                <span className="text-[10px] text-gray-500 block">เบิกจ่าย</span>
+                                <span className="text-xs font-bold text-red-600">
+                                    {new Intl.NumberFormat('th-TH').format(routineSpent)}
+                                </span>
+                            </div>
+                            <div className="p-2 bg-gray-50 rounded-xl">
+                                <span className="text-[10px] text-gray-500 block">คงเหลือ</span>
+                                <span className="text-xs font-bold text-emerald-600">
+                                    {new Intl.NumberFormat('th-TH').format(routineRemaining)}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5 pt-2">
+                            <div className="flex justify-between text-[11px] text-gray-500">
+                                <span>อัตราการเบิกจ่ายงบประจำ</span>
+                                <span>
+                                    {routineAllocated > 0 ? ((routineSpent / routineAllocated) * 100).toFixed(1) : 0}%
+                                </span>
+                            </div>
+                            <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                <div 
+                                    className="bg-amber-500 h-full rounded-full" 
+                                    style={{ width: `${routineAllocated > 0 ? Math.min((routineSpent / routineAllocated) * 100, 100) : 0}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Interactive Section: Routine Budgets Management */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Creation / Edit Form (For plan_head and admin) */}
+                    {isPlanHeadOrAdmin && (
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-purple-100/50 space-y-4 self-start">
+                            <h3 className="font-extrabold text-gray-800 text-sm">
+                                {editingRoutinePlan ? '✏️ แก้ไขแผนงบประมาณประจำปี' : '📅 สร้างแผนงบดำเนินงาน/ประจำปี'}
+                            </h3>
+                            <form onSubmit={handleRoutinePlanSubmit} className="space-y-4 text-xs">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ปีงบประมาณ</label>
+                                    <input
+                                        type="text"
+                                        value={routinePlanData.fiscal_year}
+                                        onChange={e => setRoutinePlanData('fiscal_year', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        placeholder="ตัวอย่าง 2569"
+                                        disabled={editingRoutinePlan}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ฝ่ายงาน / แผนกวิชาที่จัดสรร</label>
+                                    <select
+                                        value={routinePlanData.department_id}
+                                        onChange={e => setRoutinePlanData('department_id', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        disabled={editingRoutinePlan}
+                                    >
+                                        {allDepartments.map(dept => (
+                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ชื่อหมวดงบดำเนินงาน / งบประจำ</label>
+                                    <input
+                                        type="text"
+                                        value={routinePlanData.title}
+                                        onChange={e => setRoutinePlanData('title', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        placeholder="เช่น ค่าจัดซื้อวัสดุสำนักงาน, ค่าซ่อมแซมครุภัณฑ์"
+                                    />
+                                    {routinePlanErrors.title && <span className="text-red-500 text-[10px]">{routinePlanErrors.title}</span>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">จำนวนงบประมาณจัดสรร (บาท)</label>
+                                    <input
+                                        type="number"
+                                        value={routinePlanData.allocated_amount}
+                                        onChange={e => setRoutinePlanData('allocated_amount', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                        placeholder="เช่น 50000"
+                                    />
+                                    {routinePlanErrors.allocated_amount && <span className="text-red-500 text-[10px]">{routinePlanErrors.allocated_amount}</span>}
+                                </div>
+
+                                <div className="flex gap-2 pt-2">
+                                    <button
+                                        type="submit"
+                                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all"
+                                    >
+                                        {editingRoutinePlan ? '💾 บันทึกการแก้ไข' : '➕ บันทึกตั้งงบ'}
+                                    </button>
+                                    {editingRoutinePlan && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setEditingRoutinePlan(null);
+                                                resetRoutinePlan();
+                                            }}
+                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl transition-all"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                    )}
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {/* Routine Budgets List Table */}
+                    <div className={`${isPlanHeadOrAdmin ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4`}>
+                        <h3 className="font-extrabold text-gray-800 text-sm">📋 รายการแผนงบประมาณประจำปีทั้งหมดในระบบ</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
+                                        <th className="py-2.5 px-2">หมวดงบประจำปี / สังกัด</th>
+                                        <th className="py-2.5 px-2 text-right">จัดสรร</th>
+                                        <th className="py-2.5 px-2 text-right">เบิกจ่าย</th>
+                                        <th className="py-2.5 px-2 text-right">คงเหลือ</th>
+                                        <th className="py-2.5 px-2 text-center">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 text-[11px]">
+                                    {routinePlans.map((plan) => {
+                                        const alloc = parseFloat(plan.allocated_amount);
+                                        const spent = parseFloat(plan.spent_amount);
+                                        const rem = alloc - spent;
+                                        return (
+                                            <tr key={plan.id} className="hover:bg-gray-50/50">
+                                                <td className="py-3 px-2">
+                                                    <span className="font-bold text-gray-800 block">{plan.title}</span>
+                                                    <span className="text-[10px] text-gray-400">🏫 {plan.department?.name} (ปี {plan.fiscal_year})</span>
+                                                </td>
+                                                <td className="py-3 px-2 text-right font-semibold text-gray-800">{alloc.toLocaleString()}</td>
+                                                <td className="py-3 px-2 text-right text-red-500 font-semibold">{spent.toLocaleString()}</td>
+                                                <td className="py-3 px-2 text-right text-emerald-600 font-bold">{rem.toLocaleString()}</td>
+                                                <td className="py-3 px-2 text-center space-y-1 sm:space-y-0 sm:space-x-1 whitespace-nowrap">
+                                                    <button
+                                                        onClick={() => openRoutineProcurementModal(plan)}
+                                                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all"
+                                                    >
+                                                        🛒 ขอซื้อตรง
+                                                    </button>
+                                                    {plan.procurements?.length > 0 && (
+                                                        <button
+                                                            onClick={() => setViewingRoutineHistoryPlan(plan)}
+                                                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                        >
+                                                            ประวัติ ({plan.procurements.length})
+                                                        </button>
+                                                    )}
+                                                    {isPlanHeadOrAdmin && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingRoutinePlan(plan);
+                                                                    setRoutinePlanData({
+                                                                        fiscal_year: plan.fiscal_year,
+                                                                        department_id: plan.department_id,
+                                                                        title: plan.title,
+                                                                        allocated_amount: plan.allocated_amount,
+                                                                    });
+                                                                }}
+                                                                className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRoutinePlanDelete(plan.id)}
+                                                                className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {routinePlans.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-6 text-gray-400">ยังไม่มีงบดำเนินงานประจำปีใดๆ ในระบบ</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. Budget usage per department (Project-based) */}
+                <div className="rounded-3xl border border-purple-100 bg-white p-6 shadow-sm space-y-6">
+                    <h3 className="font-extrabold text-gray-800 text-base">🏫 ยอดใช้จ่ายงบประมาณสะสมรายฝ่าย/แผนก (งบดำเนินงาน)</h3>
+                    
+                    <div className="space-y-4">
+                        {allDepartments.map((dept) => {
+                            const deptRoutineAlloc = routinePlans
+                                .filter(p => p.department_id === dept.id)
+                                .reduce((sum, p) => sum + parseFloat(p.allocated_amount || 0), 0);
+                            
+                            const deptRoutineSpent = routinePlans
+                                .filter(p => p.department_id === dept.id)
+                                .reduce((sum, p) => sum + parseFloat(p.spent_amount || 0), 0);
+
+                            const deptTotalAlloc = deptRoutineAlloc;
+                            const deptTotalSpent = deptRoutineSpent;
+                            const deptRemaining = deptTotalAlloc - deptTotalSpent;
+                            const deptPercent = deptTotalAlloc > 0 ? (deptTotalSpent / deptTotalAlloc) * 100 : 0;
+
+                            return (
+                                <div key={dept.id} className="p-4 rounded-2xl bg-gray-50 border border-gray-100/50 space-y-2">
+                                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-1">
+                                        <div>
+                                            <span className="text-xs font-bold text-gray-800">{dept.name}</span>
+                                        </div>
+                                        <div className="text-right text-[11px]">
+                                            <span className="text-gray-500">ใช้จ่ายงบประจำแล้ว: </span>
+                                            <strong className="text-gray-900">{deptTotalSpent.toLocaleString()} / {deptTotalAlloc.toLocaleString()} บาท</strong>
+                                            <span className="text-gray-400"> (คงเหลือ: {deptRemaining.toLocaleString()} บาท)</span>
+                                        </div>
+                                    </div>
+
+                                    {deptTotalAlloc > 0 ? (
+                                        <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                                            <div 
+                                                className={`h-full rounded-full transition-all ${deptPercent > 80 ? 'bg-red-500' : deptPercent > 40 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                                                style={{ width: `${Math.min(deptPercent, 100)}%` }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div className="text-[10px] text-gray-400">ยังไม่มีงบดำเนินงานประจำปีจัดสรรให้ฝ่ายนี้</div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* 5. Funding sources breakdown cards */}
+                <div className="rounded-3xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
+                    <h3 className="font-extrabold text-gray-800 text-base">💵 งบจำแนกตามช่องทางเงินทุน (โครงการ)</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {planHeadData.fundingChannelProgress?.map((source) => (
+                            <div key={source.id} className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100/50 space-y-2">
+                                <span className="font-bold text-xs text-purple-900 block truncate">{source.name}</span>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-[10px] text-gray-500">
+                                        <span>แผนเสนอขอ:</span>
+                                        <span className="font-semibold text-gray-800">{parseFloat(source.allocated).toLocaleString()} บ.</span>
+                                    </div>
+                                    <div className="flex justify-between text-[10px] text-gray-500">
+                                        <span>เบิกจ่ายจริง:</span>
+                                        <span className="font-semibold text-red-600">{parseFloat(source.spent).toLocaleString()} บ.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* --- Modals --- */}
+                
+                {/* 5.1 Viewing Routine History Modal */}
+                {viewingRoutineHistoryPlan && (
+                    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex justify-center items-center p-4">
+                        <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 space-y-6 max-h-[85vh] overflow-y-auto shadow-2xl">
+                            <div className="flex justify-between items-center border-b pb-4">
+                                <div>
+                                    <h3 className="font-extrabold text-gray-800 text-lg">📋 ประวัติขอจัดซื้อจัดจ้างย่อย (งบประจำปี)</h3>
+                                    <p className="text-xs text-gray-400">หมวดงบ: {viewingRoutineHistoryPlan.title} ({viewingRoutineHistoryPlan.department?.name})</p>
+                                </div>
+                                <button
+                                    onClick={() => setViewingRoutineHistoryPlan(null)}
+                                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-black p-2 rounded-full w-8 h-8 flex items-center justify-center transition-all"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {viewingRoutineHistoryPlan.procurements?.map((proc) => {
+                                    const total = proc.items?.reduce((sum, item) => sum + (parseFloat(item.quantity) * parseFloat(item.unit_price)), 0) || 0;
+                                    return (
+                                        <div key={proc.id} className="p-5 rounded-2xl bg-gray-50 border border-gray-100 space-y-4">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                                <div>
+                                                    <span className="bg-purple-100 text-purple-900 font-bold px-2 py-0.5 rounded text-[10px]">
+                                                        {proc.procurement_number}
+                                                    </span>
+                                                    <h4 className="font-bold text-gray-800 text-xs sm:text-sm mt-1">{proc.memo_subject}</h4>
+                                                    <span className="text-[10px] text-gray-400 block sm:inline mt-1">
+                                                        📅 ทำรายการเมื่อ: {new Date(proc.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                                    </span>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-sm font-bold text-purple-900 block">
+                                                        รวมสุทธิ: {total.toLocaleString()} บาท
+                                                    </span>
+                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold inline-block mt-1">
+                                                        เบิกจ่ายสำเร็จ
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Sub items list */}
+                                            <div className="border-t border-dashed pt-3">
+                                                <h5 className="text-[10px] font-bold text-gray-500 uppercase mb-2">รายการพัสดุในเอกสาร:</h5>
+                                                <ul className="space-y-1 text-xs text-gray-700 pl-4 list-disc">
+                                                    {proc.items?.map((item, idx) => (
+                                                        <li key={idx}>
+                                                            {item.description} ({item.quantity.toLocaleString()} {item.unit} x {parseFloat(item.unit_price).toLocaleString()} บาท) = <strong>{parseFloat(item.total_price).toLocaleString()} บาท</strong>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            {/* Action links to download stubs */}
+                                            <div className="flex flex-wrap gap-2 pt-2">
+                                                <a
+                                                    href={route('routine_procurements.download_document', { procurement: proc.id, type: 'memo' })}
+                                                    target="_blank"
+                                                    className="bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all"
+                                                >
+                                                    📝 พิมพ์บันทึกข้อความ
+                                                </a>
+                                                <a
+                                                    href={route('routine_procurements.download_document', { procurement: proc.id, type: 'request_form' })}
+                                                    target="_blank"
+                                                    className="bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all"
+                                                >
+                                                    📄 ใบขอซื้อ/จ้าง
+                                                </a>
+                                                <a
+                                                    href={route('routine_procurements.download_document', { procurement: proc.id, type: 'estimation' })}
+                                                    target="_blank"
+                                                    className="bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all"
+                                                >
+                                                    📊 บัญชีแนบท้าย
+                                                </a>
+                                                <a
+                                                    href={route('routine_procurements.download_document', { procurement: proc.id, type: 'tor' })}
+                                                    target="_blank"
+                                                    className="bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all"
+                                                >
+                                                    📋 TOR
+                                                </a>
+                                                <button
+                                                    onClick={() => {
+                                                        setViewingRoutineHistoryPlan(null);
+                                                        openEditRoutineProcurementModal(viewingRoutineHistoryPlan, proc);
+                                                    }}
+                                                    className="bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all ml-auto"
+                                                >
+                                                    ✏️ แก้ไขใบพัสดุนี้
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 5.2 Creating Direct Routine Procurement Modal */}
+                {selectedRoutinePlanForProc && (
+                    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm flex justify-center items-center p-4">
+                        <div className="bg-white rounded-3xl max-w-4xl w-full p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+                            
+                            <div className="flex justify-between items-center border-b pb-4">
+                                <div>
+                                    <h3 className="font-extrabold text-gray-800 text-lg">🛍️ ขอจัดซื้อจัดจ้าง (ตัดงบประมาณประจำปี)</h3>
+                                    <p className="text-xs text-gray-400">
+                                        หมวดงบ: {selectedRoutinePlanForProc.title} | วงเงินคงเหลือคงคลัง: <strong>{(parseFloat(selectedRoutinePlanForProc.allocated_amount) - parseFloat(selectedRoutinePlanForProc.spent_amount)).toLocaleString()} บาท</strong>
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedRoutinePlanForProc(null)}
+                                    className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-black p-2 rounded-full w-8 h-8 flex items-center justify-center transition-all"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleRoutineProcurementSubmit} className="space-y-6 text-xs">
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">หัวข้อบันทึกข้อความขอซื้อ/จ้าง</label>
+                                        <input
+                                            type="text"
+                                            value={routineProcData.memo_subject}
+                                            onChange={e => setRoutineProcData('memo_subject', e.target.value)}
+                                            className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                            placeholder="เช่น ขออนุมัติจัดซื้อวัสดุคอมพิวเตอร์และอุปกรณ์เสริมสำหรับสำนักงาน"
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ขอบเขตงานหรือรายละเอียด TOR</label>
+                                        <textarea
+                                            value={routineProcData.tor_specifications}
+                                            onChange={e => setRoutineProcData('tor_specifications', e.target.value)}
+                                            className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                            rows="3"
+                                            placeholder="คำอธิบายขอบเขตความต้องการ เช่น รายละเอียดคุณสมบัติสินค้าหรือผู้รับจ้าง..."
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Items Section */}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="font-bold text-gray-800 text-[11px]">📦 รายการวัสดุ / สิ่งของที่จัดซื้อจัดจ้าง</h4>
+                                        <button
+                                            type="button"
+                                            onClick={addRoutineProcItem}
+                                            className="text-purple-600 hover:text-purple-800 text-[11px] font-bold"
+                                        >
+                                            ➕ เพิ่มรายการสินค้า
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {routineProcItems.map((item, idx) => (
+                                            <div key={idx} className="flex flex-col sm:flex-row gap-2 bg-gray-50 p-3 rounded-2xl border border-gray-100 items-end">
+                                                <div className="flex-1 w-full">
+                                                    <label className="block text-[9px] text-gray-500 mb-1">รายการ/รายละเอียดพัสดุ</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.description}
+                                                        onChange={e => updateRoutineProcItem(idx, 'description', e.target.value)}
+                                                        className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                        placeholder="เช่น กระดาษดับเบิ้ลเอ A4"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="w-20">
+                                                    <label className="block text-[9px] text-gray-500 mb-1">จำนวน</label>
+                                                    <input
+                                                        type="number"
+                                                        value={item.quantity}
+                                                        onChange={e => updateRoutineProcItem(idx, 'quantity', e.target.value)}
+                                                        className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                        min="0.01"
+                                                        step="0.01"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="w-20">
+                                                    <label className="block text-[9px] text-gray-500 mb-1">หน่วยนับ</label>
+                                                    <input
+                                                        type="text"
+                                                        value={item.unit}
+                                                        onChange={e => updateRoutineProcItem(idx, 'unit', e.target.value)}
+                                                        className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                        placeholder="รีม/เครื่อง"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="w-24">
+                                                    <label className="block text-[9px] text-gray-500 mb-1">ราคา/หน่วย (บาท)</label>
+                                                    <input
+                                                        type="number"
+                                                        value={item.unit_price}
+                                                        onChange={e => updateRoutineProcItem(idx, 'unit_price', e.target.value)}
+                                                        className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                        min="0"
+                                                        step="0.01"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div className="w-20 text-right py-2 text-[11px] font-bold text-gray-800">
+                                                    {(item.quantity * item.unit_price).toLocaleString()} บ.
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeRoutineProcItem(idx)}
+                                                    className="bg-red-50 hover:bg-red-100 text-red-700 p-2 rounded-xl"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="text-right font-extrabold text-xs text-purple-900 bg-purple-50 p-3 rounded-2xl">
+                                        รวมยอดรวมจัดซื้อจัดจ้างทั้งสิ้น: {calculateRoutineProcTotal().toLocaleString()} บาท
+                                    </div>
+                                </div>
+
+                                {/* Committee Section */}
+                                <div className="space-y-4 border-t pt-4">
+                                    <h4 className="font-bold text-gray-800 text-[11px]">👥 แต่งตั้งคณะกรรมการพัสดุ</h4>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {/* Purchasing Committee */}
+                                        <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100 space-y-3">
+                                            <h5 className="font-bold text-xs text-purple-900">👥 คณะกรรมการกำหนดราคากลาง/ซื้อจ้าง</h5>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-500 mb-1">ประธานกรรมการ</label>
+                                                <select
+                                                    value={routineProcData.purchasing_chair}
+                                                    onChange={e => setRoutineProcData('purchasing_chair', e.target.value)}
+                                                    className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                >
+                                                    <option value="">เลือกรายชื่อ...</option>
+                                                    {allUsers.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.position})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-500 mb-1">กรรมการคนที่ 1</label>
+                                                <select
+                                                    value={routineProcData.purchasing_member1}
+                                                    onChange={e => setRoutineProcData('purchasing_member1', e.target.value)}
+                                                    className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                >
+                                                    <option value="">เลือกรายชื่อ...</option>
+                                                    {allUsers.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.position})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-500 mb-1">กรรมการคนที่ 2</label>
+                                                <select
+                                                    value={routineProcData.purchasing_member2}
+                                                    onChange={e => setRoutineProcData('purchasing_member2', e.target.value)}
+                                                    className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                >
+                                                    <option value="">เลือกรายชื่อ...</option>
+                                                    {allUsers.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.position})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        {/* Inspection Committee */}
+                                        <div className="bg-gray-50 p-4 rounded-3xl border border-gray-100 space-y-3">
+                                            <h5 className="font-bold text-xs text-amber-800">👥 คณะกรรมการตรวจรับพัสดุ</h5>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-500 mb-1">ประธานกรรมการตรวจรับ</label>
+                                                <select
+                                                    value={routineProcData.inspection_chair}
+                                                    onChange={e => setRoutineProcData('inspection_chair', e.target.value)}
+                                                    className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                >
+                                                    <option value="">เลือกรายชื่อ...</option>
+                                                    {allUsers.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.position})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-500 mb-1">กรรมการคนที่ 1</label>
+                                                <select
+                                                    value={routineProcData.inspection_member1}
+                                                    onChange={e => setRoutineProcData('inspection_member1', e.target.value)}
+                                                    className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                >
+                                                    <option value="">เลือกรายชื่อ...</option>
+                                                    {allUsers.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.position})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] text-gray-500 mb-1">กรรมการคนที่ 2</label>
+                                                <select
+                                                    value={routineProcData.inspection_member2}
+                                                    onChange={e => setRoutineProcData('inspection_member2', e.target.value)}
+                                                    className="w-full text-xs rounded-lg border-gray-200 p-2"
+                                                >
+                                                    <option value="">เลือกรายชื่อ...</option>
+                                                    {allUsers.map(u => (
+                                                        <option key={u.id} value={u.id}>{u.name} ({u.position})</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-4 border-t pt-4">
+                                    <button
+                                        type="submit"
+                                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition-all"
+                                    >
+                                        💾 บันทึกจัดซื้อและตัดงบประมาณ
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedRoutinePlanForProc(null)}
+                                        className="bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs py-2.5 px-6 rounded-xl transition-all"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                </div>
+                            </form>
+
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };

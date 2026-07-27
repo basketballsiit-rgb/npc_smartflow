@@ -8,6 +8,7 @@ class Procurement extends Model
 {
     protected $fillable = [
         'project_id',
+        'routine_budget_plan_id',
         'procurement_number',
         'memo_date',
         'memo_subject',
@@ -31,6 +32,14 @@ class Procurement extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * Get the routine budget plan associated with this procurement.
+     */
+    public function routineBudgetPlan()
+    {
+        return $this->belongsTo(RoutineBudgetPlan::class);
     }
 
     /**

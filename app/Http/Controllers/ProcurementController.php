@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Project;
 use App\Models\Procurement;
 use App\Models\ProcurementItem;
+use App\Models\RoutineBudgetPlan;
 use Illuminate\Http\Request;
 
 class ProcurementController extends Controller
@@ -202,6 +203,131 @@ class ProcurementController extends Controller
             'project' => $project,
             'procurement' => $project->procurement,
             'items' => $project->procurement->items,
+            'purchasingCommittee' => $purchasingCommittee,
+            'inspectionCommittee' => $inspectionCommittee,
+        ]);
+    }
+
+    /**
+     * Save or update routine procurement items and committees.
+     */
+    public function saveRoutineProcurement(Request $request, RoutineBudgetPlan $routineBudget)
+    {
+        $validated = $request->validate([
+            'procurement_id' => 'nullable|exists:procurements,id',
+            'purchasing_chair' => 'nullable|exists:users,id',
+            'purchasing_member1' => 'nullable|exists:users,id',
+            'purchasing_member2' => 'nullable|exists:users,id',
+            'inspection_chair' => 'nullable|exists:users,id',
+            'inspection_member1' => 'nullable|exists:users,id',
+            'inspection_member2' => 'nullable|exists:users,id',
+            'tor_specifications' => 'nullable|string',
+            'memo_subject' => 'required|string|max:255',
+            'items' => 'required|array|min:1',
+            'items.*.description' => 'required|string',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit' => 'required|string',
+            'items.*.unit_price' => 'required|numeric|min:0',
+        ], [
+            'memo_subject.required' => 'กรุณาระบุหัวข้อเสนอซื้อ/จ้าง',
+            'items.required' => 'กรุณาระบุรายการพัสดุอย่างน้อย 1 รายการ',
+        ]);
+
+        $totalSum = 0;
+        foreach ($validated['items'] as $item) {
+            $totalSum += (floatval($item['quantity']) * floatval($item['unit_price']));
+        }
+
+        $remaining = floatval($routineBudget->allocated_amount) - floatval($routineBudget->spent_amount);
+        
+        $procurement = null;
+        $oldTotal = 0;
+        if (!empty($validated['procurement_id'])) {
+            $procurement = Procurement::find($validated['procurement_id']);
+            $oldTotal = $procurement->items()->sum('total_price');
+        }
+
+        if ($totalSum > ($remaining + $oldTotal + 0.01)) {
+            return redirect()->back()->with('error', 'ไม่สามารถบันทึกได้: ยอดเงินรวมจัดซื้อจัดจ้าง (' . number_format($totalSum, 2) . ' บาท) เกินวงเงินคงเหลือในแผนงบประมาณ (' . number_format($remaining + $oldTotal, 2) . ' บาท)');
+        }
+
+        if (!$procurement) {
+            $procurement = new Procurement();
+            $procurement->routine_budget_plan_id = $routineBudget->id;
+            $procurement->status = 'completed';
+            $procurement->procurement_number = 'PR-RT-' . str_pad($routineBudget->id . '-' . time(), 8, '0', STR_PAD_LEFT);
+        }
+
+        $procurement->memo_subject = $validated['memo_subject'];
+        $procurement->memo_date = now();
+        $procurement->tor_specifications = $validated['tor_specifications'] ?? '';
+        $procurement->save();
+
+        $syncData = [];
+        if (!empty($validated['purchasing_chair'])) {
+            $syncData[$validated['purchasing_chair']] = ['committee_type' => 'purchasing', 'role' => 'chairperson'];
+        }
+        if (!empty($validated['purchasing_member1'])) {
+            $syncData[$validated['purchasing_member1']] = ['committee_type' => 'purchasing', 'role' => 'member'];
+        }
+        if (!empty($validated['purchasing_member2'])) {
+            $syncData[$validated['purchasing_member2']] = ['committee_type' => 'purchasing', 'role' => 'member'];
+        }
+        if (!empty($validated['inspection_chair'])) {
+            $syncData[$validated['inspection_chair']] = ['committee_type' => 'inspection', 'role' => 'chairperson'];
+        }
+        if (!empty($validated['inspection_member1'])) {
+            $syncData[$validated['inspection_member1']] = ['committee_type' => 'inspection', 'role' => 'member'];
+        }
+        if (!empty($validated['inspection_member2'])) {
+            $syncData[$validated['inspection_member2']] = ['committee_type' => 'inspection', 'role' => 'member'];
+        }
+
+        if (!empty($syncData)) {
+            $procurement->committees()->sync($syncData);
+        }
+
+        $procurement->items()->delete();
+        foreach ($validated['items'] as $item) {
+            $procurement->items()->create([
+                'description' => $item['description'],
+                'quantity' => $item['quantity'],
+                'unit' => $item['unit'],
+                'unit_price' => $item['unit_price'],
+                'total_price' => floatval($item['quantity']) * floatval($item['unit_price']),
+            ]);
+        }
+
+        $routineBudget->spent_amount = ($routineBudget->spent_amount - $oldTotal) + $totalSum;
+        $routineBudget->save();
+
+        return redirect()->back()->with('message', 'บันทึกข้อมูลและเบิกตัดแผนงบประมาณประจำปีเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Download or view the dynamic HTML/PDF stub for routine procurement documents.
+     */
+    public function downloadRoutineDocument(Procurement $procurement, $type)
+    {
+        $procurement->load(['routineBudgetPlan.department', 'items', 'committees']);
+
+        if (!in_array($type, ['memo', 'request_form', 'estimation', 'tor'])) {
+            abort(404);
+        }
+
+        $purchasingCommittee = $procurement->purchasingCommittee()->get();
+        $inspectionCommittee = $procurement->inspectionCommittee()->get();
+
+        $project = new Project();
+        $project->title = $procurement->memo_subject;
+        $project->estimated_budget = $procurement->items()->sum('total_price');
+        $project->department = $procurement->routineBudgetPlan?->department;
+        $project->user = auth()->user();
+
+        return view("procurements.{$type}", [
+            'project' => $project,
+            'procurement' => $procurement,
+            'items' => $procurement->items,
             'purchasingCommittee' => $purchasingCommittee,
             'inspectionCommittee' => $inspectionCommittee,
         ]);

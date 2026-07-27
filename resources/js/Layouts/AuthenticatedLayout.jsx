@@ -265,6 +265,19 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className="text-sm">📋</span>
                                     {isSidebarOpen && <span>โครงการของฉัน</span>}
                                 </Link>
+                                <Link
+                                    href={route('admin.routine_budgets.index')}
+                                    className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
+                                        url.includes('routine-budgets') && !isPlanHead
+                                            ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
+                                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
+                                    }`}
+                                    title="งบดำเนินงานประจำปี & จัดซื้อจัดจ้างตรง"
+                                >
+                                    <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                    <span className="text-sm">📅</span>
+                                    {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
+                                </Link>
                             </div>
                         </div>
 
@@ -293,6 +306,19 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
                                         <span className="text-sm">💰</span>
                                         {isSidebarOpen && <span>งบประมาณสถานศึกษา</span>}
+                                    </Link>
+                                    <Link
+                                        href={route('admin.routine_budgets.index')}
+                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
+                                            url.includes('routine-budgets')
+                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
+                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
+                                        }`}
+                                        title="แผนงบดำเนินงานประจำปี & แดชบอร์ด"
+                                    >
+                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className="text-sm">📅</span>
+                                        {isSidebarOpen && <span>งบประจำปี & แดชบอร์ด</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'reviews' })}

@@ -34,6 +34,18 @@ class DashboardController extends Controller
         $data['allRoles'] = Role::all();
         $data['allDepartments'] = Department::all();
         $data['systemSettings'] = SystemSetting::all();
+        $data['allUsers'] = User::where('is_active', true)->orderBy('name', 'asc')->get();
+
+        // Fetch routine budget plans based on permissions
+        if ($user->isAdmin() || $user->isPlanHead()) {
+            $data['routinePlans'] = \App\Models\RoutineBudgetPlan::with(['department', 'procurements.items', 'procurements.committees'])->latest()->get();
+        } else {
+            $deptIds = $user->getResponsibleDepartmentIds();
+            $data['routinePlans'] = \App\Models\RoutineBudgetPlan::whereIn('department_id', $deptIds)
+                ->with(['department', 'procurements.items', 'procurements.committees'])
+                ->latest()
+                ->get();
+        }
 
         // 0. Admin Dashboard Data
         if ($user->isAdmin()) {

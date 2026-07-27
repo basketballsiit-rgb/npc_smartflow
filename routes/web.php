@@ -12,6 +12,7 @@ use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\AppendixController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\RoutineBudgetController;
 use App\Http\Controllers\Auth\KeycloakController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -70,6 +71,14 @@ Route::middleware('auth')->group(function () {
     Route::patch('/admin/users/{user}/toggle', [AdminController::class, 'toggleUserStatus'])->name('admin.users.toggle');
     Route::delete('/admin/users/{user}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
     Route::post('/admin/settings', [AdminController::class, 'updateSettings'])->name('admin.settings.update');
+
+    // Admin & Plan Head Routine Budget Routes
+    Route::get('/admin/routine-budgets', [RoutineBudgetController::class, 'index'])->name('admin.routine_budgets.index');
+    Route::post('/admin/routine-budgets', [RoutineBudgetController::class, 'store'])->name('admin.routine_budgets.store');
+    Route::put('/admin/routine-budgets/{routineBudget}', [RoutineBudgetController::class, 'update'])->name('admin.routine_budgets.update');
+    Route::delete('/admin/routine-budgets/{routineBudget}', [RoutineBudgetController::class, 'destroy'])->name('admin.routine_budgets.destroy');
+    Route::post('/routine-budgets/{routineBudget}/procurement/save', [ProcurementController::class, 'saveRoutineProcurement'])->name('routine_procurements.save');
+    Route::get('/routine-budgets/procurement/{procurement}/document/{type}', [ProcurementController::class, 'downloadRoutineDocument'])->name('routine_procurements.download_document');
 
     Route::post('/admin/departments', [AdminController::class, 'storeDepartment'])->name('admin.departments.store');
     Route::put('/admin/departments/{department}', [AdminController::class, 'updateDepartment'])->name('admin.departments.update');
