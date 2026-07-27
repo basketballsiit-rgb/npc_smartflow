@@ -142,7 +142,11 @@ export default function AuthenticatedLayout({ header, children }) {
                     } hidden sm:flex`}
                 >
                     {/* Upper Navigation Menu List */}
-                    <div className="p-3 space-y-2 font-sans overflow-y-auto max-h-[calc(100vh-8rem)]">
+                    <div
+                        scroll-region="true"
+                        data-inertia-scroll-region="true"
+                        className="p-3 space-y-2 font-sans overflow-y-auto max-h-[calc(100vh-8rem)]"
+                    >
                         
                         {/* 0. MAIN DASHBOARD HOME ENTRY */}
                         <Link
