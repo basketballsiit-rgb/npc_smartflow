@@ -4,7 +4,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { auth } = usePage().props;
+    const { auth, asset_url } = usePage().props;
     const user = auth.user;
     const url = usePage().url || '';
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -59,10 +59,10 @@ export default function AuthenticatedLayout({ header, children }) {
                             {/* App Logo & Title */}
                             <Link href={route('dashboard')} className="flex items-center gap-x-2.5">
                                 <img
-                                    src="/LogoNPC_PNG.png"
+                                    src={`${asset_url || '/'}LogoNPC_PNG.png`}
                                     alt="NPC Logo"
                                     className="h-10 w-auto drop-shadow-sm"
-                                    onError={(e) => { e.target.onerror = null; e.target.src = '/build/assets/ApplicationLogo.png'; }}
+                                    onError={(e) => { e.target.onerror = null; e.target.src = `${asset_url || '/'}build/assets/ApplicationLogo.png`; }}
                                 />
                                 <div className="flex flex-col">
                                     <span className="font-semibold text-purple-950 text-base leading-tight tracking-tight">
