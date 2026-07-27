@@ -54,7 +54,7 @@ export default function Login({ status, canResetPassword }) {
                 <div className="relative z-10 p-10">
                     <div className="flex items-center gap-3">
                         <img
-                            src="LogoNPC_PNG.png"
+                            src="/LogoNPC_PNG.png"
                             alt="NPC Logo"
                             className="h-12 w-12 object-contain drop-shadow-lg"
                         />
@@ -80,7 +80,7 @@ export default function Login({ status, canResetPassword }) {
                             }}
                         >
                             <img
-                                src="LogoNPC_PNG.png"
+                                src="/LogoNPC_PNG.png"
                                 alt="NPC Logo"
                                 className="w-full h-full object-contain drop-shadow-xl"
                             />
@@ -123,7 +123,7 @@ export default function Login({ status, canResetPassword }) {
 
                     {/* Mobile Logo (hidden on large screens) */}
                     <div className="flex justify-center mb-8 lg:hidden">
-                        <img src="LogoNPC_PNG.png" alt="NPC Logo" className="h-16 w-16 object-contain" />
+                        <img src="/LogoNPC_PNG.png" alt="NPC Logo" className="h-16 w-16 object-contain" />
                     </div>
 
                     {/* Heading */}
