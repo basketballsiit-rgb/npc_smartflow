@@ -1,7 +1,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
     const { auth, asset_url } = usePage().props;
@@ -9,6 +9,20 @@ export default function AuthenticatedLayout({ header, children }) {
     const url = usePage().url || '';
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [showingMobileMenu, setShowingMobileMenu] = useState(false);
+
+    const sidebarScrollRef = useRef(null);
+
+    // Restore scroll position on mount and whenever url changes
+    useEffect(() => {
+        const savedScroll = sessionStorage.getItem('sidebar-scroll');
+        if (savedScroll && sidebarScrollRef.current) {
+            sidebarScrollRef.current.scrollTop = parseInt(savedScroll, 10);
+        }
+    }, [url]);
+
+    const handleSidebarScroll = (e) => {
+        sessionStorage.setItem('sidebar-scroll', e.target.scrollTop);
+    };
 
     const userRoleName = user?.role?.name || (typeof user?.role === 'string' ? user.role : '');
     const isAdmin = user?.is_admin || userRoleName === 'admin';
@@ -143,6 +157,8 @@ export default function AuthenticatedLayout({ header, children }) {
                 >
                     {/* Upper Navigation Menu List */}
                     <div
+                        ref={sidebarScrollRef}
+                        onScroll={handleSidebarScroll}
                         scroll-region="true"
                         data-inertia-scroll-region="true"
                         className="p-3 space-y-2 font-sans overflow-y-auto max-h-[calc(100vh-8rem)]"
