@@ -33,7 +33,7 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
-            'asset_url' => asset(''),
+            'asset_url' => $request->getBaseUrl() . '/',
             'auth' => [
                 'user' => $user ? [
                     'id'              => $user->id,
