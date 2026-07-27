@@ -13,6 +13,8 @@ class RoutineBudgetPlan extends Model
         'allocated_amount',
         'encumbered_amount',
         'spent_amount',
+        'funding_source_id',
+        'report_category',
     ];
 
     /**
@@ -41,5 +43,13 @@ class RoutineBudgetPlan extends Model
     public function procurements()
     {
         return $this->hasMany(Procurement::class);
+    }
+
+    /**
+     * Get the funding source for this routine budget plan.
+     */
+    public function fundingSource()
+    {
+        return $this->belongsTo(FundingSource::class);
     }
 }

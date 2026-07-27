@@ -188,9 +188,13 @@ class DatabaseSeeder extends Seeder
 
         // 6. Seed Funding Sources
         $funding = [
-            ['name' => 'Revenue (เงินรายได้สถานศึกษา)', 'code' => 'REVENUE', 'description' => 'School tuition and training fees.'],
-            ['name' => 'Government Budget (เงินงบประมาณแผ่นดิน)', 'code' => 'GOV_BUDGET', 'description' => 'Annual government subsidies.'],
-            ['name' => 'Donation / Special Funds (เงินบริจาค/เงินสนับสนุนพิเศษ)', 'code' => 'DONATION', 'description' => 'Specific CSR or external donations.'],
+            ['name' => 'ปวช.', 'code' => 'VEC_CERT', 'description' => 'งบดำเนินงาน ปวช.'],
+            ['name' => 'ปวส.', 'code' => 'VEC_DIP', 'description' => 'งบดำเนินงาน ปวส.'],
+            ['name' => 'ระยะสั้น', 'code' => 'SHORT_COURSE', 'description' => 'งบดำเนินงาน ระยะสั้น'],
+            ['name' => 'งบทวิศึกษา', 'code' => 'DUAL_EDU', 'description' => 'งบทวิศึกษา'],
+            ['name' => 'อุดหนุนเพื่อการจัดการฯ', 'code' => 'MANAGEMENT_SUBSIDY', 'description' => 'อุดหนุนเพื่อการจัดการศึกษา'],
+            ['name' => 'อุดหนุนพัฒนาฯ', 'code' => 'DEVELOPMENT_SUBSIDY', 'description' => 'อุดหนุนพัฒนาสถานศึกษา/นักศึกษา'],
+            ['name' => 'บกศ.', 'code' => 'LOCAL_INCOME', 'description' => 'เงินบำรุงการศึกษา (บกศ.)'],
         ];
         foreach ($funding as $item) {
             FundingSource::firstOrCreate(['code' => $item['code']], $item);

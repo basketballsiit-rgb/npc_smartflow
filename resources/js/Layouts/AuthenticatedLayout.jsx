@@ -321,6 +321,19 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>งบประจำปี & แดชบอร์ด</span>}
                                     </Link>
                                     <Link
+                                        href={route('dashboard', { tab: 'action_plan_report' })}
+                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
+                                            url.includes('tab=action_plan_report')
+                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
+                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
+                                        }`}
+                                        title="รายงานงบรายจ่ายแผนปฏิบัติราชการ"
+                                    >
+                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className="text-sm">📊</span>
+                                        {isSidebarOpen && <span>รายงานแผนปฏิบัติราชการ</span>}
+                                    </Link>
+                                    <Link
                                         href={route('dashboard', { tab: 'reviews' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                             url.includes('tab=reviews')
@@ -418,6 +431,19 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
                                         <span className="text-sm">📈</span>
                                         {isSidebarOpen && <span>ภาพรวม ๔ ฝ่ายหลัก</span>}
+                                    </Link>
+                                    <Link
+                                        href={route('dashboard', { tab: 'action_plan_report' })}
+                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
+                                            url.includes('tab=action_plan_report')
+                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
+                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
+                                        }`}
+                                        title="รายงานงบรายจ่ายแผนปฏิบัติราชการ"
+                                    >
+                                        <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                        <span className="text-sm">📊</span>
+                                        {isSidebarOpen && <span>รายงานแผนปฏิบัติราชการ</span>}
                                     </Link>
                                 </div>
                             </div>

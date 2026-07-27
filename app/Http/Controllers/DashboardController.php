@@ -38,11 +38,11 @@ class DashboardController extends Controller
 
         // Fetch routine budget plans based on permissions
         if ($user->isAdmin() || $user->isPlanHead()) {
-            $data['routinePlans'] = \App\Models\RoutineBudgetPlan::with(['department', 'procurements.items', 'procurements.committees'])->latest()->get();
+            $data['routinePlans'] = \App\Models\RoutineBudgetPlan::with(['department', 'procurements.items', 'procurements.committees', 'fundingSource'])->latest()->get();
         } else {
             $deptIds = $user->getResponsibleDepartmentIds();
             $data['routinePlans'] = \App\Models\RoutineBudgetPlan::whereIn('department_id', $deptIds)
-                ->with(['department', 'procurements.items', 'procurements.committees'])
+                ->with(['department', 'procurements.items', 'procurements.committees', 'fundingSource'])
                 ->latest()
                 ->get();
         }
@@ -262,6 +262,8 @@ class DashboardController extends Controller
                         'department_name' => $p->department?->name ?? 'ฝ่ายงานทั่วไป',
                         'department_id' => $p->department_id,
                         'funding_source_name' => $p->budget?->fundingSource?->name ?? 'ยังไม่จัดสรร',
+                        'funding_source_id' => $p->budget?->funding_source_id,
+                        'allocated_amount' => (float)($p->budget?->allocated_amount ?? 0),
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
                     ];
                 });

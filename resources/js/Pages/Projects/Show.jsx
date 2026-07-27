@@ -840,7 +840,7 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
                                     <span className="text-xs font-bold uppercase text-purple-800">แหล่งเงินงบประมาณ</span>
-                                    <p className="text-base font-black text-purple-950 mt-1">{project.budget?.fundingSource?.name || 'เงินรายได้สถานศึกษา (Revenue)'}</p>
+                                    <p className="text-base font-black text-purple-950 mt-1">{project.budget?.fundingSource?.name || 'ยังไม่ระบุแหล่งเงินทุน'}</p>
                                 </div>
                                 <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
                                     <span className="text-xs font-bold uppercase text-emerald-800">วงเงินงบประมาณที่ได้รับการอนุมัติ</span>

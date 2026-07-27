@@ -32,6 +32,8 @@ export default function Dashboard({
         department_id: allDepartments[0]?.id || '',
         title: '',
         allocated_amount: '',
+        funding_source_id: '',
+        report_category: '',
     });
 
     // Form for Direct Procurement request
@@ -2203,6 +2205,77 @@ export default function Dashboard({
                                 </div>
 
                                 <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">แหล่งเงินทุน</label>
+                                    <select
+                                        value={routinePlanData.funding_source_id}
+                                        onChange={e => setRoutinePlanData('funding_source_id', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                    >
+                                        <option value="">เลือกแหล่งเงินทุน...</option>
+                                        {planHeadData?.fundingSources?.map(src => (
+                                            <option key={src.id} value={src.id}>{src.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">หมวดรายจ่ายตามแผนปฏิบัติราชการ</label>
+                                    <select
+                                        value={routinePlanData.report_category}
+                                        onChange={e => setRoutinePlanData('report_category', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                    >
+                                        <option value="">เลือกหมวดรายจ่ายในรายงาน...</option>
+                                        <optgroup label="1. งบบุคลากร">
+                                            <option value="1.1">1.1 ครูอัตราจ้าง 6 อัตรา</option>
+                                            <option value="1.2">1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง 9 อัตรา</option>
+                                            <option value="1.3">1.3 เจ้าหน้าที่ 15 อัตรา</option>
+                                            <option value="1.4">1.4 ค่าสมทบประกันสังคมของเจ้าหน้าที่ 16 อัตรา</option>
+                                        </optgroup>
+                                        <optgroup label="2. งบดำเนินงาน">
+                                            <option value="2.1.1">2.1.1 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                            <option value="2.1.2">2.1.2 ค่าตอบแทนสอนเกินภาระงานครู</option>
+                                            <option value="2.1.3">2.1.3 ค่าตอบแทนครูสอนระยะสั้นรายชั่วโมง 7 ราย</option>
+                                            <option value="2.1.4">2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ</option>
+                                            <option value="2.2.1">2.2.1 ค่าเดินทางไปราชการ</option>
+                                            <option value="2.2.2">2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง</option>
+                                            <option value="2.2.3">2.2.3 ค่าซ่อมแซมครุภัณฑ์</option>
+                                            <option value="2.2.4">2.2.4 ค่าขยะและสิ่งปฏิกูล</option>
+                                            <option value="2.2.5">2.2.5 ค่าโฆษณาและเผยแพร่</option>
+                                        </optgroup>
+                                        <optgroup label="3. ค่าวัสดุ">
+                                            <option value="3.1">3.1 วัสดุงานอาคาร</option>
+                                            <option value="3.2.1">3.2.1 วัสดุสำนักงาน - ฝ่ายวิชาการ</option>
+                                            <option value="3.2.2">3.2.2 วัสดุสำนักงาน - ฝ่ายพัฒนากิจการนักเรียนนักศึกษา</option>
+                                            <option value="3.2.3">3.2.3 วัสดุสำนักงาน - ฝ่ายบริหารทรัพยากร</option>
+                                            <option value="3.2.4">3.2.4 วัสดุสำนักงาน - ฝ่ายแผนฯ</option>
+                                            <option value="3.3">3.3 วัสดุเชื้อเพลิงและหล่อลื่น</option>
+                                        </optgroup>
+                                        <optgroup label="4. วัสดุการศึกษา">
+                                            <option value="4.1">4.1 หลักสูตรวิชาชีพระยะสั้น</option>
+                                            <option value="4.2">4.2 สาขาวิชาช่างยนต์</option>
+                                            <option value="4.3">4.3 สาขาวิชาไฟฟ้ากำลัง</option>
+                                            <option value="4.4">4.4 สาขาวิชาเทคนิคพื้นฐาน</option>
+                                            <option value="4.5">4.5 สาขาวิชาอิเล็กทรอนิกส์</option>
+                                            <option value="4.6">4.6 สาขาวิชาการบัญชี</option>
+                                            <option value="4.7">4.7 สาขาวิชาการตลาด</option>
+                                            <option value="4.8">4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ</option>
+                                            <option value="4.9">4.9 แผนกสามัญสัมพันธ์</option>
+                                        </optgroup>
+                                        <optgroup label="5. ค่าสาธารณูปโภค">
+                                            <option value="5.1">5.1 ค่าไฟฟ้า</option>
+                                            <option value="5.2">5.2 ค่าน้ำประปา</option>
+                                            <option value="5.3">5.3 ค่าโทรศัพท์</option>
+                                            <option value="5.4">5.4 ค่าไปรษณีย์โทรเลข</option>
+                                            <option value="5.5">5.5 ค่าบริการด้านสื่อสารโทรคมนาคม</option>
+                                        </optgroup>
+                                        <optgroup label="7. สำรองจ่าย">
+                                            <option value="7.1">7.1 สำรองจ่าย</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+
+                                <div>
                                     <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">จำนวนงบประมาณจัดสรร (บาท)</label>
                                     <input
                                         type="number"
@@ -2291,6 +2364,8 @@ export default function Dashboard({
                                                                         department_id: plan.department_id,
                                                                         title: plan.title,
                                                                         allocated_amount: plan.allocated_amount,
+                                                                        funding_source_id: plan.funding_source_id || '',
+                                                                        report_category: plan.report_category || '',
                                                                     });
                                                                 }}
                                                                 className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
@@ -2735,6 +2810,401 @@ export default function Dashboard({
                         </div>
                     </div>
                 )}
+            </div>
+        );
+    };
+
+    const renderActionPlanReportTab = () => {
+        const getColumnIndexBySourceName = (name) => {
+            if (!name) return -1;
+            const lowercaseName = name.toLowerCase();
+            if (lowercaseName.includes('ปวช') || lowercaseName.includes('ป.ว.ช')) return 0;
+            if (lowercaseName.includes('ปวส') || lowercaseName.includes('ป.ว.ส')) return 1;
+            if (lowercaseName.includes('ระยะสั้น')) return 2;
+            if (lowercaseName.includes('ทวิศึกษา')) return 3;
+            if (lowercaseName.includes('จัดการ')) return 4;
+            if (lowercaseName.includes('พัฒนา')) return 5;
+            if (lowercaseName.includes('บกศ') || lowercaseName.includes('บ.ก.ศ') || lowercaseName.includes('บำรุงการศึกษา')) return 6;
+            return -1;
+        };
+
+        const reportStructure = [
+            { id: '1', title: '1. งบบุคลากร', isParent: true },
+            { id: '1.1', title: '1.1 ครูอัตราจ้าง 6 อัตรา', parentId: '1' },
+            { id: '1.2', title: '1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง 9 อัตรา', parentId: '1' },
+            { id: '1.3', title: '1.3 เจ้าหน้าที่ 15 อัตรา', parentId: '1' },
+            { id: '1.4', title: '1.4 ค่าสมทบประกันสังคมของเจ้าหน้าที่ 16 อัตรา', parentId: '1' },
+            { id: '2', title: '2. งบดำเนินงาน', isParent: true },
+            { id: '2.1', title: '2.1 ค่าตอบแทน', isSubParent: true, parentId: '2' },
+            { id: '2.1.1', title: '2.1.1 จ้างเหมาบริการเจ้าหน้าที่', parentId: '2.1' },
+            { id: '2.1.2', title: '2.1.2 ค่าตอบแทนสอนเกินภาระงานครู', parentId: '2.1' },
+            { id: '2.1.3', title: '2.1.3 ค่าตอบแทนครูสอนระยะสั้นรายชั่วโมง 7 ราย', parentId: '2.1' },
+            { id: '2.1.4', title: '2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ', parentId: '2.1' },
+            { id: '2.2', title: '2.2 ค่าใช้สอย', isSubParent: true, parentId: '2' },
+            { id: '2.2.1', title: '2.2.1 ค่าเดินทางไปราชการ', parentId: '2.2' },
+            { id: '2.2.2', title: '2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง', parentId: '2.2' },
+            { id: '2.2.3', title: '2.2.3 ค่าซ่อมแซมครุภัณฑ์', parentId: '2.2' },
+            { id: '2.2.4', title: '2.2.4 ค่าขยะและสิ่งปฏิกูล', parentId: '2.2' },
+            { id: '2.2.5', title: '2.2.5 ค่าโฆษณาและเผยแพร่', parentId: '2.2' },
+            { id: '3', title: '3. ค่าวัสดุ', isParent: true },
+            { id: '3.1', title: '3.1 วัสดุงานอาคาร', parentId: '3' },
+            { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSubParent: true, parentId: '3' },
+            { id: '3.2.1', title: 'ฝ่ายวิชาการ', parentId: '3.2' },
+            { id: '3.2.2', title: 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', parentId: '3.2' },
+            { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', parentId: '3.2' },
+            { id: '3.2.4', title: 'ฝ่ายแผนฯ', parentId: '3.2' },
+            { id: '3.3', title: '3.3 วัสดุเชื้อเพลิงและหล่อลื่น', parentId: '3' },
+            { id: '4', title: '4. วัสดุการศึกษา', isParent: true },
+            { id: '4.1', title: '4.1 หลักสูตรวิชาชีพระยะสั้น', parentId: '4' },
+            { id: '4.2', title: '4.2 สาขาวิชาช่างยนต์', parentId: '4' },
+            { id: '4.3', title: '4.3 สาขาวิชาไฟฟ้ากำลัง', parentId: '4' },
+            { id: '4.4', title: '4.4 สาขาวิชาเทคนิคพื้นฐาน', parentId: '4' },
+            { id: '4.5', title: '4.5 สาขาวิชาอิเล็กทรอนิกส์', parentId: '4' },
+            { id: '4.6', title: '4.6 สาขาวิชาการบัญชี', parentId: '4' },
+            { id: '4.7', title: '4.7 สาขาวิชาการตลาด', parentId: '4' },
+            { id: '4.8', title: '4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ', parentId: '4' },
+            { id: '4.9', title: '4.9 แผนกสามัญสัมพันธ์', parentId: '4' },
+            { id: '5', title: '5. ค่าสาธารณูปโภค', isParent: true },
+            { id: '5.1', title: '5.1 ค่าไฟฟ้า', parentId: '5' },
+            { id: '5.2', title: '5.2 ค่าน้ำประปา', parentId: '5' },
+            { id: '5.3', title: '5.3 ค่าโทรศัพท์', parentId: '5' },
+            { id: '5.4', title: '5.4 ค่าไปรษณีย์โทรเลข', parentId: '5' },
+            { id: '5.5', title: '5.5 ค่าบริการด้านสื่อสารโทรคมนาคม', parentId: '5' },
+            { id: '6', title: '6. โครงการ', isParent: true },
+            { id: '6.1', title: '6.1 โครงการฝ่ายวิชาการ', parentId: '6' },
+            { id: '6.2', title: '6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา', parentId: '6' },
+            { id: '6.3', title: '6.3 โครงการฝ่ายบริหารทรัพยากร', parentId: '6' },
+            { id: '6.4', title: '6.4 โครงการฝ่ายแผนงานและความร่วมมือ', parentId: '6' },
+            { id: '7', title: '7. สำรองจ่าย', isParent: true },
+            { id: '7.1', title: '7.1 สำรองจ่าย', parentId: '7' }
+        ];
+
+        // Initialize rowData mapping
+        const rowData = {};
+        reportStructure.forEach(item => {
+            rowData[item.id] = {
+                id: item.id,
+                title: item.title,
+                isParent: item.isParent,
+                isSubParent: item.isSubParent,
+                planBudget: 0,
+                spentBySource: Array(7).fill(0),
+            };
+        });
+
+        // 3. Populate Routine Budget Plans
+        routinePlans.forEach(plan => {
+            const cat = plan.report_category;
+            if (!cat || !rowData[cat]) return;
+
+            const alloc = parseFloat(plan.allocated_amount || 0);
+            const spent = parseFloat(plan.spent_amount || 0);
+
+            // Add to planned budget
+            rowData[cat].planBudget += alloc;
+
+            // Resolve funding source column
+            const sourceName = plan.funding_source?.name;
+            const colIdx = getColumnIndexBySourceName(sourceName);
+            if (colIdx !== -1) {
+                rowData[cat].spentBySource[colIdx] += spent;
+            }
+        });
+
+        // 4. Populate Projects (Row 6.1 - 6.4)
+        allProjectsMaster.forEach(p => {
+            if (p.status !== 'approved') return;
+
+            // Resolve report category based on project's department
+            let cat = null;
+            if (p.department_name?.includes('วิชาการ')) cat = '6.1';
+            else if (p.department_name?.includes('พัฒนากิจการ') || p.department_name?.includes('นักเรียน')) cat = '6.2';
+            else if (p.department_name?.includes('บริหาร') || p.department_name?.includes('พัสดุ') || p.department_name?.includes('บริหารทรัพยากร')) cat = '6.3';
+            else if (p.department_name?.includes('วางแผน') || p.department_name?.includes('แผน')) cat = '6.4';
+            else cat = '6.1'; // fallback
+
+            const alloc = parseFloat(p.allocated_amount || 0);
+            const spent = parseFloat(p.spent_amount || 0);
+
+            rowData[cat].planBudget += alloc;
+
+            const colIdx = getColumnIndexBySourceName(p.funding_source_name);
+            if (colIdx !== -1) {
+                rowData[cat].spentBySource[colIdx] += spent;
+            }
+        });
+
+        // 5. Aggregate Parent Rows
+        const aggregate = (parentKey, childKeys) => {
+            childKeys.forEach(k => {
+                if (rowData[k]) {
+                    rowData[parentKey].planBudget += rowData[k].planBudget;
+                    for (let i = 0; i < 7; i++) {
+                        rowData[parentKey].spentBySource[i] += rowData[k].spentBySource[i];
+                    }
+                }
+            });
+        };
+
+        // Subparents first
+        aggregate('2.1', ['2.1.1', '2.1.2', '2.1.3', '2.1.4']);
+        aggregate('2.2', ['2.2.1', '2.2.2', '2.2.3', '2.2.4', '2.2.5']);
+        aggregate('3.2', ['3.2.1', '3.2.2', '3.2.3', '3.2.4']);
+
+        // Main parents
+        aggregate('1', ['1.1', '1.2', '1.3', '1.4']);
+        aggregate('2', ['2.1', '2.2']);
+        aggregate('3', ['3.1', '3.2', '3.3']);
+        aggregate('4', ['4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8', '4.9']);
+        aggregate('5', ['5.1', '5.2', '5.3', '5.4', '5.5']);
+        aggregate('6', ['6.1', '6.2', '6.3', '6.4']);
+        aggregate('7', ['7.1']);
+
+        // 6. Calculate Top Summary Rows
+        const transferBySource = Array(7).fill(0);
+        centralAllocations.forEach(a => {
+            const colIdx = getColumnIndexBySourceName(a.funding_source?.name);
+            if (colIdx !== -1) {
+                transferBySource[colIdx] += parseFloat(a.amount || 0);
+            }
+        });
+
+        const estimateBySource = Array(7).fill(0);
+        routinePlans.forEach(plan => {
+            const colIdx = getColumnIndexBySourceName(plan.funding_source?.name);
+            if (colIdx !== -1) {
+                estimateBySource[colIdx] += parseFloat(plan.allocated_amount || 0);
+            }
+        });
+        allProjectsMaster.forEach(p => {
+            if (p.status !== 'approved') return;
+            const colIdx = getColumnIndexBySourceName(p.funding_source_name);
+            if (colIdx !== -1) {
+                estimateBySource[colIdx] += parseFloat(p.allocated_amount || 0);
+            }
+        });
+
+        // 7. Calculate Grand Totals
+        const grandPlanBudget = ['1', '2', '3', '4', '5', '6', '7'].reduce((sum, k) => sum + rowData[k].planBudget, 0);
+        const grandSpentBySource = Array(7).fill(0);
+        for (let i = 0; i < 7; i++) {
+            grandSpentBySource[i] = ['1', '2', '3', '4', '5', '6', '7'].reduce((sum, k) => sum + rowData[k].spentBySource[i], 0);
+        }
+
+        const grandSpentTotal = grandSpentBySource.reduce((sum, val) => sum + val, 0);
+        const grandRemainingPlan = grandPlanBudget - grandSpentTotal;
+
+        // 8. Calculate Bottom Balances
+        const cashBalanceBySource = Array(7).fill(0);
+        for (let i = 0; i < 7; i++) {
+            cashBalanceBySource[i] = transferBySource[i] - grandSpentBySource[i];
+        }
+        const totalCashBalance = transferBySource.reduce((sum, val) => sum + val, 0) - grandSpentTotal;
+
+        const planBalanceBySource = Array(7).fill(0);
+        for (let i = 0; i < 7; i++) {
+            planBalanceBySource[i] = estimateBySource[i] - grandSpentBySource[i];
+        }
+        const totalPlanBalance = estimateBySource.reduce((sum, val) => sum + val, 0) - grandSpentTotal;
+
+        return (
+            <div className="space-y-6">
+                <style dangerouslySetInnerHTML={{__html: `
+                    @media print {
+                        body {
+                            background: white !important;
+                            color: black !important;
+                        }
+                        /* Hide sidebar, dashboard header, nav elements and non-printable items */
+                        aside, nav, header, footer, .no-print, [role="navigation"], button {
+                            display: none !important;
+                        }
+                        /* Ensure the printable area takes up full page width */
+                        .print-area {
+                            position: absolute !important;
+                            left: 0 !important;
+                            top: 0 !important;
+                            width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                        }
+                        table {
+                            font-size: 8px !important;
+                            width: 100% !important;
+                        }
+                        th, td {
+                            padding: 4px 2px !important;
+                        }
+                    }
+                `}} />
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 space-y-6 print-area">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 className="text-xl font-extrabold text-gray-800">📊 รายงานงบรายจ่ายแผนปฏิบัติราชการ</h2>
+                            <p className="text-xs text-gray-500 mt-1">วิทยาลัยสารพัดช่างน่าน ปีงบประมาณ พ.ศ. 2569</p>
+                        </div>
+                        <button
+                            onClick={() => window.print()}
+                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition-all shadow-sm flex items-center gap-1.5 no-print"
+                        >
+                            🖨️ พิมพ์รายงาน / บันทึก PDF
+                        </button>
+                    </div>
+
+                    <div className="overflow-x-auto border border-gray-200 rounded-2xl max-w-full">
+                        <table className="w-full border-collapse text-xs text-gray-700 min-w-[1200px] table-fixed">
+                            <thead>
+                                <tr className="bg-gray-100 border-b border-gray-200 text-[11px] font-bold text-gray-900 text-center">
+                                    <th rowSpan="2" className="py-4 px-3 text-left border-r border-gray-200 w-[280px]">รายการ</th>
+                                    <th rowSpan="2" className="py-4 px-3 border-r border-gray-200 w-[110px]">ตั้งงบ</th>
+                                    <th colSpan="3" className="py-2 border-b border-gray-200 border-r text-center font-bold">งบดำเนินงาน</th>
+                                    <th rowSpan="2" className="py-4 px-2 border-r border-gray-200 w-[95px]">งบทวิศึกษา</th>
+                                    <th rowSpan="2" className="py-4 px-2 border-r border-gray-200 w-[95px]">อุดหนุนเพื่อการจัดการฯ</th>
+                                    <th rowSpan="2" className="py-4 px-2 border-r border-gray-200 w-[95px]">อุดหนุนพัฒนาฯ</th>
+                                    <th rowSpan="2" className="py-4 px-2 border-r border-gray-200 w-[95px]">บกศ.</th>
+                                    <th rowSpan="2" className="py-4 px-2 border-r border-gray-200 w-[110px]">รวมค่าใช้จ่าย</th>
+                                    <th rowSpan="2" className="py-4 px-2 w-[110px]">คงเหลือตามแผนฯ</th>
+                                </tr>
+                                <tr className="bg-gray-50 border-b border-gray-200 text-[10px] font-bold text-gray-700 text-center">
+                                    <th className="py-2 px-2 border-r border-gray-200 w-[90px]">ปวช.</th>
+                                    <th className="py-2 px-2 border-r border-gray-200 w-[90px]">ปวส.</th>
+                                    <th className="py-2 px-2 border-r border-gray-200 w-[95px]">ระยะสั้น</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {/* ประมาณการรับ */}
+                                <tr className="bg-amber-50/50 border-b border-gray-200 font-bold text-[11px] text-gray-900">
+                                    <td className="py-3 px-3 text-left border-r border-gray-200">ประมาณการรับ (ตามแผน)</td>
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {estimateBySource.reduce((sum, v) => sum + v, 0).toLocaleString()}
+                                    </td>
+                                    {estimateBySource.map((val, idx) => (
+                                        <td key={idx} className="py-3 px-2 text-right border-r border-gray-200">
+                                            {val > 0 ? val.toLocaleString() : '-'}
+                                        </td>
+                                    ))}
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {estimateBySource.reduce((sum, v) => sum + v, 0).toLocaleString()}
+                                    </td>
+                                    <td className="py-3 px-2 text-right">-</td>
+                                </tr>
+
+                                {/* ได้รับเงินโอนจริง */}
+                                <tr className="bg-red-50/30 border-b border-gray-200 font-bold text-[11px] text-red-700">
+                                    <td className="py-3 px-3 text-left border-r border-gray-200 text-red-700">ได้รับเงินโอนฯ จริง</td>
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {transferBySource.reduce((sum, v) => sum + v, 0).toLocaleString()}
+                                    </td>
+                                    {transferBySource.map((val, idx) => (
+                                        <td key={idx} className="py-3 px-2 text-right border-r border-gray-200">
+                                            {val > 0 ? val.toLocaleString() : '-'}
+                                        </td>
+                                    ))}
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {transferBySource.reduce((sum, v) => sum + v, 0).toLocaleString()}
+                                    </td>
+                                    <td className="py-3 px-2 text-right">-</td>
+                                </tr>
+
+                                {/* Content rows */}
+                                {reportStructure.map(item => {
+                                    const row = rowData[item.id];
+                                    const totalSpent = row.spentBySource.reduce((sum, v) => sum + v, 0);
+                                    const remaining = row.planBudget - totalSpent;
+                                    
+                                    let rowClass = "border-b border-gray-100 hover:bg-gray-50/50";
+                                    let titleClass = "py-2 px-3 text-left border-r border-gray-200";
+                                    if (row.isParent) {
+                                        rowClass = "bg-gray-100/60 border-b border-gray-200 font-bold text-gray-900";
+                                        titleClass = "py-2.5 px-3 text-left border-r border-gray-200";
+                                    } else if (row.isSubParent) {
+                                        rowClass = "bg-gray-50/50 border-b border-gray-200 font-bold text-gray-800";
+                                        titleClass = "py-2 px-4 text-left border-r border-gray-200 pl-6";
+                                    } else {
+                                        titleClass = `py-2 px-3 text-left border-r border-gray-200 text-gray-600 ${row.id.split('.').length > 2 ? 'pl-8' : 'pl-6'}`;
+                                    }
+
+                                    return (
+                                        <tr key={row.id} className={rowClass}>
+                                            <td className={titleClass}>{row.title}</td>
+                                            <td className="py-2 px-2 text-right border-r border-gray-200 font-medium">
+                                                {row.planBudget > 0 ? row.planBudget.toLocaleString() : '-'}
+                                            </td>
+                                            {row.spentBySource.map((val, idx) => (
+                                                <td key={idx} className="py-2 px-2 text-right border-r border-gray-200">
+                                                    {val > 0 ? val.toLocaleString() : '-'}
+                                                </td>
+                                            ))}
+                                            <td className="py-2 px-2 text-right border-r border-gray-200 font-bold text-gray-800">
+                                                {totalSpent > 0 ? totalSpent.toLocaleString() : '-'}
+                                            </td>
+                                            <td className={`py-2 px-2 text-right font-bold ${remaining < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                                                {row.planBudget > 0 || totalSpent > 0 ? remaining.toLocaleString() : '-'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+
+                                {/* รวมค่าใช้จ่ายทั้งสิ้น */}
+                                <tr className="bg-red-50/40 border-y-2 border-red-200 font-bold text-[11px] text-red-700">
+                                    <td className="py-3 px-3 text-left border-r border-gray-200">รวมค่าใช้จ่ายทั้งสิ้น</td>
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {grandPlanBudget.toLocaleString()}
+                                    </td>
+                                    {grandSpentBySource.map((val, idx) => (
+                                        <td key={idx} className="py-3 px-2 text-right border-r border-gray-200">
+                                            {val > 0 ? val.toLocaleString() : '-'}
+                                        </td>
+                                    ))}
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {grandSpentTotal.toLocaleString()}
+                                    </td>
+                                    <td className={`py-3 px-2 text-right ${grandRemainingPlan < 0 ? 'text-red-700' : 'text-emerald-800'}`}>
+                                        {grandRemainingPlan.toLocaleString()}
+                                    </td>
+                                </tr>
+
+                                {/* คงเหลือเงินโอนจริง */}
+                                <tr className="bg-blue-50/20 border-b border-gray-200 font-bold text-[11px] text-blue-900">
+                                    <td className="py-3 px-3 text-left border-r border-gray-200">คงเหลือเงินโอนจริง (โอนจริง - จ่ายจริง)</td>
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {totalCashBalance.toLocaleString()}
+                                    </td>
+                                    {cashBalanceBySource.map((val, idx) => (
+                                        <td key={idx} className={`py-3 px-2 text-right border-r border-gray-200 ${val < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                                            {val.toLocaleString()}
+                                        </td>
+                                    ))}
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {totalCashBalance.toLocaleString()}
+                                    </td>
+                                    <td className="py-3 px-2 text-right">-</td>
+                                </tr>
+
+                                {/* คงเหลือเงินตามแผนฯ */}
+                                <tr className="bg-emerald-50/20 border-b border-gray-200 font-bold text-[11px] text-emerald-950">
+                                    <td className="py-3 px-3 text-left border-r border-gray-200">คงเหลือเงินตามแผนฯ (ประมาณการ - จ่ายจริง)</td>
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {totalPlanBalance.toLocaleString()}
+                                    </td>
+                                    {planBalanceBySource.map((val, idx) => (
+                                        <td key={idx} className={`py-3 px-2 text-right border-r border-gray-200 ${val < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                                            {val.toLocaleString()}
+                                        </td>
+                                    ))}
+                                    <td className="py-3 px-2 text-right border-r border-gray-200">
+                                        {totalPlanBalance.toLocaleString()}
+                                    </td>
+                                    <td className="py-3 px-2 text-right font-black">
+                                        {totalPlanBalance.toLocaleString()}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         );
     };
@@ -3412,6 +3882,7 @@ export default function Dashboard({
                         {activeTab === 'all_projects' && renderAllProjectsTab()}
                         {activeTab === 'proposals' && renderProposalsTab()}
                         {activeTab === 'budgets' && renderBudgetsTab()}
+                        {activeTab === 'action_plan_report' && renderActionPlanReportTab()}
                         {activeTab === 'reviews' && renderReviewsTab()}
                         {activeTab === 'clearings' && renderClearingsTab()}
                         {activeTab === 'procurement' && renderProcurementTab()}

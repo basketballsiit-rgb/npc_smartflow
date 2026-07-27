@@ -51,6 +51,8 @@ class RoutineBudgetController extends Controller
             'department_id' => 'required|exists:departments,id',
             'title' => 'required|string|max:255',
             'allocated_amount' => 'required|numeric|min:0',
+            'funding_source_id' => 'nullable|exists:funding_sources,id',
+            'report_category' => 'nullable|string',
         ], [
             'title.required' => 'กรุณาระบุชื่อแผนงบประมาณ',
             'allocated_amount.required' => 'กรุณาระบุจำนวนเงิน',
@@ -75,6 +77,8 @@ class RoutineBudgetController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'allocated_amount' => 'required|numeric|min:0',
+            'funding_source_id' => 'nullable|exists:funding_sources,id',
+            'report_category' => 'nullable|string',
         ], [
             'title.required' => 'กรุณาระบุชื่อแผนงบประมาณ',
             'allocated_amount.required' => 'กรุณาระบุจำนวนเงิน',
