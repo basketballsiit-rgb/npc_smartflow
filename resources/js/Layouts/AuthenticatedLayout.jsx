@@ -12,11 +12,16 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const sidebarScrollRef = useRef(null);
 
-    // Restore scroll position on mount and whenever url changes
+    // Restore scroll position on mount and whenever url changes (deferred to bypass Inertia resets)
     useEffect(() => {
         const savedScroll = sessionStorage.getItem('sidebar-scroll');
         if (savedScroll && sidebarScrollRef.current) {
-            sidebarScrollRef.current.scrollTop = parseInt(savedScroll, 10);
+            const timer = setTimeout(() => {
+                if (sidebarScrollRef.current) {
+                    sidebarScrollRef.current.scrollTop = parseInt(savedScroll, 10);
+                }
+            }, 100);
+            return () => clearTimeout(timer);
         }
     }, [url]);
 
