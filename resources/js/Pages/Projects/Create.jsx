@@ -222,7 +222,7 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
                             
                             {/* 1. Title & Academic Year */}
                             <div className="space-y-4 bg-purple-50/30 p-5 rounded-2xl border border-purple-100">
-                                <h4 className="text-sm font-bold text-purple-950 border-b border-purple-100 pb-2">๑. ข้อมูลเบื้องต้นโครงการ</h4>
+                                <h4 className="text-sm font-bold text-purple-950 border-b border-purple-100 pb-2">1. ข้อมูลเบื้องต้นโครงการ</h4>
                                 
                                 <div>
                                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
@@ -306,7 +306,7 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
 
                             {/* 2. Characteristics & Strategic Goals */}
                             <div className="space-y-3 bg-purple-50/30 p-5 rounded-2xl border border-purple-100">
-                                <h4 className="text-sm font-bold text-purple-950 border-b border-purple-100 pb-2">๒. ลักษณะโครงการและความสอดคล้อง</h4>
+                                <h4 className="text-sm font-bold text-purple-950 border-b border-purple-100 pb-2">2. ลักษณะโครงการและความสอดคล้อง</h4>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-700 mb-1">พันธกิจที่ (สถานศึกษา)</label>
                                     <input
@@ -340,7 +340,7 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
                             <div>
                                 <div className="flex justify-between items-center mb-1.5">
                                     <label className="block text-xs font-bold text-slate-700">
-                                        ๓. ความสำคัญของโครงการ/ หลักการและเหตุผล *
+                                        3. ความสำคัญของโครงการ/ หลักการและเหตุผล *
                                     </label>
                                     <button
                                         type="button"
@@ -365,7 +365,7 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
                             <div className="space-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-100">
                                 <div className="flex justify-between items-center">
                                     <label className="block text-xs font-bold text-purple-950">
-                                        ๔. วัตถุประสงค์ของโครงการ *
+                                        4. วัตถุประสงค์ของโครงการ *
                                     </label>
                                     <span className="text-[11px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">
                                         {data.objectives.length} ข้อ
@@ -373,7 +373,7 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
                                 </div>
                                 {data.objectives.map((obj, index) => (
                                     <div key={index} className="flex gap-x-2 items-center">
-                                        <span className="text-xs font-bold text-purple-700 w-8 text-right">๔.{index + 1}</span>
+                                        <span className="text-xs font-bold text-purple-700 w-8 text-right">4.{index + 1}</span>
                                         <input
                                             type="text"
                                             value={obj}
@@ -406,11 +406,11 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
                                 {/* Outputs */}
                                 <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
                                     <label className="block text-xs font-bold text-slate-800">
-                                        ๕. ผลผลิตโครงการ (Output)
+                                        5. ผลผลิตโครงการ (Output)
                                     </label>
                                     {(data.outputs || []).map((op, idx) => (
                                         <div key={idx} className="flex gap-x-2 items-center">
-                                            <span className="text-xs font-bold text-slate-500 w-7">๕.{idx + 1}</span>
+                                            <span className="text-xs font-bold text-slate-500 w-7">5.{idx + 1}</span>
                                             <input
                                                 type="text"
                                                 value={op}
@@ -428,11 +428,11 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
                                 {/* Outcomes */}
                                 <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
                                     <label className="block text-xs font-bold text-slate-800">
-                                        ๖. ผลลัพธ์โครงการ (Outcome)
+                                        6. ผลลัพธ์โครงการ (Outcome)
                                     </label>
                                     {(data.outcomes || []).map((oc, idx) => (
                                         <div key={idx} className="flex gap-x-2 items-center">
-                                            <span className="text-xs font-bold text-slate-500 w-7">๖.{idx + 1}</span>
+                                            <span className="text-xs font-bold text-slate-500 w-7">6.{idx + 1}</span>
                                             <input
                                                 type="text"
                                                 value={oc}
@@ -450,14 +450,14 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
 
                             {/* 7. Target Groups & Location */}
                             <div className="space-y-4 bg-purple-50/30 p-5 rounded-2xl border border-purple-100">
-                                <h4 className="text-sm font-bold text-purple-950 border-b border-purple-100 pb-2">๗. กลุ่มเป้าหมาย และ ๘. พื้นที่ดำเนินการ</h4>
+                                <h4 className="text-sm font-bold text-purple-950 border-b border-purple-100 pb-2">7. กลุ่มเป้าหมาย และ 8. พื้นที่ดำเนินการ</h4>
                                 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-800 mb-2">๗.๑ เชิงปริมาณ *</label>
+                                        <label className="block text-xs font-bold text-slate-800 mb-2">7.1 เชิงปริมาณ *</label>
                                         {quantList.map((item, idx) => (
                                             <div key={idx} className="flex gap-x-2 items-center mb-2">
-                                                <span className="text-xs font-bold text-slate-500 w-10">๗.๑.{idx + 1}</span>
+                                                <span className="text-xs font-bold text-slate-500 w-10">7.1.{idx + 1}</span>
                                                 <input
                                                     type="text"
                                                     value={item}
@@ -471,10 +471,10 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-800 mb-2">๗.๒ เชิงคุณภาพ *</label>
+                                        <label className="block text-xs font-bold text-slate-800 mb-2">7.2 เชิงคุณภาพ *</label>
                                         {qualList.map((item, idx) => (
                                             <div key={idx} className="flex gap-x-2 items-center mb-2">
-                                                <span className="text-xs font-bold text-slate-500 w-10">๗.๒.{idx + 1}</span>
+                                                <span className="text-xs font-bold text-slate-500 w-10">7.2.{idx + 1}</span>
                                                 <input
                                                     type="text"
                                                     value={item}
@@ -489,7 +489,7 @@ export default function Create({ strategyCategories = [], iqaStrategies = [], ov
                                 </div>
 
                                 <div className="pt-2">
-                                    <label className="block text-xs font-bold text-slate-700 mb-1">๘. พื้นที่ดำเนินการ</label>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">8. พื้นที่ดำเนินการ</label>
                                     <input
                                         type="text"
                                         value={data.location}
