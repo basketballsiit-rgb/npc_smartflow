@@ -1756,7 +1756,10 @@ export default function Dashboard({
                                 <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-900">
                                     <th className="w-[36%] min-w-[260px] px-5 py-3.5">ชื่อโครงการ</th>
                                     <th className="w-[10%] min-w-[80px] px-3 py-3.5 text-center">ปีงบประมาณ</th>
-                                    <th className="w-[20%] min-w-[160px] px-4 py-3.5">งบประมาณเสนอขอ / จัดสรรจริง</th>
+                                    <th className="w-[20%] min-w-[160px] px-4 py-3.5 leading-tight">
+                                        <div>งบประมาณเสนอขอ /</div>
+                                        <div className="text-purple-950 font-extrabold">จัดสรรจริง</div>
+                                    </th>
                                     <th className="w-[18%] min-w-[140px] px-4 py-3.5 text-center">สถานะโครงการ</th>
                                     <th className="w-[16%] min-w-[130px] px-4 py-3.5 text-right">การดำเนินการ</th>
                                 </tr>
