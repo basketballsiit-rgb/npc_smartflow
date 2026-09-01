@@ -364,8 +364,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const handleSaveDraft = (e) => {
         if (e) e.preventDefault();
-        patch(route('projects.update', project.id), {
-            data: prepareSubmitData(false),
+        router.patch(route('projects.update', project.id), prepareSubmitData(false), {
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire({
@@ -383,7 +382,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         if (e) e.preventDefault();
         Swal.fire({
             title: '🚀 ยื่นขออนุมัติโครงการ?',
-            text: 'ระบบจะส่งเรื่องไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" พร้อมแยกรายละเอียดสัญญายืมเงินและจัดซื้อจัดจ้างรายกิจกรรมให้อัตโนมัติ',
+            text: 'ระบบจะส่งเรื่องไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" พร้อมแยกรายละเอียดสัญญายืมเงินและจัดซื้อจัดจ้างรายกิจกรรมให้อัตโนมัติ (และจะล็อคการแก้ไข)',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
@@ -393,8 +392,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         }).then((result) => {
             if (result.isConfirmed) {
                 setIsSubmitting(true);
-                patch(route('projects.update', project.id), {
-                    data: prepareSubmitData(true),
+                router.patch(route('projects.update', project.id), prepareSubmitData(true), {
                     onFinish: () => setIsSubmitting(false),
                     onError: () => setIsSubmitting(false),
                 });
