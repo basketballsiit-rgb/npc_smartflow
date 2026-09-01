@@ -236,8 +236,16 @@ class ProjectController extends Controller
             else $cat = '6.1';
         }
 
-        $defaultIqaId = \App\Models\IqaStrategy::first()?->id ?: 1;
-        $defaultOvecId = \App\Models\OvecStrategy::first()?->id ?: 1;
+        $iqa = \App\Models\IqaStrategy::firstOrCreate(
+            ['id' => 1],
+            ['name' => 'มาตรฐานการอาชีวศึกษา', 'description' => 'มาตรฐานการอาชีวศึกษา']
+        );
+        $ovec = \App\Models\OvecStrategy::firstOrCreate(
+            ['id' => 1],
+            ['name' => 'นโยบายเร่งด่วน สอศ.', 'description' => 'นโยบายเร่งด่วน สอศ.']
+        );
+        $defaultIqaId = $iqa->id;
+        $defaultOvecId = $ovec->id;
 
         $project = new Project();
         $project->user_id = $user->id;
