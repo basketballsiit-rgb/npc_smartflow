@@ -172,6 +172,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         });
     };
 
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
     const handleSaveDraft = (e) => {
         if (e) e.preventDefault();
         patch(route('projects.update', project.id));
@@ -186,15 +188,18 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             showCancelButton: true,
             confirmButtonColor: '#10b981',
             cancelButtonColor: '#64748b',
-            confirmButtonText: '🚀 บันทึกและยื่นขออนุมัติ',
+            confirmButtonText: '🚀 ยืนยันยื่นขออนุมัติ',
             cancelButtonText: 'ยกเลิก',
         }).then((result) => {
             if (result.isConfirmed) {
+                setIsSubmitting(true);
                 patch(route('projects.update', project.id), {
                     data: {
                         ...data,
                         submit_approval: true,
-                    }
+                    },
+                    onFinish: () => setIsSubmitting(false),
+                    onError: () => setIsSubmitting(false),
                 });
             }
         });
