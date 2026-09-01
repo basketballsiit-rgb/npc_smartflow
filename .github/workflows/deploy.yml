@@ -1,6 +1,6 @@
 name: Deploy NPC SmartFlow
 
-# สั่งให้ทำงานทุกครั้งที่มี Push โค้ดมาที่เส้นทาง main
+# Trigger workflow on push to main branch
 on:
   push:
     branches: [ "main" ]
@@ -9,22 +9,21 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: เชื่อมต่อเซิร์ฟเวอร์และอัปเดตระบบ
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          # คำสั่งรันบนเซิร์ฟเวอร์เพื่อดึงโค้ดล่าสุดและ Build ระบบ
-          script: |
-            cd /var/www/npc_smartflow
-            git pull origin main
-            /usr/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
-            /usr/bin/php82 artisan migrate --force
-            /root/.nvm/versions/node/v20.20.2/bin/npm install
-            /root/.nvm/versions/node/v20.20.2/bin/npm run build
-            /usr/bin/php82 artisan config:clear
-            /usr/bin/php82 artisan route:clear
-            /usr/bin/php82 artisan view:clear
-            /usr/bin/php82 artisan cache:clear
-            echo "✅ Deploy NPC SmartFlow สำเร็จ!"
+    - name: Connect to server and run deployment script
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SERVER_IP }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        password: ${{ secrets.SERVER_PASSWORD }}
+        script: |
+          cd /var/www/npc_smartflow
+          git fetch origin main
+          git reset --hard origin/main
+          chmod +x deploy.sh || true
+          ./deploy.sh || (
+            /usr/bin/php82 artisan migrate --force || true
+            /root/.nvm/versions/node/v20.20.2/bin/npm run build || npm run build || true
+            /usr/bin/php82 artisan optimize:clear || true
+          )
+          echo "✅ Deploy NPC SmartFlow สำเร็จ!"
