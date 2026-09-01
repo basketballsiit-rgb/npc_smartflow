@@ -1,6 +1,10 @@
-const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const WATCH_DIR = __dirname;
 let debounceTimer = null;
@@ -16,7 +20,8 @@ const IGNORED_PATHS = [
   'bootstrap/cache',
   'public/storage',
   '.gemini',
-  'auto_push.js'
+  'auto_push.js',
+  'auto_push.cjs'
 ];
 
 const IGNORED_EXTENSIONS = [
