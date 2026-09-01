@@ -1673,22 +1673,19 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 </div>
                             </div>
 
-                            {/* Section 13: ผู้รับผิดชอบโครงการและการลงนามเสนอ */}
+                            {/* Section 13: ผู้รับผิดชอบโครงการ */}
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="border-b border-purple-100 pb-2">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๗ : ผู้ลงนาม & การเสนอขออนุมัติ</span>
-                                    <h3 className="text-base font-bold text-purple-950">๑๓. ผู้รับผิดชอบโครงการและผู้ตรวจสอบโครงการ</h3>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๗ : ผู้รับผิดชอบ & การลงนามเสนอ</span>
+                                    <h3 className="text-base font-bold text-purple-950">๑๓. ผู้รับผิดชอบโครงการ</h3>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                                    <div className="p-3.5 rounded-xl bg-white border border-purple-100 space-y-1">
-                                        <span className="font-bold text-purple-900">ผู้เสนอโครงการ:</span>
-                                        <p className="text-slate-800 font-medium">{data.responsible_person || project?.user?.name}</p>
-                                        <p className="text-slate-500">{data.position}</p>
-                                    </div>
-                                    <div className="p-3.5 rounded-xl bg-white border border-purple-100 space-y-1">
-                                        <span className="font-bold text-purple-900">ผู้ตรวจสอบโครงการ:</span>
-                                        <p className="text-slate-800 font-medium">หัวหน้างานพัฒนายุทธศาสตร์แผนงานและงบประมาณ</p>
-                                        <p className="text-slate-500">ฝ่ายแผนงานและความร่วมมือ วช.น่าน</p>
+                                <div className="max-w-md text-xs">
+                                    <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-1 shadow-2xs">
+                                        <span className="font-bold text-purple-900 block text-xs">ผู้รับผิดชอบ / ผู้เสนอโครงการ:</span>
+                                        <p className="text-slate-800 font-bold text-sm">{data.responsible_person || project?.user?.name}</p>
+                                        <p className="text-slate-500 font-medium">{data.position}</p>
+                                        {data.phone && <p className="text-slate-500">โทรศัพท์: {data.phone}</p>}
+                                        {data.email && <p className="text-slate-500">อีเมล: {data.email}</p>}
                                     </div>
                                 </div>
                             </div>
