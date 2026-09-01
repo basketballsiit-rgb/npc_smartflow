@@ -72,6 +72,47 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         { step_name: '4. สรุปผลการประเมินความพึงพอใจและจัดทำรายงานฉบับสมบูรณ์', q1: false, q2: false, q3: false, q4: true, target_count: '1 เล่ม', location_name: 'วช.น่าน', budget_operating: 0 },
     ];
 
+    // Initial procurement / budget breakdown items
+    const budgetAmount = parseFloat(project?.estimated_budget || 0);
+    const initialProcurementItems = project?.procurement?.items?.length > 0
+        ? project.procurement.items.map(item => ({
+            description: item.description,
+            quantity: parseFloat(item.quantity) || 1,
+            unit: item.unit || 'รายการ',
+            unit_price: parseFloat(item.unit_price) || 0,
+            total_price: (parseFloat(item.quantity) || 1) * (parseFloat(item.unit_price) || 0)
+        }))
+        : [
+            {
+                description: 'ค่าอาหารว่างและเครื่องดื่มสำหรับผู้เข้าร่วมโครงการ (50 คน x 35 บาท x 2 มื้อ)',
+                quantity: 50,
+                unit: 'คน',
+                unit_price: 70,
+                total_price: 3500
+            },
+            {
+                description: 'ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)',
+                quantity: 50,
+                unit: 'คน',
+                unit_price: 80,
+                total_price: 4000
+            },
+            {
+                description: 'ค่าตอบแทนวิทยากรบรรยายและฝึกอบรมเชิงปฏิบัติการ (6 ชม. x 600 บาท)',
+                quantity: 6,
+                unit: 'ชั่วโมง',
+                unit_price: 600,
+                total_price: 3600
+            },
+            {
+                description: `ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการดำเนินงานตามโครงการ`,
+                quantity: 1,
+                unit: 'ชุด',
+                unit_price: Math.max(0, budgetAmount - 11100),
+                total_price: Math.max(0, budgetAmount - 11100)
+            }
+        ];
+
     // Initialize dynamic strategy selections
     const initialSelections = project?.strategy_selections || {};
     strategyCategories.forEach(cat => {
@@ -102,6 +143,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         expected_benefits: project?.expected_benefits && project.expected_benefits.length > 0 ? project.expected_benefits : defaultExpectedBenefits,
         indicators: project?.indicators || defaultIndicators,
         action_plan: project?.action_plan && project.action_plan.length > 0 ? project.action_plan : defaultActionPlan,
+        procurement_items: initialProcurementItems,
         strategy_selections: initialSelections,
         iqa_strategy_ids: project?.iqa_strategy_ids || [],
         ovec_strategy_ids: project?.ovec_strategy_ids || [],
@@ -109,6 +151,11 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         provincial_strategy_ids: project?.provincial_strategy_ids || [],
         estimated_budget: project?.estimated_budget || '',
     });
+
+    // Total expense calculation
+    const totalProcurementSum = (data.procurement_items || []).reduce((sum, item) => {
+        return sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0));
+    }, 0);
 
     // Universal AI Generator Handler
     const handleGenerateAi = async (type, successMessage) => {
@@ -145,6 +192,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                     setData('action_plan', res.data.action_plan);
                 } else if (type === 'indicators' && res.data.indicators) {
                     setData('indicators', res.data.indicators);
+                } else if (type === 'procurement_items' && res.data.procurement_items) {
+                    setData('procurement_items', res.data.procurement_items);
                 }
                 Swal.fire('✨ AI ประมวลผลสำเร็จ!', successMessage, 'success');
             }
@@ -213,6 +262,38 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         setData('action_plan', plan);
     };
 
+    // Procurement Items Handlers (Section 12)
+    const handleProcurementItemChange = (index, field, value) => {
+        const items = [...(data.procurement_items || [])];
+        items[index] = {
+            ...items[index],
+            [field]: value
+        };
+        const qty = parseFloat(items[index].quantity) || 0;
+        const price = parseFloat(items[index].unit_price) || 0;
+        items[index].total_price = qty * price;
+        setData('procurement_items', items);
+    };
+
+    const addProcurementItemRow = () => {
+        setData('procurement_items', [
+            ...(data.procurement_items || []),
+            {
+                description: '',
+                quantity: 1,
+                unit: 'รายการ',
+                unit_price: 0,
+                total_price: 0
+            }
+        ]);
+    };
+
+    const removeProcurementItemRow = (index) => {
+        const items = [...(data.procurement_items || [])];
+        items.splice(index, 1);
+        setData('procurement_items', items);
+    };
+
     // Dynamic Strategy Handler
     const toggleDynamicStrategy = (catId, itemId) => {
         const currentCatItems = data.strategy_selections[catId] || [];
@@ -235,7 +316,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         if (e) e.preventDefault();
         Swal.fire({
             title: '🚀 ยื่นขออนุมัติโครงการ?',
-            text: 'เมื่อยื่นขออนุมัติ ระบบจะส่งเรื่องต่อไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" เพื่อเริ่มกระบวนการพิจารณาอนุมัติ 6 ขั้นตอนตามลำดับ',
+            text: 'เมื่อยื่นขออนุมัติ ระบบจะส่งเรื่องต่อไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" เพื่อเริ่มกระบวนการพิจารณาอนุมัติ 6 ขั้นตอนตามลำดับ และเชื่อมข้อมูลประมาณการค่าใช้จ่ายไปยังระบบจัดซื้อจัดจ้างโดยตรง',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
@@ -268,7 +349,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             📄 จัดทำ/แก้ไขแบบเสนอโครงการฉบับเต็ม (Full Proposal - ๑๔ หัวข้อ)
                         </h2>
                         <p className="text-xs text-slate-500 font-sans mt-0.5">
-                            กรอกรายละเอียดโครงการครบ 14 หัวข้อตามมาตรฐาน สอศ. วิทยาลัยสารพัดช่างน่าน พร้อมระบบ AI ช่วยยกร่างเนื้อหา
+                            กรอกรายละเอียดโครงการครบ 14 หัวข้อตามมาตรฐาน สอศ. พร้อมระบบประมาณการค่าใช้จ่ายเชื่อมโยงจัดซื้อจัดจ้าง
                         </p>
                     </div>
                     <div className="flex items-center gap-x-2">
@@ -1089,23 +1170,143 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 </button>
                             </div>
 
-                            {/* Section 12: งบประมาณและรายละเอียดค่าใช้จ่าย (Budget Breakdown) */}
+                            {/* Section 12: งบประมาณและรายละเอียดค่าใช้จ่าย (Budget Breakdown & Procurement Sync) */}
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
-                                <div className="border-b border-purple-100 pb-2">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๖ : งบประมาณ</span>
-                                    <h3 className="text-base font-bold text-purple-950">๑๒. งบประมาณและรายละเอียดค่าใช้จ่ายโครงการ</h3>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-2">
-                                        <label className="block text-xs font-bold text-purple-950">งบประมาณรวมทั้งโครงการ (บาท)</label>
-                                        <p className="text-xl font-black text-purple-900">{parseFloat(data.estimated_budget || 0).toLocaleString()} บาท</p>
-                                        <p className="text-[11px] text-slate-500">จำแนกตามแผนปฏิบัติงานและการดำเนินกิจกรรมของวิทยาลัย</p>
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-3">
+                                    <div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๖ : งบประมาณ & ประมาณการค่าใช้จ่าย</span>
+                                        <h3 className="text-base font-bold text-purple-950">๑๒. งบประมาณและรายละเอียดประมาณการค่าใช้จ่าย (เชื่อมโยงจัดซื้อจัดจ้าง)</h3>
                                     </div>
-                                    <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-2">
-                                        <label className="block text-xs font-bold text-purple-950">แหล่งที่มาของงบประมาณ</label>
-                                        <p className="text-sm font-bold text-slate-800">{project?.funding_source?.name || 'งบประมาณตาม พ.ร.บ. งบประมาณรายจ่าย ประจำปี'}</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleGenerateAi('procurement_items', 'ยกร่างรายการประมาณการค่าใช้จ่ายให้สอดคล้องกับวงเงินงบประมาณเรียบร้อยแล้ว')}
+                                        className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs transition-all"
+                                    >
+                                        ✨ ให้ AI ช่วยเสนอประมาณการค่าใช้จ่าย
+                                    </button>
+                                </div>
+
+                                {/* Budget Source Badges */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-1">
+                                        <span className="text-xs font-bold text-slate-500">วงเงินงบประมาณที่ได้รับจัดสรร</span>
+                                        <p className="text-xl font-black text-purple-900">{parseFloat(data.estimated_budget || 0).toLocaleString()} บาท</p>
+                                        <p className="text-[11px] text-slate-500">ตามมติการจัดสรรงบประมาณของสถานศึกษา</p>
+                                    </div>
+                                    <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-1">
+                                        <span className="text-xs font-bold text-slate-500">แหล่งที่มาของงบประมาณ</span>
+                                        <p className="text-sm font-bold text-slate-800">{project?.funding_source?.name || 'Revenue (เงินรายได้สถานศึกษา)'}</p>
                                         <p className="text-[11px] text-emerald-700 font-bold">✓ ผ่านการจัดสรรและเห็นชอบจากงานแผนงานแล้ว</p>
                                     </div>
+                                </div>
+
+                                {/* Estimated Expense / Procurement Items Table */}
+                                <div className="bg-white p-4 rounded-xl border border-purple-200 space-y-3">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                        <div>
+                                            <h4 className="text-xs font-bold text-purple-950">📦 ตารางแจกแจงรายการประมาณการค่าใช้จ่าย / พัสดุ (Items Breakdown)</h4>
+                                            <p className="text-[11px] text-slate-500">
+                                                ข้อมูลในตารางนี้จะถูกดึงไปใช้สร้างบันทึกข้อความจัดซื้อจัดจ้าง, ใบขอซื้อขอจ้าง, และ TOR โดยอัตโนมัติ
+                                            </p>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-xs text-slate-600 block">ยอดรวมประมาณการ:</span>
+                                            <span className={`text-base font-black ${totalProcurementSum > parseFloat(data.estimated_budget || 0) ? 'text-rose-600' : 'text-emerald-700'}`}>
+                                                {totalProcurementSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {totalProcurementSum > parseFloat(data.estimated_budget || 0) && (
+                                        <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 font-bold">
+                                            ⚠️ ยอดรวมประมาณการค่าใช้จ่ายเกินวงเงินงบประมาณที่ได้รับจัดสรรอยู่ {(totalProcurementSum - parseFloat(data.estimated_budget || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                        </div>
+                                    )}
+
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-xs text-slate-800 border-collapse">
+                                            <thead>
+                                                <tr className="bg-purple-50 text-purple-950 font-bold border-b border-purple-200">
+                                                    <th className="p-2 text-center w-10">ลำดับ</th>
+                                                    <th className="p-2 text-left">รายการ / รายละเอียดค่าใช้จ่าย</th>
+                                                    <th className="p-2 text-right w-20">จำนวน</th>
+                                                    <th className="p-2 text-left w-24">หน่วยนับ</th>
+                                                    <th className="p-2 text-right w-28">ราคา/หน่วย (บาท)</th>
+                                                    <th className="p-2 text-right w-28">รวมเงิน (บาท)</th>
+                                                    <th className="p-2 text-center w-10">ลบ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {(data.procurement_items || []).map((item, pIdx) => (
+                                                    <tr key={pIdx} className="border-b border-purple-100 hover:bg-purple-50/30">
+                                                        <td className="p-2 text-center text-slate-500">{pIdx + 1}</td>
+                                                        <td className="p-2">
+                                                            <input
+                                                                type="text"
+                                                                value={item.description}
+                                                                onChange={(e) => handleProcurementItemChange(pIdx, 'description', e.target.value)}
+                                                                className="w-full rounded-lg border-purple-200 px-2.5 py-1 text-xs focus:border-purple-500"
+                                                                placeholder="เช่น ค่าอาหารกลางวัน, ค่าอาหารว่าง, ค่าวัสดุฝึกอบรม..."
+                                                                required
+                                                            />
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                value={item.quantity}
+                                                                onChange={(e) => handleProcurementItemChange(pIdx, 'quantity', parseFloat(e.target.value) || 0)}
+                                                                className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right"
+                                                                required
+                                                            />
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <input
+                                                                type="text"
+                                                                value={item.unit}
+                                                                onChange={(e) => handleProcurementItemChange(pIdx, 'unit', e.target.value)}
+                                                                className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs"
+                                                                placeholder="คน/ชุด/เล่ม"
+                                                                required
+                                                            />
+                                                        </td>
+                                                        <td className="p-2">
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                value={item.unit_price}
+                                                                onChange={(e) => handleProcurementItemChange(pIdx, 'unit_price', parseFloat(e.target.value) || 0)}
+                                                                className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-bold"
+                                                                required
+                                                            />
+                                                        </td>
+                                                        <td className="p-2 text-right font-bold text-purple-900">
+                                                            {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="p-2 text-center">
+                                                            {(data.procurement_items || []).length > 1 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeProcurementItemRow(pIdx)}
+                                                                    className="text-rose-500 hover:text-rose-700 font-bold"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={addProcurementItemRow}
+                                        className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block"
+                                    >
+                                        + เพิ่มรายการประมาณการค่าใช้จ่าย
+                                    </button>
                                 </div>
                             </div>
 
