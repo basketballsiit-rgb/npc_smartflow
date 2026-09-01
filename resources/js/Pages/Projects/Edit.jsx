@@ -538,21 +538,32 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 </div>
                             </div>
 
-                            {/* Submit Buttons */}
-                            <div className="flex justify-end gap-x-4 border-t border-purple-100 pt-6">
+                            {/* Submit Action Buttons */}
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-purple-100 pt-6">
                                 <Link
                                     href={route('dashboard')}
-                                    className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                                    className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors w-full sm:w-auto text-center"
                                 >
-                                    ยกเลิก
+                                    ← ยกเลิก / ย้อนกลับ
                                 </Link>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-6 py-2.5 text-sm font-bold text-white shadow-md shadow-purple-600/20 hover:scale-[1.02] transition-all disabled:opacity-50"
-                                >
-                                    💾 บันทึกการแก้ไขโครงการ
-                                </button>
+                                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveDraft}
+                                        disabled={processing}
+                                        className="rounded-xl border border-purple-300 bg-purple-50 px-5 py-2.5 text-sm font-bold text-purple-900 shadow-2xs hover:bg-purple-100 transition-all disabled:opacity-50"
+                                    >
+                                        💾 บันทึกแบบร่าง
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveAndSubmit}
+                                        disabled={processing}
+                                        className="rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 px-6 py-2.5 text-sm font-extrabold text-white shadow-md shadow-emerald-600/25 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        <span>🚀</span> บันทึกและยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2) ➔
+                                    </button>
+                                </div>
                             </div>
 
                         </form>
