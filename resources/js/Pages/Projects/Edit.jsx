@@ -170,12 +170,35 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             ...data.strategy_selections,
             [catId]: updatedCatItems
         });
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSaveDraft = (e) => {
+        if (e) e.preventDefault();
         patch(route('projects.update', project.id));
     };
+
+    const handleSaveAndSubmit = (e) => {
+        if (e) e.preventDefault();
+        Swal.fire({
+            title: '🚀 ยื่นขออนุมัติโครงการ?',
+            text: 'เมื่อยื่นขออนุมัติ ระบบจะส่งเรื่องต่อไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" เพื่อเริ่มกระบวนการพิจารณาอนุมัติ 6 ขั้นตอนตามลำดับ',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '🚀 บันทึกและยื่นขออนุมัติ',
+            cancelButtonText: 'ยกเลิก',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                patch(route('projects.update', project.id), {
+                    data: {
+                        ...data,
+                        submit_approval: true,
+                    }
+                });
+            }
+        });
+    };
+
+    const handleSubmit = handleSaveDraft;
 
     return (
         <AuthenticatedLayout
