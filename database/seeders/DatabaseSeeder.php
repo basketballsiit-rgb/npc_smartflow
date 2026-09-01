@@ -44,6 +44,10 @@ class DatabaseSeeder extends Seeder
             Department::firstOrCreate(['code' => $deptData['code']], $deptData);
         }
 
+        // Seed Default Legacy Strategies if needed
+        IqaStrategy::firstOrCreate(['id' => 1], ['name' => 'มาตรฐานการอาชีวศึกษา', 'description' => 'มาตรฐานการอาชีวศึกษา']);
+        OvecStrategy::firstOrCreate(['id' => 1], ['name' => 'นโยบายเร่งด่วน สอศ.', 'description' => 'นโยบายเร่งด่วน สอศ.']);
+
         // Fetch models to map IDs
         $adminRole = Role::where('name', 'admin')->first();
         $teacherRole = Role::where('name', 'teacher')->first();
