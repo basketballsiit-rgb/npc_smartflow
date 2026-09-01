@@ -635,8 +635,8 @@ class ProjectController extends Controller
             abort(403, 'คุณไม่มีสิทธิ์ยื่นขออนุมัติโครงการนี้');
         }
 
-        if (!in_array($project->status, ['draft', 'rejected'])) {
-            abort(403, 'เฉพาะโครงการที่เป็นแบบร่างหรือส่งกลับแก้ไขเท่านั้นที่สามารถยื่นขออนุมัติได้');
+        if (!in_array($project->status, ['draft', 'rejected', 'budget_approved', 'preliminary'])) {
+            abort(403, 'เฉพาะโครงการที่เป็นแบบร่าง ได้รับจัดสรรงบแล้ว หรือส่งกลับแก้ไขเท่านั้นที่สามารถยื่นขออนุมัติได้');
         }
 
         $project->status = 'pending_approval';
@@ -649,7 +649,7 @@ class ProjectController extends Controller
             'user_id' => auth()->id(),
             'step_number' => 1,
             'status' => 'approved',
-            'comments' => 'ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ (Submitted for Board Execution Approval)',
+            'comments' => 'ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ (Submitted for 6-Step Approval)',
         ]);
 
         return redirect()->back()->with('success', 'ยื่นเสนอขออนุมัติเพื่อดำเนินงานโครงการต่อเรียบร้อยแล้ว');
