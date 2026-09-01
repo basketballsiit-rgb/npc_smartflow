@@ -777,7 +777,15 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                         {(!project.approvals || project.approvals.length === 0) ? (
                                             <p className="text-xs text-slate-400">ยังไม่มีประวัติการพิจารณาอนุมัติ</p>
                                         ) : (
-                                            project.approvals.map((log) => {
+                                            project.approvals
+                                                .filter((log, index, self) => 
+                                                    index === self.findIndex((t) => (
+                                                        t.step_number === log.step_number && 
+                                                        t.status === log.status && 
+                                                        t.comments === log.comments
+                                                    ))
+                                                )
+                                                .map((log) => {
                                                 const isApproved = log.status === 'approved';
                                                 const isRejected = log.status === 'rejected';
                                                 const isBudgetCommittee = log.step_number === 0 || 
