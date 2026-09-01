@@ -1725,14 +1725,14 @@ export default function Dashboard({
                         <table className="w-full text-left border-collapse table-fixed">
                             <thead>
                                 <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-900">
-                                    <th className="w-[36%] min-w-[260px] px-5 py-3.5">ชื่อโครงการ</th>
-                                    <th className="w-[10%] min-w-[80px] px-3 py-3.5 text-center">ปีงบประมาณ</th>
-                                    <th className="w-[20%] min-w-[160px] px-4 py-3.5 leading-tight">
+                                    <th className="w-[34%] min-w-[200px] px-4 py-3.5">ชื่อโครงการ</th>
+                                    <th className="w-[10%] min-w-[70px] px-2 py-3.5 text-center">ปีงบประมาณ</th>
+                                    <th className="w-[20%] min-w-[140px] px-3 py-3.5 leading-tight">
                                         <div>งบประมาณเสนอขอ /</div>
                                         <div className="text-purple-950 font-extrabold">จัดสรรจริง</div>
                                     </th>
-                                    <th className="w-[18%] min-w-[140px] px-4 py-3.5 text-center">สถานะโครงการ</th>
-                                    <th className="w-[16%] min-w-[130px] px-4 py-3.5 text-right">การดำเนินการ</th>
+                                    <th className="w-[16%] min-w-[100px] px-3 py-3.5 text-center">สถานะโครงการ</th>
+                                    <th className="w-[20%] min-w-[140px] px-3 py-3.5 text-right">การดำเนินการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-purple-100 text-sm">
@@ -1749,20 +1749,15 @@ export default function Dashboard({
                                         
                                         return (
                                             <tr key={project.id} className="hover:bg-purple-50/20 transition-colors">
-                                                <td className="px-5 py-4 align-top">
+                                                <td className="px-4 py-3.5 align-top">
                                                     <div className="font-bold text-slate-900 leading-snug text-sm line-clamp-3 break-words">
                                                         {project.title}
                                                     </div>
-                                                    {project.committee_comment && (
-                                                        <div className="text-[11px] text-purple-700 mt-1.5 font-normal bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100 inline-block line-clamp-2">
-                                                            💬 มติ: {project.committee_comment}
-                                                        </div>
-                                                    )}
                                                 </td>
-                                                <td className="px-3 py-4 text-center text-slate-600 font-bold align-top">
+                                                <td className="px-2 py-3.5 text-center text-slate-600 font-bold align-top">
                                                     {project.academic_year}
                                                 </td>
-                                                <td className="px-4 py-4 align-top">
+                                                <td className="px-3 py-3.5 align-top">
                                                     <div className="font-bold text-purple-950">
                                                         {hasAllocated ? (
                                                             <div>
@@ -1790,10 +1785,10 @@ export default function Dashboard({
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-4 text-center align-top">
+                                                <td className="px-3 py-3.5 text-center align-top whitespace-nowrap">
                                                     {getStatusBadge(project.status, project.current_approval_step)}
                                                 </td>
-                                                <td className="px-4 py-4 text-right align-top whitespace-nowrap">
+                                                <td className="px-3 py-3.5 text-right align-top whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-1.5">
                                                         {/* 1. Preliminary Status: Waiting for Budget Approval */}
                                                         {project.status === 'preliminary' && (
@@ -1833,16 +1828,20 @@ export default function Dashboard({
                                                             <>
                                                                 <Link
                                                                     href={route('projects.edit', project.id)}
-                                                                    className="px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg font-bold text-[11px] shadow-xs hover:shadow transition flex items-center gap-1"
-                                                                    title="จัดทำรายละเอียดโครงการฉบับสมบูรณ์"
+                                                                    className="px-2.5 py-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg font-bold text-xs shadow-xs hover:shadow transition flex items-center gap-1 shrink-0"
+                                                                    title="จัดทำรายละเอียดโครงการฉบับเต็ม"
                                                                 >
-                                                                    <span>📝</span> ทำฉบับเต็ม →
+                                                                    <span>📝</span> ทำฉบับเต็ม
                                                                 </Link>
                                                                 <Link
                                                                     href={route('projects.show', project.id)}
-                                                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition text-xs"
+                                                                    className="p-1 text-purple-700 hover:bg-purple-100 rounded-lg transition text-xs shrink-0"
                                                                     title="ดูรายละเอียดโครงการ"
                                                                 >
+                                                                    👁️
+                                                                </Link>
+                                                            </>
+                                                        )}
                                                                     👁️
                                                                 </Link>
                                                             </>
