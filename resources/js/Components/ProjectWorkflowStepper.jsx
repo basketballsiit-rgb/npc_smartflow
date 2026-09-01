@@ -40,15 +40,23 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
         },
     ];
 
-    // Determine active step index based on status or prop
+    // Determine active step index based on status
     let activeIndex = 0;
-    if (status === 'draft') activeIndex = 0;
-    else if (status === 'submitted' || status === 'pending_approval') activeIndex = 1;
-    else if (status === 'approved') activeIndex = 2; // Step 3: Procurement
-    else if (status === 'in_progress') activeIndex = 3; // Step 4: Execution / Clearing
-    else if (status === 'evaluating') activeIndex = 4; // Step 5: Survey & Check
-    else if (status === 'completed') activeIndex = 5; // Step 6: Final Stitched PDF Report
-    else activeIndex = Math.max(0, Math.min(5, (currentStep || 1) - 1));
+    if (status === 'draft' || status === 'budget_approved' || status === 'preliminary' || status === 'budget_rejected') {
+        activeIndex = 0; // Step 1: เสนอโครงการ (ยกร่างข้อเสนอฉบับเต็ม)
+    } else if (status === 'submitted' || status === 'pending_approval') {
+        activeIndex = 1; // Step 2: ตรวจสอบ & อนุมัติ (กระบวนการ 6 ขั้นตอน)
+    } else if (status === 'approved') {
+        activeIndex = 2; // Step 3: จัดซื้อจัดจ้าง & พัสดุ
+    } else if (status === 'in_progress') {
+        activeIndex = 3; // Step 4: เคลียร์เงินยืม & เบิกจ่าย
+    } else if (status === 'evaluating') {
+        activeIndex = 4; // Step 5: ประเมินผลโครงการ
+    } else if (status === 'completed') {
+        activeIndex = 5; // Step 6: รายงานผลฉบับสมบูรณ์
+    } else {
+        activeIndex = 0;
+    }
 
     return (
         <div className="w-full bg-gradient-to-r from-purple-900/5 via-violet-900/10 to-purple-900/5 p-5 rounded-2xl border border-purple-100 shadow-2xs mb-6">
