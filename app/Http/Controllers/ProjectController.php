@@ -228,6 +228,9 @@ class ProjectController extends Controller
             else $cat = '6.1';
         }
 
+        $defaultIqaId = \App\Models\IqaStrategy::first()?->id ?: 1;
+        $defaultOvecId = \App\Models\OvecStrategy::first()?->id ?: 1;
+
         $project = new Project();
         $project->user_id = $user->id;
         $project->department_id = $validated['department_id'];
@@ -238,6 +241,10 @@ class ProjectController extends Controller
         $project->estimated_budget = $validated['allocated_budget'];
         $project->funding_source_id = $validated['funding_source_id'];
         $project->report_category = $cat;
+        $project->iqa_strategy_id = $defaultIqaId;
+        $project->ovec_strategy_id = $defaultOvecId;
+        $project->iqa_strategy_ids = [$defaultIqaId];
+        $project->ovec_strategy_ids = [$defaultOvecId];
         $project->responsible_person = $validated['responsible_person'] ?? $user->name;
         $project->committee_comment = $validated['committee_comment'] ?? 'จัดสรรงบประมาณโดยตรงผ่านงานแผนงาน';
         $project->budget_approved_at = now();
