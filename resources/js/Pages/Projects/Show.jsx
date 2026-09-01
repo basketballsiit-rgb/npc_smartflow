@@ -786,7 +786,11 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                                     ))
                                                 )
                                                 .map((log) => {
-                                                const isApproved = log.status === 'approved';
+                                                const isStep1Submission = log.step_number === 1 || 
+                                                                          log.status === 'submitted' || 
+                                                                          log.comments?.includes('ยื่นขออนุมัติ') || 
+                                                                          log.comments?.includes('ยื่นเสนอ');
+                                                const isApproved = log.status === 'approved' && !isStep1Submission;
                                                 const isRejected = log.status === 'rejected';
                                                 const isBudgetCommittee = log.step_number === 0 || 
                                                                           log.comments?.includes('มติคณะกรรมการ') || 
@@ -798,11 +802,11 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                                 return (
                                                     <div key={log.id} className="border-l-2 border-purple-500 pl-3 py-1 space-y-1">
                                                         <div className="flex justify-between text-xs font-bold">
-                                                            <span className="text-slate-900">{log.user?.name}</span>
-                                                            <span className={isApproved ? 'text-emerald-600' : isRejected ? 'text-rose-600' : 'text-purple-700'}>
-                                                                {isApproved ? '✅ อนุมัติแล้ว' : isRejected ? '❌ ตีกลับแก้ไข' : '📝 ยื่นเสนอ'}
-                                                            </span>
-                                                        </div>
+                                                             <span className="text-slate-900">{log.user?.name}</span>
+                                                             <span className={isApproved ? 'text-emerald-600' : isRejected ? 'text-rose-600' : 'text-purple-700'}>
+                                                                 {isApproved ? '✅ อนุมัติแล้ว' : isRejected ? '❌ ตีกลับแก้ไข' : '📝 ยื่นขออนุมัติ'}
+                                                             </span>
+                                                         </div>
                                                         <div className="flex justify-between items-center text-xs text-slate-600">
                                                             <span>
                                                                 {isProposalInitial ? (
