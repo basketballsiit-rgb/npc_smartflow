@@ -265,17 +265,30 @@ export default function AuthenticatedLayout({ header, children }) {
 
                             <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1">
                                 <Link
+                                    href={route('projects.quick_create')}
+                                    className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
+                                        route().current('projects.quick_create')
+                                            ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
+                                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
+                                    }`}
+                                    title="เสนอโครงการเบื้องต้น (ขอตั้งงบ)"
+                                >
+                                    <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                    <span className="text-sm">💡</span>
+                                    {isSidebarOpen && <span>เสนอโครงการเบื้องต้น (ขอตั้งงบ)</span>}
+                                </Link>
+                                <Link
                                     href={route('projects.create')}
                                     className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
                                         route().current('projects.create')
                                             ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
                                             : 'text-purple-100 hover:bg-white/10 hover:text-white'
                                     }`}
-                                    title="เสนอโครงการใหม่"
+                                    title="จัดทำข้อเสนอโครงการฉบับเต็ม"
                                 >
                                     <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
                                     <span className="text-sm">➕</span>
-                                    {isSidebarOpen && <span>เสนอโครงการใหม่</span>}
+                                    {isSidebarOpen && <span>จัดทำโครงการฉบับเต็ม</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals' })}
@@ -300,7 +313,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     title="งบดำเนินงานประจำปี & จัดซื้อจัดจ้างตรง"
                                 >
                                     <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
-                                    <span className="text-sm">📅</span>
+                                    <span className="text-sm">🗓️</span>
                                     {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
                                 </Link>
                             </div>
