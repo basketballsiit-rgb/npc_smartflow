@@ -618,7 +618,7 @@ class ProjectController extends Controller
                 'project_id' => $project->id,
                 'user_id' => $user->id,
                 'step_number' => 1,
-                'status' => 'approved',
+                'status' => 'submitted',
                 'comments' => 'จัดทำโครงการฉบับเต็มและยื่นขออนุมัติตามกระบวนการ 6 ขั้นตอน',
             ]);
 
