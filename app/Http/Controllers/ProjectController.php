@@ -19,8 +19,28 @@ class ProjectController extends Controller
     /**
      * Show the form for creating a new project.
      */
-    public function create()
+    public function create(Request $request)
     {
+        $user = auth()->user();
+
+        if ($request->has('project_id')) {
+            $proj = Project::find($request->input('project_id'));
+            if ($proj && in_array($proj->status, ['budget_approved', 'draft'])) {
+                return redirect()->route('projects.edit', $proj->id);
+            }
+        }
+
+        $approvedProjects = Project::with(['department', 'fundingSource'])
+            ->when(!$user->isAdmin() && !$user->isPlanHead(), function($q) use ($user) {
+                $q->where(function($sub) use ($user) {
+                    $sub->where('user_id', $user->id)
+                        ->orWhere('department_id', $user->department_id);
+                });
+            })
+            ->whereIn('status', ['budget_approved', 'draft'])
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
         $activeCategories = [];
         try {
             if (\Illuminate\Support\Facades\Schema::hasTable('strategy_categories')) {
@@ -33,6 +53,7 @@ class ProjectController extends Controller
         }
 
         return Inertia::render('Projects/Create', [
+            'approvedProjects' => $approvedProjects,
             'strategyCategories' => $activeCategories,
             'iqaStrategies' => IqaStrategy::all(),
             'ovecStrategies' => OvecStrategy::all(),
