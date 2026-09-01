@@ -105,6 +105,32 @@ class User extends Authenticatable
         return $this->role?->name === 'teacher';
     }
 
+    public function isDepartmentHead(?int $departmentId = null): bool
+    {
+        if ($this->role?->name === 'department_head') return true;
+
+        $posQuery = $this->userPositions()
+            ->where(function($q) {
+                $q->where('position', 'like', '%หัวหน้า%');
+            });
+
+        if ($departmentId) {
+            $posQuery->where('department_id', $departmentId);
+        }
+
+        if ($posQuery->exists()) {
+            return true;
+        }
+
+        if (str_contains($this->position ?? '', 'หัวหน้า')) {
+            if (!$departmentId || $this->department_id === $departmentId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function isPlanHead(): bool
     {
         if ($this->role?->name === 'plan_head') return true;
