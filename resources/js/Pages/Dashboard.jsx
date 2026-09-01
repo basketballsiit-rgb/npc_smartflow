@@ -1842,10 +1842,6 @@ export default function Dashboard({
                                                                 </Link>
                                                             </>
                                                         )}
-                                                                    👁️
-                                                                </Link>
-                                                            </>
-                                                        )}
 
                                                         {/* 4. Active Workflow Statuses (draft, submitted, approved) */}
                                                         {project.status !== 'preliminary' && project.status !== 'budget_rejected' && project.status !== 'budget_approved' && (
