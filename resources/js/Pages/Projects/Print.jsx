@@ -624,104 +624,194 @@ export default function Print({ project, strategyCategories = [] }) {
                 </div>
 
                 {/* Section 12: Approvers Block */}
-                <div className="pt-5 print-break-inside-avoid font-sarabun">
-                    <p className="print-title font-bold text-slate-900 mb-3">๑๒. ผู้เห็นชอบและผู้อนุมัติโครงการ{toThaiNumerals(project.title)}</p>
+                <div className="pt-6 print-break-inside-avoid font-sarabun">
+                    <p className="print-title font-bold text-slate-900 mb-6">๑๒. ผู้เห็นชอบและผู้อนุมัติโครงการ{toThaiNumerals(project.title)}</p>
                     
-                    <div className="space-y-5 text-xs sm:text-sm">
+                    <div className="space-y-8 text-xs sm:text-sm">
                         {/* Row 1: Proposer & Head of Department */}
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                             {/* Signature 1: ผู้เสนอโครงการ */}
-                            <div className="text-center font-sarabun">
-                                <div className="flex justify-center items-center gap-x-1 whitespace-nowrap text-xs sm:text-sm">
-                                    <span>ลงชื่อ</span>
-                                    <span className="tracking-tighter">..............................................</span>
-                                    <span>ผู้เสนอโครงการ</span>
-                                </div>
-                                <p className="font-bold pt-1">
-                                    ({toThaiNumerals(cleanedResponsiblePerson)})
-                                </p>
-                                <p className="text-[11px] leading-snug pt-0.5 text-slate-800">
-                                    {toThaiNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}
-                                </p>
-                                <p className="text-[11px] pt-0.5 text-slate-700 whitespace-nowrap">
-                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
-                                </p>
+                            <div className="flex justify-center">
+                                <table className="border-collapse font-sarabun text-center">
+                                    <tbody>
+                                        <tr>
+                                            <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
+                                            <td className="text-center whitespace-nowrap px-1 align-bottom">
+                                                <span className="tracking-tighter inline-block min-w-[190px]">......................................................</span>
+                                            </td>
+                                            <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้เสนอโครงการ</td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center font-bold whitespace-nowrap pt-2">
+                                                ({toThaiNumerals(cleanedResponsiblePerson)})
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center text-[11.5px] leading-relaxed pt-1 font-normal max-w-[210px] text-slate-800">
+                                                {toThaiNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                                วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
 
                             {/* Signature 2: Head of Department */}
-                            <div className="text-center font-sarabun">
-                                <div className="flex justify-center items-center gap-x-1 whitespace-nowrap text-xs sm:text-sm">
-                                    <span>ลงชื่อ</span>
-                                    <span className="tracking-tighter">..............................................</span>
-                                    <span>ผู้เห็นชอบโครงการ</span>
-                                </div>
-                                <p className="font-bold pt-1">
-                                    (......................................................)
-                                </p>
-                                <p className="text-[11px] leading-snug pt-0.5 text-slate-800">
-                                    {toThaiNumerals(project.department?.name ? `หัวหน้า${project.department.name}` : 'หัวหน้าแผนกวิชา / หัวหน้างาน')}
-                                </p>
-                                <p className="text-[11px] pt-0.5 text-slate-700 whitespace-nowrap">
-                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
-                                </p>
+                            <div className="flex justify-center">
+                                <table className="border-collapse font-sarabun text-center">
+                                    <tbody>
+                                        <tr>
+                                            <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
+                                            <td className="text-center whitespace-nowrap px-1 align-bottom">
+                                                <span className="tracking-tighter inline-block min-w-[190px]">......................................................</span>
+                                            </td>
+                                            <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้เห็นชอบโครงการ</td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center font-bold whitespace-nowrap pt-2">
+                                                (......................................................)
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center text-[11.5px] leading-relaxed pt-1 font-normal max-w-[210px] text-slate-800">
+                                                {toThaiNumerals(project.department?.name ? `หัวหน้า${project.department.name}` : 'หัวหน้าแผนกวิชา / หัวหน้างาน')}
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                                วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
                         {/* Row 2: Planning Head & Deputy Director */}
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                             {/* Signature 3: Head of Planning */}
-                            <div className="text-center font-sarabun">
-                                <div className="flex justify-center items-center gap-x-1 whitespace-nowrap text-xs sm:text-sm">
-                                    <span>ลงชื่อ</span>
-                                    <span className="tracking-tighter">..............................................</span>
-                                    <span>ผู้เห็นชอบโครงการ</span>
-                                </div>
-                                <p className="font-bold pt-1">
-                                    (นายนิพนธ์ ร่องพืช)
-                                </p>
-                                <p className="text-[11px] leading-snug pt-0.5 text-slate-800">
-                                    หัวหน้างานแผนงานและความร่วมมือ
-                                </p>
-                                <p className="text-[11px] pt-0.5 text-slate-700 whitespace-nowrap">
-                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
-                                </p>
+                            <div className="flex justify-center">
+                                <table className="border-collapse font-sarabun text-center">
+                                    <tbody>
+                                        <tr>
+                                            <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
+                                            <td className="text-center whitespace-nowrap px-1 align-bottom">
+                                                <span className="tracking-tighter inline-block min-w-[190px]">......................................................</span>
+                                            </td>
+                                            <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้เห็นชอบโครงการ</td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center font-bold whitespace-nowrap pt-2">
+                                                (นายนิพนธ์ ร่องพืช)
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center text-[11.5px] leading-relaxed pt-1 font-normal max-w-[210px] text-slate-800">
+                                                หัวหน้างานแผนงานและความร่วมมือ
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                                วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
 
                             {/* Signature 4: Deputy Director */}
-                            <div className="text-center font-sarabun">
-                                <div className="flex justify-center items-center gap-x-1 whitespace-nowrap text-xs sm:text-sm">
-                                    <span>ลงชื่อ</span>
-                                    <span className="tracking-tighter">..............................................</span>
-                                    <span>ผู้เห็นชอบโครงการ</span>
-                                </div>
-                                <p className="font-bold pt-1">
-                                    (นายจักรพงศ์ พรหมสกุลปัญญา)
-                                </p>
-                                <p className="text-[11px] leading-snug pt-0.5 text-slate-800">
-                                    รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ
-                                </p>
-                                <p className="text-[11px] pt-0.5 text-slate-700 whitespace-nowrap">
-                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
-                                </p>
+                            <div className="flex justify-center">
+                                <table className="border-collapse font-sarabun text-center">
+                                    <tbody>
+                                        <tr>
+                                            <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
+                                            <td className="text-center whitespace-nowrap px-1 align-bottom">
+                                                <span className="tracking-tighter inline-block min-w-[190px]">......................................................</span>
+                                            </td>
+                                            <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้เห็นชอบโครงการ</td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center font-bold whitespace-nowrap pt-2">
+                                                (นายจักรพงศ์ พรหมสกุลปัญญา)
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center text-[11.5px] leading-relaxed pt-1 font-normal max-w-[210px] text-slate-800">
+                                                รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td></td>
+                                            <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                                วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
                         {/* Row 3: Final Director Approval */}
-                        <div className="pt-1 text-center font-sarabun max-w-sm mx-auto">
-                            <div className="flex justify-center items-center gap-x-1 whitespace-nowrap text-xs sm:text-sm">
-                                <span>ลงชื่อ</span>
-                                <span className="tracking-tighter">..............................................</span>
-                                <span>ผู้อนุมัติโครงการ</span>
-                            </div>
-                            <p className="font-bold text-sm sm:text-base pt-1">
-                                (นายกเชษฐ์ กิ่งชนะ)
-                            </p>
-                            <p className="text-[11px] font-semibold leading-snug pt-0.5">
-                                ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
-                            </p>
-                            <p className="text-[11px] pt-0.5 text-slate-700 whitespace-nowrap">
-                                วันที่ ....... เดือน ............................ พ.ศ. ...............
-                            </p>
+                        <div className="pt-2 flex justify-center">
+                            <table className="border-collapse font-sarabun text-center">
+                                <tbody>
+                                    <tr>
+                                        <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
+                                        <td className="text-center whitespace-nowrap px-1 align-bottom">
+                                            <span className="tracking-tighter inline-block min-w-[210px]">......................................................</span>
+                                        </td>
+                                        <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้อนุมัติโครงการ</td>
+                                    </tr>
+                                    <tr>
+                                        <td></td>
+                                        <td className="text-center font-bold text-sm sm:text-base whitespace-nowrap pt-2">
+                                            (นายกเชษฐ์ กิ่งชนะ)
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td></td>
+                                        <td className="text-center text-[12px] font-semibold leading-relaxed pt-1 text-slate-800">
+                                            ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td></td>
+                                        <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                            วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
