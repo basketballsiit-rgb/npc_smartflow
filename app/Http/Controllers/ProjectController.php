@@ -567,11 +567,9 @@ class ProjectController extends Controller
         $validated['national_strategy_ids'] = $request->input('national_strategy_ids', []);
         $validated['provincial_strategy_ids'] = $request->input('provincial_strategy_ids', []);
         $validated['strategy_selections'] = $request->input('strategy_selections', []);
-        $validated['iqa_strategy_id'] = $iqaIds[0] ?? null;
-        $validated['ovec_strategy_id'] = $ovecIds[0] ?? null;
-
-        // Prevent altering official title and allocated budget once budget is approved/allocated
-        if (in_array($project->status, ['budget_approved', 'approved', 'in_progress', 'completed']) || ($project->allocated_budget && $project->allocated_budget > 0)) {
+        // Prevent regular teachers from altering official title and allocated budget once budget is approved/allocated
+        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || ($user->department && (str_contains($user->department->name, 'แผน') || $user->department->code === 'PLAN'));
+        if ((in_array($project->status, ['budget_approved', 'approved', 'in_progress', 'completed']) || ($project->allocated_budget && $project->allocated_budget > 0)) && !$isPlanOrAdmin) {
             unset($validated['title']); // Keep existing official title
             unset($validated['estimated_budget']); // Keep existing allocated budget
         }
