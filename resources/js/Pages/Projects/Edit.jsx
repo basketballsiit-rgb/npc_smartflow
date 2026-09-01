@@ -170,6 +170,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             ...data.strategy_selections,
             [catId]: updatedCatItems
         });
+    };
+
     const handleSaveDraft = (e) => {
         if (e) e.preventDefault();
         patch(route('projects.update', project.id));
