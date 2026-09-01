@@ -1751,21 +1751,21 @@ export default function Dashboard({
                         </div>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse table-fixed">
                             <thead>
-                                <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900">
-                                    <th className="px-6 py-3.5">ชื่อโครงการ</th>
-                                    <th className="px-6 py-3.5">ปีงบประมาณ</th>
-                                    <th className="px-6 py-3.5">งบประมาณเสนอขอ / จัดสรรจริง</th>
-                                    <th className="px-6 py-3.5">สถานะโครงการ</th>
-                                    <th className="px-6 py-3.5 text-right">การดำเนินการ</th>
+                                <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-900">
+                                    <th className="w-[36%] min-w-[260px] px-5 py-3.5">ชื่อโครงการ</th>
+                                    <th className="w-[10%] min-w-[80px] px-3 py-3.5 text-center">ปีงบประมาณ</th>
+                                    <th className="w-[20%] min-w-[160px] px-4 py-3.5">งบประมาณเสนอขอ / จัดสรรจริง</th>
+                                    <th className="w-[18%] min-w-[140px] px-4 py-3.5 text-center">สถานะโครงการ</th>
+                                    <th className="w-[16%] min-w-[130px] px-4 py-3.5 text-right">การดำเนินการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-purple-100 text-sm">
                                 {teacherData.projects.length === 0 ? (
                                     <tr>
                                         <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
-                                            ยังไม่มีรายการโครงการที่เสนอ ให้กดปุ่ม '💡 เสนอโครงการเบื้องต้น' ด้านบนเพื่อเริ่มเสนอคำของบประมาณ
+                                            ยังไม่มีรายการโครงการที่เสนอ ให้กดปุ่ม '💡 เสนอโครงการเบื้องต้น (ขอตั้งงบ)' ด้านบนเพื่อเริ่มเสนอคำของบประมาณ
                                         </td>
                                     </tr>
                                 ) : (
@@ -1774,137 +1774,156 @@ export default function Dashboard({
                                         const hasAllocated = project.status === 'budget_approved' || project.status === 'approved' || project.allocated_budget > 0;
                                         
                                         return (
-                                            <tr key={project.id} className="hover:bg-purple-50/20">
-                                                <td className="px-6 py-4 font-bold text-slate-900">
-                                                    <div>{project.title}</div>
+                                            <tr key={project.id} className="hover:bg-purple-50/20 transition-colors">
+                                                <td className="px-5 py-4 align-top">
+                                                    <div className="font-bold text-slate-900 leading-snug text-sm line-clamp-3 break-words">
+                                                        {project.title}
+                                                    </div>
                                                     {project.committee_comment && (
-                                                        <div className="text-[11px] text-purple-700 mt-1 font-normal bg-purple-50 px-2 py-0.5 rounded border border-purple-100 inline-block">
-                                                            💬 มติคณะกรรมการ: {project.committee_comment}
+                                                        <div className="text-[11px] text-purple-700 mt-1.5 font-normal bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100 inline-block line-clamp-2">
+                                                            💬 มติ: {project.committee_comment}
                                                         </div>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 text-slate-600 font-semibold">{project.academic_year}</td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-3 py-4 text-center text-slate-600 font-bold align-top">
+                                                    {project.academic_year}
+                                                </td>
+                                                <td className="px-4 py-4 align-top">
                                                     <div className="font-bold text-purple-950">
                                                         {hasAllocated ? (
                                                             <div>
-                                                                <span className="text-emerald-700 font-extrabold">
+                                                                <span className="text-emerald-700 font-black text-sm block">
                                                                     {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.allocated_budget || project.estimated_budget)}
                                                                 </span>
                                                                 {fundingName && (
-                                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold ml-1.5">
+                                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold inline-block mt-0.5">
                                                                         {fundingName}
                                                                     </span>
                                                                 )}
-                                                                <div className="text-[11px] text-slate-400 font-normal">
+                                                                <div className="text-[10px] text-slate-400 font-normal mt-0.5">
                                                                     (เสนอขอ: {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.proposed_budget || project.estimated_budget)})
                                                                 </div>
                                                             </div>
                                                         ) : (
                                                             <div>
-                                                                <span className="text-slate-800 font-bold">
+                                                                <span className="text-slate-800 font-black text-sm block">
                                                                     {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.proposed_budget || project.estimated_budget)}
                                                                 </span>
-                                                                <div className="text-[10px] text-amber-700 font-semibold">
+                                                                <div className="text-[10px] text-amber-700 font-semibold mt-0.5">
                                                                     (รอการจัดสรรงบ)
                                                                 </div>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-4 py-4 text-center align-top">
                                                     {getStatusBadge(project.status, project.current_approval_step)}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                                                        {/* 1. Preliminary Status (Waiting for budget allocation) */}
+                                                <td className="px-4 py-4 text-right align-top whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        {/* 1. Preliminary Status: Waiting for Budget Approval */}
                                                         {project.status === 'preliminary' && (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
-                                                                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                                                                    ⏳ รอคณะกรรมการพิจารณาจัดสรรงบ
+                                                            <>
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-bold">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                                    รอจัดสรรงบ
                                                                 </span>
                                                                 <button
                                                                     onClick={() => handleDeleteProject(project)}
-                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                                    title="ยกเลิกคำขอเสนอโครงการเบื้องต้น"
+                                                                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition text-xs"
+                                                                    title="ยกเลิกคำขอเสนอโครงการ"
                                                                 >
-                                                                    🗑️ ลบคำขอ
+                                                                    🗑️
                                                                 </button>
-                                                            </div>
+                                                            </>
                                                         )}
 
                                                         {/* 2. Budget Rejected Status */}
                                                         {project.status === 'budget_rejected' && (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold">
-                                                                    🔴 ไม่อนุมัติจัดสรรงบ
+                                                            <>
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-200 text-[11px] font-bold">
+                                                                    🔴 ไม่อนุมัติ
                                                                 </span>
                                                                 <button
                                                                     onClick={() => handleDeleteProject(project)}
-                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition text-xs"
                                                                     title="ลบโครงการ"
                                                                 >
-                                                                    🗑️ ลบ
+                                                                    🗑️
                                                                 </button>
-                                                            </div>
+                                                            </>
                                                         )}
 
-                                                        {/* 3. Budget Approved Status - Prominent Start Full Proposal Button */}
+                                                        {/* 3. Budget Approved Status: Ready for Full Proposal */}
                                                         {project.status === 'budget_approved' && (
-                                                            <Link
-                                                                href={route('projects.edit', project.id)}
-                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 px-4 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 animate-bounce-short"
-                                                                title="จัดทำรายละเอียดโครงการฉบับสมบูรณ์"
-                                                            >
-                                                                📝 จัดทำรายละเอียดฉบับเต็ม →
-                                                            </Link>
+                                                            <>
+                                                                <Link
+                                                                    href={route('projects.edit', project.id)}
+                                                                    className="px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-lg font-bold text-[11px] shadow-xs hover:shadow transition flex items-center gap-1"
+                                                                    title="จัดทำรายละเอียดโครงการฉบับสมบูรณ์"
+                                                                >
+                                                                    <span>📝</span> ทำฉบับเต็ม →
+                                                                </Link>
+                                                                <Link
+                                                                    href={route('projects.show', project.id)}
+                                                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition text-xs"
+                                                                    title="ดูรายละเอียดโครงการ"
+                                                                >
+                                                                    👁️
+                                                                </Link>
+                                                            </>
                                                         )}
 
-                                                        {/* 4. Active Workflow Statuses (After budget allocation) */}
-                                                        {project.status !== 'preliminary' && project.status !== 'budget_rejected' && (
+                                                        {/* 4. Active Workflow Statuses (draft, submitted, approved) */}
+                                                        {project.status !== 'preliminary' && project.status !== 'budget_rejected' && project.status !== 'budget_approved' && (
                                                             <>
                                                                 <Link
                                                                     href={route('projects.show', project.id)}
-                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:shadow-purple-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                    className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-[11px] shadow-xs transition flex items-center gap-1"
                                                                     title="จัดการ / ดูรายละเอียด"
                                                                 >
-                                                                    👁️ จัดการ ➔
+                                                                    👁️ จัดการ
                                                                 </Link>
 
                                                                 {(project.status === 'draft' || project.status === 'rejected') && (
-                                                                    <button
-                                                                        onClick={() => handleResubmitProject(project)}
-                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                                        title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
-                                                                    >
-                                                                        🚀 ยื่นขออนุมัติ
-                                                                    </button>
-                                                                )}
-
-                                                                {(role === 'admin' || auth.user.is_admin || project.status === 'draft' || project.status === 'rejected') && (
-                                                                    <Link
-                                                                        href={route('projects.edit', project.id)}
-                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:shadow-amber-400/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                                        title="แก้ไขโครงการ"
-                                                                    >
-                                                                        ✏️ แก้ไข
-                                                                    </Link>
+                                                                    <>
+                                                                        <button
+                                                                            onClick={() => handleResubmitProject(project)}
+                                                                            className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition text-xs"
+                                                                            title="ยื่นเสนอขออนุมัติ"
+                                                                        >
+                                                                            🚀
+                                                                        </button>
+                                                                        <Link
+                                                                            href={route('projects.edit', project.id)}
+                                                                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition text-xs"
+                                                                            title="แก้ไข"
+                                                                        >
+                                                                            ✏️
+                                                                        </Link>
+                                                                    </>
                                                                 )}
 
                                                                 {(role === 'admin' || auth.user.is_admin || project.status === 'draft') && (
                                                                     <button
                                                                         onClick={() => handleDeleteProject(project)}
-                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:shadow-rose-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                                        title="ลบโครงการ"
+                                                                        className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition text-xs"
+                                                                        title="ลบ"
                                                                     >
-                                                                        🗑️ ลบ
+                                                                        🗑️
                                                                     </button>
                                                                 )}
                                                             </>
                                                         )}
                                                     </div>
                                                 </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                                             </tr>
                                         );
                                     })
