@@ -555,19 +555,34 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     <button
                                         type="button"
                                         onClick={handleSaveDraft}
-                                        disabled={processing}
+                                        disabled={processing || isSubmitting}
                                         className="rounded-xl border border-purple-300 bg-purple-50 px-5 py-2.5 text-sm font-bold text-purple-900 shadow-2xs hover:bg-purple-100 transition-all disabled:opacity-50"
                                     >
                                         💾 บันทึกแบบร่าง
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleSaveAndSubmit}
-                                        disabled={processing}
-                                        className="rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 px-6 py-2.5 text-sm font-extrabold text-white shadow-md shadow-emerald-600/25 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center gap-2"
-                                    >
-                                        <span>🚀</span> บันทึกและยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2) ➔
-                                    </button>
+                                    {project.status === 'pending_approval' ? (
+                                        <button
+                                            type="button"
+                                            disabled={true}
+                                            className="rounded-xl bg-slate-200 border border-slate-300 px-6 py-2.5 text-sm font-bold text-slate-500 cursor-not-allowed flex items-center gap-2 shadow-inner"
+                                        >
+                                            <span>✅</span> ยื่นขออนุมัติแล้ว (อยู่ระหว่างขั้นตอนที่ 2: รอตรวจสอบ)
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveAndSubmit}
+                                            disabled={processing || isSubmitting}
+                                            className={`rounded-xl px-6 py-2.5 text-sm font-extrabold transition-all flex items-center gap-2 shadow-md ${
+                                                isSubmitting || processing
+                                                    ? 'bg-slate-300 text-slate-500 border border-slate-400 cursor-not-allowed shadow-none'
+                                                    : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-emerald-600/25 hover:scale-[1.02] active:scale-95'
+                                            }`}
+                                        >
+                                            <span>{isSubmitting ? '⏳' : '🚀'}</span>
+                                            {isSubmitting ? 'กำลังบันทึกและส่งเรื่องอนุมัติ...' : 'บันทึกและยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2) ➔'}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
