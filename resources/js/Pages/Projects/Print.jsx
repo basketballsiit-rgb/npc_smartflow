@@ -293,7 +293,10 @@ export default function Print({ project, strategyCategories = [] }) {
                                                     </p>
                                                     {selectedItems.map((item, itemIdx) => {
                                                         let itemName = (item.name || item.title || '').trim();
+                                                        // Remove bracketed checkboxes
                                                         itemName = itemName.replace(/^\[.*?\]\s*/, '');
+                                                        // Remove IQA / OVEC prefix with numbers and colons
+                                                        itemName = itemName.replace(/^(IQA|OVEC)\s*([0-9๑-๙]+)?\s*[:\.\-]?\s*/i, '');
                                                         return (
                                                             <p key={item.id || itemIdx} className="pl-6 text-slate-800">
                                                                 <span className="font-bold pr-1">{toThaiNumerals(itemIdx + 1)})</span> {toThaiNumerals(itemName)}
