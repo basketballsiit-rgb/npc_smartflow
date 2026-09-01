@@ -1146,10 +1146,15 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                 ></textarea>
                             </div>
 
-                            {/* Section 4: Dynamic Procurement Documents Download Cards */}
+                            {/* Section 4: Dynamic Procurement & Loan Documents Download Cards */}
                             <div className="border-t border-purple-100 pt-4">
-                                <h4 className="text-sm font-black text-purple-950 mb-3">📄 เอกสารจัดซื้อจัดจ้างตามระเบียบพัสดุ (พิมพ์/สร้างอัตโนมัติ)</h4>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <h4 className="text-sm font-black text-purple-950 mb-3">📄 เอกสารจัดซื้อจัดจ้าง & สัญญายืมเงินราชการ (พิมพ์/สร้างอัตโนมัติ)</h4>
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                    <a href={route('procurements.download_document', [project.id, 'loan_contract'])} target="_blank" className="p-3.5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
+                                        <div className="text-lg mb-1">💵</div>
+                                        <div className="text-xs font-bold text-amber-950">สัญญายืมเงิน</div>
+                                        <div className="text-[10px] text-amber-700 font-medium">แบบ กค. ๑๐๑</div>
+                                    </a>
                                     <a href={route('procurements.download_document', [project.id, 'memo'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                         <div className="text-lg mb-1">📄</div>
                                         <div className="text-xs font-bold text-purple-900">1. บันทึกข้อความ</div>
@@ -1167,7 +1172,7 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                     </a>
                                     <a href={route('procurements.download_document', [project.id, 'tor'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                         <div className="text-lg mb-1">📜</div>
-                                        <div className="text-xs font-bold text-purple-900">4. TOR Specification</div>
+                                        <div className="text-xs font-bold text-purple-900">4. TOR Spec</div>
                                         <div className="text-[10px] text-purple-600">ข้อกำหนดขอบเขตงาน</div>
                                     </a>
                                 </div>
