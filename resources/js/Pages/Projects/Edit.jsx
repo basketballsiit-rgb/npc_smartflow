@@ -1525,13 +1525,44 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
                                                 {/* Procurement Items for this Activity */}
                                                 <div className="p-3.5 bg-indigo-50/40 rounded-xl border border-indigo-200 space-y-2.5">
-                                                    <div className="flex justify-between items-center">
+                                                    <div className="flex flex-wrap justify-between items-center gap-1.5">
                                                         <h5 className="text-xs font-bold text-indigo-950 flex items-center gap-1">
                                                             <span>📦</span> รายการจัดซื้อจัดจ้างพัสดุ - กิจกรรมที่ {actIdx + 1}
                                                         </h5>
-                                                        <span className="text-[11px] font-bold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-md">
-                                                            จัดซื้อ: {actProcSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            {remainingBudget > 0 && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const acts = [...(data.activities || [])];
+                                                                        const pItems = [...(acts[actIdx].procurement_items || [])];
+                                                                        if (pItems.length > 0) {
+                                                                            const currentPrice = parseFloat(pItems[0].unit_price) || 0;
+                                                                            const qty = parseFloat(pItems[0].quantity) || 1;
+                                                                            pItems[0].unit_price = currentPrice + (remainingBudget / qty);
+                                                                            pItems[0].total_price = qty * pItems[0].unit_price;
+                                                                        } else {
+                                                                            pItems.push({
+                                                                                description: '๑. ค่าวัสดุ อุปกรณ์ดำเนินกิจกรรม',
+                                                                                quantity: 1,
+                                                                                unit: 'ชุด',
+                                                                                unit_price: remainingBudget,
+                                                                                total_price: remainingBudget,
+                                                                            });
+                                                                        }
+                                                                        acts[actIdx].procurement_items = pItems;
+                                                                        setData('activities', acts);
+                                                                    }}
+                                                                    className="text-[11px] font-bold text-indigo-800 bg-indigo-100/90 hover:bg-indigo-200 border border-indigo-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1"
+                                                                    title="ดึงงบประมาณที่ยังคงเหลืออยู่มาเติมในรายการจัดซื้อของกิจกรรมนี้ให้ครบวงเงินพอดี"
+                                                                >
+                                                                    ⚡ ดึงยอดคงเหลือ (+{remainingBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บ.) เติมในกิจกรรมนี้
+                                                                </button>
+                                                            )}
+                                                            <span className="text-[11px] font-bold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-md">
+                                                                จัดซื้อ: {actProcSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <div className="overflow-x-auto">
                                                         <table className="w-full text-xs text-slate-800 border-collapse">
