@@ -323,26 +323,30 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                 icon: '✅'
             };
         }
-        if (status === 'in_progress') {
+        if (status === 'in_progress' || status === 'evaluating') {
             return {
-                title: '📦 อยู่ระหว่างดำเนินโครงการ / เบิกจ่ายเงิน (In Progress — ขั้นตอนที่ 4)',
-                desc: 'โครงการอยู่ระหว่างการจัดหาพัสดุ ดำเนินกิจกรรม และเคลียร์เงินเบิกจ่าย',
-                color: 'bg-blue-50 border-blue-200 text-blue-900',
-                icon: '🔄'
-            };
-        }
-        if (status === 'evaluating') {
-            return {
-                title: '⭐ อยู่ระหว่างประเมินผลโครงการ (Evaluating — ขั้นตอนที่ 5)',
-                desc: 'กิจกรรมโครงการเสร็จสิ้นแล้ว อยู่ระหว่างสรุปแบบประเมินผลและการวิเคราะห์ AI ในแท็บที่ 3',
+                title: '⭐ อยู่ระหว่างดำเนินกิจกรรม & ประเมินผลโครงการ (ขั้นตอนที่ 4)',
+                desc: 'โครงการอยู่ระหว่างดำเนินกิจกรรมและประเมินผลความพึงพอใจด้วย AI ในแท็บที่ 3',
                 color: 'bg-purple-50 border-purple-200 text-purple-900',
                 icon: '📊'
             };
         }
-        if (status === 'completed') {
+        if (status === 'reporting') {
             return {
-                title: '🎉 โครงการเสร็จสมบูรณ์เรียบร้อยแล้ว (Completed — ขั้นตอนที่ 6)',
-                desc: 'โครงการผ่านการสรุปและจัดทำรายงานผลเล่มรวม PDF สมบูรณ์เรียบร้อยแล้ว',
+                title: '📄 อยู่ระหว่างจัดทำรายงานผลฉบับสมบูรณ์ (ขั้นตอนที่ 5)',
+                desc: 'สรุปรูปภาพและจัดทำเล่มรายงานผลโครงการรวมเล่ม PDF สมบูรณ์',
+                color: 'bg-blue-50 border-blue-200 text-blue-900',
+                icon: '📄'
+            };
+        }
+        if (status === 'completed' || status === 'cleared') {
+            return {
+                title: '🧾 เคลียร์เงินยืม & เบิกจ่ายสิ้นสุดโครงการ (ขั้นตอนที่ 6)',
+                desc: 'ส่งเอกสารหลักฐานเคลียร์เงินทดรองและรายงานผลเสร็จสิ้นสมบูรณ์',
+                color: 'bg-teal-50 border-teal-200 text-teal-900',
+                icon: '🎉'
+            };
+        }
                 color: 'bg-teal-50 border-teal-200 text-teal-900',
                 icon: '🏆'
             };
