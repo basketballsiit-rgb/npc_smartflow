@@ -1924,13 +1924,6 @@ export default function Dashboard({
                             </tbody>
                         </table>
                     </div>
-                                            </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
         );
