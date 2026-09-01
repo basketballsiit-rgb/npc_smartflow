@@ -581,6 +581,22 @@ class ProjectController extends Controller
 
         $project->update($validated);
 
+        if ($request->boolean('submit_approval')) {
+            $project->status = 'pending_approval';
+            $project->current_approval_step = 2; // Step 2: Head of Department
+            $project->save();
+
+            ProjectApproval::create([
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+                'step_number' => 1,
+                'status' => 'approved',
+                'comments' => 'จัดทำโครงการฉบับเต็มและยื่นขออนุมัติตามกระบวนการ 6 ขั้นตอน',
+            ]);
+
+            return redirect()->route('projects.show', $project->id)->with('success', 'จัดทำรายละเอียดโครงการฉบับเต็มและยื่นขออนุมัติโครงการสำเร็จ ระบบได้ส่งต่อให้หัวหน้าแผนก/หัวหน้างานพิจารณา (ขั้นตอนที่ 2)');
+        }
+
         return redirect()->route('dashboard')->with('message', 'บันทึกรายละเอียดโครงการเรียบร้อยแล้ว');
     }
 
