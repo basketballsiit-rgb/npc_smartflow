@@ -403,11 +403,6 @@ class ProjectController extends Controller
                 'status' => 'rejected',
                 'comments' => 'มติคณะกรรมการ: ไม่อนุมัติงบประมาณ (' . $request->input('committee_comment') . ')',
             ]);
-                'user_id' => $user->id,
-                'step_number' => 3,
-                'status' => 'rejected',
-                'comments' => 'มติคณะกรรมการ: ไม่อนุมัติจัดสรรงบประมาณ (' . $request->input('committee_comment') . ')',
-            ]);
 
             return redirect()->back()->with('success', 'บันทึกมติไม่อนุมัติงบประมาณโครงการเรียบร้อยแล้ว');
         }
