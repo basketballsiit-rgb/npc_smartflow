@@ -777,24 +777,35 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                         {(!project.approvals || project.approvals.length === 0) ? (
                                             <p className="text-xs text-slate-400">ยังไม่มีประวัติการพิจารณาอนุมัติ</p>
                                         ) : (
-                                            project.approvals.map((log) => (
-                                                <div key={log.id} className="border-l-2 border-purple-500 pl-3 py-1 space-y-1">
-                                                    <div className="flex justify-between text-xs font-bold">
-                                                        <span className="text-slate-900">{log.user?.name}</span>
-                                                        <span className={log.status === 'approved' ? 'text-emerald-600' : 'text-rose-600'}>
-                                                            {log.status === 'approved' ? '✅ อนุมัติแล้ว' : '❌ ตีกลับแก้ไข'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between items-center text-xs text-slate-600">
-                                                        <span>ขั้นตอนที่ {log.step_number}: {log.comments || '-'}</span>
-                                                        {log.created_at && (
-                                                            <span className="text-[11px] font-medium text-purple-600">
-                                                                {new Date(log.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                            project.approvals.map((log) => {
+                                                const isApproved = log.status === 'approved';
+                                                const isRejected = log.status === 'rejected';
+                                                const isPreliminary = log.step_number === 0 || log.step_number === 1 && log.comments?.includes('เบื้องต้น');
+
+                                                return (
+                                                    <div key={log.id} className="border-l-2 border-purple-500 pl-3 py-1 space-y-1">
+                                                        <div className="flex justify-between text-xs font-bold">
+                                                            <span className="text-slate-900">{log.user?.name}</span>
+                                                            <span className={isApproved ? 'text-emerald-600' : isRejected ? 'text-rose-600' : 'text-purple-700'}>
+                                                                {isApproved ? '✅ อนุมัติแล้ว' : isRejected ? '❌ ตีกลับแก้ไข' : '📝 ยื่นเสนอ'}
                                                             </span>
-                                                        )}
+                                                        </div>
+                                                        <div className="flex justify-between items-center text-xs text-slate-600">
+                                                            <span>
+                                                                {isPreliminary 
+                                                                    ? `💡 เสนอตั้งงบเบื้องต้น: ${log.comments || '-'}`
+                                                                    : `ขั้นตอนที่ ${log.step_number}: ${log.comments || '-'}`
+                                                                }
+                                                            </span>
+                                                            {log.created_at && (
+                                                                <span className="text-[11px] font-medium text-purple-600 shrink-0 ml-2">
+                                                                    {new Date(log.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ))
+                                                );
+                                            })
                                         )}
                                     </div>
                                 </div>
