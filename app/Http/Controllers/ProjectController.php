@@ -873,6 +873,29 @@ class ProjectController extends Controller
      */
     public function reject(Request $request, Project $project)
     {
+        $user = auth()->user();
+        $isAuthorized = false;
+
+        if ($project->status === 'submitted' || $project->status === 'pending_approval') {
+            switch ($project->current_approval_step) {
+                case 2:
+                    $isAuthorized = $user->isAdmin() || $user->isPlanHead() || ($user->isDepartmentHead($project->department_id) && $user->id !== $project->user_id);
+                    break;
+                case 3:
+                    $isAuthorized = $user->isAdmin() || $user->isPlanHead();
+                    break;
+                case 4:
+                case 5:
+                case 6:
+                    $isAuthorized = $user->isAdmin() || $user->isExecutive();
+                    break;
+            }
+        }
+
+        if (!$isAuthorized) {
+            return redirect()->back()->with('error', 'ท่านไม่มีสิทธิ์ในการส่งกลับหรือตีกลับโครงการในขั้นตอนนี้');
+        }
+
         $request->validate([
             'comments' => 'required|string',
         ]);
