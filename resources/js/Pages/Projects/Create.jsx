@@ -5,144 +5,17 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import ProjectWorkflowStepper from '@/Components/ProjectWorkflowStepper';
 
-export default function Create({ strategyCategories = [], iqaStrategies = [], ovecStrategies = [], nationalStrategies = [], provincialStrategies = [], departments = [] }) {
+export default function Create({ 
+    approvedProjects = [],
+    strategyCategories = [], 
+    iqaStrategies = [], 
+    ovecStrategies = [], 
+    nationalStrategies = [], 
+    provincialStrategies = [], 
+    departments = [] 
+}) {
     const [generatingAi, setGeneratingAi] = useState(false);
 
-    // Initialize dynamic strategy selections
-    const initialSelections = {};
-    (strategyCategories || []).forEach(cat => {
-        initialSelections[cat.id] = cat.items?.[0]?.id ? [cat.items[0].id] : [];
-    });
-
-    const { data, setData, post, processing, errors } = useForm({
-        title: '',
-        academic_year: 2569,
-        responsible_person: 'นางสาวฉัตรนภา ถิ่นมีกุล',
-        position: 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ',
-        phone: '080-6044450',
-        email: 'Newchatnapa16@npc.ac.th',
-        mission: 'ผลิตและพัฒนากำลังคนด้านวิชาชีพให้มีคุณภาพตามมาตรฐานการอาชีวศึกษา',
-        goal: 'ผู้เรียนและผู้สำเร็จการศึกษามีความรู้ ทักษะ การประยุกต์ใช้และมีคุณธรรม จริยธรรม ตามมาตรฐานวิชาชีพ',
-        strategy_tactic: 'ส่งเสริมด้านวิชาการ คุณธรรม จริยธรรม และค่านิยมที่ดีงามในวิชาชีพ',
-        background_rationale: '',
-        objectives: [''],
-        outputs: [''],
-        outcomes: [''],
-        targets: {
-            quantitative: [''],
-            qualitative: [''],
-        },
-        location: 'ณ วิทยาลัยสารพัดช่างน่าน',
-        expected_benefits: [''],
-        strategy_selections: initialSelections,
-        iqa_strategy_ids: iqaStrategies[0]?.id ? [iqaStrategies[0].id] : [],
-        ovec_strategy_ids: ovecStrategies[0]?.id ? [ovecStrategies[0].id] : [],
-        national_strategy_ids: nationalStrategies[0]?.id ? [nationalStrategies[0].id] : [],
-        provincial_strategy_ids: provincialStrategies[0]?.id ? [provincialStrategies[0].id] : [],
-        estimated_budget: '',
-    });
-
-    // One-Click AI Full Proposal Generator
-    const handleGenerateFullProposalAi = async () => {
-        if (!data.title.trim()) {
-            Swal.fire('คำแนะนำ', 'กรุณาระบุชื่อโครงการก่อน เพื่อให้ AI ช่วยยกร่างเอกสารเสนอโครงการฉบับสมบูรณ์', 'info');
-            return;
-        }
-
-        setGeneratingAi(true);
-        try {
-            const res = await axios.post(route('projects.generate_ai_content'), {
-                type: 'full_proposal',
-                title: data.title,
-            });
-
-            if (res.data?.success) {
-                setData(prev => ({
-                    ...prev,
-                    background_rationale: res.data.background_rationale,
-                    objectives: res.data.objectives,
-                    outputs: res.data.outputs,
-                    outcomes: res.data.outcomes,
-                    targets: {
-                        quantitative: res.data.quantitative,
-                        qualitative: res.data.qualitative,
-                    },
-                    expected_benefits: res.data.expected_benefits,
-                    action_plan: res.data.action_plan,
-                }));
-                Swal.fire('✨ AI ยกร่างโครงการสำเร็จ!', 'จัดพิมพ์เนื้อหาตามแบบฟอร์มมาตรฐานวิทยาลัยสารพัดช่างน่านครบถ้วนทุกหัวข้อแล้ว ท่านสามารถปรับแก้ไขเพิ่มเติมได้ตามต้องการ', 'success');
-            }
-        } catch (err) {
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้', 'error');
-        } finally {
-            setGeneratingAi(false);
-        }
-    };
-
-    const handleGenerateAiRationale = async () => {
-        if (!data.title.trim()) {
-            Swal.fire('คำแนะนำ', 'กรุณาระบุชื่อโครงการก่อน ให้ AI ช่วยยกร่างหลักการและเหตุผล', 'info');
-            return;
-        }
-
-        setGeneratingAi(true);
-        try {
-            const res = await axios.post(route('projects.generate_ai_content'), {
-                type: 'rationale',
-                title: data.title,
-            });
-
-            if (res.data?.success && res.data.content) {
-                setData('background_rationale', res.data.content);
-                Swal.fire('✨ AI จัดพิมพ์สำเร็จ!', 'ยกร่างหลักการและเหตุผลเรียบร้อยแล้ว', 'success');
-            }
-        } catch (err) {
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้', 'error');
-        } finally {
-            setGeneratingAi(false);
-        }
-    };
-
-    // Helper for multi-string arrays
-    const handleArrayChange = (field, index, value) => {
-        const list = [...(data[field] || [])];
-        list[index] = value;
-        setData(field, list);
-    };
-
-    const addArrayItem = (field) => {
-        setData(field, [...(data[field] || []), '']);
-    };
-
-    const removeArrayItem = (field, index) => {
-        const list = [...(data[field] || [])];
-        list.splice(index, 1);
-        setData(field, list);
-    };
-
-    // Targets handlers
-    const quantList = Array.isArray(data.targets.quantitative) ? data.targets.quantitative : [data.targets.quantitative || ''];
-    const qualList = Array.isArray(data.targets.qualitative) ? data.targets.qualitative : [data.targets.qualitative || ''];
-
-    const handleTargetChange = (type, index, value) => {
-        const list = type === 'quant' ? [...quantList] : [...qualList];
-        list[index] = value;
-        setData('targets', {
-            ...data.targets,
-            [type === 'quant' ? 'quantitative' : 'qualitative']: list
-        });
-    };
-
-    const addTargetItem = (type) => {
-        const list = type === 'quant' ? quantList : qualList;
-        setData('targets', {
-            ...data.targets,
-            [type === 'quant' ? 'quantitative' : 'qualitative']: [...list, '']
-        });
-    };
-
-    const removeTargetItem = (type, index) => {
-        const list = type === 'quant' ? [...quantList] : [...qualList];
         list.splice(index, 1);
         setData('targets', {
             ...data.targets,
