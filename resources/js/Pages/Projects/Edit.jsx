@@ -1,11 +1,24 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import ProjectWorkflowStepper from '@/Components/ProjectWorkflowStepper';
 
 export default function Edit({ project, strategyCategories = [], iqaStrategies = [], ovecStrategies = [], nationalStrategies = [], provincialStrategies = [], departments = [] }) {
+    const { auth } = usePage().props;
+    const user = auth?.user;
+    const isPlanOrAdmin = user?.is_admin || 
+                          user?.role?.name === 'admin' || 
+                          user?.role === 'admin' || 
+                          user?.role?.name === 'plan_head' || 
+                          user?.role === 'plan_head' || 
+                          user?.department?.code === 'PLAN' || 
+                          (user?.department?.name && user.department.name.includes('แผน'));
+
+    const isBudgetApproved = project.status === 'budget_approved' || project.status === 'approved' || (project.allocated_budget && project.allocated_budget > 0);
+    const isTitleLocked = isBudgetApproved && !isPlanOrAdmin;
+
     const [generatingAi, setGeneratingAi] = useState(false);
 
     const initialQuant = Array.isArray(project?.targets?.quantitative)
