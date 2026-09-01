@@ -1817,51 +1817,91 @@ export default function Dashboard({
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right">
                                                     <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                                                        <Link
-                                                            href={route('projects.show', project.id)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:shadow-purple-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="จัดการ / ดูรายละเอียด"
-                                                        >
-                                                            👁️ จัดการ ➔
-                                                        </Link>
-                                                        
-                                                        {/* If budget approved, allow completing full project proposal details */}
+                                                        {/* 1. Preliminary Status (Waiting for budget allocation) */}
+                                                        {project.status === 'preliminary' && (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold">
+                                                                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                                                    ⏳ รอคณะกรรมการพิจารณาจัดสรรงบ
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => handleDeleteProject(project)}
+                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                    title="ยกเลิกคำขอเสนอโครงการเบื้องต้น"
+                                                                >
+                                                                    🗑️ ลบคำขอ
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        {/* 2. Budget Rejected Status */}
+                                                        {project.status === 'budget_rejected' && (
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-800 border border-rose-200 text-xs font-bold">
+                                                                    🔴 ไม่อนุมัติจัดสรรงบ
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => handleDeleteProject(project)}
+                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                    title="ลบโครงการ"
+                                                                >
+                                                                    🗑️ ลบ
+                                                                </button>
+                                                            </div>
+                                                        )}
+
+                                                        {/* 3. Budget Approved Status - Prominent Start Full Proposal Button */}
                                                         {project.status === 'budget_approved' && (
                                                             <Link
                                                                 href={route('projects.edit', project.id)}
-                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 px-4 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 animate-bounce-short"
                                                                 title="จัดทำรายละเอียดโครงการฉบับสมบูรณ์"
                                                             >
-                                                                📝 จัดทำรายละเอียดฉบับเต็ม
+                                                                📝 จัดทำรายละเอียดฉบับเต็ม →
                                                             </Link>
                                                         )}
 
-                                                        {(project.status === 'draft' || project.status === 'rejected') && (
-                                                            <button
-                                                                onClick={() => handleResubmitProject(project)}
-                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                                title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
-                                                            >
-                                                                🚀 ยื่นขออนุมัติ
-                                                            </button>
-                                                        )}
-                                                        {(role === 'admin' || auth.user.is_admin || project.status === 'draft' || project.status === 'rejected' || project.status === 'preliminary') && (
-                                                            <Link
-                                                                href={route('projects.edit', project.id)}
-                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:shadow-amber-400/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                                title="แก้ไขโครงการ"
-                                                            >
-                                                                ✏️ แก้ไข
-                                                            </Link>
-                                                        )}
-                                                        {(role === 'admin' || auth.user.is_admin || project.status === 'draft' || project.status === 'preliminary') && (
-                                                            <button
-                                                                onClick={() => handleDeleteProject(project)}
-                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:shadow-rose-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                                title="ลบโครงการ"
-                                                            >
-                                                                🗑️ ลบ
-                                                            </button>
+                                                        {/* 4. Active Workflow Statuses (After budget allocation) */}
+                                                        {project.status !== 'preliminary' && project.status !== 'budget_rejected' && (
+                                                            <>
+                                                                <Link
+                                                                    href={route('projects.show', project.id)}
+                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:shadow-purple-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                    title="จัดการ / ดูรายละเอียด"
+                                                                >
+                                                                    👁️ จัดการ ➔
+                                                                </Link>
+
+                                                                {(project.status === 'draft' || project.status === 'rejected') && (
+                                                                    <button
+                                                                        onClick={() => handleResubmitProject(project)}
+                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                        title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
+                                                                    >
+                                                                        🚀 ยื่นขออนุมัติ
+                                                                    </button>
+                                                                )}
+
+                                                                {(role === 'admin' || auth.user.is_admin || project.status === 'draft' || project.status === 'rejected') && (
+                                                                    <Link
+                                                                        href={route('projects.edit', project.id)}
+                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:shadow-amber-400/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                        title="แก้ไขโครงการ"
+                                                                    >
+                                                                        ✏️ แก้ไข
+                                                                    </Link>
+                                                                )}
+
+                                                                {(role === 'admin' || auth.user.is_admin || project.status === 'draft') && (
+                                                                    <button
+                                                                        onClick={() => handleDeleteProject(project)}
+                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:shadow-rose-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                        title="ลบโครงการ"
+                                                                    >
+                                                                        🗑️ ลบ
+                                                                    </button>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </div>
                                                 </td>
