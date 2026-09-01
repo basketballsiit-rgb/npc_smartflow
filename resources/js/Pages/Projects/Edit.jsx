@@ -365,7 +365,17 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     const handleSaveDraft = (e) => {
         if (e) e.preventDefault();
         patch(route('projects.update', project.id), {
-            data: prepareSubmitData(false)
+            data: prepareSubmitData(false),
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: '💾 บันทึกแบบร่างสำเร็จ!',
+                    text: 'ระบบบันทึกข้อมูลเรียบร้อยแล้ว ท่านสามารถกรอกรายละเอียดเพิ่มเติมต่อได้ทันที',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
         });
     };
 
