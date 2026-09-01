@@ -481,7 +481,7 @@ class ProjectController extends Controller
             abort(403, 'Unauthorized.');
         }
 
-        $project->load(['fundingSource', 'budget.fundingSource']);
+        $project->load(['fundingSource', 'budget.fundingSource', 'procurement.items']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
 
         $activeCategories = \App\Models\StrategyCategory::with(['items' => function($q) {
@@ -580,6 +580,33 @@ class ProjectController extends Controller
         }
 
         $project->update($validated);
+
+        // Sync Procurement Estimated Items (flows directly to Procurement stage)
+        if ($request->has('procurement_items')) {
+            $procurement = \App\Models\Procurement::firstOrCreate(
+                ['project_id' => $project->id],
+                [
+                    'procurement_number' => 'PR-' . str_pad($project->id, 5, '0', STR_PAD_LEFT),
+                    'status' => 'processing'
+                ]
+            );
+
+            $procurementItems = $request->input('procurement_items', []);
+            $procurement->items()->delete();
+            foreach ($procurementItems as $item) {
+                if (!empty($item['description'])) {
+                    $qty = (float)($item['quantity'] ?? 1);
+                    $price = (float)($item['unit_price'] ?? 0);
+                    $procurement->items()->create([
+                        'description' => $item['description'],
+                        'quantity' => $qty,
+                        'unit' => $item['unit'] ?? 'รายการ',
+                        'unit_price' => $price,
+                        'total_price' => $qty * $price,
+                    ]);
+                }
+            }
+        }
 
         if ($request->boolean('submit_approval')) {
             $project->status = 'pending_approval';
