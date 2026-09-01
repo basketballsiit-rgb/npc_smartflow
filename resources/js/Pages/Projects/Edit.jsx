@@ -20,14 +20,38 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     const isTitleLocked = isBudgetApproved && !isPlanOrAdmin;
 
     const [generatingAi, setGeneratingAi] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const initialQuant = Array.isArray(project?.targets?.quantitative)
+    const initialQuant = Array.isArray(project?.targets?.quantitative) && project.targets.quantitative.length > 0
         ? project.targets.quantitative
-        : [project?.targets?.quantitative || ''];
+        : ['นักเรียน นักศึกษา และผู้เข้าร่วมโครงการ จำนวนไม่น้อยกว่า 50 คน', 'มีการจัดกิจกรรมและการดำเนินงานตามโครงการ จำนวน 1 โครงการ'];
 
-    const initialQual = Array.isArray(project?.targets?.qualitative)
+    const initialQual = Array.isArray(project?.targets?.qualitative) && project.targets.qualitative.length > 0
         ? project.targets.qualitative
-        : [project?.targets?.qualitative || ''];
+        : ['ผู้เข้าร่วมโครงการมีความรู้ ความเข้าใจ และทักษะเพิ่มขึ้นไม่น้อยกว่าร้อยละ 85', 'ผู้เข้าร่วมโครงการมีความพึงพอใจต่อภาพรวมของการจัดโครงการในระดับดีมาก (ร้อยละ 90 ขึ้นไป)'];
+
+    const defaultOutputs = [
+        `ผู้เข้าร่วมโครงการใน "${project?.title || 'โครงการ'}" ได้รับการฝึกอบรมและพัฒนาสมรรถนะครบถ้วนตามเกณฑ์ จำนวนไม่น้อยกว่า 50 คน`,
+        'มีเอกสาร สื่อการเรียนรู้ หรือผลงานจากการดำเนินโครงการที่นำไปใช้ประโยชน์ได้จริงอย่างน้อย 1 รายการ'
+    ];
+
+    const defaultOutcomes = [
+        `ผู้เรียนและบุคลากรสามารถนำองค์ความรู้และทักษะจากโครงการไปประยุกต์ใช้ในการปฏิบัติงานจริงได้อย่างมีประสิทธิภาพ`,
+        'วิทยาลัยสารพัดช่างน่านมีมาตรฐานการจัดการเรียนการสอนและการบริการวิชาชีพที่ได้รับการยอมรับจากชุมชนและสถานประกอบการ'
+    ];
+
+    const defaultExpectedBenefits = [
+        'ผู้เข้าร่วมโครงการมีทักษะและสมรรถนะตรงตามมาตรฐานวิชาชีพและความต้องการของตลาดแรงงานในยุคดิจิทัล',
+        'สถานศึกษามีผลการดำเนินงานที่ตอบสนองต่อนโยบายของสำนักงานคณะกรรมการการอาชีวศึกษาและยุทธศาสตร์การพัฒนาจังหวัดน่าน',
+        'สร้างภาพลักษณ์ที่ดีและเพิ่มความเชื่อมั่นให้กับผู้ปกครอง ชุมชน และสถานประกอบการในการจัดการศึกษาของวิทยาลัย'
+    ];
+
+    const defaultActionPlan = [
+        { step_name: '1. ประชุมวางแผน จัดทำและเสนอโครงการเพื่อขออนุมัติ', q1: true, q2: false, q3: false, q4: false, target_count: '1 โครงการ', location_name: 'วช.น่าน', budget_operating: 0 },
+        { step_name: '2. แต่งตั้งคณะกรรมการ เตรียมการจัดซื้อจัดจ้างและประสานงาน', q1: false, q2: true, q3: false, q4: false, target_count: '1 ครั้ง', location_name: 'วช.น่าน', budget_operating: 0 },
+        { step_name: '3. ดำเนินการจัดกิจกรรม/โครงการตามแผนที่กำหนด', q1: false, q2: false, q3: true, q4: false, target_count: '50 คน', location_name: 'วช.น่าน', budget_operating: project?.estimated_budget || 0 },
+        { step_name: '4. สรุปผลการประเมินความพึงพอใจและจัดทำรายงานฉบับสมบูรณ์', q1: false, q2: false, q3: false, q4: true, target_count: '1 เล่ม', location_name: 'วช.น่าน', budget_operating: 0 },
+    ];
 
     // Initialize dynamic strategy selections
     const initialSelections = project?.strategy_selections || {};
@@ -40,12 +64,24 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     const { data, setData, patch, processing, errors } = useForm({
         title: project?.title || '',
         academic_year: project?.academic_year || 2569,
+        responsible_person: project?.responsible_person || project?.user?.name || '',
+        position: project?.position || 'ครูผู้สอน / ผู้รับผิดชอบโครงการ',
+        phone: project?.phone || '',
+        email: project?.email || project?.user?.email || '',
+        location: project?.location || 'ณ วิทยาลัยสารพัดช่างน่าน',
+        mission: project?.mission || 'ผลิตและพัฒนากำลังคนด้านวิชาชีพให้มีคุณภาพตามมาตรฐานการอาชีวศึกษา',
+        goal: project?.goal || 'ผู้เรียนและผู้สำเร็จการศึกษามีความรู้ ทักษะ การประยุกต์ใช้และมีคุณธรรม จริยธรรม ตามมาตรฐานวิชาชีพ',
+        strategy_tactic: project?.strategy_tactic || 'ส่งเสริมด้านวิชาการ คุณธรรม จริยธรรม และค่านิยมที่ดีงามในวิชาชีพ',
         background_rationale: project?.background_rationale || '',
-        objectives: project?.objectives || [''],
+        objectives: project?.objectives && project.objectives.length > 0 ? project.objectives : [''],
+        outputs: project?.outputs && project.outputs.length > 0 ? project.outputs : defaultOutputs,
+        outcomes: project?.outcomes && project.outcomes.length > 0 ? project.outcomes : defaultOutcomes,
         targets: {
             quantitative: initialQuant,
             qualitative: initialQual,
         },
+        expected_benefits: project?.expected_benefits && project.expected_benefits.length > 0 ? project.expected_benefits : defaultExpectedBenefits,
+        action_plan: project?.action_plan && project.action_plan.length > 0 ? project.action_plan : defaultActionPlan,
         strategy_selections: initialSelections,
         iqa_strategy_ids: project?.iqa_strategy_ids || [],
         ovec_strategy_ids: project?.ovec_strategy_ids || [],
@@ -54,23 +90,41 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         estimated_budget: project?.estimated_budget || '',
     });
 
-    // AI Generator Handlers
-    const handleGenerateAiRationale = async () => {
+    // Universal AI Generator Handler
+    const handleGenerateAi = async (type, successMessage) => {
         if (!data.title.trim()) {
-            Swal.fire('คำแนะนำ', 'กรุณาระบุชื่อโครงการก่อน ให้ AI ช่วยยกร่างหลักการและเหตุผล', 'info');
+            Swal.fire('คำแนะนำ', 'กรุณาระบุชื่อโครงการก่อน ให้ AI ช่วยประมวลผล', 'info');
             return;
         }
 
         setGeneratingAi(true);
         try {
             const res = await axios.post(route('projects.generate_ai_content'), {
-                type: 'rationale',
+                type: type,
                 title: data.title,
+                budget: data.estimated_budget,
             });
 
-            if (res.data?.success && res.data.content) {
-                setData('background_rationale', res.data.content);
-                Swal.fire('✨ AI จัดพิมพ์สำเร็จ!', 'ยกร่างหลักการและเหตุผลตามมาตรฐานวิทยาลัยสารพัดช่างน่านเรียบร้อยแล้ว', 'success');
+            if (res.data?.success) {
+                if (type === 'rationale' && res.data.content) {
+                    setData('background_rationale', res.data.content);
+                } else if (type === 'objectives' && res.data.objectives) {
+                    setData('objectives', res.data.objectives);
+                } else if (type === 'targets') {
+                    setData('targets', {
+                        quantitative: res.data.quantitative || data.targets.quantitative,
+                        qualitative: res.data.qualitative || data.targets.qualitative,
+                    });
+                } else if (type === 'outputs' && res.data.outputs) {
+                    setData('outputs', res.data.outputs);
+                } else if (type === 'outcomes' && res.data.outcomes) {
+                    setData('outcomes', res.data.outcomes);
+                } else if (type === 'expected_benefits' && res.data.expected_benefits) {
+                    setData('expected_benefits', res.data.expected_benefits);
+                } else if (type === 'action_plan' && res.data.action_plan) {
+                    setData('action_plan', res.data.action_plan);
+                }
+                Swal.fire('✨ AI ประมวลผลสำเร็จ!', successMessage, 'success');
             }
         } catch (err) {
             Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้', 'error');
@@ -79,84 +133,51 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         }
     };
 
-    const handleGenerateAiObjectives = async () => {
-        if (!data.title.trim()) {
-            Swal.fire('คำแนะนำ', 'กรุณาระบุชื่อโครงการก่อน ให้ AI ช่วยเสนอวัตถุประสงค์', 'info');
-            return;
-        }
+    // Generic Multi-item Handlers
+    const handleArrayChange = (field, index, value) => {
+        const list = [...(data[field] || [])];
+        list[index] = value;
+        setData(field, list);
+    };
 
-        try {
-            const res = await axios.post(route('projects.generate_ai_content'), {
-                type: 'objectives',
-                title: data.title,
-            });
+    const addArrayItem = (field) => {
+        setData(field, [...(data[field] || []), '']);
+    };
 
-            if (res.data?.success && res.data.objectives) {
-                setData('objectives', res.data.objectives);
-                Swal.fire('✨ AI เสนอวัตถุประสงค์สำเร็จ!', 'ปรับปรุงชุดวัตถุประสงค์ให้ตรงตามเป้าหมายโครงการเรียบร้อยแล้ว', 'success');
+    const removeArrayItem = (field, index) => {
+        const list = [...(data[field] || [])];
+        list.splice(index, 1);
+        setData(field, list);
+    };
+
+    // Action Plan Handlers
+    const handleActionPlanChange = (index, field, value) => {
+        const plan = [...(data.action_plan || [])];
+        plan[index] = { ...plan[index], [field]: value };
+        setData('action_plan', plan);
+    };
+
+    const addActionPlanRow = () => {
+        const nextIndex = (data.action_plan || []).length + 1;
+        setData('action_plan', [
+            ...(data.action_plan || []),
+            {
+                step_name: `${nextIndex}. ดำเนินกิจกรรมเพิ่มเติม`,
+                q1: false,
+                q2: false,
+                q3: false,
+                q4: false,
+                target_count: '50 คน',
+                location_name: 'วช.น่าน',
+                budget_operating: 0
             }
-        } catch (err) {
-            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้', 'error');
-        }
+        ]);
     };
 
-    // Objectives handlers
-    const handleObjectiveChange = (index, value) => {
-        const list = [...data.objectives];
-        list[index] = value;
-        setData('objectives', list);
-    };
-
-    const addObjectiveField = () => {
-        setData('objectives', [...data.objectives, '']);
-    };
-
-    const removeObjectiveField = (index) => {
-        const list = [...data.objectives];
-        list.splice(index, 1);
-        setData('objectives', list);
-    };
-
-    // Quantitative Target handlers
-    const quantList = Array.isArray(data.targets.quantitative)
-        ? data.targets.quantitative
-        : [data.targets.quantitative || ''];
-
-    const handleQuantTargetChange = (index, value) => {
-        const list = [...quantList];
-        list[index] = value;
-        setData('targets', { ...data.targets, quantitative: list });
-    };
-
-    const addQuantTarget = () => {
-        setData('targets', { ...data.targets, quantitative: [...quantList, ''] });
-    };
-
-    const removeQuantTarget = (index) => {
-        const list = [...quantList];
-        list.splice(index, 1);
-        setData('targets', { ...data.targets, quantitative: list });
-    };
-
-    // Qualitative Target handlers
-    const qualList = Array.isArray(data.targets.qualitative)
-        ? data.targets.qualitative
-        : [data.targets.qualitative || ''];
-
-    const handleQualTargetChange = (index, value) => {
-        const list = [...qualList];
-        list[index] = value;
-        setData('targets', { ...data.targets, qualitative: list });
-    };
-
-    const addQualTarget = () => {
-        setData('targets', { ...data.targets, qualitative: [...qualList, ''] });
-    };
-
-    const removeQualTarget = (index) => {
-        const list = [...qualList];
-        list.splice(index, 1);
-        setData('targets', { ...data.targets, qualitative: list });
+    const removeActionPlanRow = (index) => {
+        const plan = [...(data.action_plan || [])];
+        plan.splice(index, 1);
+        setData('action_plan', plan);
     };
 
     // Dynamic Strategy Handler
@@ -171,8 +192,6 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             [catId]: updatedCatItems
         });
     };
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSaveDraft = (e) => {
         if (e) e.preventDefault();
@@ -213,130 +232,243 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                 <div className="flex justify-between items-center">
                     <div>
                         <h2 className="text-2xl font-black leading-tight text-purple-950 font-sans">
-                            ✏️ แก้ไขแบบเสนอโครงการ (Edit Project Proposal)
+                            📄 จัดทำ/แก้ไขแบบเสนอโครงการฉบับเต็ม (Full Proposal)
                         </h2>
                         <p className="text-xs text-slate-500 font-sans mt-0.5">
-                            ปรับปรุงรายละเอียดข้อเสนอโครงการ วิทยาลัยสารพัดช่างน่าน
+                            กรอกรายละเอียดโครงการครบ 14 หัวข้อตามมาตรฐาน สอศ. พร้อมระบบ AI ช่วยยกร่างเนื้อหา
                         </p>
                     </div>
-                    <Link
-                        href={route('dashboard')}
-                        className="inline-flex items-center rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-bold text-purple-800 shadow-xs hover:bg-purple-50 transition-all"
-                    >
-                        ← ย้อนกลับหน้าศูนย์ควบคุม
-                    </Link>
+                    <div className="flex items-center gap-x-2">
+                        <a
+                            href={route('projects.print', project.id)}
+                            target="_blank"
+                            className="rounded-xl bg-purple-100 text-purple-800 border border-purple-200 px-4 py-2 text-xs font-bold hover:bg-purple-200 transition-all flex items-center gap-1.5"
+                        >
+                            🖨️ ดูตัวอย่างเอกสารฉบับพิมพ์
+                        </a>
+                        <Link
+                            href={route('dashboard')}
+                            className="rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-bold text-purple-800 shadow-xs hover:bg-purple-50 transition-all"
+                        >
+                            ← ศูนย์ควบคุม
+                        </Link>
+                    </div>
                 </div>
             }
         >
-            <Head title="แก้ไขโครงการ - NPC SMART FLOW" />
+            <Head title={`จัดทำโครงการฉบับเต็ม: ${project?.title}`} />
 
             <div className="py-8 font-sans">
-                <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-                    <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white p-8 shadow-sm">
-                        
-                        {/* Visual Workflow Stepper Bar */}
-                        <ProjectWorkflowStepper currentStep={project?.current_approval_step || 1} status={project?.status || 'draft'} />
+                <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-6">
 
-                        <form onSubmit={handleSubmit} className="space-y-6 text-sm text-slate-800 font-sans">
-                            
-                            {/* Form Header */}
-                            <div className="border-b border-purple-100 pb-4 mb-6 flex justify-between items-center">
-                                <div>
-                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">แก้ไขรายละเอียดโครงการ</span>
-                                    <h3 className="text-lg font-bold text-purple-950">{project?.title}</h3>
-                                </div>
-                            </div>
+                    {/* Stepper Bar */}
+                    <ProjectWorkflowStepper currentStep={project.current_approval_step || 1} status={project.status} />
 
-                            {/* Title */}
-                            <div>
-                                <div className="flex items-center justify-between mb-1.5">
-                                    <label className="block text-xs font-bold text-slate-700">
-                                        ชื่อโครงการ (Project Title) *
-                                    </label>
-                                    {isTitleLocked ? (
-                                        <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                            🔒 อนุมัติจัดสรรงบแล้ว (หากต้องการปรับแก้ชื่อกรุณาแจ้งงานแผนงาน/ผู้ดูแลระบบ)
-                                        </span>
-                                    ) : isBudgetApproved && isPlanOrAdmin ? (
-                                        <span className="text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                                            👑 สิทธิ์งานแผนงาน/ผู้ดูแลระบบ: ปลดล็อคแก้ไขชื่อโครงการได้
-                                        </span>
-                                    ) : null}
-                                </div>
-                                <input
-                                    type="text"
-                                    value={data.title}
-                                    onChange={(e) => !isTitleLocked && setData('title', e.target.value)}
-                                    disabled={isTitleLocked}
-                                    readOnly={isTitleLocked}
-                                    className={`w-full rounded-xl px-4 py-2.5 text-sm transition ${
-                                        isTitleLocked 
-                                            ? 'bg-slate-100 text-slate-700 border-slate-300 cursor-not-allowed select-none font-bold shadow-inner' 
-                                            : 'border-purple-200 focus:border-purple-500 focus:ring-purple-500'
-                                    }`}
-                                    required
-                                />
-                                {errors.title && <span className="text-xs text-rose-500 mt-1 block">{errors.title}</span>}
-                            </div>
+                    <div className="rounded-3xl border border-purple-100 bg-white p-6 md:p-8 shadow-sm">
+                        <form onSubmit={handleSubmit} className="space-y-8">
 
-                            {/* Academic Year & Estimated Budget */}
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                                        ปีการศึกษา พ.ศ. (Academic Year) *
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={data.academic_year}
-                                        onChange={(e) => setData('academic_year', e.target.value)}
-                                        className="w-full rounded-xl border-purple-200 px-4 py-2.5 text-sm focus:border-purple-500 focus:ring-purple-500"
-                                        required
-                                    />
-                                    {errors.academic_year && <span className="text-xs text-rose-500 mt-1 block">{errors.academic_year}</span>}
+                            {/* Section 1: ข้อมูลพื้นฐาน & ผู้รับผิดชอบโครงการ */}
+                            <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
+                                <div className="border-b border-purple-100 pb-3 flex justify-between items-center">
+                                    <div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๑ : ข้อมูลทั่วไป & ผู้รับผิดชอบโครงการ</span>
+                                        <h3 className="text-base font-bold text-purple-950">๑. ชื่อโครงการ & รายละเอียดผู้เสนอ</h3>
+                                    </div>
+                                    <span className="text-xs text-purple-700 font-bold bg-purple-100 px-3 py-1 rounded-full">
+                                        ปีงบประมาณ พ.ศ. {data.academic_year}
+                                    </span>
                                 </div>
 
+                                {/* Project Title */}
                                 <div>
                                     <div className="flex items-center justify-between mb-1.5">
                                         <label className="block text-xs font-bold text-slate-700">
-                                            วงเงินงบประมาณที่ได้รับจัดสรร (บาท) *
+                                            ชื่อโครงการ (Project Title) *
                                         </label>
                                         {isTitleLocked ? (
-                                            <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-full">
-                                                🔒 วงเงินตามมติจัดสรร (แจ้งงานแผนงานหากต้องการปรับลด/เพิ่ม)
+                                            <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                                🔒 อนุมัติจัดสรรงบแล้ว (หากต้องการปรับแก้ชื่อกรุณาแจ้งงานแผนงาน/ผู้ดูแลระบบ)
                                             </span>
                                         ) : isBudgetApproved && isPlanOrAdmin ? (
-                                            <span className="text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-300 px-2 py-0.5 rounded-full">
-                                                👑 สิทธิ์งานแผนงาน: ปรับวงเงินงบประมาณได้
+                                            <span className="text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-300 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                                                👑 สิทธิ์งานแผนงาน/ผู้ดูแลระบบ: ปลดล็อคแก้ไขชื่อโครงการได้
                                             </span>
                                         ) : null}
                                     </div>
                                     <input
-                                        type="number"
-                                        step="0.01"
-                                        value={data.estimated_budget}
-                                        onChange={(e) => !isTitleLocked && setData('estimated_budget', e.target.value)}
+                                        type="text"
+                                        value={data.title}
+                                        onChange={(e) => !isTitleLocked && setData('title', e.target.value)}
                                         disabled={isTitleLocked}
                                         readOnly={isTitleLocked}
-                                        className={`w-full rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                                        className={`w-full rounded-xl px-4 py-2.5 text-sm transition ${
                                             isTitleLocked 
-                                                ? 'bg-slate-100 text-slate-700 border-slate-300 cursor-not-allowed select-none shadow-inner' 
-                                                : 'border-purple-200 text-purple-900 focus:border-purple-500 focus:ring-purple-500'
+                                                ? 'bg-slate-100 text-slate-700 border-slate-300 cursor-not-allowed select-none font-bold shadow-inner' 
+                                                : 'border-purple-200 focus:border-purple-500 focus:ring-purple-500'
                                         }`}
                                         required
                                     />
-                                    {errors.estimated_budget && <span className="text-xs text-rose-500 mt-1 block">{errors.estimated_budget}</span>}
+                                    {errors.title && <span className="text-xs text-rose-500 mt-1 block">{errors.title}</span>}
+                                </div>
+
+                                {/* Academic Year & Budget */}
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                            ปีการศึกษา พ.ศ. (Academic Year) *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={data.academic_year}
+                                            onChange={(e) => setData('academic_year', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-4 py-2.5 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                            required
+                                        />
+                                        {errors.academic_year && <span className="text-xs text-rose-500 mt-1 block">{errors.academic_year}</span>}
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <label className="block text-xs font-bold text-slate-700">
+                                                วงเงินงบประมาณที่ได้รับจัดสรร (บาท) *
+                                            </label>
+                                            {isTitleLocked ? (
+                                                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-300 px-2 py-0.5 rounded-full">
+                                                    🔒 วงเงินตามมติจัดสรร (แจ้งงานแผนงานหากต้องการปรับลด/เพิ่ม)
+                                                </span>
+                                            ) : isBudgetApproved && isPlanOrAdmin ? (
+                                                <span className="text-[11px] font-bold text-purple-800 bg-purple-50 border border-purple-300 px-2 py-0.5 rounded-full">
+                                                    👑 สิทธิ์งานแผนงาน: ปรับวงเงินงบประมาณได้
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={data.estimated_budget}
+                                            onChange={(e) => !isTitleLocked && setData('estimated_budget', e.target.value)}
+                                            disabled={isTitleLocked}
+                                            readOnly={isTitleLocked}
+                                            className={`w-full rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+                                                isTitleLocked 
+                                                    ? 'bg-slate-100 text-slate-700 border-slate-300 cursor-not-allowed select-none shadow-inner' 
+                                                    : 'border-purple-200 text-purple-900 focus:border-purple-500 focus:ring-purple-500'
+                                            }`}
+                                            required
+                                        />
+                                        {errors.estimated_budget && <span className="text-xs text-rose-500 mt-1 block">{errors.estimated_budget}</span>}
+                                    </div>
+                                </div>
+
+                                {/* Responsible Person & Position & Contact */}
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-1">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">ผู้รับผิดชอบโครงการ (ชื่อ-สกุล) *</label>
+                                        <input
+                                            type="text"
+                                            value={data.responsible_person}
+                                            onChange={(e) => setData('responsible_person', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-4 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="เช่น นายสมศักดิ์ ครูผู้สอน"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">ตำแหน่ง *</label>
+                                        <input
+                                            type="text"
+                                            value={data.position}
+                                            onChange={(e) => setData('position', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-4 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="เช่น ครู วิทยฐานะชำนาญการ"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 pt-1">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">โทรศัพท์เคลื่อนที่</label>
+                                        <input
+                                            type="text"
+                                            value={data.phone}
+                                            onChange={(e) => setData('phone', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-4 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="เช่น 081-2345678"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">E-mail</label>
+                                        <input
+                                            type="email"
+                                            value={data.email}
+                                            onChange={(e) => setData('email', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-4 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="example@npc.ac.th"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1.5">พื้นที่ดำเนินการ (Location)</label>
+                                        <input
+                                            type="text"
+                                            value={data.location}
+                                            onChange={(e) => setData('location', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-4 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="เช่น ณ วิทยาลัยสารพัดช่างน่าน"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Background Rationale (With AI Assistant Button) */}
+                            {/* Section 2: พันธกิจ & เป้าประสงค์สถานศึกษา */}
+                            <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
+                                <div className="border-b border-purple-100 pb-2">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๒ : ความสอดคล้องกับแผนสถานศึกษา</span>
+                                    <h3 className="text-base font-bold text-purple-950">๒. ลักษณะโครงการตามแผนพัฒนาการจัดการศึกษา วิทยาลัยสารพัดช่างน่าน</h3>
+                                </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">พันธกิจที่สอดคล้อง (Mission)</label>
+                                        <input
+                                            type="text"
+                                            value={data.mission}
+                                            onChange={(e) => setData('mission', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-4 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="ระบุพันธกิจ..."
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">เป้าประสงค์ (Goal)</label>
+                                            <input
+                                                type="text"
+                                                value={data.goal}
+                                                onChange={(e) => setData('goal', e.target.value)}
+                                                className="w-full rounded-xl border-purple-200 px-4 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                                placeholder="ระบุเป้าประสงค์..."
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">กลยุทธ์ (Tactic/Strategy)</label>
+                                            <input
+                                                type="text"
+                                                value={data.strategy_tactic}
+                                                onChange={(e) => setData('strategy_tactic', e.target.value)}
+                                                className="w-full rounded-xl border-purple-200 px-4 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                                placeholder="ระบุกลยุทธ์..."
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Background Rationale */}
                             <div>
                                 <div className="flex justify-between items-center mb-1.5">
                                     <label className="block text-xs font-bold text-slate-700">
-                                        หลักการและเหตุผล (Background & Rationale) *
+                                        ๓. ความสำคัญของโครงการ / หลักการและเหตุผล (Background & Rationale) *
                                     </label>
                                     <button
                                         type="button"
-                                        onClick={handleGenerateAiRationale}
+                                        onClick={() => handleGenerateAi('rationale', 'ยกร่างหลักการและเหตุผลตามมาตรฐานวิทยาลัยสารพัดช่างน่านเรียบร้อยแล้ว')}
                                         disabled={generatingAi}
                                         className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs transition-all disabled:opacity-50"
                                     >
@@ -347,46 +479,48 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     rows={5}
                                     value={data.background_rationale}
                                     onChange={(e) => setData('background_rationale', e.target.value)}
-                                    className="w-full rounded-xl border-purple-200 px-4 py-2.5 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                    className="w-full rounded-xl border-purple-200 px-4 py-2.5 text-sm focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                    placeholder="ระบุหลักการ เหตุผล และความเป็นมาของโครงการ..."
                                     required
                                 ></textarea>
                                 {errors.background_rationale && <span className="text-xs text-rose-500 mt-1 block">{errors.background_rationale}</span>}
                             </div>
 
-                            {/* Objectives (Multiple Items with AI Generator) */}
+                            {/* Section 4: Objectives */}
                             <div className="space-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-100">
                                 <div className="flex justify-between items-center">
                                     <label className="block text-xs font-bold text-purple-950">
-                                        วัตถุประสงค์ของโครงการ (Objectives) *
+                                        ๔. วัตถุประสงค์ของโครงการ (Objectives) *
                                     </label>
                                     <div className="flex gap-x-2 items-center">
                                         <button
                                             type="button"
-                                            onClick={handleGenerateAiObjectives}
-                                            className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200"
+                                            onClick={() => handleGenerateAi('objectives', 'ปรับปรุงชุดวัตถุประสงค์ให้ตรงตามเป้าหมายโครงการเรียบร้อยแล้ว')}
+                                            disabled={generatingAi}
+                                            className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 shadow-2xs"
                                         >
                                             ✨ ให้ AI ช่วยเขียนวัตถุประสงค์
                                         </button>
                                         <span className="text-[11px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">
-                                            {data.objectives.length} ข้อ
+                                            {(data.objectives || []).length} ข้อ
                                         </span>
                                     </div>
                                 </div>
-                                {data.objectives.map((obj, index) => (
+                                {(data.objectives || []).map((obj, index) => (
                                     <div key={index} className="flex gap-x-2 items-start">
                                         <span className="text-xs font-bold text-purple-700 w-6 text-right mt-2.5 shrink-0">{index + 1}.</span>
                                         <textarea
                                             rows={2}
                                             value={obj}
-                                            onChange={(e) => handleObjectiveChange(index, e.target.value)}
+                                            onChange={(e) => handleArrayChange('objectives', index, e.target.value)}
                                             className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
                                             placeholder="ระบุวัตถุประสงค์โครงการ..."
                                             required
                                         />
-                                        {data.objectives.length > 1 && (
+                                        {(data.objectives || []).length > 1 && (
                                             <button
                                                 type="button"
-                                                onClick={() => removeObjectiveField(index)}
+                                                onClick={() => removeArrayItem('objectives', index)}
                                                 className="text-rose-500 hover:text-rose-700 font-bold px-2 py-2 text-base mt-1 shrink-0"
                                                 title="ลบข้อนี้"
                                             >
@@ -397,40 +531,143 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 ))}
                                 <button
                                     type="button"
-                                    onClick={addObjectiveField}
+                                    onClick={() => addArrayItem('objectives')}
                                     className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 pt-1"
                                 >
                                     + เพิ่มวัตถุประสงค์อีกข้อ
                                 </button>
                             </div>
 
-                            {/* Targets (Multiple Items) */}
+                            {/* Section 5 & 6: ผลผลิต (Outputs) & ผลลัพธ์ (Outcomes) */}
                             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                {/* Quantitative Targets */}
+                                {/* Outputs */}
                                 <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="block text-xs font-bold text-slate-800">
-                                            เป้าหมายเชิงปริมาณ (Quantitative Target) *
+                                            ๕. ผลผลิตโครงการ (Outputs)
                                         </label>
-                                        <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">
-                                            {quantList.length} รายการ
-                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleGenerateAi('outputs', 'จัดทำข้อเสนอผลผลิตโครงการเรียบร้อยแล้ว')}
+                                            className="text-[11px] font-bold text-purple-700 bg-white hover:bg-purple-100 px-2 py-0.5 rounded border border-purple-200"
+                                        >
+                                            ✨ AI เสนอผลผลิต
+                                        </button>
                                     </div>
-                                    {quantList.map((item, idx) => (
+                                    {(data.outputs || []).map((item, idx) => (
                                         <div key={idx} className="flex gap-x-2 items-start">
                                             <span className="text-xs font-bold text-slate-500 w-5 mt-2.5 shrink-0">{idx + 1}.</span>
                                             <textarea
                                                 rows={2}
                                                 value={item}
-                                                onChange={(e) => handleQuantTargetChange(idx, e.target.value)}
+                                                onChange={(e) => handleArrayChange('outputs', idx, e.target.value)}
+                                                className="w-full rounded-xl border-purple-200 px-3 py-1.5 text-xs focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
+                                                placeholder="ระบุผลผลิต..."
+                                            />
+                                            {(data.outputs || []).length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeArrayItem('outputs', idx)}
+                                                    className="text-rose-500 hover:text-rose-700 font-bold px-1 py-1 mt-1 shrink-0"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => addArrayItem('outputs')}
+                                        className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block"
+                                    >
+                                        + เพิ่มผลผลิตอีกข้อ
+                                    </button>
+                                </div>
+
+                                {/* Outcomes */}
+                                <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-xs font-bold text-slate-800">
+                                            ๖. ผลลัพธ์โครงการ (Outcomes)
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleGenerateAi('outcomes', 'จัดทำข้อเสนอผลลัพธ์โครงการเรียบร้อยแล้ว')}
+                                            className="text-[11px] font-bold text-purple-700 bg-white hover:bg-purple-100 px-2 py-0.5 rounded border border-purple-200"
+                                        >
+                                            ✨ AI เสนอผลลัพธ์
+                                        </button>
+                                    </div>
+                                    {(data.outcomes || []).map((item, idx) => (
+                                        <div key={idx} className="flex gap-x-2 items-start">
+                                            <span className="text-xs font-bold text-slate-500 w-5 mt-2.5 shrink-0">{idx + 1}.</span>
+                                            <textarea
+                                                rows={2}
+                                                value={item}
+                                                onChange={(e) => handleArrayChange('outcomes', idx, e.target.value)}
+                                                className="w-full rounded-xl border-purple-200 px-3 py-1.5 text-xs focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
+                                                placeholder="ระบุผลลัพธ์..."
+                                            />
+                                            {(data.outcomes || []).length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeArrayItem('outcomes', idx)}
+                                                    className="text-rose-500 hover:text-rose-700 font-bold px-1 py-1 mt-1 shrink-0"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => addArrayItem('outcomes')}
+                                        className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block"
+                                    >
+                                        + เพิ่มผลลัพธ์อีกข้อ
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Section 7: Targets (Multiple Items) */}
+                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                {/* Quantitative Targets */}
+                                <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
+                                    <div className="flex justify-between items-center mb-1">
+                                        <label className="block text-xs font-bold text-slate-800">
+                                            ๗.๑ กลุ่มเป้าหมายเชิงปริมาณ (Quantitative) *
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleGenerateAi('targets', 'จัดทำเป้าหมายเชิงปริมาณและคุณภาพเรียบร้อยแล้ว')}
+                                            className="text-[11px] font-bold text-purple-700 bg-white hover:bg-purple-100 px-2 py-0.5 rounded border border-purple-200"
+                                        >
+                                            ✨ AI เสนอเป้าหมาย
+                                        </button>
+                                    </div>
+                                    {(data.targets.quantitative || []).map((item, idx) => (
+                                        <div key={idx} className="flex gap-x-2 items-start">
+                                            <span className="text-xs font-bold text-slate-500 w-5 mt-2.5 shrink-0">{idx + 1}.</span>
+                                            <textarea
+                                                rows={2}
+                                                value={item}
+                                                onChange={(e) => {
+                                                    const list = [...(data.targets.quantitative || [])];
+                                                    list[idx] = e.target.value;
+                                                    setData('targets', { ...data.targets, quantitative: list });
+                                                }}
                                                 className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
                                                 placeholder="เช่น ผู้เข้าร่วมโครงการจำนวน 50 คน..."
                                                 required
                                             />
-                                            {quantList.length > 1 && (
+                                            {(data.targets.quantitative || []).length > 1 && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => removeQuantTarget(idx)}
+                                                    onClick={() => {
+                                                        const list = [...(data.targets.quantitative || [])];
+                                                        list.splice(idx, 1);
+                                                        setData('targets', { ...data.targets, quantitative: list });
+                                                    }}
                                                     className="text-rose-500 hover:text-rose-700 font-bold px-1.5 py-2 mt-1 shrink-0"
                                                     title="ลบข้อนี้"
                                                 >
@@ -441,7 +678,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     ))}
                                     <button
                                         type="button"
-                                        onClick={addQuantTarget}
+                                        onClick={() => {
+                                            setData('targets', { ...data.targets, quantitative: [...(data.targets.quantitative || []), ''] });
+                                        }}
                                         className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block"
                                     >
                                         + เพิ่มเป้าหมายเชิงปริมาณอีกข้อ
@@ -452,27 +691,35 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="block text-xs font-bold text-slate-800">
-                                            เป้าหมายเชิงคุณภาพ (Qualitative Target) *
+                                            ๗.๒ กลุ่มเป้าหมายเชิงคุณภาพ (Qualitative) *
                                         </label>
                                         <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">
-                                            {qualList.length} รายการ
+                                            {(data.targets.qualitative || []).length} รายการ
                                         </span>
                                     </div>
-                                    {qualList.map((item, idx) => (
+                                    {(data.targets.qualitative || []).map((item, idx) => (
                                         <div key={idx} className="flex gap-x-2 items-start">
                                             <span className="text-xs font-bold text-slate-500 w-5 mt-2.5 shrink-0">{idx + 1}.</span>
                                             <textarea
                                                 rows={2}
                                                 value={item}
-                                                onChange={(e) => handleQualTargetChange(idx, e.target.value)}
+                                                onChange={(e) => {
+                                                    const list = [...(data.targets.qualitative || [])];
+                                                    list[idx] = e.target.value;
+                                                    setData('targets', { ...data.targets, qualitative: list });
+                                                }}
                                                 className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
                                                 placeholder="เช่น ผู้เข้าร่วมมีความพึงพอใจในระดับดีขึ้นไป..."
                                                 required
                                             />
-                                            {qualList.length > 1 && (
+                                            {(data.targets.qualitative || []).length > 1 && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => removeQualTarget(idx)}
+                                                    onClick={() => {
+                                                        const list = [...(data.targets.qualitative || [])];
+                                                        list.splice(idx, 1);
+                                                        setData('targets', { ...data.targets, qualitative: list });
+                                                    }}
                                                     className="text-rose-500 hover:text-rose-700 font-bold px-1.5 py-2 mt-1 shrink-0"
                                                     title="ลบข้อนี้"
                                                 >
@@ -483,7 +730,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     ))}
                                     <button
                                         type="button"
-                                        onClick={addQualTarget}
+                                        onClick={() => {
+                                            setData('targets', { ...data.targets, qualitative: [...(data.targets.qualitative || []), ''] });
+                                        }}
                                         className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block"
                                     >
                                         + เพิ่มเป้าหมายเชิงคุณภาพอีกข้อ
@@ -491,7 +740,175 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 </div>
                             </div>
 
-                            {/* Strategic Alignments (Fully Dynamic Categories Multi-Select) */}
+                            {/* Section 8: ผลที่คาดว่าจะได้รับ (Expected Benefits) */}
+                            <div className="space-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-100">
+                                <div className="flex justify-between items-center">
+                                    <label className="block text-xs font-bold text-purple-950">
+                                        ๙. ผลที่คาดว่าจะได้รับ (Expected Benefits)
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleGenerateAi('expected_benefits', 'ยกร่างผลที่คาดว่าจะได้รับเรียบร้อยแล้ว')}
+                                        disabled={generatingAi}
+                                        className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 shadow-2xs"
+                                    >
+                                        ✨ ให้ AI ช่วยเสนอผลที่คาดว่าจะได้รับ
+                                    </button>
+                                </div>
+                                {(data.expected_benefits || []).map((item, index) => (
+                                    <div key={index} className="flex gap-x-2 items-start">
+                                        <span className="text-xs font-bold text-purple-700 w-6 text-right mt-2.5 shrink-0">{index + 1}.</span>
+                                        <textarea
+                                            rows={2}
+                                            value={item}
+                                            onChange={(e) => handleArrayChange('expected_benefits', index, e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
+                                            placeholder="ระบุผลประโยชน์ที่ผู้เรียนหรือสถานศึกษาจะได้รับ..."
+                                        />
+                                        {(data.expected_benefits || []).length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeArrayItem('expected_benefits', index)}
+                                                className="text-rose-500 hover:text-rose-700 font-bold px-2 py-2 text-base mt-1 shrink-0"
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                                <button
+                                    type="button"
+                                    onClick={() => addArrayItem('expected_benefits')}
+                                    className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 pt-1"
+                                >
+                                    + เพิ่มผลที่คาดว่าจะได้รับอีกข้อ
+                                </button>
+                            </div>
+
+                            {/* Section 9: ปฏิทินปฏิบัติงาน & แผนดำเนินงาน (Action Plan Table) */}
+                            <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
+                                <div className="flex justify-between items-center border-b border-purple-100 pb-2">
+                                    <div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๓ : แผนการปฏิบัติงาน</span>
+                                        <h3 className="text-base font-bold text-purple-950">๑๑. ขั้นตอนและปฏิทินปฏิบัติงาน (Action Plan)</h3>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleGenerateAi('action_plan', 'สร้างปฏิทินปฏิบัติงาน 4 ขั้นตอนมาตรฐานเรียบร้อยแล้ว')}
+                                        className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs"
+                                    >
+                                        ✨ ให้ AI สร้างปฏิทินปฏิบัติงาน
+                                    </button>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-xs text-slate-800 border-collapse">
+                                        <thead>
+                                            <tr className="bg-purple-100/70 text-purple-950 font-bold border border-purple-200">
+                                                <th className="p-2.5 text-left min-w-[220px]">กิจกรรม / ขั้นตอนการดำเนินงาน</th>
+                                                <th className="p-2 text-center w-12">Q1<br/><span className="text-[10px] font-normal text-slate-500">ต.ค.-ธ.ค.</span></th>
+                                                <th className="p-2 text-center w-12">Q2<br/><span className="text-[10px] font-normal text-slate-500">ม.ค.-มี.ค.</span></th>
+                                                <th className="p-2 text-center w-12">Q3<br/><span className="text-[10px] font-normal text-slate-500">เม.ย.-มิ.ย.</span></th>
+                                                <th className="p-2 text-center w-12">Q4<br/><span className="text-[10px] font-normal text-slate-500">ก.ค.-ก.ย.</span></th>
+                                                <th className="p-2 text-left w-24">กลุ่มเป้าหมาย</th>
+                                                <th className="p-2 text-left w-20">สถานที่</th>
+                                                <th className="p-2 text-right w-28">งบประมาณ (บาท)</th>
+                                                <th className="p-2 text-center w-8">ลบ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {(data.action_plan || []).map((row, rIdx) => (
+                                                <tr key={rIdx} className="border-b border-purple-100 hover:bg-purple-50/50">
+                                                    <td className="p-2">
+                                                        <input
+                                                            type="text"
+                                                            value={row.step_name}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'step_name', e.target.value)}
+                                                            className="w-full rounded-lg border-purple-200 px-2.5 py-1 text-xs focus:border-purple-500"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!row.q1}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'q1', e.target.checked)}
+                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!row.q2}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'q2', e.target.checked)}
+                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!row.q3}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'q3', e.target.checked)}
+                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={!!row.q4}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'q4', e.target.checked)}
+                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <input
+                                                            type="text"
+                                                            value={row.target_count}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'target_count', e.target.value)}
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs"
+                                                            placeholder="50 คน"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <input
+                                                            type="text"
+                                                            value={row.location_name}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'location_name', e.target.value)}
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs"
+                                                            placeholder="วช.น่าน"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2">
+                                                        <input
+                                                            type="number"
+                                                            value={row.budget_operating}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'budget_operating', parseFloat(e.target.value) || 0)}
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-bold"
+                                                        />
+                                                    </td>
+                                                    <td className="p-2 text-center">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeActionPlanRow(rIdx)}
+                                                            className="text-rose-500 hover:text-rose-700 font-bold"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={addActionPlanRow}
+                                    className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block"
+                                >
+                                    + เพิ่มแถวกิจกรรมในปฏิทินปฏิบัติงาน
+                                </button>
+                            </div>
+
+                            {/* Section 10: Strategic Alignments (Fully Dynamic Categories Multi-Select) */}
                             <div className="space-y-6 pt-2">
                                 <div className="border-b border-purple-100 pb-2">
                                     <h4 className="text-sm font-bold text-purple-950">ความสอดคล้องกับยุทธศาสตร์การพัฒนา (Strategic Alignments)</h4>
