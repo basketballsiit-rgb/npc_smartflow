@@ -3640,13 +3640,15 @@ export default function Dashboard({
                                                 </td>
                                                 <td className="px-2.5 py-2.5 whitespace-nowrap text-right align-top">
                                                     <div className="flex items-center justify-end gap-1">
-                                                        <button
-                                                            onClick={() => openCommitteeModal(p)}
-                                                            className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap"
-                                                            title="พิจารณาอนุมัติจัดสรรงบประมาณ หรือไม่อนุมัติ"
-                                                        >
-                                                            ⚖️ พิจารณา
-                                                        </button>
+                                                        {p.status !== 'budget_approved' && (
+                                                            <button
+                                                                onClick={() => openCommitteeModal(p)}
+                                                                className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap"
+                                                                title="พิจารณาอนุมัติจัดสรรงบประมาณ หรือไม่อนุมัติ"
+                                                            >
+                                                                ⚖️ พิจารณา
+                                                            </button>
+                                                        )}
                                                         <Link
                                                             href={route('projects.show', p.id)}
                                                             className="p-1 text-purple-700 hover:bg-purple-100 rounded-md transition text-xs"
