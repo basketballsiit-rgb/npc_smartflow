@@ -625,7 +625,7 @@ class ProjectController extends Controller
             return redirect()->route('projects.show', $project->id)->with('success', 'จัดทำรายละเอียดโครงการฉบับเต็มและยื่นขออนุมัติโครงการสำเร็จ ระบบได้ส่งต่อให้หัวหน้าแผนก/หัวหน้างานพิจารณา (ขั้นตอนที่ 2)');
         }
 
-        return redirect()->route('dashboard')->with('message', 'บันทึกรายละเอียดโครงการเรียบร้อยแล้ว');
+        return redirect()->back()->with('success', 'บันทึกแบบร่างโครงการเรียบร้อยแล้ว ท่านสามารถแก้ไขต่อได้ตลอดเวลา');
     }
 
     /**
