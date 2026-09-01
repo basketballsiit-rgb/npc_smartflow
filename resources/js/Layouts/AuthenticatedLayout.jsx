@@ -171,7 +171,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         
                         {/* 0. MAIN DASHBOARD HOME ENTRY */}
                         <Link
-                            href="/dashboard"
+                            href={route('dashboard')}
                             className={`flex items-center gap-x-3 px-3.5 py-2.5 rounded-xl transition-all text-sm ${
                                 route().current('dashboard') && (!url.includes('tab=') || url.includes('tab=admin_users'))
                                     ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-purple-950 shadow-md font-bold'
