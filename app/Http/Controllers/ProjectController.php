@@ -147,6 +147,9 @@ class ProjectController extends Controller
         $user = auth()->user();
         $deptId = $request->input('department_id') ?: ($user->department_id ?: Department::first()->id);
 
+        $defaultIqaId = \App\Models\IqaStrategy::first()?->id ?: 1;
+        $defaultOvecId = \App\Models\OvecStrategy::first()?->id ?: 1;
+
         $project = new Project();
         $project->user_id = $user->id;
         $project->department_id = $deptId;
@@ -162,6 +165,10 @@ class ProjectController extends Controller
         $project->mission = $validated['mission'] ?? '';
         $project->goal = $validated['goal'] ?? '';
         $project->strategy_tactic = $validated['strategy_tactic'] ?? '';
+        $project->iqa_strategy_id = $defaultIqaId;
+        $project->ovec_strategy_id = $defaultOvecId;
+        $project->iqa_strategy_ids = [$defaultIqaId];
+        $project->ovec_strategy_ids = [$defaultOvecId];
         $project->objectives = ['เพื่อดำเนินโครงการตามวัตถุประสงค์ที่กำหนด'];
         $project->targets = ['quantitative' => ['ผู้เข้าร่วมโครงการตามเป้าหมาย'], 'qualitative' => ['มีความพึงพอใจในระดับดีขึ้นไป']];
         $project->outputs = ['ผลผลิตโครงการ'];
