@@ -72,54 +72,30 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         { step_name: '4. สรุปผลการประเมินความพึงพอใจและจัดทำรายงานฉบับสมบูรณ์', q1: false, q2: false, q3: false, q4: true, target_count: '1 เล่ม', location_name: 'วช.น่าน', budget_operating: 0 },
     ];
 
-    // Partition initial items into Loan (สัญญายืมเงิน) and Procurement (จัดซื้อจัดจ้าง)
+    // Multi-Activity Default Structure
     const budgetAmount = parseFloat(project?.estimated_budget || 0);
 
-    const defaultLoanItems = [
-        { description: '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ (6 ชม. x 600 บาท)', quantity: 6, unit: 'ชั่วโมง', unit_price: 600, total_price: 3600 },
-        { description: '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)', quantity: 50, unit: 'คน', unit_price: 80, total_price: 4000 },
-        { description: '๓. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', quantity: 50, unit: 'คน', unit_price: 70, total_price: 3500 },
-        { description: '๔. ค่าใช้จ่ายในการเดินทางไปราชการ / ค่าพาหนะ', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
+    const defaultActivities = [
+        {
+            name: 'กิจกรรมที่ ๑ : อบรมเชิงปฏิบัติการพัฒนาทักษะวิชาชีพและการประยุกต์ใช้งาน',
+            location: 'ณ วิทยาลัยสารพัดช่างน่าน',
+            target_group: 'นักเรียน นักศึกษา และบุคลากร จำนวน 50 คน',
+            loan_items: [
+                { description: '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ (6 ชม. x 600 บาท)', quantity: 6, unit: 'ชั่วโมง', unit_price: 600, total_price: 3600 },
+                { description: '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)', quantity: 50, unit: 'คน', unit_price: 80, total_price: 4000 },
+                { description: '๓. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', quantity: 50, unit: 'คน', unit_price: 70, total_price: 3500 },
+                { description: '๔. ค่าใช้จ่ายในการเดินทางไปราชการ / ค่าพาหนะ', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
+            ],
+            procurement_items: [
+                { description: '๑. ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการฝึกอบรม', quantity: 1, unit: 'ชุด', unit_price: Math.max(0, budgetAmount - 11100), total_price: Math.max(0, budgetAmount - 11100) },
+                { description: '๒. ค่าจ้างเหมาบริการจัดทำป้ายและสื่อประชาสัมพันธ์', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
+            ]
+        }
     ];
 
-    const defaultProcurementItems = [
-        { description: '๑. ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการดำเนินโครงการ', quantity: 1, unit: 'ชุด', unit_price: Math.max(0, budgetAmount - 11100), total_price: Math.max(0, budgetAmount - 11100) },
-        { description: '๒. ค่าจ้างเหมาบริการจัดทำป้ายและสื่อประชาสัมพันธ์', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
-    ];
-
-    // Filter existing items if available
-    const existingItems = project?.procurement?.items || [];
-    const initialLoanItems = existingItems.length > 0
-        ? existingItems.filter(i => 
-            i.description.includes('วิทยากร') || 
-            i.description.includes('อาหาร') || 
-            i.description.includes('เดินทาง') || 
-            i.description.includes('พาหนะ') ||
-            i.description.includes('ยืมเงิน')
-        ).map(i => ({
-            description: i.description,
-            quantity: parseFloat(i.quantity) || 1,
-            unit: i.unit || 'รายการ',
-            unit_price: parseFloat(i.unit_price) || 0,
-            total_price: (parseFloat(i.quantity) || 1) * (parseFloat(i.unit_price) || 0)
-        }))
-        : defaultLoanItems;
-
-    const initialProcurementItems = existingItems.length > 0
-        ? existingItems.filter(i => 
-            !i.description.includes('วิทยากร') && 
-            !i.description.includes('อาหาร') && 
-            !i.description.includes('เดินทาง') && 
-            !i.description.includes('พาหนะ') &&
-            !i.description.includes('ยืมเงิน')
-        ).map(i => ({
-            description: i.description,
-            quantity: parseFloat(i.quantity) || 1,
-            unit: i.unit || 'รายการ',
-            unit_price: parseFloat(i.unit_price) || 0,
-            total_price: (parseFloat(i.quantity) || 1) * (parseFloat(i.unit_price) || 0)
-        }))
-        : defaultProcurementItems;
+    const initialActivities = Array.isArray(project?.activities) && project.activities.length > 0
+        ? project.activities
+        : defaultActivities;
 
     // Initialize dynamic strategy selections
     const initialSelections = project?.strategy_selections || {};
@@ -151,8 +127,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         expected_benefits: project?.expected_benefits && project.expected_benefits.length > 0 ? project.expected_benefits : defaultExpectedBenefits,
         indicators: project?.indicators || defaultIndicators,
         action_plan: project?.action_plan && project.action_plan.length > 0 ? project.action_plan : defaultActionPlan,
-        loan_items: initialLoanItems.length > 0 ? initialLoanItems : defaultLoanItems,
-        procurement_items: initialProcurementItems.length > 0 ? initialProcurementItems : defaultProcurementItems,
+        activities: initialActivities,
         strategy_selections: initialSelections,
         iqa_strategy_ids: project?.iqa_strategy_ids || [],
         ovec_strategy_ids: project?.ovec_strategy_ids || [],
@@ -161,10 +136,16 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         estimated_budget: project?.estimated_budget || '',
     });
 
-    // Subtotal Calculations
-    const loanSubtotal = (data.loan_items || []).reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
-    const procurementSubtotal = (data.procurement_items || []).reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
-    const grandTotalBudget = loanSubtotal + procurementSubtotal;
+    // Multi-Activity Grand Totals Calculation
+    const totalLoanAllActivities = (data.activities || []).reduce((sum, act) => {
+        return sum + (act.loan_items || []).reduce((lSum, item) => lSum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
+    }, 0);
+
+    const totalProcurementAllActivities = (data.activities || []).reduce((sum, act) => {
+        return sum + (act.procurement_items || []).reduce((pSum, item) => pSum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
+    }, 0);
+
+    const grandTotalBudget = totalLoanAllActivities + totalProcurementAllActivities;
 
     // Universal AI Generator Handler
     const handleGenerateAi = async (type, successMessage) => {
@@ -201,24 +182,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                     setData('action_plan', res.data.action_plan);
                 } else if (type === 'indicators' && res.data.indicators) {
                     setData('indicators', res.data.indicators);
-                } else if (type === 'procurement_items') {
-                    const budget = parseFloat(data.estimated_budget) || 45000;
-                    const snack = 3500;
-                    const lunch = 4000;
-                    const speaker = 3600;
-                    const material = Math.max(0, budget - (snack + lunch + speaker));
-
-                    setData('loan_items', [
-                        { description: '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ (6 ชม. x 600 บาท)', quantity: 6, unit: 'ชั่วโมง', unit_price: 600, total_price: speaker },
-                        { description: '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)', quantity: 50, unit: 'คน', unit_price: 80, total_price: lunch },
-                        { description: '๓. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', quantity: 50, unit: 'คน', unit_price: 70, total_price: snack },
-                        { description: '๔. ค่าใช้จ่ายในการเดินทางไปราชการ / ค่าพาหนะ', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
-                    ]);
-
-                    setData('procurement_items', [
-                        { description: `๑. ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการดำเนินโครงการ`, quantity: 1, unit: 'ชุด', unit_price: material, total_price: material },
-                        { description: '๒. ค่าจ้างเหมาบริการจัดทำป้ายและสื่อประชาสัมพันธ์', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
-                    ]);
+                } else if ((type === 'activities' || type === 'procurement_items') && res.data.activities) {
+                    setData('activities', res.data.activities);
                 }
                 Swal.fire('✨ AI ประมวลผลสำเร็จ!', successMessage, 'success');
             }
@@ -287,50 +252,66 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         setData('action_plan', plan);
     };
 
-    // Loan Items Handlers
-    const handleLoanItemChange = (index, field, value) => {
-        const items = [...(data.loan_items || [])];
-        items[index] = { ...items[index], [field]: value };
-        const qty = parseFloat(items[index].quantity) || 0;
-        const price = parseFloat(items[index].unit_price) || 0;
-        items[index].total_price = qty * price;
-        setData('loan_items', items);
+    // Multi-Activity Handlers
+    const handleActivityChange = (actIdx, field, value) => {
+        const acts = [...(data.activities || [])];
+        acts[actIdx] = { ...acts[actIdx], [field]: value };
+        setData('activities', acts);
     };
 
-    const addLoanItemRow = () => {
-        setData('loan_items', [
-            ...(data.loan_items || []),
-            { description: '', quantity: 1, unit: 'รายการ', unit_price: 0, total_price: 0 }
+    const addActivity = () => {
+        const nextIdx = (data.activities || []).length + 1;
+        setData('activities', [
+            ...(data.activities || []),
+            {
+                name: `กิจกรรมที่ ${nextIdx} : ดำเนินกิจกรรมเพิ่มเติม`,
+                location: 'ณ วิทยาลัยสารพัดช่างน่าน',
+                target_group: 'นักเรียน นักศึกษา 50 คน',
+                loan_items: [
+                    { description: '๑. ค่าตอบแทนวิทยากร', quantity: 6, unit: 'ชั่วโมง', unit_price: 600, total_price: 3600 },
+                    { description: '๒. ค่าอาหารกลางวัน', quantity: 50, unit: 'คน', unit_price: 80, total_price: 4000 },
+                    { description: '๓. ค่าอาหารว่างและเครื่องดื่ม', quantity: 50, unit: 'คน', unit_price: 70, total_price: 3500 },
+                ],
+                procurement_items: [
+                    { description: '๑. ค่าวัสดุ อุปกรณ์ดำเนินกิจกรรม', quantity: 1, unit: 'ชุด', unit_price: 0, total_price: 0 },
+                ]
+            }
         ]);
     };
 
-    const removeLoanItemRow = (index) => {
-        const items = [...(data.loan_items || [])];
-        items.splice(index, 1);
-        setData('loan_items', items);
+    const removeActivity = (actIdx) => {
+        const acts = [...(data.activities || [])];
+        acts.splice(actIdx, 1);
+        setData('activities', acts);
     };
 
-    // Procurement Items Handlers
-    const handleProcurementItemChange = (index, field, value) => {
-        const items = [...(data.procurement_items || [])];
-        items[index] = { ...items[index], [field]: value };
-        const qty = parseFloat(items[index].quantity) || 0;
-        const price = parseFloat(items[index].unit_price) || 0;
-        items[index].total_price = qty * price;
-        setData('procurement_items', items);
+    // Activity Item Handlers (Loan & Procurement)
+    const handleActivityItemChange = (actIdx, type, itemIdx, field, value) => {
+        const acts = [...(data.activities || [])];
+        const items = [...(acts[actIdx][type] || [])];
+        items[itemIdx] = { ...items[itemIdx], [field]: value };
+        const qty = parseFloat(items[itemIdx].quantity) || 0;
+        const price = parseFloat(items[itemIdx].unit_price) || 0;
+        items[itemIdx].total_price = qty * price;
+        acts[actIdx][type] = items;
+        setData('activities', acts);
     };
 
-    const addProcurementItemRow = () => {
-        setData('procurement_items', [
-            ...(data.procurement_items || []),
+    const addActivityItemRow = (actIdx, type) => {
+        const acts = [...(data.activities || [])];
+        acts[actIdx][type] = [
+            ...(acts[actIdx][type] || []),
             { description: '', quantity: 1, unit: 'รายการ', unit_price: 0, total_price: 0 }
-        ]);
+        ];
+        setData('activities', acts);
     };
 
-    const removeProcurementItemRow = (index) => {
-        const items = [...(data.procurement_items || [])];
-        items.splice(index, 1);
-        setData('procurement_items', items);
+    const removeActivityItemRow = (actIdx, type, itemIdx) => {
+        const acts = [...(data.activities || [])];
+        const items = [...(acts[actIdx][type] || [])];
+        items.splice(itemIdx, 1);
+        acts[actIdx][type] = items;
+        setData('activities', acts);
     };
 
     // Dynamic Strategy Handler
@@ -347,14 +328,33 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     };
 
     const prepareSubmitData = (submitApproval = false) => {
-        const mergedProcurementItems = [
-            ...(data.loan_items || []).map(i => ({ ...i, description: i.description.startsWith('💵') ? i.description : `💵 [สัญญายืมเงิน] ${i.description}` })),
-            ...(data.procurement_items || []).map(i => ({ ...i, description: i.description.startsWith('📦') ? i.description : `📦 [จัดซื้อจัดจ้าง] ${i.description}` }))
-        ];
+        // Flatten all activities' items into procurement_items for backend compatibility
+        const flattenedProcurementItems = [];
+        (data.activities || []).forEach((act, actIdx) => {
+            const actLabel = `[กิจกรรมที่ ${actIdx + 1}]`;
+            (act.loan_items || []).forEach(item => {
+                flattenedProcurementItems.push({
+                    description: `${actLabel} 💵 ${item.description}`,
+                    quantity: item.quantity,
+                    unit: item.unit,
+                    unit_price: item.unit_price,
+                    total_price: item.total_price,
+                });
+            });
+            (act.procurement_items || []).forEach(item => {
+                flattenedProcurementItems.push({
+                    description: `${actLabel} 📦 ${item.description}`,
+                    quantity: item.quantity,
+                    unit: item.unit,
+                    unit_price: item.unit_price,
+                    total_price: item.total_price,
+                });
+            });
+        });
 
         return {
             ...data,
-            procurement_items: mergedProcurementItems,
+            procurement_items: flattenedProcurementItems,
             submit_approval: submitApproval
         };
     };
@@ -370,7 +370,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         if (e) e.preventDefault();
         Swal.fire({
             title: '🚀 ยื่นขออนุมัติโครงการ?',
-            text: 'ระบบจะส่งเรื่องไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" พร้อมแยกหมวดหมู่อัตโนมัติสำหรับจัดทำ "สัญญายืมเงิน (แบบ กค. ๑๐๑)" และ "เอกสารจัดซื้อจัดจ้าง"',
+            text: 'ระบบจะส่งเรื่องไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" พร้อมแยกรายละเอียดสัญญายืมเงินและจัดซื้อจัดจ้างรายกิจกรรมให้อัตโนมัติ',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#10b981',
@@ -400,7 +400,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             📄 จัดทำ/แก้ไขแบบเสนอโครงการฉบับเต็ม (Full Proposal - ๑๔ หัวข้อ)
                         </h2>
                         <p className="text-xs text-slate-500 font-sans mt-0.5">
-                            กรอกรายละเอียดโครงการครบ 14 หัวข้อตามมาตรฐาน สอศ. พร้อมระบบแยกสัญญายืมเงินและจัดซื้อจัดจ้าง
+                            รองรับโครงการหลายกิจกรรมย่อย (Multi-Activity) พร้อมแยกสัญญายืมเงินและจัดซื้อจัดจ้าง
                         </p>
                     </div>
                     <div className="flex items-center gap-x-2">
@@ -1221,246 +1221,321 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 </button>
                             </div>
 
-                            {/* Section 12: งบประมาณและรายละเอียดค่าใช้จ่าย (Split: Cash Advance Loan vs Procurement) */}
+                            {/* Section 12: งบประมาณและรายละเอียดค่าใช้จ่าย (Multi-Activity & Split Loan/Procurement) */}
                             <div className="space-y-6 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-3">
                                     <div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๖ : งบประมาณ & ประมาณการค่าใช้จ่าย</span>
-                                        <h3 className="text-base font-bold text-purple-950">๑๒. งบประมาณและรายละเอียดค่าใช้จ่าย (แยกสัญญายืมเงิน & จัดซื้อจัดจ้าง)</h3>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๖ : งบประมาณ & กิจกรรมย่อย</span>
+                                        <h3 className="text-base font-bold text-purple-950">๑๒. งบประมาณและรายละเอียดค่าใช้จ่าย (แยกตามกิจกรรม & สัญญายืมเงิน / จัดซื้อจัดจ้าง)</h3>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleGenerateAi('procurement_items', 'คำนวณและเกลี่ยยอดสัญญายืมเงินและจัดซื้อจัดจ้างให้ลงตัวเรียบร้อยแล้ว')}
-                                        className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs transition-all"
-                                    >
-                                        ✨ ให้ AI ช่วยเสนอประมาณการค่าใช้จ่าย (แยก ๒ หมวด)
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleGenerateAi('activities', 'สร้างและกระจายงบประมาณ 2 กิจกรรมมาตรฐานเรียบร้อยแล้ว')}
+                                            className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs transition-all flex items-center gap-1"
+                                        >
+                                            ✨ AI เสนอแผนหลายกิจกรรม
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={addActivity}
+                                            className="text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-300 shadow-2xs transition-all flex items-center gap-1"
+                                        >
+                                            ➕ เพิ่มกิจกรรมย่อย
+                                        </button>
+                                    </div>
                                 </div>
 
-                                {/* Budget Source & Grand Total Summary Cards */}
+                                {/* Grand Totals Summary Cards */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                     <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-1">
                                         <span className="text-xs font-bold text-slate-500">วงเงินงบประมาณที่ได้รับจัดสรร</span>
                                         <p className="text-xl font-black text-purple-900">{parseFloat(data.estimated_budget || 0).toLocaleString()} บาท</p>
                                         <p className="text-[11px] text-slate-500">{project?.funding_source?.name || 'Revenue (เงินรายได้สถานศึกษา)'}</p>
                                     </div>
-                                    <div className="p-4 rounded-xl bg-amber-50/60 border border-amber-200 space-y-1">
-                                        <span className="text-xs font-bold text-amber-900">💵 ยอดสัญญายืมเงินทดรอง</span>
-                                        <p className="text-xl font-black text-amber-800">{loanSubtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
+                                    <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1">
+                                        <span className="text-xs font-bold text-amber-900">💵 รวมสัญญายืมเงินทุกกิจกรรม</span>
+                                        <p className="text-xl font-black text-amber-800">{totalLoanAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
                                         <p className="text-[11px] text-amber-700">วิทยากร, อาหาร, เครื่องดื่ม, เดินทาง</p>
                                     </div>
-                                    <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200 space-y-1">
-                                        <span className="text-xs font-bold text-indigo-900">📦 ยอดจัดซื้อจัดจ้างพัสดุ</span>
-                                        <p className="text-xl font-black text-indigo-800">{procurementSubtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
+                                    <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-1">
+                                        <span className="text-xs font-bold text-indigo-900">📦 รวมจัดซื้อจัดจ้างทุกกิจกรรม</span>
+                                        <p className="text-xl font-black text-indigo-800">{totalProcurementAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
                                         <p className="text-[11px] text-indigo-700">ค่าวัสดุ และรายการจัดซื้ออื่น ๆ</p>
                                     </div>
                                 </div>
 
                                 {grandTotalBudget > parseFloat(data.estimated_budget || 0) && (
                                     <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-bold flex items-center gap-2">
-                                        <span>⚠️</span> ยอดรวมประมาณการค่าใช้จ่ายทั้งหมด ({grandTotalBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท) เกินวงเงินงบประมาณที่ได้รับจัดสรรอยู่ {(grandTotalBudget - parseFloat(data.estimated_budget || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                        <span>⚠️</span> ยอดรวมประมาณการทุกกิจกรรม ({grandTotalBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท) เกินวงเงินงบประมาณที่ได้รับจัดสรรอยู่ {(grandTotalBudget - parseFloat(data.estimated_budget || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
                                     </div>
                                 )}
 
-                                {/* Sub-section 12.1: Cash Advance Loan Items */}
-                                <div className="bg-white p-4 rounded-xl border border-amber-200 space-y-3">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 border-b border-amber-100 pb-2">
-                                        <div>
-                                            <h4 className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                                                <span>💵</span> ๑๒.๑ รายการสำหรับจัดทำ "สัญญายืมเงินทดรองราชการ" (Cash Advance / Loan Contract)
-                                            </h4>
-                                            <p className="text-[11px] text-slate-500">
-                                                สำหรับยืมเงินสดไปดำเนินการ (ค่าตอบแทนวิทยากร, ค่าอาหารกลางวัน, ค่าอาหารว่าง, ค่าเดินทาง) ดึงไปสร้างแบบ กค. ๑๐๑ อัตโนมัติ
-                                            </p>
-                                        </div>
-                                        <span className="text-xs font-bold text-amber-900 bg-amber-100 px-3 py-1 rounded-lg shrink-0">
-                                            รวมเงินยืม: {loanSubtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
-                                        </span>
-                                    </div>
+                                {/* Activities Loop */}
+                                <div className="space-y-6">
+                                    {(data.activities || []).map((act, actIdx) => {
+                                        const actLoanSum = (act.loan_items || []).reduce((s, i) => s + ((parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0)), 0);
+                                        const actProcSum = (act.procurement_items || []).reduce((s, i) => s + ((parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0)), 0);
+                                        const actTotal = actLoanSum + actProcSum;
 
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-xs text-slate-800 border-collapse">
-                                            <thead>
-                                                <tr className="bg-amber-50/60 text-amber-950 font-bold border-b border-amber-200">
-                                                    <th className="p-2 text-center w-10">ลำดับ</th>
-                                                    <th className="p-2 text-left">รายการค่าใช้จ่ายเงินยืม</th>
-                                                    <th className="p-2 text-right w-20">จำนวน</th>
-                                                    <th className="p-2 text-left w-24">หน่วยนับ</th>
-                                                    <th className="p-2 text-right w-28">ราคา/หน่วย (บาท)</th>
-                                                    <th className="p-2 text-right w-28">รวมเงิน (บาท)</th>
-                                                    <th className="p-2 text-center w-10">ลบ</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(data.loan_items || []).map((item, lIdx) => (
-                                                    <tr key={lIdx} className="border-b border-amber-50 hover:bg-amber-50/30">
-                                                        <td className="p-2 text-center text-slate-500">{lIdx + 1}</td>
-                                                        <td className="p-2">
+                                        return (
+                                            <div key={actIdx} className="rounded-2xl border-2 border-purple-200 bg-white p-5 space-y-4 shadow-sm">
+                                                {/* Activity Header */}
+                                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-3 bg-purple-50/40 -mx-5 -mt-5 p-4 rounded-t-2xl">
+                                                    <div className="flex-1 w-full">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-extrabold text-white bg-purple-800 px-2.5 py-0.5 rounded-full shrink-0">
+                                                                กิจกรรมที่ {actIdx + 1}
+                                                            </span>
                                                             <input
                                                                 type="text"
-                                                                value={item.description}
-                                                                onChange={(e) => handleLoanItemChange(lIdx, 'description', e.target.value)}
-                                                                className="w-full rounded-lg border-amber-200 px-2.5 py-1 text-xs focus:border-amber-500"
+                                                                value={act.name}
+                                                                onChange={(e) => handleActivityChange(actIdx, 'name', e.target.value)}
+                                                                className="w-full font-bold text-sm text-purple-950 border-purple-200 rounded-lg px-2.5 py-1 focus:border-purple-500"
+                                                                placeholder="ชื่อกิจกรรมย่อย..."
                                                                 required
                                                             />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                value={item.quantity}
-                                                                onChange={(e) => handleLoanItemChange(lIdx, 'quantity', parseFloat(e.target.value) || 0)}
-                                                                className="w-full rounded-lg border-amber-200 px-2 py-1 text-xs text-right"
-                                                                required
-                                                            />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="text"
-                                                                value={item.unit}
-                                                                onChange={(e) => handleLoanItemChange(lIdx, 'unit', e.target.value)}
-                                                                className="w-full rounded-lg border-amber-200 px-2 py-1 text-xs"
-                                                                placeholder="คน/ชั่วโมง/มื้อ"
-                                                                required
-                                                            />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                value={item.unit_price}
-                                                                onChange={(e) => handleLoanItemChange(lIdx, 'unit_price', parseFloat(e.target.value) || 0)}
-                                                                className="w-full rounded-lg border-amber-200 px-2 py-1 text-xs text-right font-bold"
-                                                                required
-                                                            />
-                                                        </td>
-                                                        <td className="p-2 text-right font-bold text-amber-900">
-                                                            {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                                        </td>
-                                                        <td className="p-2 text-center">
-                                                            {(data.loan_items || []).length > 1 && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeLoanItemRow(lIdx)}
-                                                                    className="text-rose-500 hover:text-rose-700 font-bold"
-                                                                >
-                                                                    ✕
-                                                                </button>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        <span className="text-xs font-black text-purple-950 bg-white px-3 py-1 rounded-xl border border-purple-200 shadow-2xs">
+                                                            รวมกิจกรรมนี้: {actTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                                        </span>
+                                                        {(data.activities || []).length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeActivity(actIdx)}
+                                                                className="text-rose-500 hover:text-rose-700 font-bold text-xs bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg border border-rose-200 transition-colors"
+                                                                title="ลบกิจกรรมย่อยนี้"
+                                                            >
+                                                                🗑️ ลบกิจกรรม
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={addLoanItemRow}
-                                        className="text-xs font-bold text-amber-800 hover:text-amber-950 pt-1 block"
-                                    >
-                                        + เพิ่มรายการในสัญญายืมเงิน
-                                    </button>
+                                                {/* Activity Location & Target */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold text-slate-600 mb-1">สถานที่จัดกิจกรรมนี้</label>
+                                                        <input
+                                                            type="text"
+                                                            value={act.location || ''}
+                                                            onChange={(e) => handleActivityChange(actIdx, 'location', e.target.value)}
+                                                            className="w-full rounded-lg border-purple-200 px-3 py-1.5 text-xs"
+                                                            placeholder="เช่น ณ หอประชุม วช.น่าน..."
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold text-slate-600 mb-1">กลุ่มเป้าหมายกิจกรรมนี้</label>
+                                                        <input
+                                                            type="text"
+                                                            value={act.target_group || ''}
+                                                            onChange={(e) => handleActivityChange(actIdx, 'target_group', e.target.value)}
+                                                            className="w-full rounded-lg border-purple-200 px-3 py-1.5 text-xs"
+                                                            placeholder="เช่น นักเรียน นักศึกษา 50 คน..."
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Loan Items for this Activity */}
+                                                <div className="p-3.5 bg-amber-50/40 rounded-xl border border-amber-200 space-y-2.5">
+                                                    <div className="flex justify-between items-center">
+                                                        <h5 className="text-xs font-bold text-amber-950 flex items-center gap-1">
+                                                            <span>💵</span> รายการสัญญายืมเงิน (แบบ กค. ๑๐๑) - กิจกรรมที่ {actIdx + 1}
+                                                        </h5>
+                                                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
+                                                            เงินยืม: {actLoanSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                                        </span>
+                                                    </div>
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-xs text-slate-800 border-collapse">
+                                                            <thead>
+                                                                <tr className="bg-amber-100/60 text-amber-950 font-bold border-b border-amber-200">
+                                                                    <th className="p-1.5 text-center w-8">#</th>
+                                                                    <th className="p-1.5 text-left">รายการค่าใช้จ่ายเงินยืม</th>
+                                                                    <th className="p-1.5 text-right w-16">จำนวน</th>
+                                                                    <th className="p-1.5 text-left w-20">หน่วยนับ</th>
+                                                                    <th className="p-1.5 text-right w-24">ราคา/หน่วย</th>
+                                                                    <th className="p-1.5 text-right w-24">รวมเงิน</th>
+                                                                    <th className="p-1.5 text-center w-8">ลบ</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {(act.loan_items || []).map((item, lIdx) => (
+                                                                    <tr key={lIdx} className="border-b border-amber-100/60 hover:bg-amber-50/50">
+                                                                        <td className="p-1.5 text-center text-slate-500">{lIdx + 1}</td>
+                                                                        <td className="p-1.5">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.description}
+                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'loan_items', lIdx, 'description', e.target.value)}
+                                                                                className="w-full rounded border-amber-200 px-2 py-1 text-xs focus:border-amber-500"
+                                                                                required
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1.5">
+                                                                            <input
+                                                                                type="number"
+                                                                                step="0.01"
+                                                                                value={item.quantity}
+                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'loan_items', lIdx, 'quantity', parseFloat(e.target.value) || 0)}
+                                                                                className="w-full rounded border-amber-200 px-2 py-1 text-xs text-right"
+                                                                                required
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1.5">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.unit}
+                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'loan_items', lIdx, 'unit', e.target.value)}
+                                                                                className="w-full rounded border-amber-200 px-2 py-1 text-xs"
+                                                                                required
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1.5">
+                                                                            <input
+                                                                                type="number"
+                                                                                step="0.01"
+                                                                                value={item.unit_price}
+                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'loan_items', lIdx, 'unit_price', parseFloat(e.target.value) || 0)}
+                                                                                className="w-full rounded border-amber-200 px-2 py-1 text-xs text-right font-bold"
+                                                                                required
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1.5 text-right font-bold text-amber-900">
+                                                                            {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className="p-1.5 text-center">
+                                                                            {(act.loan_items || []).length > 1 && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => removeActivityItemRow(actIdx, 'loan_items', lIdx)}
+                                                                                    className="text-rose-500 hover:text-rose-700 font-bold"
+                                                                                >
+                                                                                    ✕
+                                                                                </button>
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addActivityItemRow(actIdx, 'loan_items')}
+                                                        className="text-[11px] font-bold text-amber-800 hover:text-amber-950 pt-0.5 block"
+                                                    >
+                                                        + เพิ่มรายการสัญญายืมเงิน
+                                                    </button>
+                                                </div>
+
+                                                {/* Procurement Items for this Activity */}
+                                                <div className="p-3.5 bg-indigo-50/40 rounded-xl border border-indigo-200 space-y-2.5">
+                                                    <div className="flex justify-between items-center">
+                                                        <h5 className="text-xs font-bold text-indigo-950 flex items-center gap-1">
+                                                            <span>📦</span> รายการจัดซื้อจัดจ้างพัสดุ - กิจกรรมที่ {actIdx + 1}
+                                                        </h5>
+                                                        <span className="text-[11px] font-bold text-indigo-800 bg-indigo-100 px-2 py-0.5 rounded-md">
+                                                            จัดซื้อ: {actProcSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                                        </span>
+                                                    </div>
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-xs text-slate-800 border-collapse">
+                                                            <thead>
+                                                                <tr className="bg-indigo-100/60 text-indigo-950 font-bold border-b border-indigo-200">
+                                                                    <th className="p-1.5 text-center w-8">#</th>
+                                                                    <th className="p-1.5 text-left">รายการพัสดุ / จัดซื้อจัดจ้าง</th>
+                                                                    <th className="p-1.5 text-right w-16">จำนวน</th>
+                                                                    <th className="p-1.5 text-left w-20">หน่วยนับ</th>
+                                                                    <th className="p-1.5 text-right w-24">ราคา/หน่วย</th>
+                                                                    <th className="p-1.5 text-right w-24">รวมเงิน</th>
+                                                                    <th className="p-1.5 text-center w-8">ลบ</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {(act.procurement_items || []).map((item, pIdx) => (
+                                                                    <tr key={pIdx} className="border-b border-indigo-100/60 hover:bg-indigo-50/50">
+                                                                        <td className="p-1.5 text-center text-slate-500">{pIdx + 1}</td>
+                                                                        <td className="p-1.5">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.description}
+                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'procurement_items', pIdx, 'description', e.target.value)}
+                                                                                className="w-full rounded border-indigo-200 px-2 py-1 text-xs focus:border-indigo-500"
+                                                                                required
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1.5">
+                                                                            <input
+                                                                                type="number"
+                                                                                step="0.01"
+                                                                                value={item.quantity}
+                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'procurement_items', pIdx, 'quantity', parseFloat(e.target.value) || 0)}
+                                                                                className="w-full rounded border-indigo-200 px-2 py-1 text-xs text-right"
+                                                                                required
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1.5">
+                                                                            <input
+                                                                                type="text"
+                                                                                value={item.unit}
+                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'procurement_items', pIdx, 'unit', e.target.value)}
+                                                                                className="w-full rounded border-indigo-200 px-2 py-1 text-xs"
+                                                                                required
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1.5">
+                                                                            <input
+                                                                                type="number"
+                                                                                step="0.01"
+                                                                                value={item.unit_price}
+                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'procurement_items', pIdx, 'unit_price', parseFloat(e.target.value) || 0)}
+                                                                                className="w-full rounded border-indigo-200 px-2 py-1 text-xs text-right font-bold"
+                                                                                required
+                                                                            />
+                                                                        </td>
+                                                                        <td className="p-1.5 text-right font-bold text-indigo-900">
+                                                                            {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                                                        </td>
+                                                                        <td className="p-1.5 text-center">
+                                                                            {(act.procurement_items || []).length > 1 && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => removeActivityItemRow(actIdx, 'procurement_items', pIdx)}
+                                                                                    className="text-rose-500 hover:text-rose-700 font-bold"
+                                                                                >
+                                                                                    ✕
+                                                                                </button>
+                                                                            )}
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addActivityItemRow(actIdx, 'procurement_items')}
+                                                        className="text-[11px] font-bold text-indigo-800 hover:text-indigo-950 pt-0.5 block"
+                                                    >
+                                                        + เพิ่มรายการจัดซื้อจัดจ้าง
+                                                    </button>
+                                                </div>
+
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
-                                {/* Sub-section 12.2: Procurement Items */}
-                                <div className="bg-white p-4 rounded-xl border border-indigo-200 space-y-3">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 border-b border-indigo-100 pb-2">
-                                        <div>
-                                            <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                                                <span>📦</span> ๑๒.๒ รายการสำหรับดำเนินการ "จัดซื้อจัดจ้างพัสดุ" (Procurement Process)
-                                            </h4>
-                                            <p className="text-[11px] text-slate-500">
-                                                สำหรับดำเนินการทางพัสดุ (ค่าวัสดุ, ค่าจ้างเหมา) ดึงไปสร้างบันทึกข้อความ, ใบขอซื้อขอจ้าง, ตารางราคากลาง, และ TOR อัตโนมัติ
-                                            </p>
-                                        </div>
-                                        <span className="text-xs font-bold text-indigo-900 bg-indigo-100 px-3 py-1 rounded-lg shrink-0">
-                                            รวมจัดซื้อ: {procurementSubtotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
-                                        </span>
-                                    </div>
-
-                                    <div className="overflow-x-auto">
-                                        <table className="w-full text-xs text-slate-800 border-collapse">
-                                            <thead>
-                                                <tr className="bg-indigo-50/60 text-indigo-950 font-bold border-b border-indigo-200">
-                                                    <th className="p-2 text-center w-10">ลำดับ</th>
-                                                    <th className="p-2 text-left">รายการพัสดุ / จัดซื้อจัดจ้าง</th>
-                                                    <th className="p-2 text-right w-20">จำนวน</th>
-                                                    <th className="p-2 text-left w-24">หน่วยนับ</th>
-                                                    <th className="p-2 text-right w-28">ราคา/หน่วย (บาท)</th>
-                                                    <th className="p-2 text-right w-28">รวมเงิน (บาท)</th>
-                                                    <th className="p-2 text-center w-10">ลบ</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {(data.procurement_items || []).map((item, pIdx) => (
-                                                    <tr key={pIdx} className="border-b border-indigo-50 hover:bg-indigo-50/30">
-                                                        <td className="p-2 text-center text-slate-500">{pIdx + 1}</td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="text"
-                                                                value={item.description}
-                                                                onChange={(e) => handleProcurementItemChange(pIdx, 'description', e.target.value)}
-                                                                className="w-full rounded-lg border-indigo-200 px-2.5 py-1 text-xs focus:border-indigo-500"
-                                                                required
-                                                            />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                value={item.quantity}
-                                                                onChange={(e) => handleProcurementItemChange(pIdx, 'quantity', parseFloat(e.target.value) || 0)}
-                                                                className="w-full rounded-lg border-indigo-200 px-2 py-1 text-xs text-right"
-                                                                required
-                                                            />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="text"
-                                                                value={item.unit}
-                                                                onChange={(e) => handleProcurementItemChange(pIdx, 'unit', e.target.value)}
-                                                                className="w-full rounded-lg border-indigo-200 px-2 py-1 text-xs"
-                                                                placeholder="ชุด/รายการ/งาน"
-                                                                required
-                                                            />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                value={item.unit_price}
-                                                                onChange={(e) => handleProcurementItemChange(pIdx, 'unit_price', parseFloat(e.target.value) || 0)}
-                                                                className="w-full rounded-lg border-indigo-200 px-2 py-1 text-xs text-right font-bold"
-                                                                required
-                                                            />
-                                                        </td>
-                                                        <td className="p-2 text-right font-bold text-indigo-900">
-                                                            {((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
-                                                        </td>
-                                                        <td className="p-2 text-center">
-                                                            {(data.procurement_items || []).length > 1 && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => removeProcurementItemRow(pIdx)}
-                                                                    className="text-rose-500 hover:text-rose-700 font-bold"
-                                                                >
-                                                                    ✕
-                                                                </button>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
+                                <div className="text-center pt-2">
                                     <button
                                         type="button"
-                                        onClick={addProcurementItemRow}
-                                        className="text-xs font-bold text-indigo-800 hover:text-indigo-950 pt-1 block"
+                                        onClick={addActivity}
+                                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 px-4 py-2 text-xs font-bold shadow-2xs transition-all"
                                     >
-                                        + เพิ่มรายการจัดซื้อจัดจ้างพัสดุ
+                                        ➕ เพิ่มกิจกรรมย่อยอีก ๑ กิจกรรม
                                     </button>
                                 </div>
                             </div>
