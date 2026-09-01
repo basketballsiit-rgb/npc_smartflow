@@ -343,20 +343,22 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     </div>
                                 </div>
                                 {data.objectives.map((obj, index) => (
-                                    <div key={index} className="flex gap-x-2 items-center">
-                                        <span className="text-xs font-bold text-purple-700 w-6 text-right">{index + 1}.</span>
-                                        <input
-                                            type="text"
+                                    <div key={index} className="flex gap-x-2 items-start">
+                                        <span className="text-xs font-bold text-purple-700 w-6 text-right mt-2.5 shrink-0">{index + 1}.</span>
+                                        <textarea
+                                            rows={2}
                                             value={obj}
                                             onChange={(e) => handleObjectiveChange(index, e.target.value)}
-                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
+                                            placeholder="ระบุวัตถุประสงค์โครงการ..."
                                             required
                                         />
                                         {data.objectives.length > 1 && (
                                             <button
                                                 type="button"
                                                 onClick={() => removeObjectiveField(index)}
-                                                className="text-rose-500 hover:text-rose-700 font-bold px-2 py-1 text-base"
+                                                className="text-rose-500 hover:text-rose-700 font-bold px-2 py-2 text-base mt-1 shrink-0"
+                                                title="ลบข้อนี้"
                                             >
                                                 ✕
                                             </button>
@@ -385,20 +387,22 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                         </span>
                                     </div>
                                     {quantList.map((item, idx) => (
-                                        <div key={idx} className="flex gap-x-2 items-center">
-                                            <span className="text-xs font-bold text-slate-500 w-5">{idx + 1}.</span>
-                                            <input
-                                                type="text"
+                                        <div key={idx} className="flex gap-x-2 items-start">
+                                            <span className="text-xs font-bold text-slate-500 w-5 mt-2.5 shrink-0">{idx + 1}.</span>
+                                            <textarea
+                                                rows={2}
                                                 value={item}
                                                 onChange={(e) => handleQuantTargetChange(idx, e.target.value)}
-                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
+                                                placeholder="เช่น ผู้เข้าร่วมโครงการจำนวน 50 คน..."
                                                 required
                                             />
                                             {quantList.length > 1 && (
                                                 <button
                                                     type="button"
                                                     onClick={() => removeQuantTarget(idx)}
-                                                    className="text-rose-500 hover:text-rose-700 font-bold px-1.5"
+                                                    className="text-rose-500 hover:text-rose-700 font-bold px-1.5 py-2 mt-1 shrink-0"
+                                                    title="ลบข้อนี้"
                                                 >
                                                     ✕
                                                 </button>
@@ -425,20 +429,22 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                         </span>
                                     </div>
                                     {qualList.map((item, idx) => (
-                                        <div key={idx} className="flex gap-x-2 items-center">
-                                            <span className="text-xs font-bold text-slate-500 w-5">{idx + 1}.</span>
-                                            <input
-                                                type="text"
+                                        <div key={idx} className="flex gap-x-2 items-start">
+                                            <span className="text-xs font-bold text-slate-500 w-5 mt-2.5 shrink-0">{idx + 1}.</span>
+                                            <textarea
+                                                rows={2}
                                                 value={item}
                                                 onChange={(e) => handleQualTargetChange(idx, e.target.value)}
-                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500 resize-y leading-relaxed"
+                                                placeholder="เช่น ผู้เข้าร่วมมีความพึงพอใจในระดับดีขึ้นไป..."
                                                 required
                                             />
                                             {qualList.length > 1 && (
                                                 <button
                                                     type="button"
                                                     onClick={() => removeQualTarget(idx)}
-                                                    className="text-rose-500 hover:text-rose-700 font-bold px-1.5"
+                                                    className="text-rose-500 hover:text-rose-700 font-bold px-1.5 py-2 mt-1 shrink-0"
+                                                    title="ลบข้อนี้"
                                                 >
                                                     ✕
                                                 </button>
