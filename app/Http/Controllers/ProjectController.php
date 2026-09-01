@@ -1034,6 +1034,55 @@ class ProjectController extends Controller
             return response()->json(['success' => true, 'procurement_items' => $items]);
         }
 
+        if ($type === 'activities' || $type === 'multi_activities') {
+            $budget = (float)$request->input('budget', 45000);
+            $act1Budget = round($budget * 0.55, 2);
+            $act2Budget = $budget - $act1Budget;
+
+            $act1Speaker = 3600;
+            $act1Lunch = 4000;
+            $act1Snack = 3500;
+            $act1Material = max(0, $act1Budget - ($act1Speaker + $act1Lunch + $act1Snack));
+
+            $act2Lunch = 4000;
+            $act2Snack = 3500;
+            $act2Travel = 5000;
+            $act2Material = max(0, $act2Budget - ($act2Lunch + $act2Snack + $act2Travel));
+
+            $activities = [
+                [
+                    'name' => "กิจกรรมที่ ๑ : อบรมเชิงปฏิบัติการพัฒนาทักษะวิชาชีพและการประยุกต์ใช้งาน",
+                    'location' => 'ณ วิทยาลัยสารพัดช่างน่าน',
+                    'target_group' => 'นักเรียน นักศึกษา และบุคลากร จำนวน 50 คน',
+                    'loan_items' => [
+                        ['description' => '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกอบรมเชิงปฏิบัติการ (6 ชม. x 600 บาท)', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => $act1Speaker],
+                        ['description' => '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => $act1Lunch],
+                        ['description' => '๓. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => $act1Snack],
+                        ['description' => '๔. ค่าใช้จ่ายในการเดินทางไปราชการ / ค่าพาหนะ', 'quantity' => 1, 'unit' => 'งาน', 'unit_price' => 0, 'total_price' => 0],
+                    ],
+                    'procurement_items' => [
+                        ['description' => '๑. ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการฝึกอบรม', 'quantity' => 1, 'unit' => 'ชุด', 'unit_price' => $act1Material, 'total_price' => $act1Material],
+                        ['description' => '๒. ค่าจัดทำป้ายประชาสัมพันธ์โครงการ', 'quantity' => 1, 'unit' => 'ป้าย', 'unit_price' => 0, 'total_price' => 0],
+                    ]
+                ],
+                [
+                    'name' => "กิจกรรมที่ ๒ : ศึกษาดูงานและแลกเปลี่ยนเรียนรู้ ณ สถานประกอบการ / แหล่งเรียนรู้",
+                    'location' => 'สถานประกอบการและแหล่งเรียนรู้ในจังหวัดน่าน',
+                    'target_group' => 'นักเรียน นักศึกษา และครูผู้ควบคุม จำนวน 50 คน',
+                    'loan_items' => [
+                        ['description' => '๑. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมกิจกรรม (50 คน x 80 บาท x 1 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => $act2Lunch],
+                        ['description' => '๒. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => $act2Snack],
+                        ['description' => '๓. ค่าจ้างเหมาพาหนะรับ-ส่งผู้เข้าร่วมศึกษาดูงาน', 'quantity' => 1, 'unit' => 'คัน', 'unit_price' => $act2Travel, 'total_price' => $act2Travel],
+                    ],
+                    'procurement_items' => [
+                        ['description' => '๑. ค่าวัสดุและคู่มือบันทึกการเรียนรู้ประจำกิจกรรม', 'quantity' => 1, 'unit' => 'ชุด', 'unit_price' => $act2Material, 'total_price' => $act2Material],
+                    ]
+                ]
+            ];
+
+            return response()->json(['success' => true, 'activities' => $activities]);
+        }
+
         return response()->json(['success' => false, 'message' => 'Invalid type']);
     }
 }
