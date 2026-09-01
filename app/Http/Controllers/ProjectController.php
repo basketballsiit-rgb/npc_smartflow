@@ -43,6 +43,17 @@ class ProjectController extends Controller
     }
 
     /**
+     * Show the preliminary proposal quick create form.
+     */
+    public function preliminaryCreate()
+    {
+        return Inertia::render('Projects/QuickCreate', [
+            'departments' => Department::all(),
+            'currentFiscalYear' => \App\Models\SystemSetting::where('key', 'current_fiscal_year')->value('value') ?: (int)(new \DateTime())->format('Y') + 543,
+        ]);
+    }
+
+    /**
      * Store a newly created project in database as draft.
      */
     public function store(Request $request)
@@ -110,11 +121,248 @@ class ProjectController extends Controller
     }
 
     /**
+     * Store a preliminary project proposal (Quick Proposal for Department/Teacher).
+     */
+    public function preliminaryStore(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'academic_year' => 'required|integer|min:2500|max:2650',
+            'proposed_budget' => 'required|numeric|min:0',
+            'department_id' => 'nullable|exists:departments,id',
+            'responsible_person' => 'nullable|string',
+            'position' => 'nullable|string',
+            'phone' => 'nullable|string',
+            'email' => 'nullable|string',
+            'background_rationale' => 'nullable|string',
+            'mission' => 'nullable|string',
+            'goal' => 'nullable|string',
+            'strategy_tactic' => 'nullable|string',
+        ], [
+            'title.required' => 'กรุณาระบุชื่อโครงการ',
+            'academic_year.required' => 'กรุณาระบุปีงบประมาณ พ.ศ.',
+            'proposed_budget.required' => 'กรุณาระบุวงเงินงบประมาณที่ต้องการขอเสนอ',
+        ]);
+
+        $user = auth()->user();
+        $deptId = $request->input('department_id') ?: ($user->department_id ?: Department::first()->id);
+
+        $project = new Project();
+        $project->user_id = $user->id;
+        $project->department_id = $deptId;
+        $project->title = $validated['title'];
+        $project->academic_year = $validated['academic_year'];
+        $project->proposed_budget = $validated['proposed_budget'];
+        $project->estimated_budget = $validated['proposed_budget'];
+        $project->responsible_person = $validated['responsible_person'] ?? $user->name;
+        $project->position = $validated['position'] ?? $user->position;
+        $project->phone = $validated['phone'] ?? '';
+        $project->email = $validated['email'] ?? $user->email;
+        $project->background_rationale = $validated['background_rationale'] ?? 'เสนอคำขอรับการจัดสรรงบประมาณโครงการเบื้องต้น';
+        $project->mission = $validated['mission'] ?? '';
+        $project->goal = $validated['goal'] ?? '';
+        $project->strategy_tactic = $validated['strategy_tactic'] ?? '';
+        $project->objectives = ['เพื่อดำเนินโครงการตามวัตถุประสงค์ที่กำหนด'];
+        $project->targets = ['quantitative' => ['ผู้เข้าร่วมโครงการตามเป้าหมาย'], 'qualitative' => ['มีความพึงพอใจในระดับดีขึ้นไป']];
+        $project->outputs = ['ผลผลิตโครงการ'];
+        $project->outcomes = ['ผลลัพธ์โครงการ'];
+        $project->status = 'preliminary';
+        $project->current_approval_step = 1;
+        $project->save();
+
+        ProjectApproval::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'step_number' => 1,
+            'status' => 'pending',
+            'comments' => 'ยื่นเสนอคำของบประมาณโครงการเบื้องต้น (Preliminary Budget Request)',
+        ]);
+
+        return redirect()->back()->with('success', 'บันทึกเสนอชื่อโครงการและงบประมาณเบื้องต้นเรียบร้อยแล้ว รอการพิจารณาจัดสรรงบจากงานแผนงาน/คณะกรรมการ');
+    }
+
+    /**
+     * Direct Project Creation & Budget Allocation (Admin & Planning Staff only).
+     */
+    public function directStoreAndAllocate(Request $request)
+    {
+        $user = auth()->user();
+        $isPlanStaff = $user->isAdmin() || $user->isPlanHead() || ($user->department && (str_contains($user->department->name, 'แผน') || $user->department->code === 'PLAN'));
+        if (!$isPlanStaff) {
+            abort(403, 'เฉพาะผู้ดูแลระบบและเจ้าหน้าที่งานแผนงานเท่านั้นที่สามารถใช้งานฟังก์ชันนี้ได้');
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'academic_year' => 'required|integer|min:2500|max:2650',
+            'department_id' => 'required|exists:departments,id',
+            'proposed_budget' => 'nullable|numeric|min:0',
+            'allocated_budget' => 'required|numeric|min:0',
+            'funding_source_id' => 'required|exists:funding_sources,id',
+            'report_category' => 'nullable|string',
+            'responsible_person' => 'nullable|string',
+            'committee_comment' => 'nullable|string',
+        ], [
+            'title.required' => 'กรุณาระบุชื่อโครงการ',
+            'academic_year.required' => 'กรุณาระบุปีงบประมาณ พ.ศ.',
+            'department_id.required' => 'กรุณาเลือกฝ่าย/งานที่รับผิดชอบ',
+            'allocated_budget.required' => 'กรุณาระบุวงเงินงบประมาณที่จัดสรรจริง',
+            'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
+        ]);
+
+        // Auto-detect report_category if not explicitly provided
+        $dept = Department::find($validated['department_id']);
+        $cat = $validated['report_category'] ?? null;
+        if (!$cat) {
+            if ($dept && (str_contains($dept->name, 'วิชาการ') || $dept->code === 'ACAD')) $cat = '6.1';
+            elseif ($dept && (str_contains($dept->name, 'พัฒนากิจการ') || str_contains($dept->name, 'นักเรียน') || $dept->code === 'STUD')) $cat = '6.2';
+            elseif ($dept && (str_contains($dept->name, 'บริหาร') || str_contains($dept->name, 'พัสดุ') || str_contains($dept->name, 'ทรัพยากร') || $dept->code === 'ADMIN')) $cat = '6.3';
+            elseif ($dept && (str_contains($dept->name, 'แผน') || $dept->code === 'PLAN')) $cat = '6.4';
+            else $cat = '6.1';
+        }
+
+        $project = new Project();
+        $project->user_id = $user->id;
+        $project->department_id = $validated['department_id'];
+        $project->title = $validated['title'];
+        $project->academic_year = $validated['academic_year'];
+        $project->proposed_budget = $validated['proposed_budget'] ?? $validated['allocated_budget'];
+        $project->allocated_budget = $validated['allocated_budget'];
+        $project->estimated_budget = $validated['allocated_budget'];
+        $project->funding_source_id = $validated['funding_source_id'];
+        $project->report_category = $cat;
+        $project->responsible_person = $validated['responsible_person'] ?? $user->name;
+        $project->committee_comment = $validated['committee_comment'] ?? 'จัดสรรงบประมาณโดยตรงผ่านงานแผนงาน';
+        $project->budget_approved_at = now();
+        $project->status = 'budget_approved';
+        $project->current_approval_step = 3;
+        $project->background_rationale = 'โครงการที่ได้รับการจัดสรรงบประมาณโดยตรงจากงานแผนงาน';
+        $project->objectives = ['เพื่อดำเนินโครงการตามวัตถุประสงค์และกรอบงบประมาณที่ได้รับจัดสรร'];
+        $project->targets = ['quantitative' => ['ผู้เข้าร่วมโครงการตามเป้าหมาย'], 'qualitative' => ['มีความพึงพอใจในระดับดีขึ้นไป']];
+        $project->outputs = ['ผลผลิตโครงการ'];
+        $project->outcomes = ['ผลลัพธ์โครงการ'];
+        $project->save();
+
+        // Create budget record
+        Budget::updateOrCreate(
+            ['project_id' => $project->id],
+            [
+                'funding_source_id' => $validated['funding_source_id'],
+                'allocated_amount' => $validated['allocated_budget'],
+                'encumbered_amount' => $validated['allocated_budget'],
+                'spent_amount' => 0.00,
+                'is_advance_payment' => false,
+            ]
+        );
+
+        // Record approval log
+        ProjectApproval::create([
+            'project_id' => $project->id,
+            'user_id' => $user->id,
+            'step_number' => 3,
+            'status' => 'approved',
+            'comments' => 'เพิ่มโครงการและอนุมัติจัดสรรงบประมาณโดยตรงผ่านงานแผนงาน (Direct Allocation)',
+        ]);
+
+        return redirect()->back()->with('success', 'เพิ่มโครงการและจัดสรรงบประมาณเรียบร้อยแล้ว ยอดเงินเชื่อมโยงเข้าระบบรายงานแผนปฏิบัติราชการทันที');
+    }
+
+    /**
+     * Planning Committee Budget Allocation Review.
+     */
+    public function committeeAllocateBudget(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        $isPlanStaff = $user->isAdmin() || $user->isPlanHead() || ($user->department && (str_contains($user->department->name, 'แผน') || $user->department->code === 'PLAN'));
+        if (!$isPlanStaff) {
+            abort(403, 'เฉพาะผู้ดูแลระบบและเจ้าหน้าที่งานแผนงานเท่านั้นที่สามารถพิจารณาจัดสรรงบประมาณโครงการได้');
+        }
+
+        $request->validate([
+            'action' => 'required|in:approve,reject',
+        ]);
+
+        if ($request->input('action') === 'approve') {
+            $request->validate([
+                'allocated_budget' => 'required|numeric|min:0',
+                'funding_source_id' => 'required|exists:funding_sources,id',
+                'report_category' => 'nullable|string',
+                'committee_comment' => 'nullable|string',
+            ], [
+                'allocated_budget.required' => 'กรุณาระบุวงเงินที่จัดสรรจริง',
+                'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
+            ]);
+
+            $dept = $project->department;
+            $cat = $request->input('report_category');
+            if (!$cat) {
+                if ($dept && (str_contains($dept->name, 'วิชาการ') || $dept->code === 'ACAD')) $cat = '6.1';
+                elseif ($dept && (str_contains($dept->name, 'พัฒนากิจการ') || str_contains($dept->name, 'นักเรียน') || $dept->code === 'STUD')) $cat = '6.2';
+                elseif ($dept && (str_contains($dept->name, 'บริหาร') || str_contains($dept->name, 'พัสดุ') || str_contains($dept->name, 'ทรัพยากร') || $dept->code === 'ADMIN')) $cat = '6.3';
+                elseif ($dept && (str_contains($dept->name, 'แผน') || $dept->code === 'PLAN')) $cat = '6.4';
+                else $cat = '6.1';
+            }
+
+            $project->allocated_budget = $request->input('allocated_budget');
+            $project->estimated_budget = $request->input('allocated_budget');
+            $project->funding_source_id = $request->input('funding_source_id');
+            $project->report_category = $cat;
+            $project->committee_comment = $request->input('committee_comment', 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว');
+            $project->budget_approved_at = now();
+            $project->status = 'budget_approved';
+            $project->current_approval_step = 3;
+            $project->save();
+
+            // Create or update Budget record
+            Budget::updateOrCreate(
+                ['project_id' => $project->id],
+                [
+                    'funding_source_id' => $request->input('funding_source_id'),
+                    'allocated_amount' => $request->input('allocated_budget'),
+                    'encumbered_amount' => $request->input('allocated_budget'),
+                    'spent_amount' => 0.00,
+                    'is_advance_payment' => false,
+                ]
+            );
+
+            ProjectApproval::create([
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+                'step_number' => 3,
+                'status' => 'approved',
+                'comments' => 'มติคณะกรรมการ: อนุมัติจัดสรรงบประมาณ ' . number_format($request->input('allocated_budget'), 2) . ' บาท',
+            ]);
+
+            return redirect()->back()->with('success', 'อนุมัติจัดสรรงบประมาณโครงการเรียบร้อยแล้ว ผู้เสนอโครงการสามารถเข้าจัดทำรายละเอียดฉบับเต็มได้');
+        } else {
+            $request->validate([
+                'committee_comment' => 'required|string',
+            ], [
+                'committee_comment.required' => 'กรุณาระบุเหตุผลหรือมติคณะกรรมการที่ไม่อนุมัติงบประมาณ',
+            ]);
+
+            $project->status = 'budget_rejected';
+            $project->committee_comment = $request->input('committee_comment');
+            $project->save();
+
+            ProjectApproval::create([
+                'project_id' => $project->id,
+                'user_id' => $user->id,
+                'step_number' => 3,
+                'status' => 'rejected',
+                'comments' => 'มติคณะกรรมการ: ไม่อนุมัติจัดสรรงบประมาณ (' . $request->input('committee_comment') . ')',
+            ]);
+
+            return redirect()->back()->with('success', 'บันทึกมติไม่อนุมัติงบประมาณโครงการเรียบร้อยแล้ว');
+        }
+    }
+
+    /**
      * Display the specified project.
      */
     public function show(Project $project)
     {
-        $project->load(['user', 'department', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'budget.fundingSource', 'procurement.committees', 'procurement.items']);
+        $project->load(['user', 'department', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
         
         // Load all strategy categories for display
@@ -154,15 +402,21 @@ class ProjectController extends Controller
      */
     public function edit(Project $project)
     {
-        // Only draft or rejected projects can be edited
-        if (!in_array($project->status, ['draft', 'rejected'])) {
-            abort(403, 'Locked projects cannot be edited.');
+        if ($project->status === 'budget_rejected') {
+            abort(403, 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถจัดทำรายละเอียดต่อได้');
         }
 
-        if ($project->user_id !== auth()->id()) {
+        // Only editable statuses
+        if (!in_array($project->status, ['draft', 'rejected', 'budget_approved', 'preliminary'])) {
+            abort(403, 'โครงการที่ได้รับการอนุมัติขั้นสุดท้ายหรืออยู่ในกระบวนการตรวจสอบไม่สามารถแก้ไขได้');
+        }
+
+        $user = auth()->user();
+        if ($project->user_id !== $user->id && !$user->isAdmin() && !$user->isPlanHead()) {
             abort(403, 'Unauthorized.');
         }
 
+        $project->load(['fundingSource', 'budget.fundingSource']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
 
         $activeCategories = \App\Models\StrategyCategory::with(['items' => function($q) {
@@ -177,6 +431,7 @@ class ProjectController extends Controller
             'nationalStrategies' => \App\Models\NationalStrategy::all(),
             'provincialStrategies' => \App\Models\ProvincialStrategy::all(),
             'departments' => Department::all(),
+            'fundingSources' => \App\Models\FundingSource::all(),
         ]);
     }
 
@@ -185,11 +440,16 @@ class ProjectController extends Controller
      */
     public function update(Request $request, Project $project)
     {
-        if (!in_array($project->status, ['draft', 'rejected'])) {
+        if ($project->status === 'budget_rejected') {
+            abort(403, 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถจัดทำรายละเอียดต่อได้');
+        }
+
+        if (!in_array($project->status, ['draft', 'rejected', 'budget_approved', 'preliminary'])) {
             abort(403, 'Locked projects cannot be updated.');
         }
 
-        if ($project->user_id !== auth()->id()) {
+        $user = auth()->user();
+        if ($project->user_id !== $user->id && !$user->isAdmin() && !$user->isPlanHead()) {
             abort(403, 'Unauthorized.');
         }
 
@@ -245,9 +505,14 @@ class ProjectController extends Controller
         $validated['iqa_strategy_id'] = $iqaIds[0] ?? null;
         $validated['ovec_strategy_id'] = $ovecIds[0] ?? null;
 
+        // If previously preliminary without budget approval, change to draft
+        if ($project->status === 'preliminary') {
+            $validated['status'] = 'draft';
+        }
+
         $project->update($validated);
 
-        return redirect()->route('dashboard')->with('message', 'Project updated successfully.');
+        return redirect()->route('dashboard')->with('message', 'บันทึกรายละเอียดโครงการเรียบร้อยแล้ว');
     }
 
     /**

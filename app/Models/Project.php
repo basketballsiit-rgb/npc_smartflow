@@ -35,6 +35,12 @@ class Project extends Model
         'indicators',
         'action_plan',
         'estimated_budget',
+        'proposed_budget',
+        'allocated_budget',
+        'funding_source_id',
+        'report_category',
+        'committee_comment',
+        'budget_approved_at',
         'status',
         'current_approval_step',
         'approved_at',
@@ -59,6 +65,9 @@ class Project extends Model
             'national_strategy_ids' => 'array',
             'provincial_strategy_ids' => 'array',
             'estimated_budget' => 'decimal:2',
+            'proposed_budget' => 'decimal:2',
+            'allocated_budget' => 'decimal:2',
+            'budget_approved_at' => 'datetime',
             'approved_at' => 'datetime',
             'current_approval_step' => 'integer',
         ];
@@ -138,6 +147,14 @@ class Project extends Model
     public function approvals()
     {
         return $this->hasMany(ProjectApproval::class);
+    }
+
+    /**
+     * Get the funding source for this project.
+     */
+    public function fundingSource()
+    {
+        return $this->belongsTo(FundingSource::class);
     }
 
     /**

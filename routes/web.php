@@ -109,6 +109,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('/admin/strategy-items/{item}', [AdminController::class, 'deleteStrategyItem'])->name('admin.items.delete');
 
     // Projects CRUD & Approvals
+    Route::get('projects/quick-create', [ProjectController::class, 'preliminaryCreate'])->name('projects.quick_create');
+    Route::post('projects/preliminary', [ProjectController::class, 'preliminaryStore'])->name('projects.preliminary_store');
+    Route::post('projects/direct-allocate', [ProjectController::class, 'directStoreAndAllocate'])->name('projects.direct_allocate_store');
+    Route::post('projects/{project}/committee-allocate', [ProjectController::class, 'committeeAllocateBudget'])->name('projects.committee_allocate');
     Route::resource('projects', ProjectController::class)->except(['index']);
     Route::get('projects/{project}/print', [ProjectController::class, 'print'])->name('projects.print');
     Route::post('projects/generate-ai-content', [ProjectController::class, 'generateAiContent'])->name('projects.generate_ai_content');

@@ -89,11 +89,11 @@ class DashboardController extends Controller
         // 1. Teacher / User Proposals Data (Always loaded for all users so anyone can view their own projects)
         $data['teacherData'] = [
             'projects' => Project::where('user_id', $user->id)
-                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals'])
+                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals', 'fundingSource', 'budget.fundingSource'])
                 ->latest()
                 ->get(),
             'proposalsCount' => Project::where('user_id', $user->id)->count(),
-            'approvedCount' => Project::where('user_id', $user->id)->where('status', 'approved')->count(),
+            'approvedCount' => Project::where('user_id', $user->id)->whereIn('status', ['approved', 'budget_approved'])->count(),
             'totalBudget' => Project::where('user_id', $user->id)->sum('estimated_budget'),
         ];
 
@@ -122,8 +122,12 @@ class DashboardController extends Controller
                 'globalEncumbered' => Budget::sum('encumbered_amount'),
                 'globalSpent' => Budget::sum('spent_amount'),
                 'fundingChannelProgress' => $fundingChannelProgress,
+                'preliminaryQueue' => Project::whereIn('status', ['preliminary', 'budget_approved', 'budget_rejected'])
+                    ->with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals'])
+                    ->latest()
+                    ->get(),
                 'planHeadQueue' => Project::whereIn('status', ['pending_approval', 'submitted', 'draft', 'rejected'])
-                    ->with(['user', 'department', 'budget.fundingSource', 'approvals'])
+                    ->with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals'])
                     ->orderByRaw("CASE WHEN status = 'pending_approval' AND current_approval_step = 3 THEN 0 WHEN status = 'pending_approval' THEN 1 ELSE 2 END")
                     ->latest()
                     ->get(),
@@ -245,15 +249,22 @@ class DashboardController extends Controller
 
         // Master Projects list for Admin, Plan Head, Procurement & Executives
         if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isExecutive()) {
-            $data['allProjectsMaster'] = Project::with(['user', 'department', 'budget.fundingSource', 'approvals'])
+            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals'])
                 ->latest()
                 ->get()
                 ->map(function ($p) {
+                    $fundingName = $p->fundingSource?->name ?: ($p->budget?->fundingSource?->name ?? 'ยังไม่จัดสรร');
+                    $fundingId = $p->funding_source_id ?: ($p->budget?->funding_source_id ?? null);
+                    $allocAmt = (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?? 0));
                     return [
                         'id' => $p->id,
                         'title' => $p->title,
                         'academic_year' => $p->academic_year,
                         'estimated_budget' => (float)$p->estimated_budget,
+                        'proposed_budget' => (float)($p->proposed_budget ?: $p->estimated_budget),
+                        'allocated_budget' => $allocAmt,
+                        'allocated_amount' => $allocAmt,
+                        'report_category' => $p->report_category,
                         'status' => $p->status,
                         'current_approval_step' => $p->current_approval_step,
                         'created_at' => $p->created_at ? $p->created_at->format('Y-m-d H:i') : '',
@@ -261,9 +272,8 @@ class DashboardController extends Controller
                         'proposer_email' => $p->user?->email ?? '',
                         'department_name' => $p->department?->name ?? 'ฝ่ายงานทั่วไป',
                         'department_id' => $p->department_id,
-                        'funding_source_name' => $p->budget?->fundingSource?->name ?? 'ยังไม่จัดสรร',
-                        'funding_source_id' => $p->budget?->funding_source_id,
-                        'allocated_amount' => (float)($p->budget?->allocated_amount ?? 0),
+                        'funding_source_name' => $fundingName,
+                        'funding_source_id' => $fundingId,
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
                     ];
                 });

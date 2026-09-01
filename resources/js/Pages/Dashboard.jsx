@@ -66,6 +66,68 @@ export default function Dashboard({
         description: '',
     });
 
+    // Direct Project Add & Allocate Modal (Admin & Planning Staff only)
+    const [isDirectAllocateModalOpen, setIsDirectAllocateModalOpen] = useState(false);
+    const { 
+        data: directAllocateForm, 
+        setData: setDirectAllocateForm, 
+        post: postDirectAllocate, 
+        reset: resetDirectAllocate, 
+        processing: directAllocateProcessing, 
+        errors: directAllocateErrors 
+    } = useForm({
+        title: '',
+        academic_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+        department_id: allDepartments[0]?.id || '',
+        proposed_budget: '',
+        allocated_budget: '',
+        funding_source_id: planHeadData?.fundingSources?.[0]?.id || '',
+        report_category: '6.1',
+        responsible_person: '',
+        committee_comment: 'จัดสรรงบประมาณโดยตรงผ่านงานแผนงาน',
+    });
+
+    // Committee Allocation Modal
+    const [isCommitteeModalOpen, setIsCommitteeModalOpen] = useState(false);
+    const [selectedProjectForAllocation, setSelectedProjectForAllocation] = useState(null);
+    const { 
+        data: committeeForm, 
+        setData: setCommitteeForm, 
+        post: postCommitteeAllocation, 
+        reset: resetCommitteeAllocation, 
+        processing: committeeProcessing, 
+        errors: committeeErrors 
+    } = useForm({
+        action: 'approve',
+        allocated_budget: '',
+        funding_source_id: planHeadData?.fundingSources?.[0]?.id || '',
+        report_category: '6.1',
+        committee_comment: 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว',
+    });
+
+    // Quick Preliminary Proposal Modal for Teachers / Proposers
+    const [isQuickProposalModalOpen, setIsQuickProposalModalOpen] = useState(false);
+    const {
+        data: quickProposalForm,
+        setData: setQuickProposalForm,
+        post: postQuickProposal,
+        reset: resetQuickProposal,
+        processing: quickProposalProcessing,
+        errors: quickProposalErrors
+    } = useForm({
+        title: '',
+        academic_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+        proposed_budget: '',
+        department_id: auth.user.department_id || (allDepartments[0]?.id || ''),
+        responsible_person: auth.user.name || '',
+        position: auth.user.position || 'ครูผู้สอน',
+        phone: '',
+        email: auth.user.email || '',
+        background_rationale: '',
+    });
+
+    const isPlanStaff = auth.user.is_admin || role === 'admin' || role === 'plan_head' || auth.user.role?.name === 'plan_head' || auth.user.role?.name === 'admin' || (auth.user.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN'));
+
     useEffect(() => {
         if (flash?.error) {
             Swal.fire('ไม่สามารถดำเนินการได้', flash.error, 'error');
@@ -130,13 +192,130 @@ export default function Dashboard({
         }
     };
 
+    const openDirectAllocateModal = () => {
+        resetDirectAllocate();
+        setDirectAllocateForm({
+            title: '',
+            academic_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+            department_id: allDepartments[0]?.id || '',
+            proposed_budget: '',
+            allocated_budget: '',
+            funding_source_id: planHeadData?.fundingSources?.[0]?.id || (planHeadData?.fundingChannelProgress?.[0]?.id || '1'),
+            report_category: '6.1',
+            responsible_person: '',
+            committee_comment: 'จัดสรรงบประมาณโดยตรงผ่านงานแผนงาน',
+        });
+        setIsDirectAllocateModalOpen(true);
+    };
+
+    const handleDirectAllocateSubmit = (e) => {
+        e.preventDefault();
+        postDirectAllocate(route('projects.direct_allocate_store'), {
+            onSuccess: () => {
+                setIsDirectAllocateModalOpen(false);
+                resetDirectAllocate();
+                Swal.fire({
+                    title: '🎉 เพิ่มโครงการและจัดสรรงบสำเร็จ!',
+                    text: 'บันทึกโครงการและส่งยอดเข้างบประมาณและรายงานแผนปฏิบัติราชการเรียบร้อยแล้ว',
+                    icon: 'success',
+                    confirmButtonColor: '#7c3aed',
+                });
+            }
+        });
+    };
+
+    const openCommitteeModal = (p) => {
+        setSelectedProjectForAllocation(p);
+        const defaultSource = p.funding_source_id || (p.budget?.funding_source_id || planHeadData?.fundingSources?.[0]?.id || '1');
+        let defaultCat = p.report_category;
+        if (!defaultCat) {
+            if (p.department?.name?.includes('วิชาการ')) defaultCat = '6.1';
+            else if (p.department?.name?.includes('พัฒนากิจการ') || p.department?.name?.includes('นักเรียน')) defaultCat = '6.2';
+            else if (p.department?.name?.includes('บริหาร') || p.department?.name?.includes('พัสดุ') || p.department?.name?.includes('ทรัพยากร')) defaultCat = '6.3';
+            else if (p.department?.name?.includes('แผน')) defaultCat = '6.4';
+            else defaultCat = '6.1';
+        }
+        setCommitteeForm({
+            action: 'approve',
+            allocated_budget: p.allocated_budget || p.proposed_budget || p.estimated_budget || '',
+            funding_source_id: defaultSource,
+            report_category: defaultCat,
+            committee_comment: p.committee_comment || 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว',
+        });
+        setIsCommitteeModalOpen(true);
+    };
+
+    const handleCommitteeSubmit = (e) => {
+        e.preventDefault();
+        if (!selectedProjectForAllocation) return;
+        postCommitteeAllocation(route('projects.committee_allocate', selectedProjectForAllocation.id), {
+            onSuccess: () => {
+                setIsCommitteeModalOpen(false);
+                setSelectedProjectForAllocation(null);
+                Swal.fire({
+                    title: '🎉 บันทึกมติจัดสรรงบประมาณสำเร็จ!',
+                    text: 'ปรับปรุงสถานะและงบประมาณโครงการเรียบร้อยแล้ว',
+                    icon: 'success',
+                    confirmButtonColor: '#7c3aed',
+                });
+            }
+        });
+    };
+
+    const openQuickProposalModal = () => {
+        resetQuickProposal();
+        setQuickProposalForm({
+            title: '',
+            academic_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+            proposed_budget: '',
+            department_id: auth.user.department_id || (allDepartments[0]?.id || ''),
+            responsible_person: auth.user.name || '',
+            position: auth.user.position || 'ครูผู้สอน',
+            phone: '',
+            email: auth.user.email || '',
+            background_rationale: '',
+        });
+        setIsQuickProposalModalOpen(true);
+    };
+
+    const handleQuickProposalSubmit = (e) => {
+        e.preventDefault();
+        postQuickProposal(route('projects.preliminary_store'), {
+            onSuccess: () => {
+                setIsQuickProposalModalOpen(false);
+                resetQuickProposal();
+                Swal.fire({
+                    title: '🎉 เสนอโครงการสำเร็จ!',
+                    text: 'บันทึกคำของบประมาณโครงการเบื้องต้นเรียบร้อยแล้ว รอการพิจารณาจัดสรรงบจากงานแผนงาน/คณะกรรมการ',
+                    icon: 'success',
+                    confirmButtonColor: '#7c3aed',
+                });
+            }
+        });
+    };
+
     const renderProjectProgressBar = (status, step) => {
         let percent = 0;
         let colorClass = 'from-slate-400 to-slate-500';
         let badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
         let stepText = `ร่างโครงการ (Draft)`;
 
-        if (status === 'approved' || step >= 6) {
+        if (status === 'preliminary') {
+            percent = 5;
+            colorClass = 'from-amber-400 to-amber-500';
+            badgeColor = 'bg-amber-50 text-amber-900 border-amber-300';
+            stepText = '🟡 เสนอตั้งงบ (รอจัดสรร)';
+        } else if (status === 'budget_approved') {
+            percent = 50;
+            colorClass = 'from-emerald-400 to-teal-500';
+            badgeColor = 'bg-emerald-50 text-emerald-800 border-emerald-300';
+            stepText = '🟢 อนุมัติงบแล้ว (พร้อมทำฉบับเต็ม)';
+        } else if (status === 'budget_rejected') {
+            percent = 0;
+            colorClass = 'from-rose-500 to-rose-600';
+            badgeColor = 'bg-rose-50 text-rose-800 border-rose-300';
+            stepText = '❌ ไม่อนุมัติงบ (ยุติ)';
+        } else if (status === 'approved' || step >= 6) {
             percent = 100;
             colorClass = 'from-emerald-400 via-emerald-500 to-teal-600';
             badgeColor = 'bg-emerald-50 text-emerald-800 border-emerald-300';
@@ -1530,7 +1709,7 @@ export default function Dashboard({
                         <p className="mt-2 text-3xl font-black text-slate-900">{teacherData.proposalsCount} โครงการ</p>
                     </div>
                     <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">โครงการที่ผ่านอนุมัติ</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">โครงการที่ผ่านอนุมัติงบ</span>
                         <p className="mt-2 text-3xl font-black text-slate-900">{teacherData.approvedCount} โครงการ</p>
                     </div>
                     <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
@@ -1542,87 +1721,153 @@ export default function Dashboard({
                 </div>
 
                 <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
-                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex justify-between items-center">
+                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
                             <h3 className="text-lg font-bold text-slate-900">รายการเสนอโครงการของฉัน</h3>
-                            <p className="text-xs text-slate-600">ติดตามสถานะกระบวนการพิจารณาอนุมัติ 6 ขั้นตอน</p>
+                            <p className="text-xs text-slate-600">ติดตามสถานะการพิจารณาจัดสรรงบประมาณ และกระบวนการอนุมัติ 6 ขั้นตอน</p>
                         </div>
-                        <Link
-                            href={route('projects.create')}
-                            className="inline-flex items-center rounded-xl bg-purple-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-purple-700 transition-colors"
-                        >
-                            + เสนอโครงการใหม่
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {isPlanStaff && (
+                                <button
+                                    onClick={openDirectAllocateModal}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 px-4 py-2 text-xs font-extrabold text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                    title="สิทธิ์พิเศษสำหรับงานแผนงาน/Admin: เพิ่มโครงการและจัดสรรงบได้ทันที"
+                                >
+                                    <span>➕</span> เพิ่มโครงการ & จัดสรรงบทันที
+                                </button>
+                            )}
+                            <Link
+                                href={route('projects.quick_create')}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-600 hover:scale-105 active:scale-95 transition-all"
+                            >
+                                <span>💡</span> เสนอโครงการเบื้องต้น (ขอตั้งงบ)
+                            </Link>
+                            <Link
+                                href={route('projects.create')}
+                                className="inline-flex items-center rounded-xl bg-purple-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-purple-700 transition-colors"
+                            >
+                                + จัดทำข้อเสนอโครงการฉบับเต็ม
+                            </Link>
+                        </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900">
                                     <th className="px-6 py-3.5">ชื่อโครงการ</th>
-                                    <th className="px-6 py-3.5">ปีการศึกษา</th>
-                                    <th className="px-6 py-3.5">งบประมาณเสนอขอ</th>
-                                    <th className="px-6 py-3.5">สถานะการอนุมัติ</th>
-                                    <th className="px-6 py-3.5">การดำเนินการ</th>
+                                    <th className="px-6 py-3.5">ปีงบประมาณ</th>
+                                    <th className="px-6 py-3.5">งบประมาณเสนอขอ / จัดสรรจริง</th>
+                                    <th className="px-6 py-3.5">สถานะโครงการ</th>
+                                    <th className="px-6 py-3.5 text-right">การดำเนินการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-purple-100 text-sm">
                                 {teacherData.projects.length === 0 ? (
                                     <tr>
                                         <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
-                                            ยังไม่มีรายการโครงการที่เสนอ ให้กดปุ่ม '+ เสนอโครงการใหม่' ด้านบนเพื่อเริ่มสร้างโครงการ
+                                            ยังไม่มีรายการโครงการที่เสนอ ให้กดปุ่ม '💡 เสนอโครงการเบื้องต้น' ด้านบนเพื่อเริ่มเสนอคำของบประมาณ
                                         </td>
                                     </tr>
                                 ) : (
-                                    teacherData.projects.map((project) => (
-                                        <tr key={project.id} className="hover:bg-purple-50/20">
-                                            <td className="px-6 py-4 font-bold text-slate-900">{project.title}</td>
-                                            <td className="px-6 py-4 text-slate-600">{project.academic_year}</td>
-                                            <td className="px-6 py-4 font-bold text-purple-700">
-                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.estimated_budget)}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {getStatusBadge(project.status, project.current_approval_step)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                                                    <Link
-                                                        href={route('projects.show', project.id)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:shadow-purple-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="จัดการ / ดูรายละเอียด"
-                                                    >
-                                                        👁️ จัดการ ➔
-                                                    </Link>
-                                                    {(project.status === 'draft' || project.status === 'rejected') && (
-                                                        <button
-                                                            onClick={() => handleResubmitProject(project)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
-                                                        >
-                                                            🚀 ยื่นขออนุมัติ
-                                                        </button>
+                                    teacherData.projects.map((project) => {
+                                        const fundingName = project.funding_source?.name || project.budget?.funding_source?.name || '';
+                                        const hasAllocated = project.status === 'budget_approved' || project.status === 'approved' || project.allocated_budget > 0;
+                                        
+                                        return (
+                                            <tr key={project.id} className="hover:bg-purple-50/20">
+                                                <td className="px-6 py-4 font-bold text-slate-900">
+                                                    <div>{project.title}</div>
+                                                    {project.committee_comment && (
+                                                        <div className="text-[11px] text-purple-700 mt-1 font-normal bg-purple-50 px-2 py-0.5 rounded border border-purple-100 inline-block">
+                                                            💬 มติคณะกรรมการ: {project.committee_comment}
+                                                        </div>
                                                     )}
-                                                    {(role === 'admin' || auth.user.is_admin || project.status === 'draft' || project.status === 'rejected') && (
+                                                </td>
+                                                <td className="px-6 py-4 text-slate-600 font-semibold">{project.academic_year}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-bold text-purple-950">
+                                                        {hasAllocated ? (
+                                                            <div>
+                                                                <span className="text-emerald-700 font-extrabold">
+                                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.allocated_budget || project.estimated_budget)}
+                                                                </span>
+                                                                {fundingName && (
+                                                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-bold ml-1.5">
+                                                                        {fundingName}
+                                                                    </span>
+                                                                )}
+                                                                <div className="text-[11px] text-slate-400 font-normal">
+                                                                    (เสนอขอ: {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.proposed_budget || project.estimated_budget)})
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <span className="text-slate-800 font-bold">
+                                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.proposed_budget || project.estimated_budget)}
+                                                                </span>
+                                                                <div className="text-[10px] text-amber-700 font-semibold">
+                                                                    (รอการจัดสรรงบ)
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    {getStatusBadge(project.status, project.current_approval_step)}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
                                                         <Link
-                                                            href={route('projects.edit', project.id)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:shadow-amber-400/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="แก้ไขโครงการ"
+                                                            href={route('projects.show', project.id)}
+                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:shadow-purple-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            title="จัดการ / ดูรายละเอียด"
                                                         >
-                                                            ✏️ แก้ไข
+                                                            👁️ จัดการ ➔
                                                         </Link>
-                                                    )}
-                                                    {(role === 'admin' || auth.user.is_admin || project.status === 'draft') && (
-                                                        <button
-                                                            onClick={() => handleDeleteProject(project)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:shadow-rose-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="ลบโครงการ"
-                                                        >
-                                                            🗑️ ลบ
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                        
+                                                        {/* If budget approved, allow completing full project proposal details */}
+                                                        {project.status === 'budget_approved' && (
+                                                            <Link
+                                                                href={route('projects.edit', project.id)}
+                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                title="จัดทำรายละเอียดโครงการฉบับสมบูรณ์"
+                                                            >
+                                                                📝 จัดทำรายละเอียดฉบับเต็ม
+                                                            </Link>
+                                                        )}
+
+                                                        {(project.status === 'draft' || project.status === 'rejected') && (
+                                                            <button
+                                                                onClick={() => handleResubmitProject(project)}
+                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
+                                                            >
+                                                                🚀 ยื่นขออนุมัติ
+                                                            </button>
+                                                        )}
+                                                        {(role === 'admin' || auth.user.is_admin || project.status === 'draft' || project.status === 'rejected' || project.status === 'preliminary') && (
+                                                            <Link
+                                                                href={route('projects.edit', project.id)}
+                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:shadow-amber-400/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                title="แก้ไขโครงการ"
+                                                            >
+                                                                ✏️ แก้ไข
+                                                            </Link>
+                                                        )}
+                                                        {(role === 'admin' || auth.user.is_admin || project.status === 'draft' || project.status === 'preliminary') && (
+                                                            <button
+                                                                onClick={() => handleDeleteProject(project)}
+                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:shadow-rose-600/35 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                title="ลบโครงการ"
+                                                            >
+                                                                🗑️ ลบ
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
                                 )}
                             </tbody>
                         </table>
@@ -2913,24 +3158,28 @@ export default function Dashboard({
 
         // 4. Populate Projects (Row 6.1 - 6.4)
         allProjectsMaster.forEach(p => {
-            if (p.status !== 'approved') return;
+            if (p.status !== 'approved' && p.status !== 'budget_approved') return;
 
-            // Resolve report category based on project's department
-            let cat = null;
-            if (p.department_name?.includes('วิชาการ')) cat = '6.1';
-            else if (p.department_name?.includes('พัฒนากิจการ') || p.department_name?.includes('นักเรียน')) cat = '6.2';
-            else if (p.department_name?.includes('บริหาร') || p.department_name?.includes('พัสดุ') || p.department_name?.includes('บริหารทรัพยากร')) cat = '6.3';
-            else if (p.department_name?.includes('วางแผน') || p.department_name?.includes('แผน')) cat = '6.4';
-            else cat = '6.1'; // fallback
+            // Resolve report category based on explicit report_category or project's department
+            let cat = p.report_category;
+            if (!cat) {
+                if (p.department_name?.includes('วิชาการ')) cat = '6.1';
+                else if (p.department_name?.includes('พัฒนากิจการ') || p.department_name?.includes('นักเรียน')) cat = '6.2';
+                else if (p.department_name?.includes('บริหาร') || p.department_name?.includes('พัสดุ') || p.department_name?.includes('บริหารทรัพยากร')) cat = '6.3';
+                else if (p.department_name?.includes('วางแผน') || p.department_name?.includes('แผน')) cat = '6.4';
+                else cat = '6.1'; // fallback
+            }
 
-            const alloc = parseFloat(p.allocated_amount || 0);
+            const alloc = parseFloat(p.allocated_amount || p.allocated_budget || 0);
             const spent = parseFloat(p.spent_amount || 0);
 
-            rowData[cat].planBudget += alloc;
+            if (rowData[cat]) {
+                rowData[cat].planBudget += alloc;
 
-            const colIdx = getColumnIndexBySourceName(p.funding_source_name);
-            if (colIdx !== -1) {
-                rowData[cat].spentBySource[colIdx] += spent;
+                const colIdx = getColumnIndexBySourceName(p.funding_source_name);
+                if (colIdx !== -1) {
+                    rowData[cat].spentBySource[colIdx] += spent;
+                }
             }
         });
 
@@ -2977,10 +3226,10 @@ export default function Dashboard({
             }
         });
         allProjectsMaster.forEach(p => {
-            if (p.status !== 'approved') return;
+            if (p.status !== 'approved' && p.status !== 'budget_approved') return;
             const colIdx = getColumnIndexBySourceName(p.funding_source_name);
             if (colIdx !== -1) {
-                estimateBySource[colIdx] += parseFloat(p.allocated_amount || 0);
+                estimateBySource[colIdx] += parseFloat(p.allocated_amount || p.allocated_budget || 0);
             }
         });
 
@@ -3217,112 +3466,265 @@ export default function Dashboard({
                 </div>
             );
         }
+
+        const prelimCount = planHeadData.preliminaryQueue?.filter(p => p.status === 'preliminary').length || 0;
+        const allocCount = planHeadData.preliminaryQueue?.filter(p => p.status === 'budget_approved').length || 0;
+        const rejectCount = planHeadData.preliminaryQueue?.filter(p => p.status === 'budget_rejected').length || 0;
+
         return (
-            <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm font-sans">
-                <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <div>
-                        <h3 className="text-lg font-black text-purple-950">📋 คิวตรวจสอบและอนุมัติโครงการทั้งหมด (Approval Review Queue)</h3>
-                        <p className="text-xs text-slate-600 mt-0.5">ตรวจสอบรายละเอียดข้อเสนอโครงการ จัดสรรงบประมาณ และอนุมัติส่งต่อตามลำดับสายงาน 6 ขั้นตอน</p>
+            <div className="space-y-8 font-sans">
+                {/* 1. Preliminary Budget Allocation Section */}
+                <div className="overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
+                    <div className="border-b border-amber-200 bg-gradient-to-r from-amber-500/15 via-purple-50 to-indigo-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">⚖️</span>
+                                <h3 className="text-lg font-black text-purple-950">
+                                    พิจารณาจัดสรรงบประมาณโครงการเบื้องต้น (Preliminary Budget Allocation)
+                                </h3>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-0.5">
+                                คณะกรรมการและงานแผนงานพิจารณากำหนดกรอบงบประมาณและแหล่งเงินทุน 7 หมวด เพื่อให้ผู้เสนอจัดทำรายละเอียดโครงการฉบับสมบูรณ์
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {isPlanStaff && (
+                                <button
+                                    onClick={openDirectAllocateModal}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 px-4 py-2 text-xs font-extrabold text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                    title="เพิ่มโครงการและระบุวงเงินจัดสรรโดยตรง"
+                                >
+                                    <span>➕</span> เพิ่มโครงการ & จัดสรรงบทันที
+                                </button>
+                            )}
+                            <div className="flex gap-1.5 text-xs font-bold">
+                                <span className="bg-amber-100 text-amber-900 px-2.5 py-1 rounded-xl border border-amber-300">
+                                    รอจัดสรร: {prelimCount}
+                                </span>
+                                <span className="bg-emerald-100 text-emerald-900 px-2.5 py-1 rounded-xl border border-emerald-300">
+                                    จัดสรรแล้ว: {allocCount}
+                                </span>
+                                <span className="bg-rose-100 text-rose-900 px-2.5 py-1 rounded-xl border border-rose-300">
+                                    ไม่อนุมัติ: {rejectCount}
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    <div className="bg-purple-100/70 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
-                        รออนุมัติในระบบ: {planHeadData.planHeadQueue?.length || 0} รายการ
-                    </div>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
-                                <th className="px-6 py-3.5">ชื่อโครงการ</th>
-                                <th className="px-6 py-3.5">ผู้เสนอโครงการ / ฝ่ายงาน</th>
-                                <th className="px-6 py-3.5">งบประมาณเสนอขอ</th>
-                                <th className="px-6 py-3.5 text-center">สถานะและขั้นตอนอนุมัติ</th>
-                                <th className="px-6 py-3.5 text-right">การดำเนินการ (Full Control)</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-purple-100 text-sm">
-                            {(!planHeadData.planHeadQueue || planHeadData.planHeadQueue.length === 0) ? (
-                                <tr>
-                                    <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
-                                        ไม่มีรายการโครงการรออนุมัติในคิวงานขณะนี้
-                                    </td>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-amber-100 bg-amber-50/40 text-xs font-bold uppercase text-purple-950 whitespace-nowrap">
+                                    <th className="px-6 py-3.5">ชื่อโครงการ</th>
+                                    <th className="px-6 py-3.5">ฝ่ายงาน / ผู้เสนอ</th>
+                                    <th className="px-6 py-3.5">งบประมาณเสนอขอ</th>
+                                    <th className="px-6 py-3.5">วงเงินจัดสรรจริง & แหล่งเงิน</th>
+                                    <th className="px-6 py-3.5 text-center">สถานะการพิจารณา</th>
+                                    <th className="px-6 py-3.5 text-right">การพิจารณาจัดสรร</th>
                                 </tr>
-                            ) : (
-                                planHeadData.planHeadQueue.map((p) => (
-                                    <tr key={p.id} className="hover:bg-purple-50/20 transition-all">
-                                        <td className="px-6 py-4 font-bold text-slate-900 max-w-xs truncate" title={p.title}>
-                                            {p.title}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-semibold text-slate-800 text-xs">{p.user?.name || 'ไม่ระบุชื่อ'}</div>
-                                            <div className="text-[11px] text-purple-600 font-medium">{p.department?.name || 'ฝ่ายงานทั่วไป'}</div>
-                                        </td>
-                                        <td className="px-6 py-4 font-bold text-purple-700 text-xs whitespace-nowrap">
-                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget)}
-                                        </td>
-                                        <td className="px-6 py-4 text-center whitespace-nowrap">
-                                            {renderProjectProgressBar(p.status, p.current_approval_step)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                                            <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                                                <Link
-                                                    href={route('projects.show', p.id)}
-                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                    title="ตรวจสอบและจัดการโครงการ"
-                                                >
-                                                    🔍 ตรวจสอบ ➔
-                                                </Link>
-                                                {(p.status === 'draft' || p.status === 'rejected') && (
-                                                    <button
-                                                        onClick={() => handleResubmitProject(p)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
-                                                    >
-                                                        🚀 ยื่นขออนุมัติ
-                                                    </button>
-                                                )}
-                                                {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && (
-                                                    <button
-                                                        onClick={() => handleAdminApproveProject(p, 'step')}
-                                                        className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-2.5 py-2 text-xs font-extrabold text-purple-950 shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="อนุมัติข้ามขั้นตอนปัจจุบันทันที (Admin Step Override)"
-                                                    >
-                                                        ⚡ อนุมัติลัด
-                                                    </button>
-                                                )}
-                                                {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && (
-                                                    <button
-                                                        onClick={() => handleAdminApproveProject(p, 'full')}
-                                                        className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 px-2.5 py-2 text-xs font-extrabold text-white shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="อนุมัติรวดเดียวสมบูรณ์ 6 ขั้นตอน (Admin Full 6-Step Override)"
-                                                    >
-                                                        👑 อนุมัติรวดเดียว
-                                                    </button>
-                                                )}
-                                                {(role === 'admin' || auth.user.is_admin) && (
-                                                    <Link
-                                                        href={route('projects.edit', p.id)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="แก้ไขโครงการ"
-                                                    >
-                                                        ✏️ แก้ไข
-                                                    </Link>
-                                                )}
-                                                {(role === 'admin' || auth.user.is_admin) && (
-                                                    <button
-                                                        onClick={() => handleDeleteProject(p)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="ลบโครงการ"
-                                                    >
-                                                        🗑️ ลบ
-                                                    </button>
-                                                )}
-                                            </div>
+                            </thead>
+                            <tbody className="divide-y divide-amber-100/60 text-sm">
+                                {(!planHeadData.preliminaryQueue || planHeadData.preliminaryQueue.length === 0) ? (
+                                    <tr>
+                                        <td colSpan="6" className="px-6 py-10 text-center text-sm text-slate-500">
+                                            ยังไม่มีรายการข้อเสนอโครงการเบื้องต้นในระบบ
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ) : (
+                                    planHeadData.preliminaryQueue.map((p) => {
+                                        const fundingName = p.funding_source?.name || p.budget?.funding_source?.name || 'ยังไม่ระบุ';
+                                        return (
+                                            <tr key={p.id} className="hover:bg-amber-50/20 transition-all">
+                                                <td className="px-6 py-4 font-bold text-slate-900 max-w-xs">
+                                                    <div>{p.title}</div>
+                                                    <div className="text-[11px] text-slate-400 font-normal mt-0.5">ปีงบประมาณ: {p.academic_year}</div>
+                                                    {p.committee_comment && (
+                                                        <div className="text-[11px] text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 mt-1 inline-block">
+                                                            💬 มติ: {p.committee_comment}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <div className="font-semibold text-slate-800 text-xs">{p.department?.name || 'ฝ่ายงานทั่วไป'}</div>
+                                                    <div className="text-[11px] text-purple-600 font-medium">{p.user?.name || 'ไม่ระบุชื่อ'}</div>
+                                                </td>
+                                                <td className="px-6 py-4 font-bold text-slate-800 text-xs whitespace-nowrap">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.proposed_budget || p.estimated_budget)}
+                                                </td>
+                                                <td className="px-6 py-4 text-xs whitespace-nowrap">
+                                                    {p.status === 'budget_approved' || p.allocated_budget > 0 ? (
+                                                        <div>
+                                                            <div className="font-extrabold text-emerald-700">
+                                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.allocated_budget || p.estimated_budget)}
+                                                            </div>
+                                                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold mt-0.5 inline-block">
+                                                                {fundingName} ({p.report_category || '6.1'})
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-slate-400 font-medium italic">- ยังไม่จัดสรร -</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                    {p.status === 'budget_approved' && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
+                                                            ✅ อนุมัติจัดสรรงบแล้ว
+                                                        </span>
+                                                    )}
+                                                    {p.status === 'budget_rejected' && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 border border-rose-300">
+                                                            ❌ ไม่อนุมัติงบประมาณ
+                                                        </span>
+                                                    )}
+                                                    {p.status === 'preliminary' && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900 border border-amber-300 animate-pulse">
+                                                            🟡 รอการพิจารณาจัดสรร
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                                                        <button
+                                                            onClick={() => openCommitteeModal(p)}
+                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            title="พิจารณาอนุมัติจัดสรรงบประมาณ หรือไม่อนุมัติ"
+                                                        >
+                                                            ⚖️ พิจารณาจัดสรรงบ
+                                                        </button>
+                                                        <Link
+                                                            href={route('projects.show', p.id)}
+                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 px-2.5 py-2 text-xs font-bold text-purple-900 hover:bg-purple-200 transition-all shrink-0"
+                                                            title="ดูรายละเอียด"
+                                                        >
+                                                            👁️
+                                                        </Link>
+                                                        {(role === 'admin' || auth.user.is_admin) && (
+                                                            <button
+                                                                onClick={() => handleDeleteProject(p)}
+                                                                className="inline-flex items-center gap-1 rounded-xl bg-rose-100 px-2.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-200 transition-all shrink-0"
+                                                                title="ลบข้อเสนอโครงการ"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* 2. Full 6-Step Workflow Approval Queue */}
+                <div className="overflow-hidden rounded-3xl border border-purple-100 bg-white shadow-sm">
+                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                            <h3 className="text-lg font-black text-purple-950">📋 คิวตรวจสอบและอนุมัติโครงการตามสายงาน (6-Step Review Queue)</h3>
+                            <p className="text-xs text-slate-600 mt-0.5">ตรวจสอบรายละเอียดข้อเสนอโครงการฉบับสมบูรณ์ และอนุมัติส่งต่อตามลำดับสายงาน 6 ขั้นตอน</p>
+                        </div>
+                        <div className="bg-purple-100/70 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
+                            รออนุมัติในระบบ: {planHeadData.planHeadQueue?.length || 0} รายการ
+                        </div>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
+                                    <th className="px-6 py-3.5">ชื่อโครงการ</th>
+                                    <th className="px-6 py-3.5">ผู้เสนอโครงการ / ฝ่ายงาน</th>
+                                    <th className="px-6 py-3.5">งบประมาณโครงการ</th>
+                                    <th className="px-6 py-3.5 text-center">สถานะและขั้นตอนอนุมัติ</th>
+                                    <th className="px-6 py-3.5 text-right">การดำเนินการ (Full Control)</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-purple-100 text-sm">
+                                {(!planHeadData.planHeadQueue || planHeadData.planHeadQueue.length === 0) ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
+                                            ไม่มีรายการโครงการรออนุมัติในคิวงานขณะนี้
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    planHeadData.planHeadQueue.map((p) => (
+                                        <tr key={p.id} className="hover:bg-purple-50/20 transition-all">
+                                            <td className="px-6 py-4 font-bold text-slate-900 max-w-xs truncate" title={p.title}>
+                                                {p.title}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="font-semibold text-slate-800 text-xs">{p.user?.name || 'ไม่ระบุชื่อ'}</div>
+                                                <div className="text-[11px] text-purple-600 font-medium">{p.department?.name || 'ฝ่ายงานทั่วไป'}</div>
+                                            </td>
+                                            <td className="px-6 py-4 font-bold text-purple-700 text-xs whitespace-nowrap">
+                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget)}
+                                            </td>
+                                            <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                {renderProjectProgressBar(p.status, p.current_approval_step)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                                                    <Link
+                                                        href={route('projects.show', p.id)}
+                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                        title="ตรวจสอบและจัดการโครงการ"
+                                                    >
+                                                        🔍 ตรวจสอบ ➔
+                                                    </Link>
+                                                    {(p.status === 'draft' || p.status === 'rejected') && (
+                                                        <button
+                                                            onClick={() => handleResubmitProject(p)}
+                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
+                                                        >
+                                                            🚀 ยื่นขออนุมัติ
+                                                        </button>
+                                                    )}
+                                                    {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && (
+                                                        <button
+                                                            onClick={() => handleAdminApproveProject(p, 'step')}
+                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-2.5 py-2 text-xs font-extrabold text-purple-950 shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            title="อนุมัติข้ามขั้นตอนปัจจุบันทันที (Admin Step Override)"
+                                                        >
+                                                            ⚡ อนุมัติลัด
+                                                        </button>
+                                                    )}
+                                                    {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && (
+                                                        <button
+                                                            onClick={() => handleAdminApproveProject(p, 'full')}
+                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 px-2.5 py-2 text-xs font-extrabold text-white shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            title="อนุมัติรวดเดียวสมบูรณ์ 6 ขั้นตอน (Admin Full 6-Step Override)"
+                                                        >
+                                                            👑 อนุมัติรวดเดียว
+                                                        </button>
+                                                    )}
+                                                    {(role === 'admin' || auth.user.is_admin) && (
+                                                        <Link
+                                                            href={route('projects.edit', p.id)}
+                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            title="แก้ไขโครงการ"
+                                                        >
+                                                            ✏️ แก้ไข
+                                                        </Link>
+                                                    )}
+                                                    {(role === 'admin' || auth.user.is_admin) && (
+                                                        <button
+                                                            onClick={() => handleDeleteProject(p)}
+                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            title="ลบโครงการ"
+                                                        >
+                                                            🗑️ ลบ
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         );
@@ -3889,6 +4291,346 @@ export default function Dashboard({
                         {activeTab === 'executive_overview' && renderExecutiveOverviewTab()}
                         {activeTab === 'executive_reports' && renderExecutiveReportsTab()}
                     </div>
+
+                    {/* Direct Add & Allocate Modal (Admin & Planning Staff Only) */}
+                    {isDirectAllocateModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                            <div className="w-full max-w-2xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8">
+                                <div className="flex justify-between items-center border-b border-purple-100 pb-4 mb-6">
+                                    <div>
+                                        <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
+                                            <span>➕</span> เพิ่มโครงการและจัดสรรงบประมาณทันที (Direct Allocate)
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            สิทธิ์เฉพาะผู้ดูแลระบบและเจ้าหน้าที่งานแผนงาน: สร้างโครงการและอนุมัติจัดสรรงบประมาณเข้างบและรายงานแผนปฏิบัติราชการทันที
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsDirectAllocateModalOpen(false)}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleDirectAllocateSubmit} className="space-y-4 text-xs font-semibold text-slate-700">
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">ชื่อโครงการ (Project Title) *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={directAllocateForm.title}
+                                            onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, title: e.target.value })}
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-sm font-bold text-purple-950 focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="เช่น โครงการพัฒนาทักษะวิชาชีพสู่มาตรฐานสากล"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block mb-1 text-slate-800 font-bold">ปีงบประมาณ พ.ศ. *</label>
+                                            <input
+                                                type="number"
+                                                required
+                                                value={directAllocateForm.academic_year}
+                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, academic_year: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 focus:ring-purple-500 font-bold"
+                                            />
+                                        </div>
+
+                                        <div className="sm:col-span-2">
+                                            <label className="block mb-1 text-slate-800 font-bold">ฝ่าย / งานที่รับผิดชอบโครงการ *</label>
+                                            <select
+                                                value={directAllocateForm.department_id}
+                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, department_id: Number(e.target.value) })}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 focus:ring-purple-500"
+                                            >
+                                                {allDepartments.map(d => (
+                                                    <option key={d.id} value={d.id}>{d.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block mb-1 text-slate-800 font-bold">วงเงินงบประมาณเสนอขอ (บาท)</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={directAllocateForm.proposed_budget}
+                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, proposed_budget: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs"
+                                                placeholder="50000.00"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="block mb-1 text-emerald-800 font-bold">วงเงินจัดสรรจริงที่อนุมัติ (บาท) *</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                required
+                                                value={directAllocateForm.allocated_budget}
+                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, allocated_budget: e.target.value })}
+                                                className="w-full rounded-xl border-emerald-300 bg-emerald-50/40 px-3.5 py-2 text-xs font-extrabold text-emerald-950 focus:border-emerald-500 focus:ring-emerald-500"
+                                                placeholder="45000.00"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block mb-1 text-purple-900 font-bold">แหล่งเงินทุน 7 หมวด *</label>
+                                            <select
+                                                value={directAllocateForm.funding_source_id}
+                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, funding_source_id: Number(e.target.value) })}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
+                                            >
+                                                {(planHeadData?.fundingSources || [
+                                                    { id: 1, name: 'ปวช.' },
+                                                    { id: 2, name: 'ปวส.' },
+                                                    { id: 3, name: 'ระยะสั้น' },
+                                                    { id: 4, name: 'งบทวิศึกษา' },
+                                                    { id: 5, name: 'อุดหนุนเพื่อการจัดการฯ' },
+                                                    { id: 6, name: 'อุดหนุนพัฒนาฯ' },
+                                                    { id: 7, name: 'บกศ. (บำรุงการศึกษา)' },
+                                                ]).map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block mb-1 text-purple-900 font-bold">หมวดรายงานแผนปฏิบัติราชการ (Section 6) *</label>
+                                            <select
+                                                value={directAllocateForm.report_category}
+                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, report_category: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
+                                            >
+                                                <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
+                                                <option value="6.2">6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา</option>
+                                                <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
+                                                <option value="6.4">6.4 โครงการฝ่ายแผนงานและความร่วมมือ</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">ผู้รับผิดชอบโครงการ (ระบุชื่อ หรือเว้นว่างไว้)</label>
+                                        <input
+                                            type="text"
+                                            value={directAllocateForm.responsible_person}
+                                            onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, responsible_person: e.target.value })}
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs"
+                                            placeholder="เช่น นายสมชาย ใจดี"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">มติคณะกรรมการ / บันทึกเพิ่มเติม</label>
+                                        <textarea
+                                            rows={2}
+                                            value={directAllocateForm.committee_comment}
+                                            onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, committee_comment: e.target.value })}
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs"
+                                            placeholder="มติที่ประชุมคณะกรรมการพิจารณางบประมาณ..."
+                                        />
+                                    </div>
+
+                                    <div className="flex justify-end gap-x-3 pt-4 border-t border-purple-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsDirectAllocateModalOpen(false)}
+                                            className="rounded-xl border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={directAllocateProcessing}
+                                            className="rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-purple-700 px-6 py-2 text-xs font-bold text-white shadow-md hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                                        >
+                                            💾 บันทึกและจัดสรรงบทันที
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Committee Allocation Modal (Approve & Allocate or Reject) */}
+                    {isCommitteeModalOpen && selectedProjectForAllocation && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                            <div className="w-full max-w-2xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-amber-200 my-8">
+                                <div className="flex justify-between items-center border-b border-amber-100 pb-4 mb-5">
+                                    <div>
+                                        <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
+                                            <span>⚖️</span> พิจารณาจัดสรรงบประมาณโครงการ (Committee Decision)
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            คณะกรรมการพิจารณาอนุมัติวงเงินงบประมาณ แหล่งเงินทุน หรือมีมติไม่อนุมัติโครงการ
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => { setIsCommitteeModalOpen(false); setSelectedProjectForAllocation(null); }}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {/* Project Context Card */}
+                                <div className="rounded-2xl border border-purple-100 bg-purple-50/40 p-4 mb-5 space-y-1.5 text-xs">
+                                    <div className="font-extrabold text-purple-950 text-sm">
+                                        📌 {selectedProjectForAllocation.title}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-600 pt-1">
+                                        <span>🏢 ฝ่าย: <strong className="text-slate-800">{selectedProjectForAllocation.department?.name || 'ไม่ระบุ'}</strong></span>
+                                        <span>👤 ผู้เสนอ: <strong className="text-slate-800">{selectedProjectForAllocation.user?.name || selectedProjectForAllocation.responsible_person || 'ไม่ระบุ'}</strong></span>
+                                        <span>📅 ปีงบประมาณ: <strong className="text-purple-900">{selectedProjectForAllocation.academic_year}</strong></span>
+                                    </div>
+                                    <div className="text-slate-700 pt-1">
+                                        💰 วงเงินงบประมาณที่ขอเสนอ: <strong className="text-base text-purple-900 font-extrabold">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedProjectForAllocation.proposed_budget || selectedProjectForAllocation.estimated_budget)}</strong>
+                                    </div>
+                                    {selectedProjectForAllocation.background_rationale && (
+                                        <div className="text-[11px] text-slate-500 italic pt-1 border-t border-purple-100/80 mt-1">
+                                            " {selectedProjectForAllocation.background_rationale} "
+                                        </div>
+                                    )}
+                                </div>
+
+                                <form onSubmit={handleCommitteeSubmit} className="space-y-4 text-xs font-semibold text-slate-700">
+                                    
+                                    {/* Action Toggle */}
+                                    <div>
+                                        <label className="block mb-2 text-slate-900 font-bold text-xs">มติคณะกรรมการ (Decision) *</label>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setCommitteeForm({ ...committeeForm, action: 'approve' })}
+                                                className={`flex items-center justify-center gap-2 rounded-2xl p-3 border-2 transition-all font-bold text-xs ${
+                                                    committeeForm.action === 'approve'
+                                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-900 shadow-sm'
+                                                        : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <span>🟢</span> อนุมัติจัดสรรงบประมาณ (Approve)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCommitteeForm({ ...committeeForm, action: 'reject' })}
+                                                className={`flex items-center justify-center gap-2 rounded-2xl p-3 border-2 transition-all font-bold text-xs ${
+                                                    committeeForm.action === 'reject'
+                                                        ? 'border-rose-500 bg-rose-50 text-rose-900 shadow-sm'
+                                                        : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                                                }`}
+                                            >
+                                                <span>🔴</span> ไม่อนุมัติงบประมาณ (Reject)
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {committeeForm.action === 'approve' && (
+                                        <div className="space-y-4 border-t border-purple-100 pt-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block mb-1 text-emerald-900 font-bold">
+                                                        วงเงินจัดสรรจริงที่อนุมัติ (บาท) *
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        required={committeeForm.action === 'approve'}
+                                                        value={committeeForm.allocated_budget}
+                                                        onChange={(e) => setCommitteeForm({ ...committeeForm, allocated_budget: e.target.value })}
+                                                        className="w-full rounded-xl border-emerald-300 bg-emerald-50/40 px-3.5 py-2.5 text-sm font-black text-emerald-950 focus:border-emerald-500 focus:ring-emerald-500"
+                                                        placeholder="วงเงินที่อนุมัติจริง (อาจเท่ากับหรือน้อยกว่าที่ขอได้)"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block mb-1 text-purple-900 font-bold">
+                                                        แหล่งเงินทุน 7 หมวด *
+                                                    </label>
+                                                    <select
+                                                        value={committeeForm.funding_source_id}
+                                                        onChange={(e) => setCommitteeForm({ ...committeeForm, funding_source_id: Number(e.target.value) })}
+                                                        className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
+                                                    >
+                                                        {(planHeadData?.fundingSources || [
+                                                            { id: 1, name: 'ปวช.' },
+                                                            { id: 2, name: 'ปวส.' },
+                                                            { id: 3, name: 'ระยะสั้น' },
+                                                            { id: 4, name: 'งบทวิศึกษา' },
+                                                            { id: 5, name: 'อุดหนุนเพื่อการจัดการฯ' },
+                                                            { id: 6, name: 'อุดหนุนพัฒนาฯ' },
+                                                            { id: 7, name: 'บกศ. (บำรุงการศึกษา)' },
+                                                        ]).map(s => (
+                                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block mb-1 text-purple-900 font-bold">
+                                                    หมวดรายงานแผนปฏิบัติราชการ (Section 6) *
+                                                </label>
+                                                <select
+                                                    value={committeeForm.report_category}
+                                                    onChange={(e) => setCommitteeForm({ ...committeeForm, report_category: e.target.value })}
+                                                    className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
+                                                >
+                                                    <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
+                                                    <option value="6.2">6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา</option>
+                                                    <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
+                                                    <option value="6.4">6.4 โครงการฝ่ายแผนงานและความร่วมมือ</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">
+                                            {committeeForm.action === 'approve' ? 'มติ / ความเห็นคณะกรรมการ' : 'เหตุผลที่ไม่อนุมัติ (ระบุให้ชัดเจน) *'}
+                                        </label>
+                                        <textarea
+                                            rows={3}
+                                            required={committeeForm.action === 'reject'}
+                                            value={committeeForm.committee_comment}
+                                            onChange={(e) => setCommitteeForm({ ...committeeForm, committee_comment: e.target.value })}
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder={committeeForm.action === 'approve' ? 'บันทึกมติคณะกรรมการจัดสรรงบประมาณ...' : 'ระบุเหตุผลความจำเป็นที่ไม่อนุมัติโครงการ...'}
+                                        />
+                                    </div>
+
+                                    <div className="flex justify-end gap-x-3 pt-4 border-t border-purple-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setIsCommitteeModalOpen(false); setSelectedProjectForAllocation(null); }}
+                                            className="rounded-xl border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={committeeProcessing}
+                                            className={`rounded-xl px-6 py-2 text-xs font-bold text-white shadow-md transition-all disabled:opacity-50 ${
+                                                committeeForm.action === 'approve'
+                                                    ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:scale-[1.02]'
+                                                    : 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:scale-[1.02]'
+                                            }`}
+                                        >
+                                            {committeeForm.action === 'approve' ? '✅ บันทึกมติอนุมัติจัดสรรงบ' : '❌ บันทึกมติไม่อนุมัติงบ'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
 
                 </div>
             </div>
