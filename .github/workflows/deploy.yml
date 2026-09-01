@@ -20,6 +20,7 @@ jobs:
             cd /var/www/npc_smartflow
             git pull origin main
             /usr/bin/php82 /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction
+            /usr/bin/php82 artisan migrate --force
             /root/.nvm/versions/node/v20.20.2/bin/npm install
             /root/.nvm/versions/node/v20.20.2/bin/npm run build
             /usr/bin/php82 artisan config:clear

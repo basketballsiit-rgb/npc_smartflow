@@ -5,6 +5,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
+        "autopush": "node auto_push.js",
         "lint": "eslint resources/js --ext .js,.jsx --ignore-path .gitignore --fix"
     },
     "devDependencies": {
