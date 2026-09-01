@@ -55,10 +55,10 @@ export default function Print({ project, strategyCategories = [] }) {
     const action_plan = Array.isArray(project.action_plan) ? project.action_plan : [];
 
     const defaultActionPlan = action_plan.length > 0 ? action_plan : [
-        { step_name: '๑. เสนอโครงการเพื่อขออนุมัติ', q1: false, q2: false, q3: true, q4: false, target_count: '๑ โครงการ', location_name: 'วช.น่าน', budget_operating: 0 },
-        { step_name: '๒. ขออนุมัติดำเนินโครงการ', q1: false, q2: false, q3: true, q4: false, target_count: '๕๐ คน', location_name: 'วช.น่าน', budget_operating: 0 },
-        { step_name: '๓. ดำเนินโครงการประเมินผล', q1: false, q2: false, q3: true, q4: false, target_count: '๕๐ คน', location_name: 'วช.น่าน', budget_operating: project.estimated_budget },
-        { step_name: '๔. สรุปผลและประเมินผล', q1: false, q2: false, q3: false, q4: true, target_count: '๑ เล่ม', location_name: 'วช.น่าน', budget_operating: 0 },
+        { step_name: '๑. เสนอโครงการเพื่อขออนุมัติ', q1: true, q2: false, q3: false, q4: false, target_count: '๑ โครงการ', location_name: 'วช.น่าน', budget_operating: 0 },
+        { step_name: '๒. แต่งตั้งคณะทำงาน และเตรียมการดำเนินกิจกรรม', q1: false, q2: true, q3: false, q4: false, target_count: '๑ ครั้ง', location_name: 'วช.น่าน', budget_operating: 0 },
+        { step_name: '๓. ดำเนินการจัดกิจกรรม/โครงการตามแผน', q1: false, q2: false, q3: true, q4: false, target_count: '๕๐ คน', location_name: 'วช.น่าน', budget_operating: project.estimated_budget || 0 },
+        { step_name: '๔. สรุปผลและประเมินผลโครงการ', q1: false, q2: false, q3: false, q4: true, target_count: '๑ เล่ม', location_name: 'วช.น่าน', budget_operating: 0 },
     ];
 
     return (
@@ -94,7 +94,7 @@ export default function Print({ project, strategyCategories = [] }) {
             <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center bg-white p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden font-sans">
                 <div>
                     <h3 className="text-lg font-bold text-slate-900">📄 แบบเสนอโครงการฉบับทางการ (Official TH Sarabun Document View)</h3>
-                    <p className="text-xs text-slate-600">แสดงผลและสั่งพิมพ์ด้วยแบบอักษร TH Sarabun และตัวเลขไทยทั้งหมด ดึงข้อมูลยุทธศาสตร์พันธกิจจากเช็คลิสต์อัตโนมัติ</p>
+                    <p className="text-xs text-slate-600">แสดงผลและสั่งพิมพ์ด้วยแบบอักษร TH Sarabun และตัวเลขไทยทั้งหมด ดึงข้อมูลตัวชี้วัดและกิจกรรมแยกรายจ่ายอัตโนมัติ</p>
                 </div>
                 <div className="flex gap-x-3">
                     <button
@@ -204,8 +204,8 @@ export default function Print({ project, strategyCategories = [] }) {
                                 outputs.map((op, i) => <p key={i}>๕.{toThaiNumerals(i + 1)} {toThaiNumerals(op)}</p>)
                             ) : (
                                 <>
-                                    <p>๕.๑ สถานศึกษาสังกัดสำนักงานคณะกรรมการการอาชีวศึกษาในจังหวัดที่มีศูนย์บ่มเพาะผู้ประกอบการอาชีวศึกษา จำนวน ๔ แห่ง ได้รับการประเมินผลการดำเนินงานครบถ้วนตามหลักเกณฑ์ที่กำหนด</p>
-                                    <p>๕.๒ ได้สถานศึกษาที่มีผลการดำเนินงานดีเด่น เพื่อเป็นตัวแทนจังหวัดเข้ารับการประเมินในระดับภาค</p>
+                                    <p>๕.๑ ผู้เข้าร่วมโครงการได้รับการอบรมและพัฒนาสมรรถนะครบถ้วนตามหลักเกณฑ์ที่กำหนด</p>
+                                    <p>๕.๒ มีเอกสาร สื่อการเรียนรู้ หรือผลงานจากการดำเนินโครงการที่นำไปใช้ประโยชน์ได้จริง</p>
                                 </>
                             )}
                         </div>
@@ -219,7 +219,53 @@ export default function Print({ project, strategyCategories = [] }) {
                                 outcomes.map((oc, i) => <p key={i}>๖.{toThaiNumerals(i + 1)} {toThaiNumerals(oc)}</p>)
                             ) : (
                                 <>
-                                    <p>๖.๑ สถานศึกษามีระบบบริหารจัดการศูนย์บ่มเพาะผู้ประกอบการอาชีวศึกษาที่มีประสิทธิภาพ สอดคล้องกับมาตรฐานและเกณฑ์การประเมินของสำนักงานคณะกรรมการการอาชี�                    {/* Section 10: Indicators Table & Detailed Expenses by Activity */}
+                                    <p>๖.๑ ผู้เรียนและบุคลากรสามารถนำองค์ความรู้และทักษะจากโครงการไปประยุกต์ใช้ในการปฏิบัติงานจริงได้อย่างมีประสิทธิภาพ</p>
+                                    <p>๖.๒ สถานศึกษามีมาตรฐานการจัดการเรียนการสอนและการบริการวิชาชีพที่ได้รับการยอมรับ</p>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Section 7: Target Groups */}
+                    <div>
+                        <p className="font-bold text-base sm:text-lg text-slate-900">๗. กลุ่มเป้าหมาย</p>
+                        <div className="pl-6 pt-1.5 text-base text-slate-900 space-y-1">
+                            <p className="font-bold">๗.๑ เชิงปริมาณ</p>
+                            {Array.isArray(project.targets?.quantitative) && project.targets.quantitative.length > 0 ? (
+                                project.targets.quantitative.map((q, i) => <p key={i} className="pl-6">๗.๑.{toThaiNumerals(i + 1)} {toThaiNumerals(q)}</p>)
+                            ) : (
+                                <p className="pl-6">๗.๑.๑ {toThaiNumerals(project.targets?.quantitative || '-')}</p>
+                            )}
+                            <p className="font-bold pt-1.5">๗.๒ เชิงคุณภาพ</p>
+                            {Array.isArray(project.targets?.qualitative) && project.targets.qualitative.length > 0 ? (
+                                project.targets.qualitative.map((q, i) => <p key={i} className="pl-6">๗.๒.{toThaiNumerals(i + 1)} {toThaiNumerals(q)}</p>)
+                            ) : (
+                                <p className="pl-6">๗.๒.๑ {toThaiNumerals(project.targets?.qualitative || '-')}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Section 8: Location */}
+                    <div>
+                        <p className="font-bold text-base sm:text-lg text-slate-900">๘. พื้นที่ดำเนินการ : <span className="font-normal">{toThaiNumerals(project.location || 'ณ วิทยาลัยสารพัดช่างน่าน')}</span></p>
+                    </div>
+
+                    {/* Section 9: Expected Benefits */}
+                    <div>
+                        <p className="font-bold text-base sm:text-lg text-slate-900">๙. ผลที่คาดว่าจะได้รับ</p>
+                        <div className="pl-6 pt-1.5 text-base text-slate-900 space-y-1">
+                            {expected_benefits.length > 0 ? (
+                                expected_benefits.map((eb, i) => <p key={i}>๙.{toThaiNumerals(i + 1)} {toThaiNumerals(eb)}</p>)
+                            ) : (
+                                <>
+                                    <p>๙.๑ ผู้เข้าร่วมโครงการมีทักษะและสมรรถนะตรงตามมาตรฐานวิชาชีพและความต้องการของตลาดแรงงาน</p>
+                                    <p>๙.๒ สถานศึกษามีผลการดำเนินงานที่ตอบสนองต่อนโยบายของสำนักงานคณะกรรมการการอาชีวศึกษา</p>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Section 10: Indicators Table & Detailed Expenses by Activity */}
                     <div className="pt-4 page-break-inside-avoid">
                         <p className="font-bold text-base sm:text-lg text-slate-900 mb-2.5">๑๐. ตัวชี้วัดเป้าหมายโครงการ</p>
                         <table className="w-full border-collapse border border-slate-900 text-sm sm:text-base font-sarabun">
@@ -227,7 +273,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                 <tr className="bg-slate-50 text-center font-bold border-b border-slate-900 text-base">
                                     <th className="border-r border-slate-900 p-2 w-32">ประเภทตัวชี้วัด</th>
                                     <th className="border-r border-slate-900 p-2">ตัวชี้วัด</th>
-                                    <th className="p-2 w-32 text-center">หน่วยนับ / จำนวนเงิน</th>
+                                    <th className="p-2 w-36 text-center">หน่วยนับ / จำนวนเงิน</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -308,15 +354,15 @@ export default function Print({ project, strategyCategories = [] }) {
                                                     const actTotal = actLoanSum + actProcSum;
 
                                                     return (
-                                                        <div key={aIdx} className="border-l-2 border-slate-400 pl-3 py-1 space-y-1.5 bg-slate-50/50 p-2 rounded">
-                                                            <p className="font-bold text-slate-900">
+                                                        <div key={aIdx} className="border-l-2 border-slate-400 pl-3 py-1.5 space-y-1 bg-slate-50/60 p-2 rounded">
+                                                            <p className="font-bold text-slate-900 text-base">
                                                                 {toThaiNumerals(act.name || `กิจกรรมที่ ${aIdx + 1}`)}
                                                             </p>
                                                             {act.location && <p className="text-xs text-slate-700 pl-2">สถานที่: {toThaiNumerals(act.location)}</p>}
                                                             
                                                             {/* Loan Items */}
                                                             {loanItems.length > 0 && (
-                                                                <div className="pl-3 space-y-0.5">
+                                                                <div className="pl-2 space-y-0.5 pt-0.5">
                                                                     <p className="font-bold text-xs text-amber-900 underline">หมวดสัญญายืมเงิน (ดำเนินกิจกรรม):</p>
                                                                     {loanItems.map((item, lIdx) => {
                                                                         const itemTotal = parseFloat(item.total_price) || ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0));
@@ -332,7 +378,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                                                             {/* Procurement Items */}
                                                             {procItems.length > 0 && (
-                                                                <div className="pl-3 space-y-0.5 pt-1">
+                                                                <div className="pl-2 space-y-0.5 pt-1">
                                                                     <p className="font-bold text-xs text-indigo-900 underline">หมวดจัดซื้อจัดจ้างพัสดุ:</p>
                                                                     {procItems.map((item, pIdx) => {
                                                                         const itemTotal = parseFloat(item.total_price) || ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0));
@@ -346,9 +392,9 @@ export default function Print({ project, strategyCategories = [] }) {
                                                                 </div>
                                                             )}
 
-                                                            <div className="flex justify-between text-xs font-bold pt-1 border-t border-slate-300">
+                                                            <div className="flex justify-between text-xs font-bold pt-1.5 border-t border-slate-300">
                                                                 <span>รวมเงินกิจกรรมที่ {toThaiNumerals(aIdx + 1)}</span>
-                                                                <span>{formatCurrencyThai(actTotal)} บาท</span>
+                                                                <span className="text-purple-950 font-bold">{formatCurrencyThai(actTotal)} บาท</span>
                                                             </div>
                                                         </div>
                                                     );
@@ -368,7 +414,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                         <p className="font-bold text-right pt-2 text-base">รวมงบประมาณทั้งสิ้นทั้งโครงการ</p>
                                     </td>
                                     <td className="p-2.5 text-right align-bottom font-bold">
-                                        <p className="pt-2 border-t border-slate-900 text-base font-bold text-slate-900">
+                                        <p className="pt-2 border-t-2 border-slate-900 text-base font-bold text-slate-900">
                                             {formatCurrencyThai(project.estimated_budget)} บาท
                                         </p>
                                     </td>
@@ -438,7 +484,7 @@ export default function Print({ project, strategyCategories = [] }) {
                         <div className="space-y-8 text-sm sm:text-base">
                             {/* Row 1: Proposer & Head of Department */}
                             <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                {/* Signature 1 */}
+                                {/* Signature 1: ผู้เสนอโครงการ */}
                                 <div className="flex justify-center">
                                     <table className="border-collapse font-sarabun text-center">
                                         <tbody>
@@ -613,109 +659,6 @@ export default function Print({ project, strategyCategories = [] }) {
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    );
-}......</td>
-                                                <td className="text-left whitespace-nowrap pl-0.5">ผู้เห็นชอบโครงการ</td>
-                                            </tr>
-                                            <tr>
-                                                <td></td>
-                                                <td className="text-center font-bold whitespace-nowrap pt-1">
-                                                    (นายนิพนธ์ ร่องพืช)
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                            <tr>
-                                                <td></td>
-                                                <td className="text-center text-xs sm:text-sm leading-snug pt-0.5 font-normal max-w-[210px]">
-                                                    รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                            <tr>
-                                                <td></td>
-                                                <td className="text-center text-xs pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {/* Signature 4 */}
-                                <div className="flex justify-center">
-                                    <table className="border-collapse font-sarabun text-center">
-                                        <tbody>
-                                            <tr>
-                                                <td className="text-right whitespace-nowrap pr-0.5">ลงชื่อ</td>
-                                                <td className="text-center whitespace-nowrap">..............................................</td>
-                                                <td className="text-left whitespace-nowrap pl-0.5">ผู้เห็นชอบโครงการ</td>
-                                            </tr>
-                                            <tr>
-                                                <td></td>
-                                                <td className="text-center font-bold whitespace-nowrap pt-1">
-                                                    (นายจักรพงศ์ พรหมสกุลปัญญา)
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                            <tr>
-                                                <td></td>
-                                                <td className="text-center text-xs sm:text-sm leading-snug pt-0.5 font-normal max-w-[210px]">
-                                                    รองผู้อำนวยการฝ่ายบริหารทรัพยากร
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                            <tr>
-                                                <td></td>
-                                                <td className="text-center text-xs pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
-                                                </td>
-                                                <td></td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* Row 3: Final Director Approval */}
-                            <div className="pt-2 flex justify-center">
-                                <table className="border-collapse font-sarabun text-center">
-                                    <tbody>
-                                        <tr>
-                                            <td className="text-right whitespace-nowrap pr-0.5">ลงชื่อ</td>
-                                            <td className="text-center whitespace-nowrap">..............................................</td>
-                                            <td className="text-left whitespace-nowrap pl-0.5">ผู้อนุมัติโครงการ</td>
-                                        </tr>
-                                        <tr>
-                                            <td></td>
-                                            <td className="text-center font-bold text-base sm:text-lg whitespace-nowrap pt-1">
-                                                (นายกเชษฐ์ กิ่งชนะ)
-                                            </td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td></td>
-                                            <td className="text-center text-sm font-semibold leading-snug pt-0.5">
-                                                ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
-                                            </td>
-                                            <td></td>
-                                        </tr>
-                                        <tr>
-                                            <td></td>
-                                            <td className="text-center text-xs pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                                วันที่ ....... เดือน ............................ พ.ศ. ...............
-                                            </td>
-                                            <td></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>
