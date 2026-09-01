@@ -538,6 +538,7 @@ class ProjectController extends Controller
             'expected_benefits' => 'nullable|array',
             'indicators' => 'nullable|array',
             'action_plan' => 'nullable|array',
+            'activities' => 'nullable|array',
             'iqa_strategy_ids' => 'nullable|array',
             'ovec_strategy_ids' => 'nullable|array',
             'national_strategy_ids' => 'nullable|array',
