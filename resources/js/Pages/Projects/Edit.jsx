@@ -136,7 +136,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         estimated_budget: project?.estimated_budget || '',
     });
 
-    // Multi-Activity Grand Totals Calculation
+    // Multi-Activity Grand Totals & Remaining Balance Calculations
+    const allocatedBudget = parseFloat(data.estimated_budget || 0);
     const totalLoanAllActivities = (data.activities || []).reduce((sum, act) => {
         return sum + (act.loan_items || []).reduce((lSum, item) => lSum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
     }, 0);
@@ -146,6 +147,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     }, 0);
 
     const grandTotalBudget = totalLoanAllActivities + totalProcurementAllActivities;
+    const remainingBudget = allocatedBudget - grandTotalBudget;
+    const usedPercentage = allocatedBudget > 0 ? ((grandTotalBudget / allocatedBudget) * 100).toFixed(1) : 0;
 
     // Universal AI Generator Handler
     const handleGenerateAi = async (type, successMessage) => {
