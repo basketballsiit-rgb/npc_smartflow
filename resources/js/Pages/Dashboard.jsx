@@ -295,83 +295,54 @@ export default function Dashboard({
     };
 
     const renderProjectProgressBar = (status, step) => {
-        let percent = 0;
-        let colorClass = 'from-slate-400 to-slate-500';
-        let badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
-        let stepText = `ร่างโครงการ (Draft)`;
-
         if (status === 'preliminary') {
-            percent = 5;
-            colorClass = 'from-amber-400 to-amber-500';
-            badgeColor = 'bg-amber-50 text-amber-900 border-amber-300';
-            stepText = '🟡 เสนอตั้งงบ (รอจัดสรร)';
-        } else if (status === 'budget_approved') {
-            percent = 50;
-            colorClass = 'from-emerald-400 to-teal-500';
-            badgeColor = 'bg-emerald-50 text-emerald-800 border-emerald-300';
-            stepText = '🟢 อนุมัติงบแล้ว (พร้อมทำฉบับเต็ม)';
-        } else if (status === 'budget_rejected') {
-            percent = 0;
-            colorClass = 'from-rose-500 to-rose-600';
-            badgeColor = 'bg-rose-50 text-rose-800 border-rose-300';
-            stepText = '❌ ไม่อนุมัติงบ (ยุติ)';
-        } else if (status === 'approved' || step >= 6) {
-            percent = 100;
-            colorClass = 'from-emerald-400 via-emerald-500 to-teal-600';
-            badgeColor = 'bg-emerald-50 text-emerald-800 border-emerald-300';
-            stepText = '✅ อนุมัติสมบูรณ์ (100%)';
-        } else if (status === 'rejected') {
-            percent = 0;
-            colorClass = 'from-rose-500 to-red-600';
-            badgeColor = 'bg-rose-50 text-rose-800 border-rose-300';
-            stepText = '✕ ตีกลับแก้ไข';
-        } else if (status === 'draft') {
-            percent = 10;
-            colorClass = 'from-slate-300 to-slate-400';
-            badgeColor = 'bg-slate-100 text-slate-700 border-slate-200';
-            stepText = '📝 แบบร่าง';
-        } else {
-            const currentStep = step || 1;
-            percent = Math.round((currentStep / 6) * 100);
-            if (currentStep === 1) {
-                colorClass = 'from-purple-500 to-purple-600';
-                badgeColor = 'bg-purple-50 text-purple-800 border-purple-300';
-                stepText = 'ขั้นที่ 1: 📝 เสนอโครงการ (16%)';
-            } else if (currentStep === 2) {
-                colorClass = 'from-blue-500 to-indigo-600';
-                badgeColor = 'bg-blue-50 text-blue-800 border-blue-300';
-                stepText = 'ขั้นที่ 2: 👤 หัวหน้าแผนก (33%)';
-            } else if (currentStep === 3) {
-                colorClass = 'from-cyan-500 to-blue-600';
-                badgeColor = 'bg-cyan-50 text-cyan-800 border-cyan-300';
-                stepText = 'ขั้นที่ 3: 💰 งานวางแผน (50%)';
-            } else if (currentStep === 4) {
-                colorClass = 'from-violet-500 to-purple-600';
-                badgeColor = 'bg-violet-50 text-violet-800 border-violet-300';
-                stepText = 'ขั้นที่ 4: 📦 งานพัสดุ (66%)';
-            } else if (currentStep === 5) {
-                colorClass = 'from-amber-400 to-yellow-500';
-                badgeColor = 'bg-amber-50 text-amber-900 border-amber-300';
-                stepText = 'ขั้นที่ 5: 🏢 รองผู้อำนวยการ (83%)';
-            }
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold whitespace-nowrap">
+                    🟡 รอจัดสรร
+                </span>
+            );
+        }
+        if (status === 'budget_approved') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold whitespace-nowrap">
+                    🟢 อนุมัติ
+                </span>
+            );
+        }
+        if (status === 'budget_rejected') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-300 text-xs font-bold whitespace-nowrap">
+                    ❌ ไม่อนุมัติ
+                </span>
+            );
+        }
+        if (status === 'approved' || step >= 6) {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold whitespace-nowrap">
+                    ✅ อนุมัติแล้ว
+                </span>
+            );
+        }
+        if (status === 'rejected') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-300 text-xs font-bold whitespace-nowrap">
+                    ✕ ตีกลับแก้ไข
+                </span>
+            );
+        }
+        if (status === 'draft') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold whitespace-nowrap">
+                    📝 แบบร่าง
+                </span>
+            );
         }
 
+        const currentStep = step || 1;
         return (
-            <div className="w-full min-w-[160px] space-y-1.5 font-sans">
-                <div className="flex justify-between items-center text-[11px] font-bold">
-                    <span className={`px-2 py-0.5 rounded-md border ${badgeColor} shadow-2xs`}>
-                        {stepText}
-                    </span>
-                    <span className="text-slate-500 font-mono text-[10px]">{percent}%</span>
-                </div>
-                {/* 6-Step Visual Progress Bar */}
-                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200 shadow-inner">
-                    <div
-                        className={`h-full bg-gradient-to-r ${colorClass} rounded-full transition-all duration-500`}
-                        style={{ width: `${percent}%` }}
-                    />
-                </div>
-            </div>
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold whitespace-nowrap">
+                ⏳ รออนุมัติ (ขั้น {currentStep})
+            </span>
         );
     };
 
