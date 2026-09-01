@@ -780,7 +780,12 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                             project.approvals.map((log) => {
                                                 const isApproved = log.status === 'approved';
                                                 const isRejected = log.status === 'rejected';
-                                                const isPreliminary = log.step_number === 0 || log.step_number === 1 && log.comments?.includes('เบื้องต้น');
+                                                const isBudgetCommittee = log.step_number === 0 || 
+                                                                          log.comments?.includes('มติคณะกรรมการ') || 
+                                                                          log.comments?.includes('จัดสรรงบ') || 
+                                                                          log.comments?.includes('Direct Allocation');
+                                                const isProposalInitial = log.comments?.includes('เบื้องต้น') || 
+                                                                          log.comments?.includes('Preliminary');
 
                                                 return (
                                                     <div key={log.id} className="border-l-2 border-purple-500 pl-3 py-1 space-y-1">
@@ -792,10 +797,13 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                                         </div>
                                                         <div className="flex justify-between items-center text-xs text-slate-600">
                                                             <span>
-                                                                {isPreliminary 
-                                                                    ? `💡 เสนอตั้งงบเบื้องต้น: ${log.comments || '-'}`
-                                                                    : `ขั้นตอนที่ ${log.step_number}: ${log.comments || '-'}`
-                                                                }
+                                                                {isProposalInitial ? (
+                                                                    <span>💡 <strong>เสนอตั้งงบเบื้องต้น:</strong> {log.comments || '-'}</span>
+                                                                ) : isBudgetCommittee ? (
+                                                                    <span>⚖️ <strong>มติจัดสรรงบประมาณ:</strong> {log.comments?.replace(/^มติคณะกรรมการ:\s*/, '') || '-'}</span>
+                                                                ) : (
+                                                                    <span><strong>ขั้นตอนที่ {log.step_number}:</strong> {log.comments || '-'}</span>
+                                                                )}
                                                             </span>
                                                             {log.created_at && (
                                                                 <span className="text-[11px] font-medium text-purple-600 shrink-0 ml-2">
