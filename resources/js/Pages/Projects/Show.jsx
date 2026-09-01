@@ -347,10 +347,6 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                 icon: '🎉'
             };
         }
-                color: 'bg-teal-50 border-teal-200 text-teal-900',
-                icon: '🏆'
-            };
-        }
         if (status === 'rejected') {
             return {
                 title: '✕ โครงการถูกส่งกลับแก้ไข (Returned for Revisions)',
