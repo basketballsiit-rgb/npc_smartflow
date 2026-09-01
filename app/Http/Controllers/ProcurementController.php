@@ -192,7 +192,7 @@ class ProcurementController extends Controller
             return redirect()->route('dashboard')->with('error', 'Procurement process has not been initialized yet.');
         }
 
-        if (!in_array($type, ['memo', 'request_form', 'estimation', 'tor'])) {
+        if (!in_array($type, ['memo', 'request_form', 'estimation', 'tor', 'loan_contract'])) {
             abort(404);
         }
 
