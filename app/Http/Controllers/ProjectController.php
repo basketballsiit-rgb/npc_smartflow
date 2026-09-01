@@ -310,7 +310,7 @@ class ProjectController extends Controller
         ProjectApproval::create([
             'project_id' => $project->id,
             'user_id' => $user->id,
-            'step_number' => 3,
+            'step_number' => 0,
             'status' => 'approved',
             'comments' => 'เพิ่มโครงการและอนุมัติจัดสรรงบประมาณโดยตรงผ่านงานแผนงาน (Direct Allocation)',
         ]);
@@ -379,7 +379,7 @@ class ProjectController extends Controller
             ProjectApproval::create([
                 'project_id' => $project->id,
                 'user_id' => $user->id,
-                'step_number' => 3,
+                'step_number' => 0,
                 'status' => 'approved',
                 'comments' => 'มติคณะกรรมการ: อนุมัติจัดสรรงบประมาณ ' . number_format($request->input('allocated_budget'), 2) . ' บาท',
             ]);
@@ -398,6 +398,11 @@ class ProjectController extends Controller
 
             ProjectApproval::create([
                 'project_id' => $project->id,
+                'user_id' => $user->id,
+                'step_number' => 0,
+                'status' => 'rejected',
+                'comments' => 'มติคณะกรรมการ: ไม่อนุมัติงบประมาณ (' . $request->input('committee_comment') . ')',
+            ]);
                 'user_id' => $user->id,
                 'step_number' => 3,
                 'status' => 'rejected',
