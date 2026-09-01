@@ -30,16 +30,23 @@ class ProjectController extends Controller
             }
         }
 
-        $approvedProjects = Project::with(['department', 'fundingSource'])
+        $allUserProjects = Project::with(['department', 'fundingSource', 'budget'])
             ->when(!$user->isAdmin() && !$user->isPlanHead(), function($q) use ($user) {
                 $q->where(function($sub) use ($user) {
                     $sub->where('user_id', $user->id)
                         ->orWhere('department_id', $user->department_id);
                 });
             })
-            ->whereIn('status', ['budget_approved', 'draft'])
             ->orderBy('updated_at', 'desc')
             ->get();
+
+        $approvedProjects = $allUserProjects->filter(function($p) {
+            return in_array($p->status, ['budget_approved', 'draft']);
+        })->values();
+
+        $otherProjects = $allUserProjects->filter(function($p) {
+            return !in_array($p->status, ['budget_approved', 'draft']);
+        })->values();
 
         $activeCategories = [];
         try {
@@ -54,6 +61,7 @@ class ProjectController extends Controller
 
         return Inertia::render('Projects/Create', [
             'approvedProjects' => $approvedProjects,
+            'otherProjects' => $otherProjects,
             'strategyCategories' => $activeCategories,
             'iqaStrategies' => IqaStrategy::all(),
             'ovecStrategies' => OvecStrategy::all(),
