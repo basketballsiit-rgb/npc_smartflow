@@ -2,8 +2,8 @@ import { Head } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Print({ project, strategyCategories = [] }) {
-    // Font size preset state
-    const [fontSizePreset, setFontSizePreset] = useState('compact'); // 'compact' (13pt) | 'normal' (14pt) | 'large' (15.5pt)
+    // Font size preset state: 'compact' (14px) | 'normal' (15px) | 'large' (16.5px)
+    const [fontSizePreset, setFontSizePreset] = useState('normal');
 
     // Utility to clean person name from parenthetical role tags like (อาจารย์ประจำสาขา), (Super Admin), etc.
     const cleanPersonName = (name) => {
@@ -73,17 +73,11 @@ export default function Print({ project, strategyCategories = [] }) {
         { step_name: '๔. สรุปผลและประเมินผลโครงการ', q1: false, q2: false, q3: false, q4: true, target_count: '๑ เล่ม', location_name: 'วช.น่าน', budget_operating: 0 },
     ];
 
-    const getPrintPtSize = () => {
-        if (fontSizePreset === 'compact') return '13pt';
-        if (fontSizePreset === 'large') return '15.5pt';
-        return '14pt'; // normal
-    };
-
-    const getPrintTablePtSize = () => {
-        if (fontSizePreset === 'compact') return '11.5pt';
-        if (fontSizePreset === 'large') return '13.5pt';
-        return '12pt';
-    };
+    const fontStyles = {
+        compact: { docSize: '14px', lineHeight: '1.4', tableSize: '12px', titleSize: '15px' },
+        normal: { docSize: '15px', lineHeight: '1.45', tableSize: '13px', titleSize: '16px' },
+        large: { docSize: '16.5px', lineHeight: '1.5', tableSize: '14px', titleSize: '17.5px' },
+    }[fontSizePreset];
 
     const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล');
 
@@ -96,10 +90,17 @@ export default function Print({ project, strategyCategories = [] }) {
                 <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
             </Head>
 
-            {/* Dynamic Embedded CSS for TH Sarabun Font and Exact Page Margins */}
+            {/* Dynamic CSS matching Screen & Print 1:1 with 1 Inch All-Around Page Margin */}
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
                 
+                :root {
+                    --doc-font-size: ${fontStyles.docSize};
+                    --doc-line-height: ${fontStyles.lineHeight};
+                    --table-font-size: ${fontStyles.tableSize};
+                    --title-font-size: ${fontStyles.titleSize};
+                }
+
                 .font-sarabun {
                     font-family: 'TH Sarabun PSK', 'TH Sarabun Chula', 'THSarabunNew', 'Sarabun', sans-serif !important;
                 }
@@ -108,29 +109,41 @@ export default function Print({ project, strategyCategories = [] }) {
                     text-indent: 2.5cm !important;
                 }
 
+                .print-doc-container {
+                    font-size: var(--doc-font-size) !important;
+                    line-height: var(--doc-line-height) !important;
+                }
+
+                .print-title {
+                    font-size: var(--title-font-size) !important;
+                    font-weight: bold !important;
+                }
+
+                .print-table {
+                    font-size: var(--table-font-size) !important;
+                    line-height: 1.25 !important;
+                }
+
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin-top: 0.5in;
-                        margin-bottom: 0.5in;
-                        margin-left: 1.5in;
-                        margin-right: 0.5in;
+                        margin: 1in !important;
                     }
                     html, body {
                         width: 100% !important;
                         margin: 0 !important;
                         padding: 0 !important;
-                        background: transparent !important;
+                        background: #fff !important;
                         font-family: 'TH Sarabun PSK', 'TH Sarabun Chula', 'THSarabunNew', 'Sarabun', sans-serif !important;
-                        font-size: ${getPrintPtSize()} !important;
-                        line-height: 1.35 !important;
+                        font-size: var(--doc-font-size) !important;
+                        line-height: var(--doc-line-height) !important;
                         color: #000 !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
                     .print-doc-container {
-                        font-size: ${getPrintPtSize()} !important;
-                        line-height: 1.35 !important;
+                        font-size: var(--doc-font-size) !important;
+                        line-height: var(--doc-line-height) !important;
                         padding: 0 !important;
                         margin: 0 !important;
                         width: 100% !important;
@@ -138,30 +151,13 @@ export default function Print({ project, strategyCategories = [] }) {
                         border: none !important;
                         box-shadow: none !important;
                     }
-                    .official-text-section {
-                        padding-left: 0 !important;
-                        padding-right: 0 !important;
-                    }
-                    .official-table-section {
-                        padding-left: 0 !important;
-                        padding-right: 0 !important;
-                        width: 100% !important;
-                    }
-                    .print-title {
-                        font-size: 14.5pt !important;
-                        font-weight: bold !important;
-                    }
                     .print-table {
-                        font-size: ${getPrintTablePtSize()} !important;
+                        font-size: var(--table-font-size) !important;
                         line-height: 1.2 !important;
                         width: 100% !important;
                     }
                     .print-table th, .print-table td {
-                        padding: 2.5px 4px !important;
-                    }
-                    .print-sign-table {
-                        font-size: ${getPrintTablePtSize()} !important;
-                        width: 100% !important;
+                        padding: 3px 5px !important;
                     }
                     .print-break-inside-avoid {
                         break-inside: avoid;
@@ -177,7 +173,7 @@ export default function Print({ project, strategyCategories = [] }) {
                         <span>📄</span> แบบเสนอโครงการฉบับทางการ (Official TH Sarabun View)
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        ตั้งระยะขอบ: ซ้าย ๑.๕ นิ้ว, บน/ล่าง/ขวา ๐.๕ นิ้ว ย่อหน้า ๒.๕ ซม.
+                        ระยะขอบทุกด้าน ๑ นิ้ว | ขนาดฟอนต์ในการพิมพ์เท่ากับหน้ามุมมองที่กำลังดู 100%
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -192,9 +188,9 @@ export default function Print({ project, strategyCategories = [] }) {
                                     ? 'bg-purple-600 text-white shadow-xs' 
                                     : 'text-slate-700 hover:bg-slate-200'
                             }`}
-                            title="ขนาดกระทัดรัด 13pt (ประหยัดหน้ากระดาษ ไม่ล้นหน้า)"
+                            title="ขนาดกระทัดรัด (14px)"
                         >
-                            กระทัดรัด (13pt)
+                            กระทัดรัด
                         </button>
                         <button
                             type="button"
@@ -204,9 +200,9 @@ export default function Print({ project, strategyCategories = [] }) {
                                     ? 'bg-purple-600 text-white shadow-xs' 
                                     : 'text-slate-700 hover:bg-slate-200'
                             }`}
-                            title="ขนาดมาตรฐาน 14pt"
+                            title="ขนาดมาตรฐาน (15px)"
                         >
-                            มาตรฐาน (14pt)
+                            มาตรฐาน
                         </button>
                         <button
                             type="button"
@@ -216,9 +212,9 @@ export default function Print({ project, strategyCategories = [] }) {
                                     ? 'bg-purple-600 text-white shadow-xs' 
                                     : 'text-slate-700 hover:bg-slate-200'
                             }`}
-                            title="ขนาดใหญ่ 15.5pt"
+                            title="ขนาดใหญ่ (16.5px)"
                         >
-                            ใหญ่ (15.5pt)
+                            ใหญ่
                         </button>
                     </div>
 
@@ -238,12 +234,10 @@ export default function Print({ project, strategyCategories = [] }) {
             </div>
 
             {/* Printable Document Paper A4 Styled with TH Sarabun Font & Thai Numerals */}
-            <div className={`print-doc-container font-sarabun max-w-4xl mx-auto bg-white p-8 md:p-10 shadow-lg border border-slate-200 rounded-lg print:shadow-none print:border-none print:p-0 print:max-w-none text-slate-900 leading-normal ${
-                fontSizePreset === 'compact' ? 'text-sm' : fontSizePreset === 'large' ? 'text-base' : 'text-[14.5px]'
-            }`}>
+            <div className="print-doc-container font-sarabun max-w-4xl mx-auto bg-white p-8 md:p-12 shadow-lg border border-slate-200 rounded-lg print:shadow-none print:border-none print:p-0 print:max-w-none text-slate-900 leading-normal">
                 
                 {/* Official Header */}
-                <div className="text-center font-bold mb-5 space-y-0.5 font-sarabun">
+                <div className="text-center font-bold mb-6 space-y-0.5 font-sarabun">
                     <h1 className="text-lg md:text-xl font-bold text-slate-900">
                         โครงการ/กิจกรรม ตาม พ.ร.บ. งบประมาณ ประจำปีงบประมาณ พ.ศ. {toThaiNumerals(project.academic_year)}
                     </h1>
@@ -254,11 +248,11 @@ export default function Print({ project, strategyCategories = [] }) {
                 </div>
 
                 {/* Section 1-9: Official Text Content */}
-                <div className="official-text-section space-y-3.5 font-sarabun">
+                <div className="space-y-4 font-sarabun">
                     
                     {/* Section 1: Title & Responsible Person */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">
+                        <p className="print-title font-bold text-slate-900">
                             ๑. ชื่อโครงการ: <span className="font-semibold text-slate-900">{toThaiNumerals(project.title)}</span>
                         </p>
                         <div className="pl-6 pt-1 space-y-0.5 text-slate-900 leading-relaxed">
@@ -270,7 +264,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 2: Project Characteristics & Clean Strategy Alignment (No Checkboxes, Numbered ๑) ๒) ๓)) */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">๒. ลักษณะโครงการ</p>
+                        <p className="print-title font-bold text-slate-900">๒. ลักษณะโครงการ</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-1.5 leading-relaxed">
                             <div>
                                 <p className="font-semibold">๒.๑ สอดคล้องกับแผนพัฒนาการจัดการศึกษาของสถานศึกษา (พ.ศ. ๒๕๖๘-๒๕๗๐) วิทยาลัยสารพัดช่างน่าน</p>
@@ -279,7 +273,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                 <p className="pl-6 pt-0.5"><span className="font-bold">- กลยุทธ์ที่ ๑</span> {toThaiNumerals(project.strategy_tactic || 'ส่งเสริมด้านวิชาการ คุณธรรม จริยธรรม และค่านิยมที่ดีงามในวิชาชีพ')}</p>
                             </div>
 
-                            {/* Dynamic Strategy Checklist Render (Numbered ๑) ๒) ๓) without checkmarks) */}
+                            {/* Dynamic Strategy Checklist Render (Numbered ๑) ๒) ๓) without checkmarks & prefixes) */}
                             {strategyCategories && strategyCategories.length > 0 && (
                                 <div className="pt-0.5 space-y-1.5">
                                     <p className="font-semibold">๒.๒ สอดคล้องกับยุทธศาสตร์ นโยบาย และมาตรฐานการอาชีวศึกษา:</p>
@@ -314,7 +308,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 3: Background Rationale (With 2.5cm Paragraph Indentation & Relaxed Line Spacing) */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">๓. ความสำคัญของโครงการ/ หลักการและเหตุผล</p>
+                        <p className="print-title font-bold text-slate-900">๓. ความสำคัญของโครงการ/ หลักการและเหตุผล</p>
                         <div className="pt-1.5 text-slate-900 space-y-2 leading-relaxed text-justify">
                             {project.background_rationale ? (
                                 project.background_rationale.split('\n\n').map((paragraph, pIdx) => {
@@ -334,7 +328,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 4: Objectives */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">๔. วัตถุประสงค์ของโครงการ:</p>
+                        <p className="print-title font-bold text-slate-900">๔. วัตถุประสงค์ของโครงการ:</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-0.5 leading-relaxed">
                             {Array.isArray(project.objectives) && project.objectives.length > 0 ? (
                                 project.objectives.map((obj, i) => (
@@ -348,7 +342,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 5: Outputs */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">๕. ผลผลิตโครงการ (Output)</p>
+                        <p className="print-title font-bold text-slate-900">๕. ผลผลิตโครงการ (Output)</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-0.5 leading-relaxed">
                             {outputs.length > 0 ? (
                                 outputs.map((op, i) => <p key={i}>๕.{toThaiNumerals(i + 1)} {toThaiNumerals(op)}</p>)
@@ -363,7 +357,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 6: Outcomes */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">๖. ผลลัพธ์โครงการ (Outcome)</p>
+                        <p className="print-title font-bold text-slate-900">๖. ผลลัพธ์โครงการ (Outcome)</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-0.5 leading-relaxed">
                             {outcomes.length > 0 ? (
                                 outcomes.map((oc, i) => <p key={i}>๖.{toThaiNumerals(i + 1)} {toThaiNumerals(oc)}</p>)
@@ -378,7 +372,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 7: Target Groups */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">๗. กลุ่มเป้าหมาย</p>
+                        <p className="print-title font-bold text-slate-900">๗. กลุ่มเป้าหมาย</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-1 leading-relaxed">
                             <p className="font-bold">๗.๑ เชิงปริมาณ</p>
                             {Array.isArray(project.targets?.quantitative) && project.targets.quantitative.length > 0 ? (
@@ -397,12 +391,12 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 8: Location */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">๘. พื้นที่ดำเนินการ : <span className="font-normal">{toThaiNumerals(project.location || 'ณ วิทยาลัยสารพัดช่างน่าน')}</span></p>
+                        <p className="print-title font-bold text-slate-900">๘. พื้นที่ดำเนินการ : <span className="font-normal">{toThaiNumerals(project.location || 'ณ วิทยาลัยสารพัดช่างน่าน')}</span></p>
                     </div>
 
                     {/* Section 9: Expected Benefits */}
                     <div>
-                        <p className="print-title font-bold text-base text-slate-900">๙. ผลที่คาดว่าจะได้รับ</p>
+                        <p className="print-title font-bold text-slate-900">๙. ผลที่คาดว่าจะได้รับ</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-0.5 leading-relaxed">
                             {expected_benefits.length > 0 ? (
                                 expected_benefits.map((eb, i) => <p key={i}>๙.{toThaiNumerals(i + 1)} {toThaiNumerals(eb)}</p>)
@@ -417,9 +411,9 @@ export default function Print({ project, strategyCategories = [] }) {
 
                 </div>
 
-                {/* Section 10: Indicators Table & Detailed Expenses (Full Width Table Layout) */}
-                <div className="official-table-section pt-4 print-break-inside-avoid">
-                    <p className="print-title font-bold text-base text-slate-900 mb-1.5">๑๐. ตัวชี้วัดเป้าหมายโครงการ</p>
+                {/* Section 10: Indicators Table & Detailed Expenses */}
+                <div className="pt-4 print-break-inside-avoid">
+                    <p className="print-title font-bold text-slate-900 mb-1.5">๑๐. ตัวชี้วัดเป้าหมายโครงการ</p>
                     <table className="print-table w-full border-collapse border border-slate-900 text-xs sm:text-sm font-sarabun">
                         <thead>
                             <tr className="bg-slate-50 text-center font-bold border-b border-slate-900">
@@ -575,9 +569,9 @@ export default function Print({ project, strategyCategories = [] }) {
                     </table>
                 </div>
 
-                {/* Section 11: Action Plan & Budget Table (Full Width Table Layout) */}
-                <div className="official-table-section pt-4 print-break-inside-avoid">
-                    <p className="print-title font-bold text-base text-slate-900 mb-1.5">๑๑. สรุปขั้นตอน/วิธีดำเนินการและเงินที่ใช้</p>
+                {/* Section 11: Action Plan & Budget Table */}
+                <div className="pt-4 print-break-inside-avoid">
+                    <p className="print-title font-bold text-slate-900 mb-1.5">๑๑. สรุปขั้นตอน/วิธีดำเนินการและเงินที่ใช้</p>
                     <table className="print-table w-full border-collapse border border-slate-900 text-xs font-sarabun text-center">
                         <thead>
                             <tr className="bg-slate-50 font-bold border-b border-slate-900 text-xs">
@@ -630,8 +624,8 @@ export default function Print({ project, strategyCategories = [] }) {
                 </div>
 
                 {/* Section 12: Approvers Block */}
-                <div className="official-text-section pt-5 print-break-inside-avoid font-sarabun">
-                    <p className="print-title font-bold text-base text-slate-900 mb-3">๑๒. ผู้เห็นชอบและผู้อนุมัติโครงการ{toThaiNumerals(project.title)}</p>
+                <div className="pt-5 print-break-inside-avoid font-sarabun">
+                    <p className="print-title font-bold text-slate-900 mb-3">๑๒. ผู้เห็นชอบและผู้อนุมัติโครงการ{toThaiNumerals(project.title)}</p>
                     
                     <div className="space-y-5 text-xs sm:text-sm">
                         {/* Row 1: Proposer & Head of Department */}
