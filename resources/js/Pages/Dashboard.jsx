@@ -3567,21 +3567,21 @@ export default function Dashboard({
                     </div>
 
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full text-left border-collapse table-fixed text-xs">
                             <thead>
-                                <tr className="border-b border-amber-100 bg-amber-50/40 text-xs font-bold uppercase text-purple-950 whitespace-nowrap">
-                                    <th className="px-6 py-3.5">ชื่อโครงการ</th>
-                                    <th className="px-6 py-3.5">ฝ่ายงาน / ผู้เสนอ</th>
-                                    <th className="px-6 py-3.5">งบประมาณเสนอขอ</th>
-                                    <th className="px-6 py-3.5">วงเงินจัดสรรจริง & แหล่งเงิน</th>
-                                    <th className="px-6 py-3.5 text-center">สถานะการพิจารณา</th>
-                                    <th className="px-6 py-3.5 text-right">การพิจารณาจัดสรร</th>
+                                <tr className="border-b border-amber-100 bg-amber-50/40 text-[11px] font-bold uppercase text-purple-950">
+                                    <th className="w-[28%] min-w-[180px] px-3.5 py-3">ชื่อโครงการ</th>
+                                    <th className="w-[18%] min-w-[120px] px-3 py-3">ฝ่ายงาน / ผู้เสนอ</th>
+                                    <th className="w-[14%] min-w-[95px] px-3 py-3 text-right">งบประมาณเสนอขอ</th>
+                                    <th className="w-[17%] min-w-[110px] px-3 py-3">วงเงินจัดสรรจริง & แหล่งเงิน</th>
+                                    <th className="w-[11%] min-w-[80px] px-2 py-3 text-center">สถานะ</th>
+                                    <th className="w-[12%] min-w-[90px] px-2.5 py-3 text-right">การพิจารณา</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-amber-100/60 text-sm">
+                            <tbody className="divide-y divide-amber-100/60">
                                 {(!planHeadData.preliminaryQueue || planHeadData.preliminaryQueue.length === 0) ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-10 text-center text-sm text-slate-500">
+                                        <td colSpan="6" className="px-6 py-8 text-center text-xs text-slate-500">
                                             ยังไม่มีรายการข้อเสนอโครงการเบื้องต้นในระบบ
                                         </td>
                                     </tr>
@@ -3590,65 +3590,66 @@ export default function Dashboard({
                                         const fundingName = p.funding_source?.name || p.budget?.funding_source?.name || 'ยังไม่ระบุ';
                                         return (
                                             <tr key={p.id} className="hover:bg-amber-50/20 transition-all">
-                                                <td className="px-6 py-4 font-bold text-slate-900 max-w-xs">
-                                                    <div>{p.title}</div>
-                                                    <div className="text-[11px] text-slate-400 font-normal mt-0.5">ปีงบประมาณ: {p.academic_year}</div>
-                                                    {p.committee_comment && (
-                                                        <div className="text-[11px] text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 mt-1 inline-block">
-                                                            💬 มติ: {p.committee_comment}
-                                                        </div>
-                                                    )}
+                                                <td className="px-3.5 py-2.5 align-top">
+                                                    <div className="font-bold text-slate-900 line-clamp-2 leading-snug break-words">
+                                                        {p.title}
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-400 font-normal mt-0.5">ปีงบฯ {p.academic_year}</div>
                                                 </td>
-                                                <td className="px-6 py-4">
-                                                    <div className="font-semibold text-slate-800 text-xs">{p.department?.name || 'ฝ่ายงานทั่วไป'}</div>
-                                                    <div className="text-[11px] text-purple-600 font-medium">{p.user?.name || 'ไม่ระบุชื่อ'}</div>
+                                                <td className="px-3 py-2.5 align-top">
+                                                    <div className="font-semibold text-slate-800 text-[11px] truncate" title={p.department?.name}>
+                                                        {p.department?.name || 'ฝ่ายงานทั่วไป'}
+                                                    </div>
+                                                    <div className="text-[10px] text-purple-600 font-medium truncate" title={p.user?.name}>
+                                                        {p.user?.name || 'ไม่ระบุชื่อ'}
+                                                    </div>
                                                 </td>
-                                                <td className="px-6 py-4 font-bold text-slate-800 text-xs whitespace-nowrap">
+                                                <td className="px-3 py-2.5 text-right font-bold text-slate-800 text-xs align-top whitespace-nowrap">
                                                     {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.proposed_budget || p.estimated_budget)}
                                                 </td>
-                                                <td className="px-6 py-4 text-xs whitespace-nowrap">
+                                                <td className="px-3 py-2.5 text-xs align-top">
                                                     {p.status === 'budget_approved' || p.allocated_budget > 0 ? (
                                                         <div>
-                                                            <div className="font-extrabold text-emerald-700">
+                                                            <div className="font-extrabold text-emerald-700 text-xs">
                                                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.allocated_budget || p.estimated_budget)}
                                                             </div>
-                                                            <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold mt-0.5 inline-block">
+                                                            <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold mt-0.5 inline-block truncate max-w-full" title={`${fundingName} (${p.report_category || '6.1'})`}>
                                                                 {fundingName} ({p.report_category || '6.1'})
                                                             </span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-slate-400 font-medium italic">- ยังไม่จัดสรร -</span>
+                                                        <span className="text-slate-400 text-[11px] italic">- รอจัดสรร -</span>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                <td className="px-2 py-2.5 text-center align-top whitespace-nowrap">
                                                     {p.status === 'budget_approved' && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
-                                                            ✅ อนุมัติจัดสรรงบแล้ว
+                                                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                                                            ✅ จัดสรรแล้ว
                                                         </span>
                                                     )}
                                                     {p.status === 'budget_rejected' && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-3 py-1 text-xs font-bold text-rose-800 border border-rose-300">
-                                                            ❌ ไม่อนุมัติงบประมาณ
+                                                        <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">
+                                                            ❌ ไม่อนุมัติ
                                                         </span>
                                                     )}
                                                     {p.status === 'preliminary' && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900 border border-amber-300 animate-pulse">
-                                                            🟡 รอการพิจารณาจัดสรร
+                                                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+                                                            🟡 รอจัดสรร
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                                                <td className="px-2.5 py-2.5 whitespace-nowrap text-right align-top">
+                                                    <div className="flex items-center justify-end gap-1">
                                                         <button
                                                             onClick={() => openCommitteeModal(p)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 px-3.5 py-2 text-xs font-extrabold text-white shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap"
                                                             title="พิจารณาอนุมัติจัดสรรงบประมาณ หรือไม่อนุมัติ"
                                                         >
-                                                            ⚖️ พิจารณาจัดสรรงบ
+                                                            ⚖️ พิจารณา
                                                         </button>
                                                         <Link
                                                             href={route('projects.show', p.id)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 px-2.5 py-2 text-xs font-bold text-purple-900 hover:bg-purple-200 transition-all shrink-0"
+                                                            className="p-1 text-purple-700 hover:bg-purple-100 rounded-md transition text-xs"
                                                             title="ดูรายละเอียด"
                                                         >
                                                             👁️
@@ -3656,7 +3657,7 @@ export default function Dashboard({
                                                         {(role === 'admin' || auth.user.is_admin) && (
                                                             <button
                                                                 onClick={() => handleDeleteProject(p)}
-                                                                className="inline-flex items-center gap-1 rounded-xl bg-rose-100 px-2.5 py-2 text-xs font-bold text-rose-700 hover:bg-rose-200 transition-all shrink-0"
+                                                                className="p-1 text-rose-600 hover:bg-rose-100 rounded-md transition text-xs"
                                                                 title="ลบข้อเสนอโครงการ"
                                                             >
                                                                 🗑️
