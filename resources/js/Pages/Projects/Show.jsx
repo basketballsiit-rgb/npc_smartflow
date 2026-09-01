@@ -425,25 +425,25 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                         </p>
                     </div>
                     <div className="flex items-center gap-x-2.5 whitespace-nowrap flex-nowrap shrink-0">
-                        {(project.status === 'draft' || project.status === 'rejected') && (project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
+                        {(project.status === 'draft' || project.status === 'rejected' || project.status === 'budget_approved') && (project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
                             <button
                                 onClick={handleWorkflowSubmit}
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                title="ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ"
+                                title="ยื่นขออนุมัติโครงการเพื่อเริ่มกระบวนการพิจารณา 6 ขั้นตอน"
                             >
-                                🚀 ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ
+                                🚀 ยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2)
                             </button>
                         )}
-                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft') && (
+                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft' || project.status === 'budget_approved' || project.status === 'rejected') && (
                             <Link
                                 href={route('projects.edit', project.id)}
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                title="แก้ไขรายละเอียดโครงการ"
+                                title="แก้ไขรายละเอียดโครงการฉบับเต็ม"
                             >
-                                ✏️ แก้ไขโครงการ
+                                ✏️ จัดทำ/แก้ไขโครงการ
                             </Link>
                         )}
-                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft') && (
+                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft' || project.status === 'preliminary') && (
                             <button
                                 onClick={handleDeleteProject}
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
@@ -494,12 +494,12 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                             }`}>
                                 สถานะ: {getStatusBadgeText(project.status)} (ขั้นตอนที่ {project.current_approval_step}/6)
                             </span>
-                            {(project.status === 'draft' || project.status === 'rejected') && (project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
+                            {(project.status === 'draft' || project.status === 'rejected' || project.status === 'budget_approved') && (project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
                                 <button
                                     onClick={handleWorkflowSubmit}
                                     className="rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white hover:scale-105 shadow-md shadow-emerald-600/25 transition-all whitespace-nowrap"
                                 >
-                                    🚀 ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ
+                                    🚀 ยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2)
                                 </button>
                             )}
                         </div>
