@@ -1,5 +1,4 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link, usePage } from '@inertiajs/react';
+import { Head, useForm, Link, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Swal from 'sweetalert2';
 import axios from 'axios';
