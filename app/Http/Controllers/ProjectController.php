@@ -376,13 +376,17 @@ class ProjectController extends Controller
                 ]
             );
 
-            ProjectApproval::create([
-                'project_id' => $project->id,
-                'user_id' => $user->id,
-                'step_number' => 0,
-                'status' => 'approved',
-                'comments' => 'มติคณะกรรมการ: อนุมัติจัดสรรงบประมาณ ' . number_format($request->input('allocated_budget'), 2) . ' บาท',
-            ]);
+            ProjectApproval::updateOrCreate(
+                [
+                    'project_id' => $project->id,
+                    'step_number' => 0,
+                ],
+                [
+                    'user_id' => $user->id,
+                    'status' => 'approved',
+                    'comments' => 'มติคณะกรรมการ: อนุมัติจัดสรรงบประมาณ ' . number_format($request->input('allocated_budget'), 2) . ' บาท',
+                ]
+            );
 
             return redirect()->back()->with('success', 'อนุมัติจัดสรรงบประมาณโครงการเรียบร้อยแล้ว ผู้เสนอโครงการสามารถเข้าจัดทำรายละเอียดฉบับเต็มได้');
         } else {
@@ -396,13 +400,17 @@ class ProjectController extends Controller
             $project->committee_comment = $request->input('committee_comment');
             $project->save();
 
-            ProjectApproval::create([
-                'project_id' => $project->id,
-                'user_id' => $user->id,
-                'step_number' => 0,
-                'status' => 'rejected',
-                'comments' => 'มติคณะกรรมการ: ไม่อนุมัติงบประมาณ (' . $request->input('committee_comment') . ')',
-            ]);
+            ProjectApproval::updateOrCreate(
+                [
+                    'project_id' => $project->id,
+                    'step_number' => 0,
+                ],
+                [
+                    'user_id' => $user->id,
+                    'status' => 'rejected',
+                    'comments' => 'มติคณะกรรมการ: ไม่อนุมัติงบประมาณ (' . $request->input('committee_comment') . ')',
+                ]
+            );
 
             return redirect()->back()->with('success', 'บันทึกมติไม่อนุมัติงบประมาณโครงการเรียบร้อยแล้ว');
         }
@@ -415,6 +423,12 @@ class ProjectController extends Controller
     {
         $project->load(['user', 'department', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
+        
+        // Deduplicate approvals (prevent duplicate records from legacy submits)
+        $uniqueApprovals = $project->approvals->unique(function ($item) {
+            return $item->step_number . '_' . $item->status . '_' . $item->comments;
+        })->values();
+        $project->setRelation('approvals', $uniqueApprovals);
         
         // Load all strategy categories for display
         $allCategories = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->get();
