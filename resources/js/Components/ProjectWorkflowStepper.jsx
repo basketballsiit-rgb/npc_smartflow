@@ -22,21 +22,21 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
         },
         {
             number: 4,
-            title: 'เคลียร์เงินยืม & เบิกจ่าย',
-            subtitle: 'ส่งเอกสารเคลียร์ทดรอง',
-            icon: '🧾',
-        },
-        {
-            number: 5,
             title: 'ประเมินผลโครงการ',
             subtitle: 'แบบสำรวจ & วิเคราะห์ AI',
             icon: '⭐',
         },
         {
-            number: 6,
+            number: 5,
             title: 'รายงานผลฉบับสมบูรณ์',
             subtitle: 'รูปภาพ & รวมเล่ม PDF',
             icon: '📄',
+        },
+        {
+            number: 6,
+            title: 'เคลียร์เงินยืม & เบิกจ่าย',
+            subtitle: 'ส่งเอกสารเคลียร์ทดรอง',
+            icon: '🧾',
         },
     ];
 
@@ -48,12 +48,12 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
         activeIndex = 1; // Step 2: ตรวจสอบ & อนุมัติ (กระบวนการ 6 ขั้นตอน)
     } else if (status === 'approved') {
         activeIndex = 2; // Step 3: จัดซื้อจัดจ้าง & พัสดุ
-    } else if (status === 'in_progress') {
-        activeIndex = 3; // Step 4: เคลียร์เงินยืม & เบิกจ่าย
-    } else if (status === 'evaluating') {
-        activeIndex = 4; // Step 5: ประเมินผลโครงการ
-    } else if (status === 'completed') {
-        activeIndex = 5; // Step 6: รายงานผลฉบับสมบูรณ์
+    } else if (status === 'in_progress' || status === 'evaluating') {
+        activeIndex = 3; // Step 4: ดำเนินโครงการ & ประเมินผล
+    } else if (status === 'reporting') {
+        activeIndex = 4; // Step 5: รายงานผลฉบับสมบูรณ์
+    } else if (status === 'cleared' || status === 'completed' || status === 'closed') {
+        activeIndex = 5; // Step 6: เคลียร์เงินยืม & เบิกจ่ายสิ้นสุด
     } else {
         activeIndex = 0;
     }
