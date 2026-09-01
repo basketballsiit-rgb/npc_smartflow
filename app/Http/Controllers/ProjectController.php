@@ -361,7 +361,7 @@ class ProjectController extends Controller
             $project->committee_comment = $request->input('committee_comment', 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว');
             $project->budget_approved_at = now();
             $project->status = 'budget_approved';
-            $project->current_approval_step = 3;
+            $project->current_approval_step = 1;
             $project->save();
 
             // Create or update Budget record
