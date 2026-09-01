@@ -439,16 +439,18 @@ class ProjectController extends Controller
         
         if ($project->status === 'submitted' || $project->status === 'pending_approval') {
             switch ($project->current_approval_step) {
-                case 2: // Head of Department (HOD) - mapped to same department teacher or HOD role
-                    $canApprove = ($user->department_id === $project->department_id && ($user->isTeacher() || $user->isPlanHead()));
+                case 2: // Head of Department (HOD) - Must be Admin, Plan Head, or designated Department Head (and not proposing teacher)
+                    $canApprove = $user->isAdmin() 
+                        || $user->isPlanHead() 
+                        || ($user->isDepartmentHead($project->department_id) && $user->id !== $project->user_id);
                     break;
                 case 3: // Plan Head
-                    $canApprove = $user->isPlanHead();
+                    $canApprove = $user->isAdmin() || $user->isPlanHead();
                     break;
                 case 4: // Deputy Director
                 case 5: // Deputy Director 2
                 case 6: // Director
-                    $canApprove = $user->isExecutive();
+                    $canApprove = $user->isAdmin() || $user->isExecutive();
                     break;
             }
         }
