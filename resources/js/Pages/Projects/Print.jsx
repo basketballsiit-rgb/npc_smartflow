@@ -5,6 +5,14 @@ export default function Print({ project, strategyCategories = [] }) {
     // Font size preset state
     const [fontSizePreset, setFontSizePreset] = useState('compact'); // 'compact' (13.5pt) | 'normal' (14.5pt) | 'large' (16pt)
 
+    // Utility to clean person name from parenthetical role tags like (อาจารย์ประจำสาขา), (Super Admin), etc.
+    const cleanPersonName = (name) => {
+        if (!name) return '';
+        let cleaned = String(name).replace(/\s*\([^)]*\)/g, '').trim();
+        cleaned = cleaned.replace(/^\(+|\)+$/g, '').trim();
+        return cleaned;
+    };
+
     // Utility to convert any Arabic digits in a string/number into Thai digits
     const toThaiNumerals = (val) => {
         if (val === null || val === undefined) return '';
@@ -76,6 +84,8 @@ export default function Print({ project, strategyCategories = [] }) {
         if (fontSizePreset === 'large') return '14.5pt';
         return '13pt';
     };
+
+    const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล');
 
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0">
@@ -247,7 +257,7 @@ export default function Print({ project, strategyCategories = [] }) {
                             ๑. ชื่อโครงการ: <span className="font-semibold text-slate-900">{toThaiNumerals(project.title)}</span>
                         </p>
                         <div className="pl-6 pt-1 space-y-1 text-slate-900 leading-relaxed">
-                            <p><span className="font-bold">ผู้รับผิดชอบโครงการ ชื่อ-สกุล :</span> {toThaiNumerals(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล')}</p>
+                            <p><span className="font-bold">ผู้รับผิดชอบโครงการ ชื่อ-สกุล :</span> {toThaiNumerals(cleanedResponsiblePerson)}</p>
                             <p><span className="font-bold">ตำแหน่ง :</span> {toThaiNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}</p>
                             <p><span className="font-bold">โทรศัพท์เคลื่อนที่ :</span> {toThaiNumerals(project.phone || '๐๘๐-๖๐๔๔๔๕๐')} &nbsp;&nbsp;&nbsp;&nbsp; <span className="font-bold">E-mail :</span> {project.email || project.user?.email || 'Newchatnapa16@npc.ac.th'}</p>
                         </div>
@@ -630,7 +640,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                         <tr>
                                             <td></td>
                                             <td className="text-center font-bold whitespace-nowrap pt-0.5">
-                                                ({toThaiNumerals(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล')})
+                                                ({toThaiNumerals(cleanedResponsiblePerson)})
                                             </td>
                                             <td></td>
                                         </tr>
