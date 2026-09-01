@@ -629,35 +629,35 @@ export default function Print({ project, strategyCategories = [] }) {
                     
                     <div className="space-y-8 text-xs sm:text-sm">
                         {/* Row 1: Proposer & Head of Department */}
-                        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-6">
                             {/* Signature 1: ผู้เสนอโครงการ */}
                             <div className="flex justify-center">
-                                <table className="border-collapse font-sarabun text-center">
+                                <table className="border-collapse font-sarabun text-center mx-auto">
                                     <tbody>
                                         <tr>
-                                            <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
-                                            <td className="text-center whitespace-nowrap px-1 align-bottom">
-                                                <span className="tracking-tighter inline-block min-w-[190px]">......................................................</span>
+                                            <td className="text-right whitespace-nowrap pr-1 align-bottom text-xs sm:text-[13px]">ลงชื่อ</td>
+                                            <td className="text-center whitespace-nowrap px-0.5 align-bottom">
+                                                <span className="tracking-tighter inline-block">................................</span>
                                             </td>
-                                            <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้เสนอโครงการ</td>
+                                            <td className="text-left whitespace-nowrap pl-1 align-bottom text-xs sm:text-[13px]">ผู้เสนอโครงการ</td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center font-bold whitespace-nowrap pt-2">
+                                            <td className="text-center font-bold whitespace-nowrap pt-2 text-xs sm:text-[13px]">
                                                 ({toThaiNumerals(cleanedResponsiblePerson)})
                                             </td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center text-[11.5px] leading-relaxed pt-1 font-normal max-w-[210px] text-slate-800">
+                                            <td className="text-center text-[11px] sm:text-[11.5px] leading-relaxed pt-1 font-normal max-w-[180px] text-slate-800 mx-auto">
                                                 {toThaiNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}
                                             </td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                            <td className="text-center text-[11px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
                                                 วันที่ ....... เดือน ............................ พ.ศ. ...............
                                             </td>
                                             <td></td>
@@ -668,32 +668,32 @@ export default function Print({ project, strategyCategories = [] }) {
 
                             {/* Signature 2: Head of Department */}
                             <div className="flex justify-center">
-                                <table className="border-collapse font-sarabun text-center">
+                                <table className="border-collapse font-sarabun text-center mx-auto">
                                     <tbody>
                                         <tr>
-                                            <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
-                                            <td className="text-center whitespace-nowrap px-1 align-bottom">
-                                                <span className="tracking-tighter inline-block min-w-[190px]">......................................................</span>
+                                            <td className="text-right whitespace-nowrap pr-1 align-bottom text-xs sm:text-[13px]">ลงชื่อ</td>
+                                            <td className="text-center whitespace-nowrap px-0.5 align-bottom">
+                                                <span className="tracking-tighter inline-block">................................</span>
                                             </td>
-                                            <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้เห็นชอบโครงการ</td>
+                                            <td className="text-left whitespace-nowrap pl-1 align-bottom text-xs sm:text-[13px]">ผู้เห็นชอบโครงการ</td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center font-bold whitespace-nowrap pt-2">
+                                            <td className="text-center font-bold whitespace-nowrap pt-2 text-xs sm:text-[13px]">
                                                 (......................................................)
                                             </td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center text-[11.5px] leading-relaxed pt-1 font-normal max-w-[210px] text-slate-800">
+                                            <td className="text-center text-[11px] sm:text-[11.5px] leading-relaxed pt-1 font-normal max-w-[180px] text-slate-800 mx-auto">
                                                 {toThaiNumerals(project.department?.name ? `หัวหน้า${project.department.name}` : 'หัวหน้าแผนกวิชา / หัวหน้างาน')}
                                             </td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                            <td className="text-center text-[11px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
                                                 วันที่ ....... เดือน ............................ พ.ศ. ...............
                                             </td>
                                             <td></td>
@@ -704,35 +704,35 @@ export default function Print({ project, strategyCategories = [] }) {
                         </div>
 
                         {/* Row 2: Planning Head & Deputy Director */}
-                        <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-6">
                             {/* Signature 3: Head of Planning */}
                             <div className="flex justify-center">
-                                <table className="border-collapse font-sarabun text-center">
+                                <table className="border-collapse font-sarabun text-center mx-auto">
                                     <tbody>
                                         <tr>
-                                            <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
-                                            <td className="text-center whitespace-nowrap px-1 align-bottom">
-                                                <span className="tracking-tighter inline-block min-w-[190px]">......................................................</span>
+                                            <td className="text-right whitespace-nowrap pr-1 align-bottom text-xs sm:text-[13px]">ลงชื่อ</td>
+                                            <td className="text-center whitespace-nowrap px-0.5 align-bottom">
+                                                <span className="tracking-tighter inline-block">................................</span>
                                             </td>
-                                            <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้เห็นชอบโครงการ</td>
+                                            <td className="text-left whitespace-nowrap pl-1 align-bottom text-xs sm:text-[13px]">ผู้เห็นชอบโครงการ</td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center font-bold whitespace-nowrap pt-2">
+                                            <td className="text-center font-bold whitespace-nowrap pt-2 text-xs sm:text-[13px]">
                                                 (นายนิพนธ์ ร่องพืช)
                                             </td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center text-[11.5px] leading-relaxed pt-1 font-normal max-w-[210px] text-slate-800">
+                                            <td className="text-center text-[11px] sm:text-[11.5px] leading-relaxed pt-1 font-normal max-w-[180px] text-slate-800 mx-auto">
                                                 หัวหน้างานแผนงานและความร่วมมือ
                                             </td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                            <td className="text-center text-[11px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
                                                 วันที่ ....... เดือน ............................ พ.ศ. ...............
                                             </td>
                                             <td></td>
@@ -743,32 +743,32 @@ export default function Print({ project, strategyCategories = [] }) {
 
                             {/* Signature 4: Deputy Director */}
                             <div className="flex justify-center">
-                                <table className="border-collapse font-sarabun text-center">
+                                <table className="border-collapse font-sarabun text-center mx-auto">
                                     <tbody>
                                         <tr>
-                                            <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
-                                            <td className="text-center whitespace-nowrap px-1 align-bottom">
-                                                <span className="tracking-tighter inline-block min-w-[190px]">......................................................</span>
+                                            <td className="text-right whitespace-nowrap pr-1 align-bottom text-xs sm:text-[13px]">ลงชื่อ</td>
+                                            <td className="text-center whitespace-nowrap px-0.5 align-bottom">
+                                                <span className="tracking-tighter inline-block">................................</span>
                                             </td>
-                                            <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้เห็นชอบโครงการ</td>
+                                            <td className="text-left whitespace-nowrap pl-1 align-bottom text-xs sm:text-[13px]">ผู้เห็นชอบโครงการ</td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center font-bold whitespace-nowrap pt-2">
+                                            <td className="text-center font-bold whitespace-nowrap pt-2 text-xs sm:text-[13px]">
                                                 (นายจักรพงศ์ พรหมสกุลปัญญา)
                                             </td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center text-[11.5px] leading-relaxed pt-1 font-normal max-w-[210px] text-slate-800">
+                                            <td className="text-center text-[11px] sm:text-[11.5px] leading-relaxed pt-1 font-normal max-w-[180px] text-slate-800 mx-auto">
                                                 รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ
                                             </td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td></td>
-                                            <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                            <td className="text-center text-[11px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
                                                 วันที่ ....... เดือน ............................ พ.ศ. ...............
                                             </td>
                                             <td></td>
@@ -780,14 +780,14 @@ export default function Print({ project, strategyCategories = [] }) {
 
                         {/* Row 3: Final Director Approval */}
                         <div className="pt-2 flex justify-center">
-                            <table className="border-collapse font-sarabun text-center">
+                            <table className="border-collapse font-sarabun text-center mx-auto">
                                 <tbody>
                                     <tr>
-                                        <td className="text-right whitespace-nowrap pr-1 align-bottom">ลงชื่อ</td>
-                                        <td className="text-center whitespace-nowrap px-1 align-bottom">
-                                            <span className="tracking-tighter inline-block min-w-[210px]">......................................................</span>
+                                        <td className="text-right whitespace-nowrap pr-1 align-bottom text-xs sm:text-[13px]">ลงชื่อ</td>
+                                        <td className="text-center whitespace-nowrap px-0.5 align-bottom">
+                                            <span className="tracking-tighter inline-block">................................</span>
                                         </td>
-                                        <td className="text-left whitespace-nowrap pl-1 align-bottom">ผู้อนุมัติโครงการ</td>
+                                        <td className="text-left whitespace-nowrap pl-1 align-bottom text-xs sm:text-[13px]">ผู้อนุมัติโครงการ</td>
                                     </tr>
                                     <tr>
                                         <td></td>
@@ -805,7 +805,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                     </tr>
                                     <tr>
                                         <td></td>
-                                        <td className="text-center text-[11.5px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
+                                        <td className="text-center text-[11px] pt-1.5 font-normal text-slate-700 whitespace-nowrap">
                                             วันที่ ....... เดือน ............................ พ.ศ. ...............
                                         </td>
                                         <td></td>
