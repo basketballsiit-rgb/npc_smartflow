@@ -993,6 +993,46 @@ class ProjectController extends Controller
             return response()->json(['success' => true, 'indicators' => $indicators]);
         }
 
+        if ($type === 'procurement_items') {
+            $budget = (float)$request->input('budget', 45000);
+            $snackCost = 3500;
+            $lunchCost = 4000;
+            $speakerCost = 3600;
+            $materialCost = max(0, $budget - ($snackCost + $lunchCost + $speakerCost));
+
+            $items = [
+                [
+                    'description' => 'ค่าอาหารว่างและเครื่องดื่มสำหรับผู้เข้าร่วมโครงการ (50 คน x 35 บาท x 2 มื้อ)',
+                    'quantity' => 50,
+                    'unit' => 'คน',
+                    'unit_price' => 70,
+                    'total_price' => $snackCost
+                ],
+                [
+                    'description' => 'ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)',
+                    'quantity' => 50,
+                    'unit' => 'คน',
+                    'unit_price' => 80,
+                    'total_price' => $lunchCost
+                ],
+                [
+                    'description' => 'ค่าตอบแทนวิทยากรบรรยายและฝึกอบรมเชิงปฏิบัติการ (6 ชม. x 600 บาท)',
+                    'quantity' => 6,
+                    'unit' => 'ชั่วโมง',
+                    'unit_price' => 600,
+                    'total_price' => $speakerCost
+                ],
+                [
+                    'description' => "ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการดำเนินงานตามโครงการ",
+                    'quantity' => 1,
+                    'unit' => 'ชุด',
+                    'unit_price' => $materialCost,
+                    'total_price' => $materialCost
+                ]
+            ];
+            return response()->json(['success' => true, 'procurement_items' => $items]);
+        }
+
         return response()->json(['success' => false, 'message' => 'Invalid type']);
     }
 }
