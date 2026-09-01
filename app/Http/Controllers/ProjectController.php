@@ -944,6 +944,28 @@ class ProjectController extends Controller
             return response()->json(['success' => true, 'action_plan' => $action_plan]);
         }
 
+        if ($type === 'indicators') {
+            $indicators = [
+                'quantitative' => [
+                    'text' => "ผู้เข้าร่วมโครงการใน{$title} เข้าร่วมกิจกรรมครบถ้วนตามเกณฑ์ คิดเป็นร้อยละ 100",
+                    'unit' => '50 คน'
+                ],
+                'qualitative' => [
+                    'text' => 'ผู้เข้าร่วมมีความพึงพอใจต่อการดำเนินงานและได้รับความรู้ทักษะเพิ่มขึ้นในระดับดีมาก',
+                    'unit' => 'ร้อยละ 90'
+                ],
+                'time' => [
+                    'text' => 'ดำเนินการแล้วเสร็จตามระยะเวลาและปฏิทินปฏิบัติงานที่กำหนด',
+                    'unit' => '1 ภาคเรียน'
+                ],
+                'cost' => [
+                    'text' => 'ค่าใช้จ่ายในการดำเนินโครงการเป็นไปตามวงเงินงบประมาณที่ได้รับจัดสรร',
+                    'unit' => number_format((float)$request->input('budget', 0), 2) . ' บาท'
+                ],
+            ];
+            return response()->json(['success' => true, 'indicators' => $indicators]);
+        }
+
         return response()->json(['success' => false, 'message' => 'Invalid type']);
     }
 }
