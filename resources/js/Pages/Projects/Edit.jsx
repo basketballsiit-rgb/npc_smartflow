@@ -1249,28 +1249,109 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     </div>
                                 </div>
 
-                                {/* Grand Totals Summary Cards */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-1">
-                                        <span className="text-xs font-bold text-slate-500">วงเงินงบประมาณที่ได้รับจัดสรร</span>
-                                        <p className="text-xl font-black text-purple-900">{parseFloat(data.estimated_budget || 0).toLocaleString()} บาท</p>
-                                        <p className="text-[11px] text-slate-500">{project?.funding_source?.name || 'Revenue (เงินรายได้สถานศึกษา)'}</p>
+                                {/* Grand Totals Summary Cards (4 Cards Grid) */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                                    {/* 1. วงเงินจัดสรร */}
+                                    <div className="p-4 rounded-2xl bg-white border border-purple-100 space-y-1 shadow-2xs">
+                                        <span className="text-[11px] font-bold text-slate-500 block">🎯 วงเงินที่ได้รับจัดสรร</span>
+                                        <p className="text-xl font-black text-purple-950">{allocatedBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
+                                        <p className="text-[10px] text-purple-700 font-medium truncate">{project?.funding_source?.name || 'Revenue (เงินรายได้สถานศึกษา)'}</p>
                                     </div>
-                                    <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1">
-                                        <span className="text-xs font-bold text-amber-900">💵 รวมสัญญายืมเงินทุกกิจกรรม</span>
+
+                                    {/* 2. รวมสัญญายืมเงิน */}
+                                    <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-1 shadow-2xs">
+                                        <span className="text-[11px] font-bold text-amber-900 block">💵 รวมสัญญายืมเงิน (ทุกกิจกรรม)</span>
                                         <p className="text-xl font-black text-amber-800">{totalLoanAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
-                                        <p className="text-[11px] text-amber-700">วิทยากร, อาหาร, เครื่องดื่ม, เดินทาง</p>
+                                        <p className="text-[10px] text-amber-700 font-medium">วิทยากร, อาหาร, เครื่องดื่ม, เดินทาง</p>
                                     </div>
-                                    <div className="p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-1">
-                                        <span className="text-xs font-bold text-indigo-900">📦 รวมจัดซื้อจัดจ้างทุกกิจกรรม</span>
+
+                                    {/* 3. รวมจัดซื้อจัดจ้าง */}
+                                    <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 space-y-1 shadow-2xs">
+                                        <span className="text-[11px] font-bold text-indigo-900 block">📦 รวมจัดซื้อจัดจ้าง (ทุกกิจกรรม)</span>
                                         <p className="text-xl font-black text-indigo-800">{totalProcurementAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
-                                        <p className="text-[11px] text-indigo-700">ค่าวัสดุ และรายการจัดซื้ออื่น ๆ</p>
+                                        <p className="text-[10px] text-indigo-700 font-medium">ค่าวัสดุ และรายการจัดซื้ออื่น ๆ</p>
+                                    </div>
+
+                                    {/* 4. สถานะงบประมาณคงเหลือ (Remaining Balance) */}
+                                    <div className={`p-4 rounded-2xl border space-y-1 shadow-2xs transition-all ${
+                                        remainingBudget > 0 
+                                            ? 'bg-emerald-50/80 border-emerald-300' 
+                                            : remainingBudget === 0 
+                                                ? 'bg-teal-50 border-teal-400' 
+                                                : 'bg-rose-50 border-rose-300'
+                                    }`}>
+                                        <span className={`text-[11px] font-bold block ${
+                                            remainingBudget > 0 ? 'text-emerald-900' : remainingBudget === 0 ? 'text-teal-900' : 'text-rose-900'
+                                        }`}>
+                                            {remainingBudget > 0 ? '💰 จัดสรรได้อีก (งบคงเหลือ)' : remainingBudget === 0 ? '✅ จัดสรรครบถ้วนพอดี 100%' : '🚨 จัดสรรเกินงบประมาณ'}
+                                        </span>
+                                        <p className={`text-xl font-black ${
+                                            remainingBudget > 0 ? 'text-emerald-700' : remainingBudget === 0 ? 'text-teal-800' : 'text-rose-700'
+                                        }`}>
+                                            {remainingBudget > 0 ? `+${remainingBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })}` : remainingBudget === 0 ? '0.00' : `-${Math.abs(remainingBudget).toLocaleString('th-TH', { minimumFractionDigits: 2 })}`} บาท
+                                        </p>
+                                        <p className={`text-[10px] font-bold ${
+                                            remainingBudget > 0 ? 'text-emerald-600' : remainingBudget === 0 ? 'text-teal-600' : 'text-rose-600'
+                                        }`}>
+                                            {remainingBudget > 0 ? `ใช้ไปแล้ว ${usedPercentage}% (ยังเหลืองบ)` : remainingBudget === 0 ? 'งบประมาณลงตัว 100% พอดี' : `ใช้เกินวงเงิน ${usedPercentage}% (กรุณาปรับลด)`}
+                                        </p>
                                     </div>
                                 </div>
 
-                                {grandTotalBudget > parseFloat(data.estimated_budget || 0) && (
+                                {/* Live Visual Budget Progress Bar */}
+                                <div className="bg-white p-4 rounded-2xl border border-purple-100 space-y-2 shadow-2xs">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 text-xs">
+                                        <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                                            <span>📊</span> สถานะการใช้จ่ายงบประมาณโครงการ:
+                                            <span className="text-purple-950 font-black ml-1">
+                                                {grandTotalBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} / {allocatedBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท ({usedPercentage}%)
+                                            </span>
+                                        </span>
+                                        <span className={`font-bold px-2.5 py-0.5 rounded-full text-xs ${
+                                            remainingBudget > 0 ? 'bg-emerald-100 text-emerald-800' :
+                                            remainingBudget === 0 ? 'bg-teal-100 text-teal-800' :
+                                            'bg-rose-100 text-rose-800'
+                                        }`}>
+                                            {remainingBudget > 0 ? `💰 คงเหลือให้จัดสรรอีก: +${remainingBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท` :
+                                             remainingBudget === 0 ? '🎉 จัดสรรงบประมาณลงตัวครบ 100% พอดี' :
+                                             `⚠️ จัดสรรเกินวงเงิน: -${Math.abs(remainingBudget).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`}
+                                        </span>
+                                    </div>
+
+                                    {/* Progress Bar Track */}
+                                    <div className="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden flex border border-slate-200">
+                                        <div 
+                                            style={{ width: `${Math.min(100, allocatedBudget > 0 ? (totalLoanAllActivities / allocatedBudget) * 100 : 0)}%` }} 
+                                            className="bg-amber-500 h-full transition-all duration-300"
+                                            title={`สัญญายืมเงิน: ${totalLoanAllActivities.toLocaleString()} บาท`}
+                                        />
+                                        <div 
+                                            style={{ width: `${Math.min(100, allocatedBudget > 0 ? (totalProcurementAllActivities / allocatedBudget) * 100 : 0)}%` }} 
+                                            className="bg-indigo-600 h-full transition-all duration-300"
+                                            title={`จัดซื้อจัดจ้าง: ${totalProcurementAllActivities.toLocaleString()} บาท`}
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-wrap justify-between items-center text-[11px] text-slate-600 pt-0.5">
+                                        <div className="flex items-center gap-4">
+                                            <span className="flex items-center gap-1.5 font-bold text-amber-900">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 
+                                                สัญญายืมเงิน: {totalLoanAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท ({allocatedBudget > 0 ? ((totalLoanAllActivities / allocatedBudget) * 100).toFixed(1) : 0}%)
+                                            </span>
+                                            <span className="flex items-center gap-1.5 font-bold text-indigo-900">
+                                                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span> 
+                                                จัดซื้อจัดจ้าง: {totalProcurementAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท ({allocatedBudget > 0 ? ((totalProcurementAllActivities / allocatedBudget) * 100).toFixed(1) : 0}%)
+                                            </span>
+                                        </div>
+                                        <span className="text-slate-500 font-medium">
+                                            {data.activities?.length || 1} กิจกรรมย่อย
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {grandTotalBudget > allocatedBudget && (
                                     <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-bold flex items-center gap-2">
-                                        <span>⚠️</span> ยอดรวมประมาณการทุกกิจกรรม ({grandTotalBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท) เกินวงเงินงบประมาณที่ได้รับจัดสรรอยู่ {(grandTotalBudget - parseFloat(data.estimated_budget || 0)).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                        <span>⚠️</span> ยอดรวมประมาณการทุกกิจกรรม ({grandTotalBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท) เกินวงเงินงบประมาณที่ได้รับจัดสรรอยู่ {(grandTotalBudget - allocatedBudget).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
                                     </div>
                                 )}
 
@@ -1280,6 +1361,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                         const actLoanSum = (act.loan_items || []).reduce((s, i) => s + ((parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0)), 0);
                                         const actProcSum = (act.procurement_items || []).reduce((s, i) => s + ((parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price) || 0)), 0);
                                         const actTotal = actLoanSum + actProcSum;
+                                        const actPercentage = allocatedBudget > 0 ? ((actTotal / allocatedBudget) * 100).toFixed(1) : 0;
 
                                         return (
                                             <div key={actIdx} className="rounded-2xl border-2 border-purple-200 bg-white p-5 space-y-4 shadow-sm">
@@ -1300,15 +1382,22 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-3 shrink-0">
-                                                        <span className="text-xs font-black text-purple-950 bg-white px-3 py-1 rounded-xl border border-purple-200 shadow-2xs">
-                                                            รวมกิจกรรมนี้: {actTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
-                                                        </span>
+                                                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                                                        <div className="text-right">
+                                                            <div className="text-xs font-black text-purple-950 bg-white px-3 py-1 rounded-xl border border-purple-200 shadow-2xs inline-flex items-center gap-1.5">
+                                                                <span>รวมกิจกรรมนี้:</span>
+                                                                <span className="text-purple-700 font-black">{actTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
+                                                                <span className="text-[10px] text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded">({actPercentage}%)</span>
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
+                                                                💵 ยืมเงิน {actLoanSum.toLocaleString()} บ. | 📦 จัดซื้อ {actProcSum.toLocaleString()} บ.
+                                                            </div>
+                                                        </div>
                                                         {(data.activities || []).length > 1 && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => removeActivity(actIdx)}
-                                                                className="text-rose-500 hover:text-rose-700 font-bold text-xs bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded-lg border border-rose-200 transition-colors"
+                                                                className="text-rose-500 hover:text-rose-700 font-bold text-xs bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg border border-rose-200 transition-colors ml-1"
                                                                 title="ลบกิจกรรมย่อยนี้"
                                                             >
                                                                 🗑️ ลบกิจกรรม
