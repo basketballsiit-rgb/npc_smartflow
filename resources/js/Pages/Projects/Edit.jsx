@@ -441,6 +441,20 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                     <ProjectWorkflowStepper currentStep={project.current_approval_step || 1} status={project.status} />
 
                     <div className="rounded-3xl border border-purple-100 bg-white p-6 md:p-8 shadow-sm">
+                        {project.status === 'pending_approval' && !isPlanOrAdmin && (
+                            <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-xs text-amber-950 font-bold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">🔒</span>
+                                    <div>
+                                        <p className="font-black text-sm text-amber-950">โครงการนี้อยู่ระหว่างขั้นตอนการพิจารณาอนุมัติ (ขั้นตอนที่ {project.current_approval_step || 2})</p>
+                                        <p className="font-normal text-[11px] text-amber-800 mt-0.5">ระบบล็อคการแก้ไขโครงการฉบับเต็มเรียบร้อยแล้ว หากต้องการปรับแก้กรุณาติดต่อหัวหน้างานแผนงานหรือผู้ดูแลระบบ</p>
+                                    </div>
+                                </div>
+                                <Link href={route('projects.show', project.id)} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold shadow-xs shrink-0">
+                                    ติดตามสถานะโครงการ ➔
+                                </Link>
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="space-y-8">
 
                             {/* Section 1: ข้อมูลพื้นฐาน & ผู้รับผิดชอบโครงการ */}
