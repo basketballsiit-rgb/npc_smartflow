@@ -299,6 +299,22 @@ export default function Show({ project, strategyCategories = [], fundingSources 
     };
 
     const getApprovalStepOfficerInfo = (step, status) => {
+        if (status === 'budget_approved') {
+            return {
+                title: '🟢 ได้รับจัดสรรงบประมาณแล้ว — อยู่ระหว่างจัดทำรายละเอียดโครงการฉบับเต็ม',
+                desc: 'โครงการผ่านความเห็นชอบจัดสรรงบประมาณจากงานแผนงานแล้ว กรุณากรอกรายละเอียดโครงการฉบับเต็มในแท็บที่ 1 และกด "🚀 ยื่นขออนุมัติโครงการ" เพื่อเริ่มกระบวนการอนุมัติ 6 ขั้นตอน',
+                color: 'bg-emerald-50 border-emerald-300 text-emerald-950',
+                icon: '📝'
+            };
+        }
+        if (status === 'preliminary') {
+            return {
+                title: '⏳ เสนอโครงการเบื้องต้น — อยู่ระหว่างรอการพิจารณาจัดสรรงบประมาณ',
+                desc: 'โครงการอยู่ระหว่างรอคณะกรรมการและงานแผนงานพิจารณากำหนดกรอบวงเงินงบประมาณและแหล่งเงินทุน',
+                color: 'bg-amber-50 border-amber-300 text-amber-950',
+                icon: '💡'
+            };
+        }
         if (status === 'approved') {
             return {
                 title: '🎓 อนุมัติสมบูรณ์แล้ว (Approved) — พร้อมจัดซื้อจัดจ้าง (ขั้นตอนที่ 3)',
