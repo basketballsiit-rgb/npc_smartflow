@@ -3826,7 +3826,17 @@ export default function Dashboard({
         }
 
         const queue = procurementData.procurementQueue || [];
+        const pendingCount = queue.filter(p => !p.procurement || p.procurement.status === 'pending' || p.procurement.status === 'received' || p.procurement.status === 'processing').length;
+        const waitingIntakeCount = queue.filter(p => !p.procurement || p.procurement.status === 'pending').length;
+        const receivedCount = queue.filter(p => p.procurement?.status === 'received' || p.procurement?.status === 'processing').length;
+        const forwardedCount = queue.filter(p => p.procurement?.status === 'forwarded_to_finance').length;
+        const totalBudgetSum = queue.reduce((sum, p) => sum + (parseFloat(p.estimated_budget || p.allocated_budget || 0)), 0);
+
         const filteredQueue = queue.filter(p => {
+            const procStatus = p.procurement?.status || 'pending';
+            if (procurementFilterTab === 'pending' && procStatus === 'forwarded_to_finance') return false;
+            if (procurementFilterTab === 'forwarded' && procStatus !== 'forwarded_to_finance') return false;
+
             if (!procurementSearch) return true;
             const s = procurementSearch.toLowerCase();
             return (p.title || '').toLowerCase().includes(s) ||
@@ -3835,70 +3845,132 @@ export default function Dashboard({
                    (p.procurement?.procurement_number || '').toLowerCase().includes(s);
         });
 
-        const pendingCount = queue.filter(p => !p.procurement || p.procurement.status === 'pending').length;
-        const receivedCount = queue.filter(p => p.procurement?.status === 'received' || p.procurement?.status === 'processing').length;
-        const forwardedCount = queue.filter(p => p.procurement?.status === 'forwarded_to_finance').length;
-        const totalBudgetSum = queue.reduce((sum, p) => sum + (parseFloat(p.estimated_budget || p.allocated_budget || 0)), 0);
-
         return (
             <div className="space-y-6 font-sans">
                 {/* 1. Stat Summary Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-5 shadow-xs">
+                    <button
+                        type="button"
+                        onClick={() => setProcurementFilterTab('pending')}
+                        className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
+                            procurementFilterTab === 'pending' ? 'border-amber-400 bg-amber-50/90 ring-2 ring-amber-400' : 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50'
+                        }`}
+                    >
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-amber-900">รอพัสดุลงรับเรื่อง</span>
-                            <span className="text-xl">🟡</span>
+                            <span className="text-xs font-black uppercase tracking-wider text-amber-900">🟡 รอดำเนินการ / รอลงรับ</span>
+                            <span className="text-xl">📦</span>
                         </div>
                         <p className="mt-2 text-3xl font-black text-amber-950">{pendingCount} <span className="text-xs font-normal text-amber-800">โครงการ</span></p>
-                        <p className="text-[11px] text-amber-700 mt-1">อนุมัติแล้ว รอพัสดุตรวจสอบ & กดรับ</p>
-                    </div>
+                        <p className="text-[11px] text-amber-700 mt-1">รอพัสดุลงรับ ({waitingIntakeCount}) | ลงรับแล้วรอเบิก ({receivedCount})</p>
+                    </button>
 
-                    <div className="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 shadow-xs">
+                    <button
+                        type="button"
+                        onClick={() => setProcurementFilterTab('forwarded')}
+                        className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
+                            procurementFilterTab === 'forwarded' ? 'border-emerald-400 bg-emerald-50/90 ring-2 ring-emerald-400' : 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50'
+                        }`}
+                    >
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-blue-900">พัสดุลงรับเรื่องแล้ว</span>
-                            <span className="text-xl">🔵</span>
-                        </div>
-                        <p className="mt-2 text-3xl font-black text-blue-950">{receivedCount} <span className="text-xs font-normal text-blue-800">โครงการ</span></p>
-                        <p className="text-[11px] text-blue-700 mt-1">อยู่ระหว่างจัดทำชุดเอกสารจัดซื้อ</p>
-                    </div>
-
-                    <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-5 shadow-xs">
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-emerald-900">ตั้งเบิกส่งการเงินแล้ว</span>
-                            <span className="text-xl">🟢</span>
+                            <span className="text-xs font-black uppercase tracking-wider text-emerald-900">🟢 ส่งงานการเงินแล้ว</span>
+                            <span className="text-xl">📤</span>
                         </div>
                         <p className="mt-2 text-3xl font-black text-emerald-950">{forwardedCount} <span className="text-xs font-normal text-emerald-800">โครงการ</span></p>
-                        <p className="text-[11px] text-emerald-700 mt-1">ส่งต่อให้งานการเงินเบิกจ่าย</p>
-                    </div>
+                        <p className="text-[11px] text-emerald-700 mt-1">ส่งต่อให้งานการเงินเบิกจ่ายแล้ว</p>
+                    </button>
 
-                    <div className="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50 p-5 shadow-xs">
+                    <button
+                        type="button"
+                        onClick={() => setProcurementFilterTab('all')}
+                        className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
+                            procurementFilterTab === 'all' ? 'border-purple-400 bg-purple-50/90 ring-2 ring-purple-400' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50'
+                        }`}
+                    >
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-purple-900">งบประมาณจัดซื้อรวม</span>
+                            <span className="text-xs font-black uppercase tracking-wider text-purple-900">📁 รายการทั้งหมด</span>
+                            <span className="text-xl">📑</span>
+                        </div>
+                        <p className="mt-2 text-3xl font-black text-purple-950">{queue.length} <span className="text-xs font-normal text-purple-800">โครงการ</span></p>
+                        <p className="text-[11px] text-purple-700 mt-1">โครงการจัดซื้อจัดจ้างทั้งหมด</p>
+                    </button>
+
+                    <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-5 shadow-xs">
+                        <div className="flex justify-between items-center">
+                            <span className="text-xs font-black uppercase tracking-wider text-indigo-900">งบประมาณจัดซื้อรวม</span>
                             <span className="text-xl">💰</span>
                         </div>
-                        <p className="mt-2 text-2xl font-black text-purple-950">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalBudgetSum)}</p>
-                        <p className="text-[11px] text-purple-700 mt-1">โครงการที่ผ่านอนุมัติทั้งหมด</p>
+                        <p className="mt-2 text-2xl font-black text-indigo-950">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalBudgetSum)}</p>
+                        <p className="text-[11px] text-indigo-700 mt-1">วงเงินงบประมาณที่ได้รับจัดสรร</p>
                     </div>
                 </div>
 
                 {/* 2. Main Procurement Queue Container */}
                 <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
-                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                <span>🏛️</span> ศูนย์จัดการงานพัสดุ & ลงรับชุดจัดซื้อจัดจ้าง
+                    {/* Header with Sub-Tabs */}
+                    <div className="border-b border-purple-100 bg-purple-50/40 p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-1">
+                            <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
+                                <span>🏛️</span> ศูนย์จัดการชุดจัดซื้อจัดจ้าง & พัสดุ
                             </h3>
-                            <p className="text-xs text-slate-600 mt-0.5">
-                                ตรวจสอบรายการวัสดุ/พัสดุที่ครูผู้เสนอโครงการบันทึกมา ลงรับเอกสาร และตั้งเบิกส่งงานการเงิน
+                            <p className="text-xs text-slate-600">
+                                ตรวจสอบชุดจัดซื้อจัดจ้างที่ครูเสนอมา กดดูรายละเอียดเพื่อตรวจรายการวัสดุ ลงรับเรื่อง หรือตั้งเบิกส่งงานการเงิน
                             </p>
                         </div>
-                        <div className="w-full sm:w-72">
+
+                        {/* Search & Sub-tabs */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                            {/* Sub-tab Pills */}
+                            <div className="flex bg-white rounded-xl p-1 border border-purple-200 shadow-2xs">
+                                <button
+                                    type="button"
+                                    onClick={() => setProcurementFilterTab('pending')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                        procurementFilterTab === 'pending'
+                                            ? 'bg-amber-500 text-white shadow-2xs'
+                                            : 'text-slate-600 hover:text-purple-900'
+                                    }`}
+                                >
+                                    <span>🟡 รอดำเนินการ</span>
+                                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${procurementFilterTab === 'pending' ? 'bg-white/30 text-white' : 'bg-amber-100 text-amber-900'}`}>
+                                        {pendingCount}
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setProcurementFilterTab('forwarded')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                        procurementFilterTab === 'forwarded'
+                                            ? 'bg-emerald-600 text-white shadow-2xs'
+                                            : 'text-slate-600 hover:text-purple-900'
+                                    }`}
+                                >
+                                    <span>🟢 ส่งการเงินแล้ว</span>
+                                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${procurementFilterTab === 'forwarded' ? 'bg-white/30 text-white' : 'bg-emerald-100 text-emerald-900'}`}>
+                                        {forwardedCount}
+                                    </span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setProcurementFilterTab('all')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                                        procurementFilterTab === 'all'
+                                            ? 'bg-purple-900 text-white shadow-2xs'
+                                            : 'text-slate-600 hover:text-purple-900'
+                                    }`}
+                                >
+                                    <span>📁 ทั้งหมด</span>
+                                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${procurementFilterTab === 'all' ? 'bg-white/30 text-white' : 'bg-purple-100 text-purple-900'}`}>
+                                        {queue.length}
+                                    </span>
+                                </button>
+                            </div>
+
                             <input
                                 type="text"
                                 value={procurementSearch}
                                 onChange={(e) => setProcurementSearch(e.target.value)}
-                                placeholder="🔍 ค้นหาชื่อโครงการ, ผู้เสนอ, ฝ่าย..."
-                                className="w-full text-xs rounded-xl border border-purple-200 px-3.5 py-2 bg-white focus:border-purple-500 focus:ring-purple-500"
+                                placeholder="🔍 ค้นหาโครงการ/ผู้เสนอ..."
+                                className="text-xs rounded-xl border border-purple-200 px-3.5 py-2 bg-white focus:border-purple-500 focus:ring-purple-500 w-full sm:w-56"
                             />
                         </div>
                     </div>
@@ -3906,78 +3978,103 @@ export default function Dashboard({
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900">
-                                    <th className="px-5 py-3.5">ชื่อโครงการ / ผู้เสนอ</th>
+                                <tr className="border-b border-purple-100 bg-purple-50/50 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
+                                    <th className="px-5 py-3.5 w-12 text-center">ลำดับ</th>
+                                    <th className="px-5 py-3.5">ชื่อโครงการ / ผู้รับผิดชอบ</th>
                                     <th className="px-4 py-3.5">ฝ่าย / แผนก</th>
-                                    <th className="px-4 py-3.5 text-right">วงเงินงบประมาณ</th>
-                                    <th className="px-4 py-3.5 text-center">รายการวัสดุ</th>
-                                    <th className="px-4 py-3.5 text-center">สถานะงานพัสดุ</th>
-                                    <th className="px-5 py-3.5 text-center">การดำเนินการของพัสดุ</th>
+                                    <th className="px-4 py-3.5 text-right">วงเงินจัดสรร</th>
+                                    <th className="px-4 py-3.5 text-center">รายการจัดซื้อจัดจ้าง</th>
+                                    <th className="px-4 py-3.5 text-center">สถานะชุดจัดซื้อ</th>
+                                    <th className="px-5 py-3.5 text-center">การจัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-purple-100 text-xs">
                                 {filteredQueue.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-10 text-center text-sm text-slate-500">
-                                            {procurementSearch ? 'ไม่พบรายการโครงการที่ค้นหา' : 'ไม่มีรายการโครงการที่รอจัดซื้อจัดจ้างในขณะนี้'}
+                                        <td colSpan="7" className="px-6 py-12 text-center text-sm text-slate-500">
+                                            <span className="text-3xl block mb-2">📭</span>
+                                            {procurementSearch 
+                                                ? `ไม่พบโครงการที่ค้นหา "${procurementSearch}"` 
+                                                : procurementFilterTab === 'pending'
+                                                ? 'ไม่มีโครงการที่รอดำเนินการจัดซื้อจัดจ้างในขณะนี้'
+                                                : procurementFilterTab === 'forwarded'
+                                                ? 'ยังไม่มีโครงการที่ส่งเบิกงานการเงิน'
+                                                : 'ไม่มีรายการโครงการในระบบ'}
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredQueue.map((p) => {
+                                    filteredQueue.map((p, idx) => {
                                         const itemCount = p.procurement?.items?.length || 0;
                                         const procStatus = p.procurement?.status || 'pending';
+                                        const totalItemSum = (p.procurement?.items || []).reduce((acc, item) => acc + (parseFloat(item.quantity || 0) * parseFloat(item.unit_price || 0)), 0);
 
                                         return (
-                                            <tr key={p.id} className="hover:bg-purple-50/30 transition-colors">
+                                            <tr 
+                                                key={p.id} 
+                                                onClick={() => setViewingProcurementProject(p)}
+                                                className="hover:bg-purple-50/40 transition-colors cursor-pointer"
+                                            >
+                                                <td className="px-5 py-4 text-center font-bold text-slate-400">
+                                                    {idx + 1}
+                                                </td>
                                                 <td className="px-5 py-4">
-                                                    <p className="font-bold text-slate-900 text-sm">{p.title}</p>
-                                                    <p className="text-slate-500 mt-0.5">👤 ผู้เสนอ: {p.user?.name || '-'}</p>
+                                                    <p className="font-bold text-slate-900 text-sm hover:text-purple-700 transition">
+                                                        {p.title}
+                                                    </p>
+                                                    <p className="text-slate-500 mt-0.5 flex items-center gap-2">
+                                                        <span>👤 {p.user?.name || '-'}</span>
+                                                        {p.academic_year && <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md">ปี {p.academic_year}</span>}
+                                                    </p>
                                                 </td>
                                                 <td className="px-4 py-4 text-slate-700 font-medium">
                                                     {p.department?.name || '-'}
                                                 </td>
-                                                <td className="px-4 py-4 text-right">
-                                                    <span className="font-bold text-purple-950 text-sm">
+                                                <td className="px-4 py-4 text-right whitespace-nowrap">
+                                                    <span className="font-black text-purple-950 text-sm">
                                                         {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget || 0)}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-4 text-center">
+                                                <td className="px-4 py-4 text-center whitespace-nowrap">
                                                     {itemCount > 0 ? (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
-                                                            📦 {itemCount} รายการ
-                                                        </span>
+                                                        <div className="space-y-0.5">
+                                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                                                                📦 {itemCount} รายการ
+                                                            </span>
+                                                            <span className="block text-[10px] text-slate-500 font-mono">
+                                                                รวม {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalItemSum)}
+                                                            </span>
+                                                        </div>
                                                     ) : (
-                                                        <span className="text-slate-400">-</span>
+                                                        <span className="text-slate-400 italic">ยื่นขอวงเงินรวม</span>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-4 text-center">
+                                                <td className="px-4 py-4 text-center whitespace-nowrap">
                                                     {procStatus === 'forwarded_to_finance' ? (
-                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
                                                             <span>🟢</span> ส่งงานการเงินแล้ว
                                                         </span>
                                                     ) : procStatus === 'received' || procStatus === 'processing' ? (
-                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
+                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-300 shadow-2xs">
                                                             <span>🔵</span> ลงรับแล้ว {p.procurement?.procurement_number ? `(${p.procurement.procurement_number})` : ''}
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                                        <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
                                                             <span>🟡</span> รอพัสดุลงรับ
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="px-5 py-4 text-center">
-                                                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                                                        {/* Button: View Items Modal */}
+                                                <td className="px-5 py-4 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        {/* Primary View Procurement Details Button */}
                                                         <button
                                                             type="button"
                                                             onClick={() => setViewingProcurementProject(p)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 font-bold transition-all shadow-2xs"
-                                                            title="ตรวจสอบตารางรายการพัสดุและ TOR"
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-sm hover:scale-105 transition-all"
                                                         >
-                                                            <span>📋</span> รายการพัสดุ
+                                                            <span>🔍</span> ดูชุดจัดซื้อจัดจ้าง
                                                         </button>
 
-                                                        {/* Button: Receive */}
+                                                        {/* Quick Receive Button if pending */}
                                                         {procStatus !== 'received' && procStatus !== 'forwarded_to_finance' && (
                                                             <button
                                                                 type="button"
@@ -4014,13 +4111,14 @@ export default function Dashboard({
                                                                         }
                                                                     });
                                                                 }}
-                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold transition-all shadow-xs"
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-all shadow-xs"
+                                                                title="ลงรับชุดจัดซื้อจัดจ้าง"
                                                             >
                                                                 <span>📥</span> ลงรับ
                                                             </button>
                                                         )}
 
-                                                        {/* Button: Forward to Finance */}
+                                                        {/* Quick Forward to Finance Button if received */}
                                                         {procStatus === 'received' && (
                                                             <button
                                                                 type="button"
@@ -4042,20 +4140,12 @@ export default function Dashboard({
                                                                         }
                                                                     });
                                                                 }}
-                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white font-bold transition-all shadow-xs"
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-xs"
+                                                                title="ตั้งเบิกส่งงานการเงิน"
                                                             >
                                                                 <span>📤</span> ส่งการเงิน
                                                             </button>
                                                         )}
-
-                                                        {/* Link: Go to Project Page */}
-                                                        <Link
-                                                            href={route('projects.show', p.id)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-all"
-                                                            title="เปิดดูหน้าโครงการฉบับเต็ม"
-                                                        >
-                                                            <span>👁️</span> ดูเล่ม
-                                                        </Link>
                                                     </div>
                                                 </td>
                                             </tr>
