@@ -56,6 +56,7 @@ export default function Dashboard({
     // Procurement View & Search states
     const [viewingProcurementProject, setViewingProcurementProject] = useState(null);
     const [procurementSearch, setProcurementSearch] = useState('');
+    const [procurementFilterTab, setProcurementFilterTab] = useState('pending'); // 'pending', 'forwarded', 'all'
 
     // Central allocations states
     const [editingCentralAllocation, setEditingCentralAllocation] = useState(null);
