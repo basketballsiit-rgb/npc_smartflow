@@ -869,40 +869,6 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                             </div>
                         ) : (
                         <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6 font-sans">
-                            {/* PDCA Status Action Bar for Project Owner / Admin */}
-                            {(project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
-                                <div className="p-4 rounded-xl bg-gradient-to-r from-blue-900/5 via-indigo-900/10 to-purple-900/5 border border-blue-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                    <div>
-                                        <h4 className="text-xs font-black text-purple-950 uppercase flex items-center gap-1.5">
-                                            <span>📌 สถานะดำเนินงานปัจจุบัน:</span>
-                                            <span className="text-purple-700 bg-white px-2.5 py-0.5 rounded-full border border-purple-200">
-                                                {project.status === 'in_progress' ? 'กำลังดำเนินโครงการ & เบิกจ่าย (ขั้นตอนที่ 4)' : project.status === 'approved' ? 'อนุมัติสมบูรณ์ / จัดซื้อจัดจ้าง (ขั้นตอนที่ 3)' : project.status === 'evaluating' ? 'อยู่ระหว่างประเมินผล (ขั้นตอนที่ 5)' : project.status === 'completed' ? 'เสร็จสิ้นโครงการสมบูรณ์ (ขั้นตอนที่ 6)' : project.status}
-                                            </span>
-                                        </h4>
-                                        <p className="text-xs text-slate-600 mt-1">ผู้ดำเนินโครงการสามารถอัปเดตสถานะโครงการตามวงจร PDCA เมื่อดำเนินกิจกรรมหรือเคลียร์เงินเรียบร้อย</p>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 shrink-0">
-                                        {project.status === 'approved' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleUpdateStatus('in_progress', 'กำลังดำเนินโครงการ/เบิกจ่าย (ขั้นตอนที่ 4)')}
-                                                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:scale-105 text-white font-bold text-xs shadow-md transition-all whitespace-nowrap"
-                                            >
-                                                🚀 เริ่มดำเนินโครงการ & เบิกจ่าย (ขั้นที่ 4) ➔
-                                            </button>
-                                        )}
-                                        {(project.status === 'approved' || project.status === 'in_progress') && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleUpdateStatus('evaluating', 'ประเมินผลโครงการ (ขั้นตอนที่ 5)')}
-                                                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:scale-105 text-white font-bold text-xs shadow-md transition-all whitespace-nowrap"
-                                            >
-                                                ⭐ เข้าสู่การประเมินผล (ขั้นที่ 5) ➔
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
 
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-4">
                                 <div>
