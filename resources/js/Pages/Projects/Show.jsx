@@ -518,22 +518,22 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                         </div>
                     </div>
 
-                    {project.current_approval_step === 4 && project.status === 'pending_approval' && (
-                        <div className="mb-6 p-4 rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm font-sans">
+                    {isPlanApproved && (
+                        <div className="mb-6 p-4 rounded-2xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm font-sans">
                             <div className="flex items-center gap-3">
                                 <span className="text-2xl animate-bounce">📦</span>
                                 <div>
-                                    <h4 className="text-sm font-extrabold text-amber-950">
-                                        ข้อแนะนำสำหรับขั้นตอนที่ 4 (งานพัสดุ): รายการจัดซื้อจัดจ้าง & คำสั่งแต่งตั้งกรรมการ
+                                    <h4 className="text-sm font-extrabold text-emerald-950">
+                                        โครงการได้รับการอนุมัติแล้ว: พร้อมเข้าสู่กระบวนการจัดซื้อจัดจ้าง & ดำเนินการ (Do Phase)
                                     </h4>
-                                    <p className="text-xs text-amber-900 mt-0.5">
-                                        ในขั้นตอนนี้ เจ้าหน้าที่งานพัสดุและผู้เสนอโครงการสามารถจัดทำเอกสารจัดซื้อจัดจ้าง 4 ฉบับ และตรวจสอบคำสั่งแต่งตั้งคณะกรรมการจัดซื้อจัดจ้างใน แท็บที่ 2 (Do) ได้ทันที
+                                    <p className="text-xs text-emerald-900 mt-0.5">
+                                        ผู้เสนอโครงการและงานพัสดุสามารถจัดทำเอกสารจัดซื้อจัดจ้าง ๔ ฉบับ ทำสัญญายืมเงิน และออกคำสั่งแต่งตั้งกรรมการใน แท็บที่ ๒ ได้ทันที
                                     </p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setActiveTab('do')}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 px-4 py-2 text-xs font-black text-white shadow-md hover:scale-105 transition-all whitespace-nowrap shrink-0"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-black text-white shadow-md hover:scale-105 transition-all whitespace-nowrap shrink-0"
                             >
                                 🛠️ ไปยัง แท็บที่ 2 (Do) จัดการพัสดุ ➔
                             </button>
