@@ -55,6 +55,7 @@ export default function Show({ project, strategyCategories = [], fundingSources 
     const totalProcurementSum = procurementItems.reduce((acc, item) => acc + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
     const isOverBudget = totalProcurementSum > (allocatedBudget + 0.01);
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
+    const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
 
     const handleSaveProcurement = (e) => {
         e.preventDefault();
@@ -553,33 +554,42 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                         </button>
                         <button
                             onClick={() => setActiveTab('do')}
-                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                                 activeTab === 'do'
                                     ? 'border-purple-600 text-purple-900 bg-purple-50/40'
                                     : 'border-transparent text-slate-500 hover:text-purple-700'
                             }`}
                         >
-                            🛠️ แท็บที่ 2: การจัดซื้อจัดจ้าง & ดำเนินงาน (Do)
+                            <span>🛠️ แท็บที่ 2: การจัดซื้อจัดจ้าง & ดำเนินงาน (Do)</span>
+                            {!isPlanApproved && (
+                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">🔒 รออนุมัติ</span>
+                            )}
                         </button>
                         <button
                             onClick={() => setActiveTab('check')}
-                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                                 activeTab === 'check'
                                     ? 'border-purple-600 text-purple-900 bg-purple-50/40'
                                     : 'border-transparent text-slate-500 hover:text-purple-700'
                             }`}
                         >
-                            📊 แท็บที่ 3: แบบสำรวจ & ประเมินผล (Check)
+                            <span>📊 แท็บที่ 3: แบบสำรวจ & ประเมินผล (Check)</span>
+                            {!isPlanApproved && (
+                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">🔒 รออนุมัติ</span>
+                            )}
                         </button>
                         <button
                             onClick={() => setActiveTab('act')}
-                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
                                 activeTab === 'act'
                                     ? 'border-purple-600 text-purple-900 bg-purple-50/40'
                                     : 'border-transparent text-slate-500 hover:text-purple-700'
                             }`}
                         >
-                            🤖 แท็บที่ 4: รายงาน AI & ภาคผนวก (Act)
+                            <span>🤖 แท็บที่ 4: รายงาน AI & ภาคผนวก (Act)</span>
+                            {!isPlanApproved && (
+                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">🔒 รออนุมัติ</span>
+                            )}
                         </button>
                     </div>
 
@@ -835,6 +845,29 @@ export default function Show({ project, strategyCategories = [], fundingSources 
 
                     {/* Tab 2: Procurement (Do) */}
                     {activeTab === 'do' && (
+                        !isPlanApproved ? (
+                            <div className="rounded-3xl border border-amber-200 bg-white p-8 sm:p-12 text-center space-y-5 font-sans shadow-sm">
+                                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-amber-200">
+                                    🔒
+                                </div>
+                                <div className="space-y-2 max-w-lg mx-auto">
+                                    <h3 className="text-xl font-bold text-slate-800">
+                                        แท็บที่ ๒ ยังไม่เปิดให้ดำเนินการจัดซื้อจัดจ้าง (Do Phase)
+                                    </h3>
+                                    <p className="text-xs text-slate-600 leading-relaxed">
+                                        ตามระเบียบพัสดุและการเงินภาครัฐ โครงการจะต้องผ่านการพิจารณาอนุมัติตามสายงาน ๖ ขั้นตอนใน <strong>แท็บที่ ๑ (Plan)</strong> จนกระทั่งได้รับสถานะ <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg inline-block">✅ อนุมัติแล้ว</span> ก่อน จึงจะสามารถบันทึกข้อมูลพัสดุ ออกคำสั่งแต่งตั้งกรรมการ และพิมพ์เอกสารจัดซื้อจัดจ้าง ๔ ฉบับได้ครับ
+                                    </p>
+                                </div>
+                                <div className="pt-2">
+                                    <button
+                                        onClick={() => setActiveTab('plan')}
+                                        className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
+                                    >
+                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ ๑ (Plan)
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
                         <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6 font-sans">
                             {/* PDCA Status Action Bar for Project Owner / Admin */}
                             {(project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
@@ -1182,10 +1215,34 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                 </div>
                             </div>
                         </div>
+                        )
                     )}
 
                     {/* Tab 3: Survey & Stats (Check) */}
                     {activeTab === 'check' && (
+                        !isPlanApproved ? (
+                            <div className="rounded-3xl border border-amber-200 bg-white p-8 sm:p-12 text-center space-y-5 font-sans shadow-sm">
+                                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-amber-200">
+                                    🔒
+                                </div>
+                                <div className="space-y-2 max-w-lg mx-auto">
+                                    <h3 className="text-xl font-bold text-slate-800">
+                                        แท็บที่ ๓ ยังไม่เปิดให้ทำแบบประเมินผล (Check Phase)
+                                    </h3>
+                                    <p className="text-xs text-slate-600 leading-relaxed">
+                                        แบบสำรวจและประเมินผลความพึงพอใจจะเปิดให้ใช้งานเมื่อโครงการผ่านการพิจารณาอนุมัติใน <strong>แท็บที่ ๑ (Plan)</strong> และเริ่มดำเนินกิจกรรมเรียบร้อยแล้วครับ
+                                    </p>
+                                </div>
+                                <div className="pt-2">
+                                    <button
+                                        onClick={() => setActiveTab('plan')}
+                                        className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
+                                    >
+                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ ๑ (Plan)
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
                         <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6">
                             {(project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
                                 <div className="p-4 rounded-xl bg-gradient-to-r from-purple-900/5 via-indigo-900/10 to-purple-900/5 border border-purple-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 font-sans">
@@ -1221,10 +1278,34 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                             </div>
                             <p className="text-xs text-slate-500">สร้าง QR Code และลิงก์แบบประเมินสำหรับสแกนตอบประเมินความพึงพอใจโครงการออนไลน์</p>
                         </div>
+                        )
                     )}
 
                     {/* Tab 4: AI Report & Appendix (Act) */}
                     {activeTab === 'act' && (
+                        !isPlanApproved ? (
+                            <div className="rounded-3xl border border-amber-200 bg-white p-8 sm:p-12 text-center space-y-5 font-sans shadow-sm">
+                                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-amber-200">
+                                    🔒
+                                </div>
+                                <div className="space-y-2 max-w-lg mx-auto">
+                                    <h3 className="text-xl font-bold text-slate-800">
+                                        แท็บที่ ๔ ยังไม่เปิดให้สรุปรายงาน AI (Act Phase)
+                                    </h3>
+                                    <p className="text-xs text-slate-600 leading-relaxed">
+                                        ระบบ AI จะประมวลผลเล่มรายงานผลโครงการ ๕ บทและภาคผนวกให้อัตโนมัติ เมื่อโครงการผ่านการอนุมัติใน <strong>แท็บที่ ๑ (Plan)</strong> และดำเนินกิจกรรมเรียบร้อยแล้วครับ
+                                    </p>
+                                </div>
+                                <div className="pt-2">
+                                    <button
+                                        onClick={() => setActiveTab('plan')}
+                                        className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
+                                    >
+                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ ๑ (Plan)
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
                         <div className="space-y-6 font-sans">
                             {(project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'completed' && (
                                 <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-900/10 via-teal-900/10 to-emerald-900/5 border border-emerald-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
@@ -1411,6 +1492,7 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                                 </div>
                             </div>
                         </div>
+                        )
                     )}
 
                 </div>

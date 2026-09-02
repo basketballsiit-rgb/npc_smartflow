@@ -83,6 +83,10 @@ class ProcurementController extends Controller
             abort(403, 'เฉพาะเจ้าหน้าที่พัสดุ ผู้ดูแลระบบ หรือผู้เสนอโครงการเท่านั้นที่สามารถดำเนินการพัสดุได้');
         }
 
+        if (!in_array($project->status, ['approved', 'in_progress', 'evaluating', 'completed']) && $project->current_approval_step < 6) {
+            return redirect()->back()->with('error', 'โครงการนี้ยังไม่ผ่านการอนุมัติสมบูรณ์ในแท็บที่ 1 (Plan) จึงยังไม่สามารถดำเนินการจัดซื้อจัดจ้างได้');
+        }
+
         $validated = $request->validate([
             'purchasing_chair' => 'nullable|exists:users,id',
             'purchasing_member1' => 'nullable|exists:users,id',
