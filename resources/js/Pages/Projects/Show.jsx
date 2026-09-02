@@ -929,6 +929,59 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                         ) : (
                         <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6 font-sans">
 
+                            {/* Procurement Intake & Status Box */}
+                            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/5 via-indigo-900/10 to-purple-900/5 border border-purple-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                <div className="space-y-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-bold uppercase text-purple-950">📦 สถานะงานพัสดุ:</span>
+                                        {project.procurement?.status === 'forwarded_to_finance' ? (
+                                            <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                <span>🟢</span> ตั้งเบิกส่งงานการเงินแล้ว
+                                            </span>
+                                        ) : project.procurement?.status === 'received' ? (
+                                            <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
+                                                <span>🔵</span> พัสดุลงรับเรื่องแล้ว {project.procurement.procurement_number ? `(${project.procurement.procurement_number})` : ''}
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                                <span>🟡</span> รอพัสดุลงรับเรื่อง
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-slate-600">
+                                        {project.procurement?.status === 'forwarded_to_finance'
+                                            ? 'งานพัสดุได้ดำเนินการจัดซื้อจัดจ้างและส่งเรื่องไปยังงานการเงินเพื่อดำเนินการเบิกจ่ายเรียบร้อยแล้ว'
+                                            : project.procurement?.status === 'received'
+                                            ? `งานพัสดุได้ลงรับชุดจัดซื้อจัดจ้างแล้ว เมื่อ ${project.procurement.memo_date ? new Date(project.procurement.memo_date).toLocaleDateString('th-TH') : 'วันนี้'} อยู่ระหว่างดำเนินการตั้งเบิก`
+                                            : 'เมื่อผู้เสนอโครงการบันทึกข้อมูลพัสดุครบถ้วน เจ้าหน้าที่งานพัสดุสามารถกดลงรับชุดจัดซื้อจัดจ้างเพื่อดำเนินการต่อไป'}
+                                    </p>
+                                </div>
+
+                                {/* Buttons for Procurement Staff / Admin */}
+                                {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'procurement_head' || auth.user.role === 'procurement_head' || auth.user.position?.includes('พัสดุ')) && (
+                                    <div className="flex flex-wrap gap-2 shrink-0">
+                                        {project.procurement?.status !== 'received' && project.procurement?.status !== 'forwarded_to_finance' && (
+                                            <button
+                                                type="button"
+                                                onClick={handleReceiveProcurement}
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95"
+                                            >
+                                                <span>📥</span> พัสดุกดลงรับชุดจัดซื้อจัดจ้าง
+                                            </button>
+                                        )}
+                                        {project.procurement?.status === 'received' && (
+                                            <button
+                                                type="button"
+                                                onClick={handleForwardToFinance}
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95"
+                                            >
+                                                <span>📤</span> ตั้งเบิกส่งงานการเงิน ➔
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-4">
                                 <div>
                                     <h3 className="text-lg font-black text-purple-950">🛠️ การจัดซื้อจัดจ้าง และคำสั่งแต่งตั้งกรรมการ (Do Phase)</h3>
