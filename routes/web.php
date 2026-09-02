@@ -126,6 +126,8 @@ Route::middleware('auth')->group(function () {
     Route::post('budgets/{budget}/clear', [BudgetController::class, 'clear'])->name('budgets.clear');
     Route::post('projects/{project}/procurement/committees', [ProcurementController::class, 'assignCommittees'])->name('procurements.assign_committees');
     Route::post('projects/{project}/procurement/save', [ProcurementController::class, 'saveProcurement'])->name('procurements.save');
+    Route::post('projects/{project}/procurement/receive', [ProcurementController::class, 'receive'])->name('procurements.receive');
+    Route::post('projects/{project}/procurement/forward-to-finance', [ProcurementController::class, 'forwardToFinance'])->name('procurements.forward_to_finance');
     Route::get('projects/{project}/procurement/document/{type}', [ProcurementController::class, 'downloadDocument'])->name('procurements.download_document');
 
     // Survey stats
