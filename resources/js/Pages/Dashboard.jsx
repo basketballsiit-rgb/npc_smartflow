@@ -53,6 +53,10 @@ export default function Dashboard({
         items: []
     });
 
+    // Procurement View & Search states
+    const [viewingProcurementProject, setViewingProcurementProject] = useState(null);
+    const [procurementSearch, setProcurementSearch] = useState('');
+
     // Central allocations states
     const [editingCentralAllocation, setEditingCentralAllocation] = useState(null);
 
