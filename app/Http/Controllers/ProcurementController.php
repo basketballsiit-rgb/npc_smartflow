@@ -186,6 +186,63 @@ class ProcurementController extends Controller
     }
 
     /**
+     * Procurement staff acknowledges and receives the procurement package.
+     */
+    public function receive(Request $request, Project $project)
+    {
+        if (!auth()->user()->isProcurementHead() && !auth()->user()->isAdmin()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานพัสดุหรือผู้ดูแลระบบเท่านั้นที่สามารถลงรับได้');
+        }
+
+        $request->validate([
+            'procurement_number' => 'nullable|string|max:100',
+            'memo_date' => 'nullable|date',
+        ]);
+
+        $procurement = Procurement::firstOrCreate(
+            ['project_id' => $project->id],
+            [
+                'procurement_number' => 'PR-' . str_pad($project->id, 5, '0', STR_PAD_LEFT),
+                'status' => 'pending'
+            ]
+        );
+
+        if ($request->filled('procurement_number')) {
+            $procurement->procurement_number = $request->input('procurement_number');
+        }
+        if ($request->filled('memo_date')) {
+            $procurement->memo_date = $request->input('memo_date');
+        }
+        $procurement->status = 'received';
+        $procurement->save();
+
+        if ($project->status === 'approved') {
+            $project->status = 'in_progress';
+            $project->save();
+        }
+
+        return redirect()->back()->with('message', 'งานพัสดุลงรับชุดจัดซื้อจัดจ้างโครงการ "' . $project->title . '" เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Procurement staff forwards the completed procurement package to finance.
+     */
+    public function forwardToFinance(Request $request, Project $project)
+    {
+        if (!auth()->user()->isProcurementHead() && !auth()->user()->isAdmin()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานพัสดุหรือผู้ดูแลระบบเท่านั้นที่สามารถส่งต่อได้');
+        }
+
+        $procurement = $project->procurement;
+        if ($procurement) {
+            $procurement->status = 'forwarded_to_finance';
+            $procurement->save();
+        }
+
+        return redirect()->back()->with('message', 'ตั้งเบิกชุดจัดซื้อจัดจ้างและส่งต่อให้งานการเงินเรียบร้อยแล้ว');
+    }
+
+    /**
      * Download or view the dynamic HTML/PDF stub for procurement documents.
      */
     public function downloadDocument(Project $project, $type)
