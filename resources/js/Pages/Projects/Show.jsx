@@ -87,6 +87,65 @@ export default function Show({ project, strategyCategories = [], fundingSources 
         });
     };
 
+    const handleReceiveProcurement = () => {
+        Swal.fire({
+            title: '📥 งานพัสดุลงรับชุดจัดซื้อจัดจ้าง',
+            html: `
+                <div class="text-left text-xs text-slate-600 space-y-2 font-sans">
+                    <p><strong>โครงการ:</strong> ${project.title}</p>
+                    <p><strong>ผู้เสนอ:</strong> ${project.user?.name || '-'}</p>
+                    <div class="pt-2">
+                        <label class="block font-bold text-slate-800 mb-1">เลขที่ลงรับพัสดุ (ถ้ามี):</label>
+                        <input id="swal-proc-number" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" placeholder="เช่น พด. 012/2569" value="${project.procurement?.procurement_number || ''}">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-800 mb-1">วันที่ลงรับ:</label>
+                        <input id="swal-proc-date" type="date" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '📥 ยืนยันลงรับเรื่อง',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#7c3aed',
+            preConfirm: () => {
+                return {
+                    procurement_number: document.getElementById('swal-proc-number').value,
+                    memo_date: document.getElementById('swal-proc-date').value,
+                };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('procurements.receive', project.id), result.value, {
+                    onSuccess: () => {
+                        Swal.fire('สำเร็จ', 'งานพัสดุลงรับชุดจัดซื้อจัดจ้างเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
+
+    const handleForwardToFinance = () => {
+        Swal.fire({
+            title: '📤 ตั้งเบิกชุดจัดซื้อจัดจ้าง ➔ ส่งงานการเงิน',
+            text: `ต้องการตั้งเบิกชุดจัดซื้อจัดจ้างโครงการ "${project.title}" และส่งต่อให้งานการเงินดำเนินการเบิกจ่ายหรือไม่?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '📤 ยืนยันตั้งเบิกส่งการเงิน',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('procurements.forward_to_finance', project.id), {}, {
+                    onSuccess: () => {
+                        Swal.fire('สำเร็จ', 'ตั้งเบิกและส่งต่อให้งานการเงินเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
+
     const formatCurrency = (value) => {
         return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(value || 0);
     };
