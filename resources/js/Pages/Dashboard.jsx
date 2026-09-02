@@ -4158,168 +4158,311 @@ export default function Dashboard({
                 </div>
 
                 {/* 3. Procurement Details Modal */}
-                {viewingProcurementProject && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-                        <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 space-y-6 font-sans">
-                            <div className="flex justify-between items-start border-b border-purple-100 pb-4">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xl">📦</span>
-                                        <h3 className="text-lg font-black text-purple-950">
-                                            รายการจัดซื้อจัดจ้าง: {viewingProcurementProject.title}
-                                        </h3>
-                                    </div>
-                                    <p className="text-xs text-slate-500 mt-1">
-                                        ผู้เสนอ: <b>{viewingProcurementProject.user?.name || '-'}</b> | ฝ่าย/แผนก: <b>{viewingProcurementProject.department?.name || '-'}</b> | วงเงินอนุมัติ: <b>{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(viewingProcurementProject.estimated_budget || 0)}</b>
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setViewingProcurementProject(null)}
-                                    className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-sm"
-                                >
-                                    ✕
-                                </button>
-                            </div>
+                {viewingProcurementProject && (() => {
+                    const p = viewingProcurementProject;
+                    const proc = p.procurement;
+                    const procStatus = proc?.status || 'pending';
+                    const items = proc?.items || [];
+                    const totalItemSum = items.reduce((acc, it) => acc + (parseFloat(it.quantity || 0) * parseFloat(it.unit_price || 0)), 0);
 
-                            {/* Table of Items */}
-                            <div className="space-y-3">
-                                <h4 className="text-xs font-bold uppercase text-purple-900">📋 ตารางรายการวัสดุ / อุปกรณ์ ที่เสนอขอ</h4>
-                                <div className="overflow-x-auto rounded-xl border border-purple-100">
-                                    <table className="w-full text-left text-xs">
-                                        <thead className="bg-purple-50 text-purple-950 font-bold border-b border-purple-100">
-                                            <tr>
-                                                <th className="p-3 w-12 text-center">ลำดับ</th>
-                                                <th className="p-3">รายการ</th>
-                                                <th className="p-3 w-20 text-center">จำนวน</th>
-                                                <th className="p-3 w-20 text-center">หน่วย</th>
-                                                <th className="p-3 w-28 text-right">ราคาต่อหน่วย</th>
-                                                <th className="p-3 w-28 text-right">รวมเป็นเงิน</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-purple-50">
-                                            {(!viewingProcurementProject.procurement?.items || viewingProcurementProject.procurement.items.length === 0) ? (
-                                                <tr>
-                                                    <td colSpan="6" className="p-4 text-center text-slate-400">ยังไม่มีรายการวัสดุในระบบ (ยื่นขอเป็นวงเงินเหมารวม)</td>
-                                                </tr>
+                    return (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-fadeIn">
+                            <div className="w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 space-y-6 font-sans">
+                                
+                                {/* Modal Header */}
+                                <div className="flex justify-between items-start border-b border-purple-100 pb-4">
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-2xl">📦</span>
+                                            <h3 className="text-xl font-black text-purple-950">
+                                                ชุดเอกสารจัดซื้อจัดจ้าง
+                                            </h3>
+                                        </div>
+                                        <p className="text-sm font-bold text-slate-800">
+                                            {p.title}
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            ผู้เสนอโครงการ: <b className="text-slate-800">{p.user?.name || '-'}</b> | ฝ่าย/แผนก: <b className="text-slate-800">{p.department?.name || '-'}</b> | วงเงินอนุมัติ: <b className="text-purple-900">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget || 0)}</b>
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewingProcurementProject(null)}
+                                        className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-black text-sm transition"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {/* Status & Action Box */}
+                                <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${
+                                    procStatus === 'forwarded_to_finance'
+                                        ? 'bg-emerald-50/80 border-emerald-200'
+                                        : procStatus === 'received' || procStatus === 'processing'
+                                        ? 'bg-blue-50/80 border-blue-200'
+                                        : 'bg-amber-50/80 border-amber-200'
+                                }`}>
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-black uppercase tracking-wider text-slate-700">สถานะงานพัสดุ:</span>
+                                            {procStatus === 'forwarded_to_finance' ? (
+                                                <span className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-emerald-600 text-white shadow-2xs">
+                                                    <span>🟢</span> ตั้งเบิกส่งงานการเงินแล้ว
+                                                </span>
+                                            ) : procStatus === 'received' || procStatus === 'processing' ? (
+                                                <span className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-blue-600 text-white shadow-2xs">
+                                                    <span>🔵</span> พัสดุลงรับเรื่องแล้ว {proc?.procurement_number ? `(เลขที่ ${proc.procurement_number})` : ''}
+                                                </span>
                                             ) : (
-                                                viewingProcurementProject.procurement.items.map((it, idx) => (
-                                                    <tr key={it.id || idx}>
-                                                        <td className="p-3 text-center text-slate-500">{idx + 1}</td>
-                                                        <td className="p-3 font-semibold text-slate-800">{it.description}</td>
-                                                        <td className="p-3 text-center">{it.quantity}</td>
-                                                        <td className="p-3 text-center">{it.unit}</td>
-                                                        <td className="p-3 text-right font-mono">{parseFloat(it.unit_price).toLocaleString()} บ.</td>
-                                                        <td className="p-3 text-right font-mono font-bold text-purple-950">{(parseFloat(it.quantity) * parseFloat(it.unit_price)).toLocaleString()} บ.</td>
-                                                    </tr>
-                                                ))
+                                                <span className="inline-flex items-center gap-1 text-xs font-black px-3 py-1 rounded-full bg-amber-500 text-white shadow-2xs">
+                                                    <span>🟡</span> รอพัสดุลงรับเรื่อง
+                                                </span>
                                             )}
-                                        </tbody>
-                                        <tfoot className="bg-purple-50/80 font-bold border-t border-purple-100">
-                                            <tr>
-                                                <td colSpan="5" className="p-3 text-right text-purple-950">ยอดรวมจัดซื้อจัดจ้างทั้งสิ้น:</td>
-                                                <td className="p-3 text-right text-purple-950 font-mono font-black text-sm">
-                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(
-                                                        (viewingProcurementProject.procurement?.items || []).reduce((acc, it) => acc + (parseFloat(it.quantity || 0) * parseFloat(it.unit_price || 0)), 0)
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* TOR Specifications & Committees */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
-                                    <h5 className="text-xs font-bold uppercase text-slate-800">📝 ขอบเขตคุณลักษณะเฉพาะ (TOR)</h5>
-                                    <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
-                                        {viewingProcurementProject.procurement?.tor_specifications || 'ไม่ได้ระบุข้อกำหนดเพิ่มเติม'}
-                                    </p>
-                                </div>
-
-                                <div className="p-4 rounded-xl bg-purple-50/40 border border-purple-100 space-y-3">
-                                    <h5 className="text-xs font-bold uppercase text-purple-900">👥 คณะกรรมการที่แต่งตั้ง</h5>
-                                    <div className="text-xs text-slate-700 space-y-2">
-                                        <div>
-                                            <span className="font-bold text-purple-950">คณะกรรมการจัดซื้อจัดจ้าง:</span>
-                                            <ul className="list-disc pl-5 mt-1 space-y-0.5 text-slate-600">
-                                                {viewingProcurementProject.procurement?.committees?.filter(c => c.pivot?.committee_type === 'purchasing').map(c => (
-                                                    <li key={c.id}>{c.name} ({c.pivot?.role === 'chairperson' ? 'ประธาน' : 'กรรมการ'})</li>
-                                                )) || <li>ยังไม่ได้แต่งตั้ง</li>}
-                                            </ul>
                                         </div>
-                                        <div>
-                                            <span className="font-bold text-purple-950">คณะกรรมการตรวจรับพัสดุ:</span>
-                                            <ul className="list-disc pl-5 mt-1 space-y-0.5 text-slate-600">
-                                                {viewingProcurementProject.procurement?.committees?.filter(c => c.pivot?.committee_type === 'inspection').map(c => (
-                                                    <li key={c.id}>{c.name} ({c.pivot?.role === 'chairperson' ? 'ประธาน' : 'กรรมการ'})</li>
-                                                )) || <li>ยังไม่ได้แต่งตั้ง</li>}
-                                            </ul>
+                                        <p className="text-xs text-slate-600">
+                                            {procStatus === 'forwarded_to_finance'
+                                                ? 'ชุดเอกสารจัดซื้อจัดจ้างได้ถูกส่งไปยังงานการเงินเพื่อดำเนินการเบิกจ่ายงบประมาณแล้ว'
+                                                : procStatus === 'received' || procStatus === 'processing'
+                                                ? 'พัสดุลงรับเรื่องแล้ว เมื่อตรวจสอบเอกสารครบถ้วน สามารถกดตั้งเบิกส่งงานการเงินได้ทันที'
+                                                : 'โครงการได้รับการอนุมัติแล้ว รอเจ้าหน้าที่พัสดุลงรับเรื่องเพื่อเริ่มกระบวนการจัดซื้อจัดจ้าง'}
+                                        </p>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {procStatus !== 'received' && procStatus !== 'forwarded_to_finance' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    Swal.fire({
+                                                        title: '📥 ลงรับชุดจัดซื้อจัดจ้าง',
+                                                        html: `
+                                                            <div class="text-left text-xs text-slate-600 space-y-2 font-sans">
+                                                                <p><strong>โครงการ:</strong> ${p.title}</p>
+                                                                <p><strong>ผู้เสนอ:</strong> ${p.user?.name || '-'}</p>
+                                                                <div class="pt-2">
+                                                                    <label class="block font-bold text-slate-800 mb-1">เลขที่ลงรับพัสดุ (ถ้ามี):</label>
+                                                                    <input id="swal-proc-num-modal" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" placeholder="เช่น พด. 012/2569" value="${proc?.procurement_number || ''}">
+                                                                </div>
+                                                                <div>
+                                                                    <label class="block font-bold text-slate-800 mb-1">วันที่ลงรับ:</label>
+                                                                    <input id="swal-proc-dt-modal" type="date" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" value="${new Date().toISOString().split('T')[0]}">
+                                                                </div>
+                                                            </div>
+                                                        `,
+                                                        showCancelButton: true,
+                                                        confirmButtonText: '📥 ยืนยันลงรับเรื่อง',
+                                                        cancelButtonText: 'ยกเลิก',
+                                                        confirmButtonColor: '#7c3aed',
+                                                        preConfirm: () => ({
+                                                            procurement_number: document.getElementById('swal-proc-num-modal').value,
+                                                            memo_date: document.getElementById('swal-proc-dt-modal').value,
+                                                        })
+                                                    }).then((res) => {
+                                                        if (res.isConfirmed) {
+                                                            router.post(route('procurements.receive', p.id), res.value, {
+                                                                onSuccess: () => {
+                                                                    setViewingProcurementProject(null);
+                                                                    Swal.fire('สำเร็จ', 'งานพัสดุลงรับชุดจัดซื้อจัดจ้างเรียบร้อยแล้ว', 'success');
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }}
+                                                className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs transition shadow-sm"
+                                            >
+                                                📥 ลงรับชุดจัดซื้อจัดจ้าง
+                                            </button>
+                                        )}
+
+                                        {procStatus === 'received' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    Swal.fire({
+                                                        title: '📤 ตั้งเบิกส่งงานการเงิน',
+                                                        text: `ต้องการส่งเรื่องจัดซื้อจัดจ้างของ "${p.title}" ให้งานการเงินดำเนินการเบิกจ่ายหรือไม่?`,
+                                                        icon: 'question',
+                                                        showCancelButton: true,
+                                                        confirmButtonColor: '#10b981',
+                                                        cancelButtonColor: '#64748b',
+                                                        confirmButtonText: '📤 ยืนยันส่งงานการเงิน',
+                                                        cancelButtonText: 'ยกเลิก'
+                                                    }).then((res) => {
+                                                        if (res.isConfirmed) {
+                                                            router.post(route('procurements.forward_to_finance', p.id), {}, {
+                                                                onSuccess: () => {
+                                                                    setViewingProcurementProject(null);
+                                                                    Swal.fire('สำเร็จ', 'ตั้งเบิกและส่งต่อให้งานการเงินเรียบร้อยแล้ว', 'success');
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }}
+                                                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-sm"
+                                            >
+                                                📤 ตั้งเบิก ➔ ส่งงานการเงิน
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Table of Items */}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="text-xs font-bold uppercase text-purple-900 flex items-center gap-1.5">
+                                            <span>📋</span> รายการวัสดุ / ครุภัณฑ์ / จ้างเหมา ที่เสนอจัดซื้อจัดจ้าง
+                                        </h4>
+                                        <span className="text-xs text-slate-500 font-medium">
+                                            รวมทั้งสิ้น <b>{items.length}</b> รายการ
+                                        </span>
+                                    </div>
+                                    <div className="overflow-x-auto rounded-2xl border border-purple-100 shadow-2xs">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-purple-50 text-purple-950 font-bold border-b border-purple-100">
+                                                <tr>
+                                                    <th className="p-3 w-12 text-center">ลำดับ</th>
+                                                    <th className="p-3">รายการ</th>
+                                                    <th className="p-3 w-24 text-center">จำนวน</th>
+                                                    <th className="p-3 w-24 text-center">หน่วยนับ</th>
+                                                    <th className="p-3 w-32 text-right">ราคาต่อหน่วย</th>
+                                                    <th className="p-3 w-32 text-right">รวมเป็นเงิน</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-purple-50">
+                                                {items.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan="6" className="p-6 text-center text-slate-400">
+                                                            ยังไม่มีรายการวัสดุแยกย่อยในระบบ (ยื่นขอเป็นวงเงินเหมารวม {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget || 0)})
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    items.map((it, idx) => (
+                                                        <tr key={it.id || idx} className="hover:bg-purple-50/30">
+                                                            <td className="p-3 text-center text-slate-500 font-bold">{idx + 1}</td>
+                                                            <td className="p-3 font-semibold text-slate-800">{it.description}</td>
+                                                            <td className="p-3 text-center font-bold">{it.quantity}</td>
+                                                            <td className="p-3 text-center text-slate-600">{it.unit}</td>
+                                                            <td className="p-3 text-right font-mono">{parseFloat(it.unit_price).toLocaleString()} บ.</td>
+                                                            <td className="p-3 text-right font-mono font-bold text-purple-950">{(parseFloat(it.quantity) * parseFloat(it.unit_price)).toLocaleString()} บ.</td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                            <tfoot className="bg-purple-50/80 font-bold border-t border-purple-100">
+                                                <tr>
+                                                    <td colSpan="5" className="p-3.5 text-right text-purple-950">ยอดรวมจัดซื้อจัดจ้างทั้งสิ้น:</td>
+                                                    <td className="p-3.5 text-right text-purple-950 font-mono font-black text-sm">
+                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalItemSum)}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* TOR Specifications & Committees */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                                        <h5 className="text-xs font-bold uppercase text-slate-800 flex items-center gap-1">
+                                            <span>📝</span> ขอบเขตคุณลักษณะเฉพาะ (TOR)
+                                        </h5>
+                                        <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
+                                            {proc?.tor_specifications || 'ไม่ได้ระบุข้อกำหนดเพิ่มเติม'}
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-100 space-y-3">
+                                        <h5 className="text-xs font-bold uppercase text-purple-900 flex items-center gap-1">
+                                            <span>👥</span> คณะกรรมการที่แต่งตั้ง
+                                        </h5>
+                                        <div className="text-xs text-slate-700 space-y-2">
+                                            <div>
+                                                <span className="font-bold text-purple-950">คณะกรรมการจัดซื้อจัดจ้าง:</span>
+                                                <ul className="list-disc pl-5 mt-1 space-y-0.5 text-slate-600">
+                                                    {proc?.committees?.filter(c => c.pivot?.committee_type === 'purchasing').map(c => (
+                                                        <li key={c.id}>{c.name} ({c.pivot?.role === 'chairperson' ? 'ประธาน' : 'กรรมการ'})</li>
+                                                    )) || <li>ยังไม่ได้แต่งตั้ง</li>}
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <span className="font-bold text-purple-950">คณะกรรมการตรวจรับพัสดุ:</span>
+                                                <ul className="list-disc pl-5 mt-1 space-y-0.5 text-slate-600">
+                                                    {proc?.committees?.filter(c => c.pivot?.committee_type === 'inspection').map(c => (
+                                                        <li key={c.id}>{c.name} ({c.pivot?.role === 'chairperson' ? 'ประธาน' : 'กรรมการ'})</li>
+                                                    )) || <li>ยังไม่ได้แต่งตั้ง</li>}
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            {/* Download Documents Actions */}
-                            <div className="space-y-2 pt-2 border-t border-purple-100">
-                                <h5 className="text-xs font-bold uppercase text-purple-950">🖨️ พิมพ์เอกสารจัดซื้อจัดจ้าง ๔ ฉบับ & สัญญายืมเงิน</h5>
-                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                    <a
-                                        href={route('procurements.download_document', { project: viewingProcurementProject.id, type: 'memo' })}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
-                                    >
-                                        📄 ๑. บันทึกข้อความ
-                                    </a>
-                                    <a
-                                        href={route('procurements.download_document', { project: viewingProcurementProject.id, type: 'request_form' })}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
-                                    >
-                                        📑 ๒. ใบเสนอซื้อ/จ้าง
-                                    </a>
-                                    <a
-                                        href={route('procurements.download_document', { project: viewingProcurementProject.id, type: 'estimation' })}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
-                                    >
-                                        📊 ๓. ตารางราคากลาง
-                                    </a>
-                                    <a
-                                        href={route('procurements.download_document', { project: viewingProcurementProject.id, type: 'tor' })}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
-                                    >
-                                        📝 ๔. เอกสาร TOR
-                                    </a>
-                                    <a
-                                        href={route('procurements.download_document', { project: viewingProcurementProject.id, type: 'loan_contract' })}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 font-bold text-center text-xs transition"
-                                    >
-                                        🧾 สัญญายืมเงิน (กค.๑๐๑)
-                                    </a>
+                                {/* Download Documents Actions */}
+                                <div className="space-y-2 pt-2 border-t border-purple-100">
+                                    <h5 className="text-xs font-bold uppercase text-purple-950">🖨️ พิมพ์เอกสารจัดซื้อจัดจ้าง ๔ ฉบับ & สัญญายืมเงิน</h5>
+                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                        <a
+                                            href={route('procurements.download_document', { project: p.id, type: 'memo' })}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
+                                        >
+                                            📄 ๑. บันทึกข้อความ
+                                        </a>
+                                        <a
+                                            href={route('procurements.download_document', { project: p.id, type: 'request_form' })}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
+                                        >
+                                            📑 ๒. ใบเสนอซื้อ/จ้าง
+                                        </a>
+                                        <a
+                                            href={route('procurements.download_document', { project: p.id, type: 'estimation' })}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
+                                        >
+                                            📊 ๓. ตารางราคากลาง
+                                        </a>
+                                        <a
+                                            href={route('procurements.download_document', { project: p.id, type: 'tor' })}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
+                                        >
+                                            📝 ๔. เอกสาร TOR
+                                        </a>
+                                        <a
+                                            href={route('procurements.download_document', { project: p.id, type: 'loan_contract' })}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 font-bold text-center text-xs transition"
+                                        >
+                                            🧾 สัญญายืมเงิน (กค.๑๐๑)
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="flex justify-end pt-3 border-t border-purple-100">
-                                <button
-                                    type="button"
-                                    onClick={() => setViewingProcurementProject(null)}
-                                    className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
-                                >
-                                    ปิดหน้าต่าง
-                                </button>
+                                <div className="flex justify-between items-center pt-3 border-t border-purple-100">
+                                    <Link
+                                        href={route('projects.show', p.id)}
+                                        className="text-xs text-purple-700 hover:text-purple-900 font-bold underline flex items-center gap-1"
+                                    >
+                                        <span>👁️</span> เปิดดูเล่มโครงการเต็ม (รายละเอียด 12 ข้อ)
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewingProcurementProject(null)}
+                                        className="px-6 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                                    >
+                                        ปิดหน้าต่าง
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
         );
     };
