@@ -1210,28 +1210,6 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                             </div>
                         ) : (
                         <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6">
-                            {(project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
-                                <div className="p-4 rounded-xl bg-gradient-to-r from-purple-900/5 via-indigo-900/10 to-purple-900/5 border border-purple-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 font-sans">
-                                    <div>
-                                        <h4 className="text-xs font-black text-purple-950 uppercase flex items-center gap-1.5">
-                                            <span>📌 สถานะดำเนินงานปัจจุบัน:</span>
-                                            <span className="text-purple-700 bg-white px-2.5 py-0.5 rounded-full border border-purple-200">
-                                                {project.status === 'evaluating' ? 'อยู่ระหว่างประเมินผลโครงการ (ขั้นตอนที่ 5)' : project.status === 'completed' ? 'เสร็จสิ้นโครงการสมบูรณ์ (ขั้นตอนที่ 6)' : project.status}
-                                            </span>
-                                        </h4>
-                                        <p className="text-xs text-slate-600 mt-1">เมื่อรวบรวมแบบประเมินและวิเคราะห์สรุปผลเสร็จสิ้น สามารถส่งเรื่องปิดโครงการเข้าสู่ขั้นตอนที่ 6 ได้</p>
-                                    </div>
-                                    {project.status !== 'completed' && (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleUpdateStatus('completed', 'เสร็จสิ้นโครงการสมบูรณ์ (ขั้นตอนที่ 6)')}
-                                            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:scale-105 text-white font-bold text-xs shadow-md transition-all whitespace-nowrap"
-                                        >
-                                            🎉 ปิดโครงการ & สรุปเล่มสมบูรณ์ (ขั้นที่ 6) ➔
-                                        </button>
-                                    )}
-                                </div>
-                            )}
 
                             <div className="flex justify-between items-center">
                                 <h3 className="text-lg font-bold text-purple-950">📊 การสำรวจความพึงพอใจ และดัชนีประเมินผลโครงการ (Check)</h3>
