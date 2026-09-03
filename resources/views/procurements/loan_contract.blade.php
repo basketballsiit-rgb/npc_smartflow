@@ -20,14 +20,14 @@
             width: 210mm;
             min-height: 297mm;
             margin: 0 auto 25px auto;
-            padding: 8mm 12mm 8mm 15mm;
+            padding: 6mm 12mm 6mm 15mm;
             box-sizing: border-box;
             background: #ffffff;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
         }
         .outer-contract-box {
             border: 1.5px solid #000;
-            min-height: 275mm;
+            min-height: 278mm;
             box-sizing: border-box;
             overflow: hidden;
             padding-bottom: 4px;
@@ -92,7 +92,7 @@
                 box-shadow: none !important;
             }
             .outer-contract-box {
-                min-height: 280mm !important;
+                min-height: 282mm !important;
             }
             .no-print,
             .no-print * {
@@ -459,32 +459,35 @@
             </div>
 
             <!-- Signature of Borrower -->
-            <div style="padding: 0 12px; margin-top: 2px; margin-bottom: 6px; font-size: 15pt; text-align: left; padding-left: 1.5cm;">
+            <div style="padding: 0 12px; margin-top: 4px; margin-bottom: 8px; font-size: 15pt; text-align: left; padding-left: 1.5cm;">
                 ลายมือชื่อ ........................................................................... ผู้ยืม
-                <span style="display: block; padding-left: 1.8cm; margin-top: 2px;">( {{ $cleanProposerName }} )</span>
+                <span style="display: block; padding-left: 1.8cm; margin-top: 14px;">( {{ $cleanProposerName }} )</span>
             </div>
 
             <!-- Divider line -->
             <div class="divider-line"></div>
 
             <!-- Lower Section 1: Checked by Financial & Deputy -->
-            <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px;">
+            <div style="font-size: 15pt; line-height: 1.3; padding: 4px 12px 6px 12px;">
                 <div style="margin-bottom: 2px;">เสนอ......ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 2px;">
-                    ได้ตรวจสอบแล้ว เห็นสมควรอนุมัติให้ยืมเงินตามใบยืมฉบับนี้ได้ จำนวน <span class="underline-dotted" id="checked-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท (<span class="underline-dotted" id="checked-amount-thai">{{ $allBahtText }}</span>)
+                    ได้ตรวจสอบแล้ว เห็นสมควรอนุมัติให้ยืมเงินตามใบยืมฉบับนี้ได้ จำนวน <span class="underline-dotted" id="checked-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท
+                </div>
+                <div style="text-align: left; padding-left: 1.2cm; margin-bottom: 4px;">
+                    ( <span class="underline-dotted" id="checked-amount-thai">{{ $allBahtText }}</span> )
                 </div>
                 
-                <table style="width: 100%; border: none; font-size: 14pt; margin-top: 4px; border-collapse: collapse;">
+                <table style="width: 100%; border: none; font-size: 14pt; margin-top: 6px; border-collapse: collapse;">
                     <tr>
                         <td style="width: 50%; text-align: center; vertical-align: top; padding: 2px 0;">
                             <div>ลงชื่อ............................................</div>
-                            <div style="margin-top: 2px;">( {{ $financeHeadName }} )</div>
-                            <div style="margin-top: 1px; font-size: 13.5pt; color: #334155;">หัวหน้างานการเงิน</div>
+                            <div style="margin-top: 14px;">( {{ $financeHeadName }} )</div>
+                            <div style="margin-top: 2px; font-size: 13.5pt; color: #334155;">หัวหน้างานการเงิน</div>
                         </td>
                         <td style="width: 50%; text-align: center; vertical-align: top; padding: 2px 0;">
                             <div>ลงชื่อ............................................</div>
-                            <div style="margin-top: 2px;">( {{ $deputyResName }} )</div>
-                            <div style="margin-top: 1px; font-size: 13.5pt; color: #334155; line-height: 1.1;">รองผู้อำนวยการฝ่ายบริหารทรัพยากร</div>
+                            <div style="margin-top: 14px;">( {{ $deputyResName }} )</div>
+                            <div style="margin-top: 2px; font-size: 13.5pt; color: #334155; line-height: 1.1;">รองผู้อำนวยการฝ่ายบริหารทรัพยากร</div>
                         </td>
                     </tr>
                 </table>
@@ -494,19 +497,19 @@
             <div class="divider-line"></div>
 
             <!-- Lower Section 2: Approved by Director -->
-            <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px;">
+            <div style="font-size: 15pt; line-height: 1.3; padding: 4px 12px 6px 12px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 2px; font-size: 15pt;">คำอนุมัติ</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 2px;">
-                    อนุมัติให้ยืมตามเงื่อนไขข้างต้นได้ เป็นเงิน <span class="underline-dotted" id="approved-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท (<span class="underline-dotted" id="approved-amount-thai">{{ $allBahtText }}</span>)
+                    อนุมัติให้ยืมตามเงื่อนไขข้างต้นได้ เป็นเงิน <span class="underline-dotted" id="approved-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท ( <span class="underline-dotted" id="approved-amount-thai">{{ $allBahtText }}</span> )
                 </div>
                 
-                <table style="width: 100%; border: none; font-size: 14pt; margin-top: 4px; border-collapse: collapse;">
+                <table style="width: 100%; border: none; font-size: 14pt; margin-top: 6px; border-collapse: collapse;">
                     <tr>
                         <td style="width: 45%;"></td>
                         <td style="width: 55%; text-align: center; vertical-align: top; padding: 2px 0;">
                             <div>ลงชื่อผู้อนุมัติ............................................</div>
-                            <div style="margin-top: 2px; font-weight: bold;">( {{ $directorName }} )</div>
-                            <div style="margin-top: 1px; font-size: 13.5pt; color: #334155;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
+                            <div style="margin-top: 15px; font-weight: bold;">( {{ $directorName }} )</div>
+                            <div style="margin-top: 2px; font-size: 13.5pt; color: #334155;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
                         </td>
                     </tr>
                 </table>
@@ -516,18 +519,18 @@
             <div class="divider-line"></div>
 
             <!-- Lower Section 3: Receipt -->
-            <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px 4px 12px;">
+            <div style="font-size: 15pt; line-height: 1.3; padding: 4px 12px 8px 12px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 2px; font-size: 15pt;">ใบรับเงิน</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 4px;">
-                    ได้รับเงินยืมจำนวน <span class="underline-dotted" id="receipt-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท (<span class="underline-dotted" id="receipt-amount-thai">{{ $allBahtText }}</span>) ไปเป็นการถูกต้องแล้ว
+                    ได้รับเงินยืมจำนวน <span class="underline-dotted" id="receipt-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท ( <span class="underline-dotted" id="receipt-amount-thai">{{ $allBahtText }}</span> ) ไปเป็นการถูกต้องแล้ว
                 </div>
                 
-                <table style="width: 100%; border: none; margin-top: 4px; font-size: 14pt; border-collapse: collapse;">
+                <table style="width: 100%; border: none; margin-top: 8px; font-size: 14pt; border-collapse: collapse;">
                     <tr>
-                        <td style="width: 50%; text-align: center; vertical-align: middle; padding: 2px 0;">
+                        <td style="width: 50%; text-align: center; vertical-align: middle; padding: 4px 0;">
                             ลงชื่อ............................................ผู้รับเงิน
                         </td>
-                        <td style="width: 50%; text-align: center; vertical-align: middle; padding: 2px 0;">
+                        <td style="width: 50%; text-align: center; vertical-align: middle; padding: 4px 0;">
                             วันที่............................................
                         </td>
                     </tr>
