@@ -114,7 +114,35 @@ return new class extends Migration
                     $table->string('fiscal_year', 10)->nullable()->default('2569')->after('code');
                 }
                 if (!Schema::hasColumn('funding_sources', 'budget_number')) {
-                    $table->string('budget_number', 50)->nullable()->after('fiscal_year');
+                    $table->string('budget_number', 100)->nullable()->after('fiscal_year');
+                }
+            });
+
+            // Set initial official GFMIS / Budget codes for Nan Polytechnic College
+            $defaultCodes = [
+                'ปวช.' => '20006-2569-101',
+                'ปวส.' => '20006-2569-102',
+                'ระยะสั้น' => '20006-2569-201',
+                'งบทวิศึกษา' => '20006-2569-301',
+                'อุดหนุนเพื่อการจัดการฯ' => '20006-2569-401',
+                'อุดหนุนพัฒนาฯ' => '20006-2569-501',
+                'บกศ. (บำรุงการศึกษา)' => '20006-2569-601',
+            ];
+            foreach ($defaultCodes as $srcName => $bCode) {
+                DB::table('funding_sources')
+                    ->where('name', 'LIKE', '%' . $srcName . '%')
+                    ->update([
+                        'fiscal_year' => '2569',
+                        'budget_number' => $bCode,
+                    ]);
+            }
+        }
+
+        // 4. Add budget_code to central_allocations table
+        if (Schema::hasTable('central_allocations')) {
+            Schema::table('central_allocations', function (Blueprint $table) {
+                if (!Schema::hasColumn('central_allocations', 'budget_code')) {
+                    $table->string('budget_code', 100)->nullable()->after('document_number');
                 }
             });
         }
