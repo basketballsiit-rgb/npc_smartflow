@@ -132,6 +132,7 @@ ${itemsListText}
     const isOverBudget = totalProcurementSum > (allocatedBudget + 0.01);
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
     const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
+    const isProcStaffOrAdmin = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'procurement_head' || auth.user.role === 'procurement_head' || (auth.user.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC')) || auth.user.position?.includes('พัสดุ'));
     const [savingProcurement, setSavingProcurement] = useState(false);
     const [isEditingProcurement, setIsEditingProcurement] = useState(!project.procurement?.id);
 
@@ -1504,29 +1505,38 @@ ${itemsListText}
                                 </div>
                             )}
 
-                            {/* Section 1: Procurement Items Table & Add Form */}
+                            {/* Section 1: Procurement Items Table (Read-Only when submitted) */}
                             <div className="border border-purple-100 rounded-2xl p-5 bg-purple-50/20 space-y-4">
                                 <div className="flex justify-between items-center">
-                                    <h4 className="text-sm font-extrabold text-purple-950">📦 รายการวัสดุอุปกรณ์ที่จะจัดซื้อจัดจ้าง (Procurement Items)</h4>
-                                    <button
-                                        type="button"
-                                        onClick={() => setProcurementItems([...procurementItems, { description: '', quantity: 1, unit: 'รายการ', unit_price: 0 }])}
-                                        className="text-xs font-bold text-purple-700 hover:text-purple-900 bg-white px-3 py-1.5 rounded-lg border border-purple-200 shadow-2xs hover:bg-purple-50"
-                                    >
-                                        + เพิ่มรายการวัสดุ
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="text-sm font-extrabold text-purple-950">📦 รายการวัสดุอุปกรณ์ที่จะจัดซื้อจัดจ้าง (Procurement Items)</h4>
+                                        {!isEditingProcurement && (
+                                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                                                🔒 ดูอย่างเดียว
+                                            </span>
+                                        )}
+                                    </div>
+                                    {isEditingProcurement && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setProcurementItems([...procurementItems, { description: '', quantity: 1, unit: 'รายการ', unit_price: 0 }])}
+                                            className="text-xs font-bold text-purple-700 hover:text-purple-900 bg-white px-3 py-1.5 rounded-lg border border-purple-200 shadow-2xs hover:bg-purple-50"
+                                        >
+                                            + เพิ่มรายการวัสดุ
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse bg-white rounded-xl overflow-hidden border border-purple-100">
                                         <thead>
                                             <tr className="bg-purple-100/60 text-purple-950 text-xs font-bold uppercase">
-                                                <th className="p-3">ลำดับ</th>
+                                                <th className="p-3 w-12 text-center">ลำดับ</th>
                                                 <th className="p-3">รายการวัสดุ / อุปกรณ์</th>
                                                 <th className="p-3 w-20 text-center">จำนวน</th>
                                                 <th className="p-3 w-24 text-center">หน่วยนับ</th>
                                                 <th className="p-3 w-32 text-right">ราคาต่อหน่วย</th>
                                                 <th className="p-3 w-32 text-right">รวมเป็นเงิน</th>
-                                                <th className="p-3 w-12 text-center"></th>
+                                                {isEditingProcurement && <th className="p-3 w-12 text-center"></th>}
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-purple-100 text-xs">
@@ -1535,91 +1545,109 @@ ${itemsListText}
                                                 return (
                                                     <tr key={idx} className="hover:bg-purple-50/30">
                                                         <td className="p-3 font-bold text-slate-700 text-center">{idx + 1}</td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="text"
-                                                                value={item.description}
-                                                                onChange={(e) => {
-                                                                    const updated = [...procurementItems];
-                                                                    updated[idx].description = e.target.value;
-                                                                    setProcurementItems(updated);
-                                                                }}
-                                                                placeholder="ระบุชื่อวัสดุ / รายการจัดซื้อ..."
-                                                                className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
-                                                            />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="number"
-                                                                min="1"
-                                                                value={item.quantity}
-                                                                onChange={(e) => {
-                                                                    const updated = [...procurementItems];
-                                                                    updated[idx].quantity = e.target.value;
-                                                                    setProcurementItems(updated);
-                                                                }}
-                                                                className="w-full rounded-lg border-purple-200 text-xs text-center font-bold focus:ring-purple-500 focus:border-purple-500"
-                                                            />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="text"
-                                                                value={item.unit}
-                                                                onChange={(e) => {
-                                                                    const updated = [...procurementItems];
-                                                                    updated[idx].unit = e.target.value;
-                                                                    setProcurementItems(updated);
-                                                                }}
-                                                                placeholder="เช่น งาน/ชุด"
-                                                                className="w-full rounded-lg border-purple-200 text-xs text-center focus:ring-purple-500 focus:border-purple-500"
-                                                            />
-                                                        </td>
-                                                        <td className="p-2">
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                value={item.unit_price}
-                                                                onChange={(e) => {
-                                                                    const updated = [...procurementItems];
-                                                                    updated[idx].unit_price = e.target.value;
-                                                                    setProcurementItems(updated);
-                                                                }}
-                                                                className="w-full rounded-lg border-purple-200 text-xs text-right font-bold text-emerald-700 focus:ring-purple-500 focus:border-purple-500"
-                                                            />
-                                                        </td>
-                                                        <td className="p-3 text-right font-bold text-purple-900">
-                                                            {formatCurrency(itemTotal)}
-                                                        </td>
-                                                        <td className="p-2 text-center">
-                                                            {procurementItems.length > 1 && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => setProcurementItems(procurementItems.filter((_, i) => i !== idx))}
-                                                                    className="text-rose-600 hover:text-rose-800 font-bold text-sm"
-                                                                    title="ลบรายการ"
-                                                                >
-                                                                    ✕
-                                                                </button>
+                                                        <td className="p-3">
+                                                            {isEditingProcurement ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.description}
+                                                                    onChange={(e) => {
+                                                                        const updated = [...procurementItems];
+                                                                        updated[idx].description = e.target.value;
+                                                                        setProcurementItems(updated);
+                                                                    }}
+                                                                    placeholder="ชื่อรายการพัสดุ / รายละเอียดคุณลักษณะ..."
+                                                                    className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="font-bold text-slate-900">{item.description || '-'}</span>
                                                             )}
                                                         </td>
+                                                        <td className="p-3 text-center">
+                                                            {isEditingProcurement ? (
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    value={item.quantity}
+                                                                    onChange={(e) => {
+                                                                        const updated = [...procurementItems];
+                                                                        updated[idx].quantity = e.target.value;
+                                                                        setProcurementItems(updated);
+                                                                    }}
+                                                                    className="w-full rounded-lg border-purple-200 text-xs text-center font-bold focus:ring-purple-500 focus:border-purple-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="font-extrabold text-slate-800">{item.quantity}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            {isEditingProcurement ? (
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.unit}
+                                                                    onChange={(e) => {
+                                                                        const updated = [...procurementItems];
+                                                                        updated[idx].unit = e.target.value;
+                                                                        setProcurementItems(updated);
+                                                                    }}
+                                                                    placeholder="หน่วย เช่น ชุด/เครื่อง"
+                                                                    className="w-full rounded-lg border-purple-200 text-xs text-center focus:ring-purple-500 focus:border-purple-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-slate-600 font-medium">{item.unit || '-'}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-right">
+                                                            {isEditingProcurement ? (
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={item.unit_price}
+                                                                    onChange={(e) => {
+                                                                        const updated = [...procurementItems];
+                                                                        updated[idx].unit_price = e.target.value;
+                                                                        setProcurementItems(updated);
+                                                                    }}
+                                                                    className="w-full rounded-lg border-purple-200 text-xs text-right font-bold text-emerald-700 focus:ring-purple-500 focus:border-purple-500"
+                                                                />
+                                                            ) : (
+                                                                <span className="font-bold text-emerald-700">{formatCurrency(item.unit_price)}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-right font-black text-purple-950">
+                                                            {formatCurrency(itemTotal)}
+                                                        </td>
+                                                        {isEditingProcurement && (
+                                                            <td className="p-2 text-center">
+                                                                {procurementItems.length > 1 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setProcurementItems(procurementItems.filter((_, i) => i !== idx))}
+                                                                        className="text-rose-600 hover:text-rose-800 font-bold text-sm cursor-pointer"
+                                                                        title="ลบรายการนี้"
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
                                         <tfoot className="bg-purple-50/60 font-bold text-xs border-t-2 border-purple-200">
                                             <tr>
-                                                <td colSpan={5} className="p-3 text-right text-purple-950 font-black">
+                                                <td colSpan={isEditingProcurement ? 5 : 4} className="p-3 text-right text-purple-950 font-black">
                                                     รวมงบประมาณจัดซื้อจัดจ้างทั้งสิ้น:
                                                 </td>
                                                 <td className={`p-3 text-right font-black text-sm ${isOverBudget ? 'text-rose-600' : 'text-purple-950'}`}>
                                                     {formatCurrency(totalProcurementSum)}
                                                 </td>
-                                                <td></td>
+                                                {isEditingProcurement && <td></td>}
                                             </tr>
                                             {isOverBudget && (
                                                 <tr className="bg-rose-100/70 text-rose-950">
-                                                    <td colSpan={7} className="p-2.5 text-center text-xs font-black">
-                                                        ⚠️ ยอดรวมพัสดุเกินวงเงินอนุมัติ ({formatCurrency(allocatedBudget)}) อยู่ {formatCurrency(budgetDifference)} — ระบบไม่อนุญาตให้บันทึกจนกว่าจะปรับลดราคาให้อยู่ในวงเงิน
+                                                    <td colSpan={isEditingProcurement ? 7 : 6} className="p-2.5 text-center text-xs font-black">
+                                                        ⚠️ ยอดจัดซื้อเกินงบประมาณที่ได้รับจัดสรร ({formatCurrency(allocatedBudget)}) อยู่ {formatCurrency(budgetDifference)} - กรุณาปรับลดจำนวนหรือราคาลงให้พอดี
                                                     </td>
                                                 </tr>
                                             )}
@@ -1628,78 +1656,127 @@ ${itemsListText}
                                 </div>
                             </div>
 
-                            {/* Section 2: Committee Appointment Form */}
+                            {/* Section 2: Committee Appointment Form (Read-Only when submitted) */}
                             <div className="border border-purple-100 rounded-2xl p-5 bg-purple-50/20 space-y-4">
-                                <h4 className="text-sm font-extrabold text-purple-950">👥 แต่งตั้งคณะกรรมการจัดซื้อจัดจ้าง และตรวจรับพัสดุ (Committees)</h4>
+                                <div className="flex items-center gap-2">
+                                    <h4 className="text-sm font-extrabold text-purple-950">👥 แต่งตั้งคณะกรรมการจัดซื้อจัดจ้าง และตรวจรับพัสดุ (Committees)</h4>
+                                    {!isEditingProcurement && (
+                                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                                            🔒 ดูอย่างเดียว
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Purchasing Committee */}
                                     <div className="bg-white p-4 rounded-xl border border-purple-100 space-y-3">
-                                        <h5 className="text-xs font-bold text-purple-900 border-b border-purple-100 pb-1.5">1. คณะกรรมการจัดซื้อ/จัดจ้าง</h5>
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">ประธานกรรมการจัดซื้อ</label>
-                                            <select
-                                                value={purchasingChair}
-                                                onChange={(e) => setPurchasingChair(e.target.value)}
-                                                className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
-                                            >
-                                                {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">กรรมการจัดซื้อ (คนที่ 1)</label>
-                                            <select
-                                                value={purchasingMember1}
-                                                onChange={(e) => setPurchasingMember1(e.target.value)}
-                                                className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
-                                            >
-                                                {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">กรรมการจัดซื้อ (คนที่ 2)</label>
-                                            <select
-                                                value={purchasingMember2}
-                                                onChange={(e) => setPurchasingMember2(e.target.value)}
-                                                className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
-                                            >
-                                                {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                                            </select>
-                                        </div>
+                                        <h5 className="text-xs font-bold text-purple-900 border-b border-purple-100 pb-1.5 flex items-center gap-1.5">
+                                            <span>📋</span> 1. คณะกรรมการจัดซื้อ/จัดจ้าง
+                                        </h5>
+                                        {isEditingProcurement ? (
+                                            <>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">ประธานกรรมการจัดซื้อ</label>
+                                                    <select
+                                                        value={purchasingChair}
+                                                        onChange={(e) => setPurchasingChair(e.target.value)}
+                                                        className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                                    >
+                                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">กรรมการจัดซื้อ (คนที่ 1)</label>
+                                                    <select
+                                                        value={purchasingMember1}
+                                                        onChange={(e) => setPurchasingMember1(e.target.value)}
+                                                        className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                                    >
+                                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">กรรมการจัดซื้อ (คนที่ 2)</label>
+                                                    <select
+                                                        value={purchasingMember2}
+                                                        onChange={(e) => setPurchasingMember2(e.target.value)}
+                                                        className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                                    >
+                                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </select>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="space-y-2 text-xs">
+                                                <div className="p-2 bg-purple-50/40 rounded-lg flex items-center justify-between">
+                                                    <span className="text-slate-500">ประธานกรรมการ:</span>
+                                                    <span className="font-extrabold text-purple-950">{allUsers.find(u => String(u.id) === String(purchasingChair))?.name || 'ไม่ระบุ'}</span>
+                                                </div>
+                                                <div className="p-2 bg-purple-50/40 rounded-lg flex items-center justify-between">
+                                                    <span className="text-slate-500">กรรมการ (คนที่ 1):</span>
+                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(purchasingMember1))?.name || 'ไม่ระบุ'}</span>
+                                                </div>
+                                                <div className="p-2 bg-purple-50/40 rounded-lg flex items-center justify-between">
+                                                    <span className="text-slate-500">กรรมการ (คนที่ 2):</span>
+                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(purchasingMember2))?.name || 'ไม่ระบุ'}</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Inspection Committee */}
                                     <div className="bg-white p-4 rounded-xl border border-purple-100 space-y-3">
-                                        <h5 className="text-xs font-bold text-emerald-900 border-b border-purple-100 pb-1.5">2. คณะกรรมการตรวจรับพัสดุ</h5>
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">ประธานกรรมการตรวจรับ</label>
-                                            <select
-                                                value={inspectionChair}
-                                                onChange={(e) => setInspectionChair(e.target.value)}
-                                                className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
-                                            >
-                                                {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">กรรมการตรวจรับ (คนที่ 1)</label>
-                                            <select
-                                                value={inspectionMember1}
-                                                onChange={(e) => setInspectionMember1(e.target.value)}
-                                                className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
-                                            >
-                                                {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-slate-700 mb-1">กรรมการตรวจรับ (คนที่ 2)</label>
-                                            <select
-                                                value={inspectionMember2}
-                                                onChange={(e) => setInspectionMember2(e.target.value)}
-                                                className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
-                                            >
-                                                {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
-                                            </select>
-                                        </div>
+                                        <h5 className="text-xs font-bold text-emerald-900 border-b border-purple-100 pb-1.5 flex items-center gap-1.5">
+                                            <span>🔍</span> 2. คณะกรรมการตรวจรับพัสดุ
+                                        </h5>
+                                        {isEditingProcurement ? (
+                                            <>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">ประธานกรรมการตรวจรับ</label>
+                                                    <select
+                                                        value={inspectionChair}
+                                                        onChange={(e) => setInspectionChair(e.target.value)}
+                                                        className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                                    >
+                                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">กรรมการตรวจรับ (คนที่ 1)</label>
+                                                    <select
+                                                        value={inspectionMember1}
+                                                        onChange={(e) => setInspectionMember1(e.target.value)}
+                                                        className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                                    >
+                                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">กรรมการตรวจรับ (คนที่ 2)</label>
+                                                    <select
+                                                        value={inspectionMember2}
+                                                        onChange={(e) => setInspectionMember2(e.target.value)}
+                                                        className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                                    >
+                                                        {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </select>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="space-y-2 text-xs">
+                                                <div className="p-2 bg-emerald-50/40 rounded-lg flex items-center justify-between">
+                                                    <span className="text-slate-500">ประธานกรรมการ:</span>
+                                                    <span className="font-extrabold text-emerald-950">{allUsers.find(u => String(u.id) === String(inspectionChair))?.name || 'ไม่ระบุ'}</span>
+                                                </div>
+                                                <div className="p-2 bg-emerald-50/40 rounded-lg flex items-center justify-between">
+                                                    <span className="text-slate-500">กรรมการ (คนที่ 1):</span>
+                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(inspectionMember1))?.name || 'ไม่ระบุ'}</span>
+                                                </div>
+                                                <div className="p-2 bg-emerald-50/40 rounded-lg flex items-center justify-between">
+                                                    <span className="text-slate-500">กรรมการ (คนที่ 2):</span>
+                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(inspectionMember2))?.name || 'ไม่ระบุ'}</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
