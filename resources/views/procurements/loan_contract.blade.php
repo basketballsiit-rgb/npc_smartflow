@@ -11,7 +11,7 @@
             background-color: #f1f5f9;
             font-family: "TH Sarabun PSK", "THSarabunPSK", "Angsana New", sans-serif;
             font-size: 15pt;
-            line-height: 1.2;
+            line-height: 1.25;
             color: #000000;
             margin: 0;
             padding: 20px 0;
@@ -30,16 +30,17 @@
             min-height: 275mm;
             box-sizing: border-box;
             overflow: hidden;
-            padding-bottom: 6px;
+            padding-bottom: 4px;
         }
         .bold { font-weight: bold; }
+        .font-normal { font-weight: normal; }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         .text-left { text-align: left; }
         .underline-dotted {
             border-bottom: 1px dotted #000;
             padding: 0 4px;
-            display: inline-block;
+            display: inline;
         }
 
         table.details-table {
@@ -49,15 +50,26 @@
             border-top: 1.5px solid #000;
             border-bottom: 1.5px solid #000;
             font-size: 15pt;
+            font-family: inherit;
             margin: 0;
         }
         table.details-table td {
             border: none;
-            padding: 3px 10px;
+            padding: 2px 10px;
             vertical-align: top;
+            font-family: inherit;
+            font-size: 15pt;
         }
         table.details-table td.col-border-right {
             border-right: 1.5px solid #000;
+        }
+        table.details-table td.col-amount {
+            text-align: right;
+            width: 22%;
+            white-space: nowrap;
+            font-family: inherit;
+            font-size: 15pt;
+            font-weight: normal;
         }
 
         .divider-line {
@@ -212,71 +224,116 @@
     $directorSetting = \App\Models\SystemSetting::where('key', 'director_name')->first();
     $directorName = $directorSetting ? cleanPersonName($directorSetting->value) : ($directorUser ? cleanPersonName($directorUser->name) : 'นายกเชษฐ์ กิ่งชนะ');
 
-    // 5. Loan Items Extraction
-    $loanItems = collect();
-    $activities = is_array($project->activities) ? $project->activities : json_decode($project->activities ?? '[]', true);
-    if (is_array($activities) && count($activities) > 0) {
-        foreach ($activities as $actIdx => $act) {
+    // 5. Structure Activities & Loan Items Data
+    $activitiesRaw = is_array($project->activities) ? $project->activities : json_decode($project->activities ?? '[]', true);
+    $structuredActivities = [];
+    $allLoanItems = [];
+
+    $baseContractNum = $project->procurement?->procurement_number ?: ('กค.101/' . ($project->academic_year ?? '2569') . '-' . str_pad($project->id, 4, '0', STR_PAD_LEFT));
+
+    if (is_array($activitiesRaw) && count($activitiesRaw) > 0) {
+        foreach ($activitiesRaw as $actIdx => $act) {
             $actName = trim($act['name'] ?? ('กิจกรรมที่ ' . ($actIdx + 1)));
+            $actItems = [];
+            $actSum = 0;
+
             foreach ($act['loan_items'] ?? [] as $it) {
                 if (!empty($it['description']) && trim($it['description']) !== '') {
                     $qty = floatval($it['quantity'] ?? 1);
                     $price = floatval($it['unit_price'] ?? 0);
-                    $loanItems->push((object)[
-                        'description' => trim($it['description']),
-                        'activity' => $actName,
+                    $tot = $qty * $price;
+                    $actSum += $tot;
+                    
+                    $itemObj = [
+                        'description' => trim(preg_replace('/[💵📦💰📑📝🛒📄📊]/u', '', $it['description'])),
                         'quantity' => $qty,
                         'unit' => $it['unit'] ?? 'รายการ',
                         'unit_price' => $price,
-                        'total_price' => $qty * $price,
-                    ]);
+                        'total_price' => $tot,
+                    ];
+                    $actItems[] = $itemObj;
+                    $allLoanItems[] = $itemObj;
                 }
+            }
+
+            if (count($actItems) > 0) {
+                $structuredActivities[] = [
+                    'index' => $actIdx + 1,
+                    'name' => $actName,
+                    'contract_no' => $baseContractNum . '/' . ($actIdx + 1),
+                    'items' => $actItems,
+                    'total_amount' => $actSum,
+                    'baht_text' => convertToThaiBahtTextLoan($actSum),
+                ];
             }
         }
     }
 
-    if ($loanItems->isEmpty() && $project->procurement && $project->procurement->items) {
-        $loanItems = $project->procurement->items->filter(function($i) {
+    if (empty($allLoanItems) && $project->procurement && $project->procurement->items) {
+        $filtered = $project->procurement->items->filter(function($i) {
             return preg_match('/ค่าตอบแทน|วิทยากร|ค่าอาหาร|อาหารกลางวัน|อาหารว่าง|เครื่องดื่ม|เดินทาง|พาหนะ|ยานพาหนะ|เบี้ยเลี้ยง|ที่พัก|สมนาคุณ|เงินยืม/u', $i->description);
-        })->map(function($i) {
+        });
+        foreach ($filtered as $i) {
             $qty = floatval($i->quantity ?? 1);
             $price = floatval($i->unit_price ?? 0);
-            return (object)[
+            $tot = $qty * $price;
+            $allLoanItems[] = [
                 'description' => trim(preg_replace('/[💵📦💰📑📝🛒📄📊]/u', '', $i->description)),
                 'quantity' => $qty,
                 'unit' => $i->unit ?? 'รายการ',
                 'unit_price' => $price,
-                'total_price' => $qty * $price,
+                'total_price' => $tot,
             ];
-        });
+        }
     }
 
-    if ($loanItems->isEmpty()) {
-        $loanItems = collect([
-            (object)['description' => 'ค่าตอบแทนวิทยากรบรรยายและฝึกอบรม', 'total_price' => floatval($project->estimated_budget) * 0.3],
-            (object)['description' => 'ค่าอาหารกลางวันและเครื่องดื่มสำหรับผู้เข้าร่วมโครงการ', 'total_price' => floatval($project->estimated_budget) * 0.4],
-            (object)['description' => 'ค่าอาหารว่างและเครื่องดื่ม', 'total_price' => floatval($project->estimated_budget) * 0.3],
-        ]);
+    if (empty($allLoanItems)) {
+        $allLoanItems = [
+            ['description' => 'ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => 3600],
+            ['description' => 'ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => 4000],
+            ['description' => 'ค่าอาหารว่างและเครื่องดื่ม', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => 3500],
+        ];
     }
 
-    $totalLoanAmount = $loanItems->sum('total_price');
-    if ($totalLoanAmount <= 0) {
-        $totalLoanAmount = floatval($project->estimated_budget ?: 0);
+    $allTotalSum = array_sum(array_column($allLoanItems, 'total_price'));
+    if ($allTotalSum <= 0) {
+        $allTotalSum = floatval($project->estimated_budget ?: 0);
     }
-    $totalLoanBahtText = convertToThaiBahtTextLoan($totalLoanAmount);
+    $allBahtText = convertToThaiBahtTextLoan($allTotalSum);
 
-    $contractNumber = $project->procurement?->procurement_number ?: ('กค.101/' . ($project->academic_year ?? '2569') . '-' . str_pad($project->id, 4, '0', STR_PAD_LEFT));
+    // Bundle full JSON dataset for seamless client-side activity filtering
+    $clientPayload = [
+        'all' => [
+            'name' => 'ทุกกิจกรรมรวมกัน',
+            'contract_no' => $baseContractNum,
+            'purpose_text' => 'เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ "' . $project->title . '" ประจำปีงบประมาณ พ.ศ. ' . ($project->academic_year ?? '2569') . ' ดังรายละเอียดต่อไปนี้',
+            'items' => $allLoanItems,
+            'total_amount' => $allTotalSum,
+            'baht_text' => $allBahtText,
+        ],
+        'activities' => $structuredActivities,
+    ];
 @endphp
 
 <body>
     <!-- Interactive Top Control Bar -->
     <div class="no-print" style="margin: 0 auto 20px auto; width: 210mm; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px 18px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
-        <div style="font-size: 14pt; font-weight: bold; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-            <span>💵</span> สัญญายืมเงินทดรองราชการ (แบบ กค. ๑๐๑)
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <label for="activity-select" style="font-weight: bold; color: #1e293b; font-size: 14pt; display: flex; align-items: center; gap: 6px;">
+                <span>🎯</span> เลือกกิจกรรมที่ต้องการขอยืมเงิน:
+            </label>
+            <select id="activity-select" onchange="switchActivity(this.value)" style="padding: 6px 14px; border-radius: 10px; border: 2px solid #0284c7; font-family: inherit; font-size: 14pt; font-weight: bold; color: #0369a1; background-color: #ffffff; cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(2,132,199,0.1);">
+                <option value="all">ทุกกิจกรรมรวมกัน (ยอดรวมทั้งหมด {{ number_format($allTotalSum, 2) }} บาท)</option>
+                @foreach($structuredActivities as $act)
+                    <option value="{{ $act['index'] }}">
+                        กิจกรรมที่ {{ $act['index'] }}: {{ Str::limit($act['name'], 40) }} ({{ number_format($act['total_amount'], 2) }} บาท)
+                    </option>
+                @endforeach
+            </select>
         </div>
 
         <button onclick="window.print()" style="padding: 8px 20px; background-color: #0284c7; color: #ffffff; border: none; border-radius: 10px; font-family: inherit; font-size: 14pt; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 8px rgba(2,132,199,0.25);">
-            <span>🖨️</span> สั่งพิมพ์สัญญายืมเงิน (PDF)
+            <span>🖨️</span> สั่งพิมพ์สัญญายืมเงิน
         </button>
     </div>
 
@@ -295,8 +352,8 @@
                     <td style="width: 30%; padding: 6px 12px; vertical-align: top;">
                         <div style="font-size: 15pt; margin-bottom: 2px; display: flex; align-items: baseline; gap: 4px;">
                             <span style="white-space: nowrap;">เลขที่</span>
-                            <span class="underline-dotted" style="flex-grow: 1; text-align: center; min-width: 50px; font-size: 14pt;">
-                                {{ $contractNumber }}
+                            <span class="underline-dotted" id="contract-no-display" style="flex-grow: 1; text-align: center; min-width: 50px; font-size: 14pt;">
+                                {{ $baseContractNum }}
                             </span>
                         </div>
                         <div style="font-size: 15pt; line-height: 1.0;">วันครบกำหนด</div>
@@ -316,34 +373,30 @@
                 มีความประสงค์ขอยืมเงินจาก <span class="bold">วิทยาลัยสารพัดช่างน่าน</span>
             </div>
 
-            <div style="padding: 0 12px 6px 12px; text-indent: 1.2cm; text-align: justify; line-height: 1.25; font-size: 15pt;">
+            <div id="contract-purpose-display" style="padding: 0 12px 6px 12px; text-indent: 1.2cm; text-align: justify; line-height: 1.25; font-size: 15pt;">
                 เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"{{ $project->title }}"</span> ประจำปีงบประมาณ พ.ศ. {{ $project->academic_year ?? '2569' }} ดังรายละเอียดต่อไปนี้
             </div>
 
             <!-- Details Table -->
             <table class="details-table">
-                <tbody>
-                    @foreach($loanItems as $item)
-                        @php
-                            $cleanDesc = preg_replace('/[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]/u', '', $item->description);
-                            $cleanDesc = trim(str_replace(['💵', '📦', '💰', '📑', '📝', '🛒', '📄', '📊'], '', $cleanDesc));
-                        @endphp
+                <tbody id="loan-items-tbody">
+                    @foreach($allLoanItems as $item)
                         <tr>
                             <td class="col-border-right">
-                                - {{ $cleanDesc }}
-                                @if(!empty($item->quantity) && $item->quantity > 1)
-                                    ({{ number_format($item->quantity, 0) }} {{ $item->unit }} x {{ number_format($item->unit_price, 2) }} บาท)
+                                - {{ $item['description'] }}
+                                @if(!empty($item['quantity']) && $item['quantity'] > 1)
+                                    ({{ number_format($item['quantity'], 0) }} {{ $item['unit'] }} x {{ number_format($item['unit_price'], 2) }} บาท)
                                 @endif
                             </td>
-                            <td style="text-align: right; width: 28%; white-space: nowrap; font-family: monospace; font-weight: bold;">
-                                {{ number_format($item->total_price, 2) }}
+                            <td class="col-amount">
+                                {{ number_format($item['total_price'], 2) }}
                             </td>
                         </tr>
                     @endforeach
-                    <tr style="font-weight: bold; border-top: 1px solid #000;">
-                        <td class="col-border-right text-right" style="padding-right: 15px;">รวมเป็นเงินทั้งสิ้น</td>
-                        <td style="text-align: right; font-family: monospace; font-size: 15pt;">
-                            {{ number_format($totalLoanAmount, 2) }}
+                    <tr style="border-top: 1px solid #000;">
+                        <td class="col-border-right text-right bold" style="padding-right: 15px;">รวมเป็นเงินทั้งสิ้น</td>
+                        <td class="col-amount bold" id="table-total-display">
+                            {{ number_format($allTotalSum, 2) }}
                         </td>
                     </tr>
                 </tbody>
@@ -364,11 +417,10 @@
             <div class="divider-line"></div>
 
             <!-- Lower Section 1: Checked by Financial & Deputy -->
-            <div style="font-size: 15pt; line-height: 1.2; padding: 4px 12px;">
+            <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px;">
                 <div style="margin-bottom: 2px;">เสนอ......ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 2px;">
-                    ได้ตรวจสอบแล้ว เห็นสมควรอนุมัติให้ยืมเงินตามใบยืมฉบับนี้ได้ จำนวน <span class="underline-dotted bold">{{ number_format($totalLoanAmount, 2) }}</span> บาท
-                    ( <span class="underline-dotted bold">{{ $totalLoanBahtText }}</span> )
+                    ได้ตรวจสอบแล้ว เห็นสมควรอนุมัติให้ยืมเงินตามใบยืมฉบับนี้ได้ จำนวน <span class="underline-dotted" id="checked-amount-num">{{ number_format($allTotalSum, 2) }}</span> บาท (<span class="underline-dotted" id="checked-amount-thai">{{ $allBahtText }}</span>)
                 </div>
                 
                 <table style="width: 100%; border: none; font-size: 14pt; margin-top: 4px; border-collapse: collapse;">
@@ -391,10 +443,10 @@
             <div class="divider-line"></div>
 
             <!-- Lower Section 2: Approved by Director -->
-            <div style="font-size: 15pt; line-height: 1.2; padding: 4px 12px;">
+            <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 2px; font-size: 15pt;">คำอนุมัติ</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 2px;">
-                    อนุมัติให้ยืมตามเงื่อนไขข้างต้นได้ เป็นเงิน <span class="underline-dotted bold">{{ number_format($totalLoanAmount, 2) }}</span> บาท (<span class="bold">{{ $totalLoanBahtText }}</span>)
+                    อนุมัติให้ยืมตามเงื่อนไขข้างต้นได้ เป็นเงิน <span class="underline-dotted" id="approved-amount-num">{{ number_format($allTotalSum, 2) }}</span> บาท (<span class="underline-dotted" id="approved-amount-thai">{{ $allBahtText }}</span>)
                 </div>
                 
                 <table style="width: 100%; border: none; font-size: 14pt; margin-top: 4px; border-collapse: collapse;">
@@ -413,11 +465,10 @@
             <div class="divider-line"></div>
 
             <!-- Lower Section 3: Receipt -->
-            <div style="font-size: 15pt; line-height: 1.2; padding: 4px 12px 4px 12px;">
+            <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px 4px 12px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 2px; font-size: 15pt;">ใบรับเงิน</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 4px;">
-                    ได้รับเงินยืมจำนวน <span class="underline-dotted bold">{{ number_format($totalLoanAmount, 2) }}</span> บาท
-                    ( <span class="underline-dotted bold">{{ $totalLoanBahtText }}</span> ) ไปเป็นการถูกต้องแล้ว
+                    ได้รับเงินยืมจำนวน <span class="underline-dotted" id="receipt-amount-num">{{ number_format($allTotalSum, 2) }}</span> บาท (<span class="underline-dotted" id="receipt-amount-thai">{{ $allBahtText }}</span>) ไปเป็นการถูกต้องแล้ว
                 </div>
                 
                 <table style="width: 100%; border: none; margin-top: 4px; font-size: 14pt; border-collapse: collapse;">
@@ -434,5 +485,83 @@
 
         </div>
     </div>
+
+    <!-- Client-Side Dynamic Activity Switcher Script -->
+    <script>
+        const loanData = @json($clientPayload);
+        const projectTitle = @json($project->title);
+        const fiscalYear = @json($project->academic_year ?? '2569');
+
+        function formatMoney(num) {
+            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function switchActivity(val) {
+            let activeDataset;
+            let purposeHtml;
+
+            if (val === 'all' || !val) {
+                activeDataset = loanData.all;
+                purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> ประจำปีงบประมาณ พ.ศ. ${fiscalYear} ดังรายละเอียดต่อไปนี้`;
+            } else {
+                const targetIdx = parseInt(val);
+                const found = loanData.activities.find(a => a.index === targetIdx);
+                if (found) {
+                    activeDataset = found;
+                    purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> (<span class="bold">กิจกรรมที่ ${found.index}: ${found.name}</span>) ประจำปีงบประมาณ พ.ศ. ${fiscalYear} ดังรายละเอียดต่อไปนี้`;
+                } else {
+                    activeDataset = loanData.all;
+                    purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> ประจำปีงบประมาณ พ.ศ. ${fiscalYear} ดังรายละเอียดต่อไปนี้`;
+                }
+            }
+
+            // 1. Update Contract Number
+            document.getElementById('contract-no-display').innerText = activeDataset.contract_no;
+
+            // 2. Update Purpose Line
+            document.getElementById('contract-purpose-display').innerHTML = purposeHtml;
+
+            // 3. Render Table Rows
+            const tbody = document.getElementById('loan-items-tbody');
+            let rowsHtml = '';
+            activeDataset.items.forEach(it => {
+                const qtyText = (it.quantity && it.quantity > 1) ? ` (${parseFloat(it.quantity).toLocaleString()} ${it.unit || 'รายการ'} x ${formatMoney(it.unit_price)} บาท)` : '';
+                rowsHtml += `
+                    <tr>
+                        <td class="col-border-right">
+                            - ${it.description}${qtyText}
+                        </td>
+                        <td class="col-amount">
+                            ${formatMoney(it.total_price)}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Total row
+            rowsHtml += `
+                <tr style="border-top: 1px solid #000;">
+                    <td class="col-border-right text-right bold" style="padding-right: 15px;">รวมเป็นเงินทั้งสิ้น</td>
+                    <td class="col-amount bold" id="table-total-display">
+                        ${formatMoney(activeDataset.total_amount || activeDataset.total_price || 0)}
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML = rowsHtml;
+
+            // 4. Update Lower Sections (Numbers & Thai Baht Text - Normal Weight Font)
+            const amtStr = formatMoney(activeDataset.total_amount || activeDataset.total_price || 0);
+            const bahtStr = activeDataset.baht_text;
+
+            document.getElementById('checked-amount-num').innerText = amtStr;
+            document.getElementById('checked-amount-thai').innerText = bahtStr;
+
+            document.getElementById('approved-amount-num').innerText = amtStr;
+            document.getElementById('approved-amount-thai').innerText = bahtStr;
+
+            document.getElementById('receipt-amount-num').innerText = amtStr;
+            document.getElementById('receipt-amount-thai').innerText = bahtStr;
+        }
+    </script>
 </body>
 </html>
