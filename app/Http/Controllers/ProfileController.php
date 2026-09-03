@@ -41,6 +41,31 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update or register the user's 13-digit Thai Citizen ID (stored encrypted).
+     */
+    public function updateCitizenId(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'citizen_id' => 'required|string|regex:/^[0-9\-]{13,17}$/',
+        ], [
+            'citizen_id.required' => 'กรุณากรอกเลขประจำตัวประชาชน 13 หลัก',
+            'citizen_id.regex' => 'รูปแบบเลขประจำตัวประชาชนไม่ถูกต้อง (ต้องเป็นตัวเลข 13 หลัก)',
+        ]);
+
+        $cleanCitizenId = preg_replace('/[^0-9]/', '', $request->input('citizen_id'));
+
+        if (strlen($cleanCitizenId) !== 13) {
+            return Redirect::back()->withErrors(['citizen_id' => 'เลขประจำตัวประชาชนต้องมีครบ 13 หลัก']);
+        }
+
+        $user = $request->user();
+        $user->citizen_id = $cleanCitizenId;
+        $user->save();
+
+        return Redirect::back()->with('message', 'บันทึกเลขประจำตัวประชาชน 13 หลัก (เข้ารหัสความปลอดภัย AES-256) เรียบร้อยแล้ว');
+    }
+
+    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse
