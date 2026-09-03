@@ -330,6 +330,74 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         });
     };
 
+    // Standard Items Live Search & Autocomplete
+    const [standardItemSuggestions, setStandardItemSuggestions] = useState([]);
+    const [activeSuggestionKey, setActiveSuggestionKey] = useState(null);
+    const [isSearchingItems, setIsSearchingItems] = useState(false);
+    const [showQuickAddItemModal, setShowQuickAddItemModal] = useState(false);
+    const [quickAddItemData, setQuickAddItemData] = useState({ name: '', unit: 'ชิ้น', standard_price: 0, category: 'วัสดุทั่วไป' });
+
+    const handleItemDescriptionChange = (actIdx, pIdx, value) => {
+        handleActivityItemChange(actIdx, 'procurement_items', pIdx, 'description', value);
+        
+        const key = `${actIdx}-${pIdx}`;
+        setActiveSuggestionKey(key);
+
+        if (!value || value.trim().length < 1) {
+            setStandardItemSuggestions([]);
+            return;
+        }
+
+        setIsSearchingItems(true);
+        axios.get(route('standard_items.search'), { params: { q: value.trim() } })
+            .then(res => {
+                if (res.data && res.data.items) {
+                    setStandardItemSuggestions(res.data.items);
+                }
+            })
+            .catch(() => {})
+            .finally(() => setIsSearchingItems(false));
+    };
+
+    const selectStandardItem = (actIdx, pIdx, item) => {
+        const acts = [...(data.activities || [])];
+        const pItems = [...(acts[actIdx].procurement_items || [])];
+        pItems[pIdx] = {
+            ...pItems[pIdx],
+            description: item.name,
+            unit: item.unit || 'ชิ้น',
+            unit_price: parseFloat(item.standard_price) || 0,
+            total_price: (parseFloat(pItems[pIdx].quantity) || 1) * (parseFloat(item.standard_price) || 0)
+        };
+        acts[actIdx].procurement_items = pItems;
+        setData('activities', acts);
+        setActiveSuggestionKey(null);
+        setStandardItemSuggestions([]);
+    };
+
+    const handleSaveNewStandardItem = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await axios.post(route('standard_items.store'), quickAddItemData);
+            if (res.data && res.data.item) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกสำเร็จ!',
+                    text: `บันทึก "${res.data.item.name}" เข้าสู่คลังข้อมูลราคากลางเรียบร้อยแล้ว`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                setShowQuickAddItemModal(false);
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด',
+                text: 'ไม่สามารถบันทึกรายการได้ กรุณาตรวจสอบข้อมูล'
+            });
+        }
+    };
+
     const prepareSubmitData = (submitApproval = false) => {
         // Flatten only actual procurement items (พัสดุ/วัสดุ/ครุภัณฑ์/จ้างทำของ) for procurement stage
         // Note: Loan items (ค่าตอบแทน, ค่าอาหาร, ค่าใช้จ่ายเดินทาง) are for Loan Contract (กค.๑๐๑) and go directly to Finance!
