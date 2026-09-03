@@ -4852,6 +4852,17 @@ ${itemsListText}
                                             >
                                                 <span>💰</span> เลขงบประมาณตัดงบ
                                             </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setProcActiveTool('item_catalog')}
+                                                className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                                    procActiveTool === 'item_catalog'
+                                                        ? 'bg-purple-700 text-white shadow-xs'
+                                                        : 'text-purple-900 hover:bg-purple-100/60'
+                                                }`}
+                                            >
+                                                <span>📦</span> คลังวัสดุ & ราคากลาง
+                                            </button>
                                         </div>
                                     </div>
 
