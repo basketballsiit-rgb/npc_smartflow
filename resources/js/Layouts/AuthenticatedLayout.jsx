@@ -493,15 +493,29 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <Link
                                         href={route('dashboard', { tab: 'procurement' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=procurement')
+                                            url.includes('tab=procurement') && !url.includes('tool=item_catalog')
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
                                                 : 'text-purple-100 hover:bg-white/10 hover:text-white'
                                         }`}
                                         title="จัดซื้อจัดจ้าง & กรรมการ"
                                     >
                                         <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
-                                        <span className="text-sm">📦</span>
+                                        <span className="text-sm">📋</span>
                                         {isSidebarOpen && <span>จัดซื้อจัดจ้าง & กรรมการ</span>}
+                                    </Link>
+
+                                    <Link
+                                        href={route('dashboard', { tab: 'procurement', tool: 'item_catalog' })}
+                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
+                                            url.includes('tool=item_catalog')
+                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
+                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
+                                        }`}
+                                        title="คลังวัสดุ & ราคากลาง"
+                                    >
+                                        <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                        <span className="text-sm">📦</span>
+                                        {isSidebarOpen && <span>คลังวัสดุ & ราคากลาง</span>}
                                     </Link>
                                 </div>
                             </div>
