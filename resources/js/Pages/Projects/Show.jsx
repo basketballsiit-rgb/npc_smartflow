@@ -133,6 +133,7 @@ ${itemsListText}
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
     const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
     const [savingProcurement, setSavingProcurement] = useState(false);
+    const [isEditingProcurement, setIsEditingProcurement] = useState(!project.procurement?.id);
 
     const handleSaveProcurement = (e) => {
         if (e) e.preventDefault();
@@ -163,7 +164,8 @@ ${itemsListText}
         }, {
             onSuccess: () => {
                 setSavingProcurement(false);
-                Swal.fire('บันทึกสำเร็จ!', 'บันทึกข้อมูลข้อกำหนด TOR และคำสั่งพัสดุเรียบร้อยแล้ว', 'success');
+                setIsEditingProcurement(false);
+                Swal.fire('บันทึกสำเร็จ!', 'บันทึกข้อมูลข้อกำหนด TOR และคำสั่งพัสดุเรียบร้อยแล้ว (ล็อกการบันทึกซ้ำ)', 'success');
             },
             onError: () => {
                 setSavingProcurement(false);
