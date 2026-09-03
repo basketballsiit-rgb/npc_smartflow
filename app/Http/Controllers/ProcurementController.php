@@ -300,19 +300,28 @@ class ProcurementController extends Controller
             return redirect()->route('dashboard')->with('error', 'Procurement process has not been initialized yet.');
         }
 
-        if (!in_array($type, ['memo', 'request_form', 'estimation', 'tor', 'loan_contract'])) {
+        if (!in_array($type, ['memo', 'request_form', 'estimation', 'tor', 'loan_contract', 'po', 'purchase_order'])) {
             abort(404);
         }
 
         $purchasingCommittee = $project->procurement->purchasingCommittee()->get();
         $inspectionCommittee = $project->procurement->inspectionCommittee()->get();
 
-        return view("procurements.{$type}", [
+        $viewName = ($type === 'purchase_order' || $type === 'po') ? 'procurements.po' : "procurements.{$type}";
+
+        return view($viewName, [
             'project' => $project,
             'procurement' => $project->procurement,
             'items' => $project->procurement->items,
             'purchasingCommittee' => $purchasingCommittee,
             'inspectionCommittee' => $inspectionCommittee,
+            'vendorName' => request('vendor_name', ''),
+            'vendorAddress' => request('vendor_address', ''),
+            'vendorTaxId' => request('vendor_tax_id', ''),
+            'vendorPhone' => request('vendor_phone', ''),
+            'deliveryDays' => request('delivery_days', '๗'),
+            'poNumber' => request('po_number', ''),
+            'poDate' => request('po_date', ''),
         ]);
     }
 
