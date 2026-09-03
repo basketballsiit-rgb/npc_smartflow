@@ -208,28 +208,58 @@
     $headOfDeptName = $headUser ? cleanPersonName($headUser->name) : $cleanProposerName;
     $headOfDeptTitle = 'หัวหน้า' . (str_starts_with($deptName, 'งาน') || str_starts_with($deptName, 'แผนก') || str_starts_with($deptName, 'ฝ่าย') ? $deptName : 'แผนกวิชา' . $deptName);
 
-    // 3. Relevant Deputy Director (รองผู้อำนวยการฝ่ายฯ ที่เกี่ยวข้อง)
-    $deputyTitle = 'รองผู้อำนวยการฝ่ายวิชาการ';
-    if (str_contains($divisionName, 'บริหาร') || str_contains($divisionName, 'ทรัพยากร')) {
-        $deputyTitle = 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร';
-    } elseif (str_contains($divisionName, 'กิจการ') || str_contains($divisionName, 'พัฒนากิจการ')) {
-        $deputyTitle = 'รองผู้อำนวยการฝ่ายพัฒนากิจการนักเรียนนักศึกษา';
-    } elseif (str_contains($divisionName, 'แผน') || str_contains($divisionName, 'ร่วมมือ')) {
-        $deputyTitle = 'รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ';
-    } elseif (str_contains($divisionName, 'วิชาการ')) {
-        $deputyTitle = 'รองผู้อำนวยการฝ่ายวิชาการ';
+    // List of standard Deputy Directors in the college
+    $deputyOptions = [
+        'academic' => [
+            'key' => 'academic',
+            'division' => 'ฝ่ายวิชาการ',
+            'title' => 'รองผู้อำนวยการฝ่ายวิชาการ',
+            'name' => 'นายนิพนธ์ ร่องพืช',
+        ],
+        'student_affairs' => [
+            'key' => 'student_affairs',
+            'division' => 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา',
+            'title' => 'รองผู้อำนวยการฝ่ายพัฒนากิจการนักเรียนนักศึกษา',
+            'name' => 'นายสุทธิชัย ศรีวิชัย',
+        ],
+        'resources' => [
+            'key' => 'resources',
+            'division' => 'ฝ่ายบริหารทรัพยากร',
+            'title' => 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
+            'name' => 'นางสาวสิริกร มงคลวัจน์',
+        ],
+        'planning' => [
+            'key' => 'planning',
+            'division' => 'ฝ่ายแผนงานและความร่วมมือ',
+            'title' => 'รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ',
+            'name' => 'นายวิทวัส ดวงใจ',
+        ],
+    ];
+
+    // Check if any Deputy users exist in database and override default names
+    foreach ($deputyOptions as $k => $opt) {
+        $foundUser = \App\Models\User::where('position', 'like', "%{$opt['title']}%")
+            ->orWhere('position', 'like', "%{$opt['division']}%")
+            ->first();
+        if ($foundUser) {
+            $deputyOptions[$k]['name'] = cleanPersonName($foundUser->name);
+        }
     }
 
-    $deputyUser = \App\Models\User::where('position', 'like', "%{$deputyTitle}%")
-        ->orWhere(function($q) use ($divisionDept) {
-            if ($divisionDept) {
-                $q->where('department_id', $divisionDept->id)
-                  ->where('position', 'like', '%รองผู้อำนวยการ%');
-            }
-        })->first();
+    // Determine initial selected key based on department division
+    $initialDeputyKey = 'academic';
+    if (str_contains($divisionName, 'บริหาร') || str_contains($divisionName, 'ทรัพยากร')) {
+        $initialDeputyKey = 'resources';
+    } elseif (str_contains($divisionName, 'กิจการ') || str_contains($divisionName, 'พัฒนา')) {
+        $initialDeputyKey = 'student_affairs';
+    } elseif (str_contains($divisionName, 'แผน') || str_contains($divisionName, 'ร่วมมือ')) {
+        $initialDeputyKey = 'planning';
+    } elseif (str_contains($divisionName, 'วิชาการ')) {
+        $initialDeputyKey = 'academic';
+    }
 
-    $deputyDirectorName = $deputyUser ? cleanPersonName($deputyUser->name) : 'นายนิพนธ์ ร่องพืช';
-    $deputyDirectorTitle = $deputyUser ? $deputyUser->position : $deputyTitle;
+    $deputyDirectorName = $deputyOptions[$initialDeputyKey]['name'];
+    $deputyDirectorTitle = $deputyOptions[$initialDeputyKey]['title'];
 
     // 4. College Director (ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน)
     $directorUser = \App\Models\User::where('position', 'like', '%ผู้อำนวยการวิทยาลัย%')
@@ -259,8 +289,27 @@
 @endphp
 
 <body>
-    <div class="no-print" style="margin-bottom: 15px; text-align: right;">
-        <button onclick="window.print()" style="padding: 6px 14px; background-color: #7c3aed; color: white; border: none; border-radius: 6px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer;">🖨️ สั่งพิมพ์เอกสาร / PDF</button>
+    <!-- Interactive Top Control Bar -->
+    <div class="no-print" style="margin-bottom: 20px; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px 18px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <label for="deputy-select" style="font-weight: bold; color: #1e293b; font-size: 14pt; display: flex; align-items: center; gap: 6px;">
+                <span>👔</span> เลือกรองผู้อำนวยการฝ่ายที่เกี่ยวข้อง:
+            </label>
+            <select id="deputy-select" onchange="changeDeputy(this.value)" style="padding: 6px 14px; border-radius: 10px; border: 2px solid #7c3aed; font-family: inherit; font-size: 14pt; font-weight: bold; color: #4c1d95; background-color: #ffffff; cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(124,58,237,0.1);">
+                @foreach($deputyOptions as $key => $opt)
+                    <option value="{{ $key }}" {{ ($initialDeputyKey === $key) ? 'selected' : '' }}>
+                        {{ $opt['division'] }} — ({{ $opt['name'] }})
+                    </option>
+                @endforeach
+                <option value="custom">✏️ ระบุชื่อ/ตำแหน่งเอง (กำหนดเอง)...</option>
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+            <button onclick="window.print()" style="padding: 7px 20px; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; border: none; border-radius: 10px; font-family: inherit; font-size: 14pt; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(124,58,237,0.25); display: flex; align-items: center; gap: 6px;">
+                <span>🖨️</span> สั่งพิมพ์เอกสาร / PDF
+            </button>
+        </div>
     </div>
 
     <div class="header-container">
@@ -292,7 +341,7 @@
     </div>
 
     <div class="paragraph">
-        ด้วยข้าพเจ้า {{ $cleanProposerName }} ตำแหน่ง {{ $displayProposerPos }} {{ $displayDeptAffiliation }} มีความประสงค์ จัดซื้อพัสดุ เพื่อใช้ในการดำเนินโครงการ "{{$project->title}}" ใน{{ $divisionName }}
+        ด้วยข้าพเจ้า <span contenteditable="true" style="outline: none;">{{ $cleanProposerName }}</span> ตำแหน่ง <span contenteditable="true" style="outline: none;">{{ $displayProposerPos }}</span> {{ $displayDeptAffiliation }} มีความประสงค์ จัดซื้อพัสดุ เพื่อใช้ในการดำเนินโครงการ "{{$project->title}}" ใน<span id="division-name-text">{{ $divisionName }}</span>
     </div>
 
     <div class="paragraph">
@@ -306,7 +355,7 @@
     <!-- 1. ผู้ขออนุมัติจัดซื้อ (Proposer) -->
     <div style="margin-top: 20px; margin-left: auto; width: 3.3in; text-align: center;">
         <div style="margin-bottom: 6px; border-bottom: 1px dotted #000; height: 26px;"></div>
-        <div>( {{ $cleanProposerName }} )</div>
+        <div>( <span contenteditable="true" style="outline: none;">{{ $cleanProposerName }}</span> )</div>
         <div style="font-size: 15pt; margin-top: 2px;">ผู้ขออนุมัติจัดซื้อ</div>
     </div>
     <div style="clear: both;"></div>
@@ -314,8 +363,8 @@
     <!-- 2. หัวหน้างาน / หัวหน้าแผนกวิชา (Head of Department) -->
     <div style="margin-top: 25px; margin-left: auto; width: 3.3in; text-align: center;">
         <div style="margin-bottom: 6px; border-bottom: 1px dotted #000; height: 26px;"></div>
-        <div>( {{ $headOfDeptName }} )</div>
-        <div style="font-size: 15pt; margin-top: 2px;">{{ $headOfDeptTitle }}</div>
+        <div>( <span contenteditable="true" style="outline: none;">{{ $headOfDeptName }}</span> )</div>
+        <div style="font-size: 15pt; margin-top: 2px;" contenteditable="true" style="outline: none;">{{ $headOfDeptTitle }}</div>
     </div>
     <div style="clear: both;"></div>
 
@@ -329,8 +378,8 @@
             
             <div style="text-align: center; margin-top: 10px;">
                 <div style="border-bottom: 1px dotted #000; height: 26px; width: 85%; margin: 0 auto 6px auto;"></div>
-                <div>( {{ $deputyDirectorName }} )</div>
-                <div style="font-size: 15pt; margin-top: 2px;">{{ $deputyDirectorTitle }}</div>
+                <div>( <span id="deputy-name-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorName }}</span> )</div>
+                <div style="font-size: 15pt; margin-top: 2px;"><span id="deputy-title-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorTitle }}</span></div>
                 <div style="font-size: 14pt; margin-top: 4px;">............../............../..............</div>
             </div>
         </div>
@@ -343,11 +392,41 @@
             
             <div style="text-align: center; margin-top: 10px;">
                 <div style="border-bottom: 1px dotted #000; height: 26px; width: 85%; margin: 0 auto 6px auto;"></div>
-                <div>( {{ $directorName }} )</div>
+                <div>( <span contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
                 <div style="font-size: 15pt; margin-top: 2px;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
                 <div style="font-size: 14pt; margin-top: 4px;">............../............../..............</div>
             </div>
         </div>
     </div>
+
+    <script>
+        const deputiesData = @json($deputyOptions);
+
+        function changeDeputy(key) {
+            if (key === 'custom') {
+                const currentName = document.getElementById('deputy-name-text').innerText;
+                const currentTitle = document.getElementById('deputy-title-text').innerText;
+                const customName = prompt('ระบุชื่อ-สกุล รองผู้อำนวยการ:', currentName);
+                if (customName !== null && customName.trim() !== '') {
+                    document.getElementById('deputy-name-text').innerText = customName.trim();
+                }
+                const customTitle = prompt('ระบุตำแหน่ง รองผู้อำนวยการ:', currentTitle);
+                if (customTitle !== null && customTitle.trim() !== '') {
+                    document.getElementById('deputy-title-text').innerText = customTitle.trim();
+                }
+                return;
+            }
+
+            const data = deputiesData[key];
+            if (data) {
+                document.getElementById('deputy-name-text').innerText = data.name;
+                document.getElementById('deputy-title-text').innerText = data.title;
+                const divTextElem = document.getElementById('division-name-text');
+                if (divTextElem) {
+                    divTextElem.innerText = data.division;
+                }
+            }
+        }
+    </script>
 </body>
 </html>
