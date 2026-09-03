@@ -4,26 +4,26 @@
     <meta charset="UTF-8">
     <title>ขอบเขตและรายละเอียดคุณลักษณะเฉพาะ (TOR) - {{ $project->title }}</title>
     <style>
-        @page {
-            size: A4 portrait;
-            margin: 2cm 2cm 2cm 2.5cm;
-        }
         * {
             box-sizing: border-box;
         }
         body {
+            background-color: #f1f5f9;
             font-family: "TH Sarabun PSK", "THSarabunPSK", "Angsana New", sans-serif;
             font-size: 16pt;
             line-height: 1.25;
             color: #000;
             margin: 0;
-            padding: 0;
-            background-color: #fff;
+            padding: 20px 0;
         }
         .page-container {
-            width: 100%;
-            max-width: 100%;
-            margin: 0 auto;
+            width: 210mm;
+            min-height: 297mm;
+            padding: 2.0cm 2.0cm 2.0cm 2.5cm;
+            margin: 0 auto 25px auto;
+            background: #ffffff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+            box-sizing: border-box;
         }
         .text-center { text-align: center; }
         .text-right { text-align: right; }
@@ -62,37 +62,33 @@
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 8px 0 16px 0;
+            margin: 6px 0 12px 0;
         }
         .items-table th, .items-table td {
-            padding: 4px 8px;
-            vertical-align: middle;
-        }
-        .items-table th {
-            font-weight: bold;
-            border-bottom: 1px solid #000;
-            text-align: center;
+            padding: 2px 4px;
+            vertical-align: top;
+            border: none;
         }
         .items-table td.col-idx {
-            width: 8%;
+            width: 35px;
             text-align: center;
         }
         .items-table td.col-desc {
-            width: 62%;
             text-align: left;
+            padding-left: 8px;
         }
         .items-table td.col-qty {
-            width: 15%;
-            text-align: center;
-            font-weight: bold;
+            width: 60px;
+            text-align: right;
+            padding-right: 12px;
         }
         .items-table td.col-unit {
-            width: 15%;
+            width: 80px;
             text-align: left;
         }
 
         .signatures-container {
-            margin-top: 25px;
+            margin-top: 30px;
             page-break-inside: avoid;
         }
         .signature-row {
@@ -105,16 +101,33 @@
             min-width: 220px;
             margin-right: 6px;
         }
-        .sig-name {
-            display: inline-block;
-            min-width: 240px;
-            text-align: center;
-            margin-top: 3px;
-        }
 
         @media print {
-            .no-print { display: none !important; }
-            body { padding: 0 !important; }
+            body {
+                background-color: #ffffff !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .page-container {
+                width: 100% !important;
+                min-height: auto !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+            }
+            .no-print,
+            .no-print * {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 2.0cm 2.0cm 2.0cm 2.5cm;
+            }
         }
     </style>
 </head>
@@ -209,12 +222,12 @@
     
     // 2. Department & Head of Department
     $dept = $project->department;
-    $deptName = $dept ? $dept->name : ($project->user?->department?->name ?? 'งานพัฒนาหลักสูตรและการจัดการเรียนรู้');
+    $deptName = $dept ? $dept->name : ($project->user?->department?->name ?? 'พัฒนาหลักสูตรและการจัดการเรียนรู้');
     $divisionName = $dept && $dept->division ? $dept->division : 'ฝ่ายวิชาการ';
     
     $deptDisplayName = $deptName;
     if (!str_starts_with($deptDisplayName, 'งาน') && !str_starts_with($deptDisplayName, 'แผนก') && !str_starts_with($deptDisplayName, 'ฝ่าย')) {
-        $deptDisplayName = 'แผนกวิชา' . $deptDisplayName;
+        $deptDisplayName = 'งาน' . $deptDisplayName;
     }
 
     $headUser = null;
@@ -226,7 +239,7 @@
             })->first();
     }
     $headOfDeptName = $headUser ? cleanPersonName($headUser->name) : $cleanProposerName;
-    $headOfDeptTitle = 'หัวหน้า' . (str_starts_with($deptName, 'งาน') || str_starts_with($deptName, 'แผนก') || str_starts_with($deptName, 'ฝ่าย') ? $deptName : $deptName);
+    $headOfDeptTitle = 'หัวหน้า' . (str_starts_with($deptName, 'งาน') || str_starts_with($deptName, 'แผนก') || str_starts_with($deptName, 'ฝ่าย') ? $deptName : $deptDisplayName);
 
     // 3. Deputy Director options
     $deputyOptions = [
@@ -304,7 +317,7 @@
 
 <body>
     <!-- Interactive Top Control Bar -->
-    <div class="no-print" style="margin: 15px auto 25px auto; max-width: 800px; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px 18px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+    <div class="no-print" style="margin: 0 auto 20px auto; width: 210mm; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px 18px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
             <label for="deputy-select" style="font-weight: bold; color: #1e293b; font-size: 14pt; display: flex; align-items: center; gap: 6px;">
                 <span>👔</span> เลือกรองฝ่ายที่เกี่ยวข้อง:
