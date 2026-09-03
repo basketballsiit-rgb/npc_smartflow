@@ -639,6 +639,87 @@ export default function AuthenticatedLayout({ header, children }) {
 
             </div>
 
+            {/* FIRST-TIME CITIZEN ID REGISTRATION MODAL */}
+            {showCitizenModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-purple-950/60 backdrop-blur-sm p-4 animate-fadeIn">
+                    <div className="bg-white rounded-3xl shadow-2xl border border-purple-200 max-w-lg w-full overflow-hidden animate-scaleUp">
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 p-6 text-white relative">
+                            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-2xl mb-3 border border-white/20 shadow-inner">
+                                🪪
+                            </div>
+                            <h3 className="text-lg font-black tracking-wide">
+                                ยืนยันเลขประจำตัวประชาชน 13 หลัก
+                            </h3>
+                            <p className="text-xs text-purple-100/90 mt-1 leading-relaxed">
+                                เพื่อใช้ประกอบการจัดทำคำสั่งแต่งตั้งคณะกรรมการตรวจรับพัสดุ และบันทึกข้อมูลในระบบจัดซื้อจัดจ้างภาครัฐ (e-GP)
+                            </p>
+                        </div>
+
+                        {/* Modal Body */}
+                        <form onSubmit={handleSaveCitizenId} className="p-6 space-y-4">
+                            <div className="p-3.5 rounded-2xl bg-purple-50/80 border border-purple-100 flex items-start gap-3">
+                                <span className="text-lg shrink-0">🛡️</span>
+                                <div className="text-xs text-purple-900 space-y-1">
+                                    <p className="font-bold">ระบบความปลอดภัยมาตรฐานภาครัฐ</p>
+                                    <p className="text-[11px] text-purple-700/80 leading-relaxed">
+                                        ข้อมูลเลขประจำตัวประชาชนของท่านจะถูก<b>เข้ารหัสความปลอดภัยระดับสูง (AES-256 Encrypted)</b> ในฐานข้อมูล ไม่สามารถเข้าถึงโดยตรงได้
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <label className="block text-xs font-black text-slate-700">
+                                    เลขประจำตัวประชาชน 13 หลัก (ของ {user?.name}) <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={citizenIdInput}
+                                    onChange={handleCitizenIdChange}
+                                    placeholder="X-XXXX-XXXXX-XX-X"
+                                    maxLength={17}
+                                    className="w-full text-center text-lg font-mono font-bold tracking-widest rounded-2xl border-2 border-purple-200 bg-slate-50/50 px-4 py-3 focus:border-purple-600 focus:bg-white focus:ring-4 focus:ring-purple-100 transition-all text-purple-950 placeholder:text-slate-300 shadow-inner"
+                                    autoFocus
+                                />
+                                {citizenIdError && (
+                                    <p className="text-xs text-rose-600 font-bold flex items-center gap-1 mt-1">
+                                        <span>⚠️</span> {citizenIdError}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                                <button
+                                    type="submit"
+                                    disabled={isSavingCitizenId}
+                                    className="flex-1 py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-2xl text-xs shadow-lg shadow-purple-200 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                                >
+                                    {isSavingCitizenId ? (
+                                        <>
+                                            <span className="animate-spin">⏳</span> กำลังบันทึกข้อมูล...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>💾</span> บันทึกและเข้ารหัสข้อมูล
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        sessionStorage.setItem('dismiss_citizen_modal', 'true');
+                                        setShowCitizenModal(false);
+                                    }}
+                                    className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-2xl text-xs transition active:scale-[0.98] cursor-pointer"
+                                >
+                                    ไว้ภายหลัง
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 }
