@@ -83,6 +83,15 @@
     $month = $months[(int)date('n')];
     $year = date('Y') + 543;
     $thaiDateStr = "{$day} {$month} {$year}";
+
+    // Clean name and position
+    $rawProposerName = $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................');
+    $extractedProposerPos = '';
+    if (preg_match('/\((.*?)\)/', $rawProposerName, $matches)) {
+        $extractedProposerPos = trim($matches[1]);
+    }
+    $cleanProposerName = trim(preg_replace('/\s*\(.*?\)/', '', $rawProposerName));
+    $displayProposerPos = $project->position ?: ($extractedProposerPos ?: ($project->user?->position ?: 'อาจารย์ประจำสาขา / ผู้รับผิดชอบโครงการ'));
 @endphp
 
 <body>
@@ -117,7 +126,7 @@
     </div>
 
     <div class="paragraph">
-        ในการนี้ เพื่อให้โครงการดังกล่าวบรรลุตามวัตถุประสงค์และเป้าหมาย จึงใคร่ขออนุมัติจัดหาพัสดุและวัสดุสำหรับจัดทำโครงการดังกล่าว เป็นเงินจำนวนทั้งสิ้น {{number_format($project->estimated_budget, 2)}} บาท ({{$project->estimated_budget}} บาทถ้วน) โดยขอใช้เงินสนับสนุนจากแหล่งงบประมาณ {{$project->budget?->fundingSource?->name ?? 'เงินรายได้สถานศึกษา'}}
+        ในการนี้ เพื่อให้โครงการดังกล่าวบรรลุตามวัตถุประสงค์และเป้าหมาย จึงใคร่ขออนุมัติจัดหาพัสดุและวัสดุสำหรับจัดทำโครงการดังกล่าว เป็นเงินจำนวนทั้งสิ้น {{number_format($project->estimated_budget, 2)}} บาท โดยขอใช้เงินสนับสนุนจากแหล่งงบประมาณ {{$project->budget?->fundingSource?->name ?? 'เงินรายได้สถานศึกษา'}}
     </div>
 
     <div class="closing">
@@ -126,8 +135,8 @@
 
     <div class="signature-block">
         <div class="signature-line"></div>
-        <div>( {{$project->user?->name}} )</div>
-        <div style="font-size: 15pt;">{{$project->position || 'ผู้เสนอโครงการ'}}</div>
+        <div>( {{ $cleanProposerName }} )</div>
+        <div style="font-size: 15pt; margin-top: 4px;">{{ $displayProposerPos }}</div>
         <div class="date-line">วันที่ ....... เดือน ............................ พ.ศ. ...............</div>
     </div>
 </body>
