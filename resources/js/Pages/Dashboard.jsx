@@ -58,6 +58,83 @@ export default function Dashboard({
     const [procurementSearch, setProcurementSearch] = useState('');
     const [procurementFilterTab, setProcurementFilterTab] = useState('pending'); // 'pending', 'forwarded', 'all'
 
+    // Procurement Toolkit States (เครื่องมือสนับสนุนงานพัสดุ 4 ด้าน)
+    const [procActiveTool, setProcActiveTool] = useState('vendor_po'); // 'vendor_po', 'committee_id', 'budget_code'
+    const [procVendorSearch, setProcVendorSearch] = useState('');
+    const [procTeacherSearch, setProcTeacherSearch] = useState('');
+    const [procPoData, setProcPoData] = useState({
+        vendor_name: '',
+        vendor_address: '',
+        vendor_tax_id: '',
+        vendor_phone: '',
+        delivery_days: '๗',
+        po_number: '',
+        po_date: '',
+    });
+
+    const verifiedVendors = [
+        {
+            id: 1,
+            name: 'ห้างหุ้นส่วนจำกัด น่านศึกษาภัณฑ์',
+            tax_id: '0543542001234',
+            address: '124/5 ถ.สุมนเทวราช ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
+            phone: '054-710234',
+            category: 'เครื่องเขียน สื่อการสอน แบบเรียน อุปกรณ์สำนักงาน',
+            icon: '📚'
+        },
+        {
+            id: 2,
+            name: 'บริษัท น่านไอที คอมพิวเตอร์ แอนด์ เซอร์วิส จำกัด',
+            tax_id: '0545558005678',
+            address: '88/12 ถ.อนันตวรฤทธิเดช ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
+            phone: '054-771890',
+            category: 'อุปกรณ์คอมพิวเตอร์ ไอที เครื่องพิมพ์ โทเนอร์ ซอฟต์แวร์',
+            icon: '💻'
+        },
+        {
+            id: 3,
+            name: 'ร้าน น่านการช่างและวัสดุก่อสร้าง',
+            tax_id: '3540100456789',
+            address: '205 ถ.มหายศ ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
+            phone: '054-750112',
+            category: 'วัสดุฝึกงานช่าง เครื่องมือช่าง อุปกรณ์ไฟฟ้า สีและเคมีภัณฑ์',
+            icon: '🛠️'
+        },
+        {
+            id: 4,
+            name: 'โรงพิมพ์ น่านพาณิชย์การพิมพ์และไวนิล',
+            tax_id: '0543536009876',
+            address: '45/3 ถ.ผากอง ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
+            phone: '054-712345',
+            category: 'เอกสารประกอบการฝึกอบรม แผ่นพับ ป้ายไวนิล สิ่งพิมพ์',
+            icon: '🖨️'
+        },
+        {
+            id: 5,
+            name: 'ร้าน น่านอีเล็คทรอนิคส์ แอนด์ ซัพพลาย',
+            tax_id: '3540100789123',
+            address: '99/4 ถ.เปรมประชาราษฎร์ ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
+            phone: '054-774561',
+            category: 'อุปกรณ์อิเล็กทรอนิกส์ ชิ้นส่วนวงจร เครื่องเสียง เครื่องวัดไฟฟ้า',
+            icon: '⚡'
+        }
+    ];
+
+    const copyToClipboard = (text, label) => {
+        if (navigator && navigator.clipboard) {
+            navigator.clipboard.writeText(text);
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: `คัดลอก ${label} แล้ว`,
+                text: text,
+                showConfirmButton: false,
+                timer: 2000
+            });
+        }
+    };
+
     // Central allocations states
     const [editingCentralAllocation, setEditingCentralAllocation] = useState(null);
 
