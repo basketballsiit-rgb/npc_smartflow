@@ -2916,13 +2916,23 @@ ${itemsListText}
                                         />
                                     </div>
                                     <div className="md:col-span-2">
-                                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ขอบเขตงานหรือรายละเอียด TOR</label>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="block text-[10px] font-bold text-gray-500 uppercase">ขอบเขตงานหรือรายละเอียด TOR</label>
+                                            <button
+                                                type="button"
+                                                onClick={handleGenerateRoutineAiTor}
+                                                className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-md border border-purple-200 transition-all cursor-pointer"
+                                                title="ให้ AI ช่วยดึงรายการสิ่งของด้านล่างมาร่างเป็น TOR อัตโนมัติ"
+                                            >
+                                                <span>✨ AI ช่วยร่าง TOR จากรายการพัสดุ</span>
+                                            </button>
+                                        </div>
                                         <textarea
                                             value={routineProcData.tor_specifications}
                                             onChange={e => setRoutineProcData('tor_specifications', e.target.value)}
                                             className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
-                                            rows="3"
-                                            placeholder="คำอธิบายขอบเขตความต้องการ เช่น รายละเอียดคุณสมบัติสินค้าหรือผู้รับจ้าง..."
+                                            rows="5"
+                                            placeholder="คำอธิบายขอบเขตความต้องการ เช่น รายละเอียดคุณสมบัติสินค้า หรือกด '✨ AI ช่วยร่าง TOR' ด้านบน..."
                                         />
                                     </div>
                                 </div>
