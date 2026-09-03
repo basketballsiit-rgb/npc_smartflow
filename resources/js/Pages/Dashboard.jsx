@@ -5970,6 +5970,182 @@ ${itemsListText}
                         </div>
                     )}
 
+                    {/* ADD NEW VENDOR MODAL */}
+                    {isAddVendorOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                            <div className="w-full max-w-xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-200 my-8 animate-scaleUp">
+                                <div className="flex justify-between items-center border-b border-purple-100 pb-4 mb-5">
+                                    <div>
+                                        <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
+                                            <span>🏪</span> เพิ่มข้อมูลร้านค้า / ผู้ประกอบการใหม่
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            บันทึกฐานข้อมูลร้านค้า เลขผู้เสียภาษี และเลขบัญชีธนาคารสำหรับงานพัสดุ
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddVendorOpen(false)}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleCreateVendor} className="space-y-4 text-xs font-semibold text-slate-700">
+                                    <div className="space-y-1">
+                                        <label className="block text-slate-900 font-bold text-xs">
+                                            ชื่อร้านค้า / บริษัท / ผู้ขาย / ผู้รับจ้าง <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newVendorForm.name}
+                                            onChange={(e) => setNewVendorForm({ ...newVendorForm, name: e.target.value })}
+                                            placeholder="เช่น ห้างหุ้นส่วนจำกัด น่านศึกษาภัณฑ์ หรือ ร้านวัสดุน่าน"
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="block text-slate-900 font-bold text-xs">
+                                                เลขประจำตัวผู้เสียภาษี 13 หลัก
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newVendorForm.tax_id}
+                                                onChange={(e) => setNewVendorForm({ ...newVendorForm, tax_id: e.target.value })}
+                                                placeholder="เช่น 0543542001234"
+                                                maxLength={20}
+                                                className="w-full font-mono rounded-xl border-purple-200 px-3.5 py-2.5 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="block text-slate-900 font-bold text-xs">
+                                                เบอร์โทรศัพท์ร้านค้า
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newVendorForm.phone}
+                                                onChange={(e) => setNewVendorForm({ ...newVendorForm, phone: e.target.value })}
+                                                placeholder="เช่น 054-710234 หรือ 081-2345678"
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Bank Details Section */}
+                                    <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                                        <h4 className="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                                            <span>🏦</span> ข้อมูลบัญชีธนาคารสำหรับโอนเงิน
+                                        </h4>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <label className="block text-emerald-900 font-bold text-[11px]">ธนาคาร</label>
+                                                <select
+                                                    value={newVendorForm.bank_name}
+                                                    onChange={(e) => setNewVendorForm({ ...newVendorForm, bank_name: e.target.value })}
+                                                    className="w-full rounded-xl border-emerald-300 bg-white px-3 py-2 text-xs focus:border-emerald-600 focus:ring-emerald-600 text-slate-800"
+                                                >
+                                                    <option value="ธนาคารกรุงไทย">ธนาคารกรุงไทย (KTB)</option>
+                                                    <option value="ธนาคารกสิกรไทย">ธนาคารกสิกรไทย (KBANK)</option>
+                                                    <option value="ธนาคารกรุงเทพ">ธนาคารกรุงเทพ (BBL)</option>
+                                                    <option value="ธนาคารไทยพาณิชย์">ธนาคารไทยพาณิชย์ (SCB)</option>
+                                                    <option value="ธนาคารออมสิน">ธนาคารออมสิน (GSB)</option>
+                                                    <option value="ธนาคารเพื่อการเกษตรและสหกรณ์การเกษตร">ธ.ก.ส. (BAAC)</option>
+                                                    <option value="ธนาคารทหารไทยธนชาต">ธนาคารทหารไทยธนชาต (ttb)</option>
+                                                    <option value="ธนาคารกรุงศรีอยุธยา">ธนาคารกรุงศรีอยุธยา (BAY)</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <label className="block text-emerald-900 font-bold text-[11px]">เลขที่บัญชีธนาคาร</label>
+                                                <input
+                                                    type="text"
+                                                    value={newVendorForm.bank_account_number}
+                                                    onChange={(e) => setNewVendorForm({ ...newVendorForm, bank_account_number: e.target.value })}
+                                                    placeholder="เช่น 507-1-23456-7"
+                                                    className="w-full font-mono rounded-xl border-emerald-300 bg-white px-3 py-2 text-xs focus:border-emerald-600 focus:ring-emerald-600 text-slate-800"
+                                                />
+                                            </div>
+
+                                            <div className="sm:col-span-2 space-y-1">
+                                                <label className="block text-emerald-900 font-bold text-[11px]">ชื่อบัญชีธนาคาร</label>
+                                                <input
+                                                    type="text"
+                                                    value={newVendorForm.bank_account_name}
+                                                    onChange={(e) => setNewVendorForm({ ...newVendorForm, bank_account_name: e.target.value })}
+                                                    placeholder="เช่น หจก. น่านศึกษาภัณฑ์ หรือ นายสมชาย ศึกษาการ"
+                                                    className="w-full rounded-xl border-emerald-300 bg-white px-3 py-2 text-xs focus:border-emerald-600 focus:ring-emerald-600 text-slate-800"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="block text-slate-900 font-bold text-xs">
+                                            ที่อยู่ร้านค้า / สถานประกอบการ
+                                        </label>
+                                        <textarea
+                                            rows={2}
+                                            value={newVendorForm.address}
+                                            onChange={(e) => setNewVendorForm({ ...newVendorForm, address: e.target.value })}
+                                            placeholder="เช่น 124/5 ถ.สุมนเทวราช ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000"
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="block text-slate-900 font-bold text-xs">
+                                                ชื่อผู้ติดต่อ / ผู้รับมอบอำนาจ
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newVendorForm.contact_person}
+                                                onChange={(e) => setNewVendorForm({ ...newVendorForm, contact_person: e.target.value })}
+                                                placeholder="เช่น คุณสมชาย ศึกษาการ"
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="block text-slate-900 font-bold text-xs">
+                                                หมวดหมู่สินค้า / งานบริการ
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={newVendorForm.category}
+                                                onChange={(e) => setNewVendorForm({ ...newVendorForm, category: e.target.value })}
+                                                placeholder="เช่น เครื่องเขียน, วัสดุฝึกงานช่าง, ไอที"
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-x-3 pt-4 border-t border-purple-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAddVendorOpen(false)}
+                                            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isSavingVendor}
+                                            className="rounded-xl px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-800 hover:to-indigo-700 shadow-md transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                                        >
+                                            {isSavingVendor ? '⏳ กำลังบันทึก...' : '💾 บันทึกข้อมูลร้านค้า'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
         </AuthenticatedLayout>
