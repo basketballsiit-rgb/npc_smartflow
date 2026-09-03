@@ -1470,13 +1470,13 @@ ${itemsListText}
                                     </a>
                                     <a href={route('procurements.download_document', [project.id, 'request_form'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                         <div className="text-lg mb-1">🛒</div>
-                                        <div className="text-xs font-bold text-purple-900">2. ใบเสนอซื้อ/จ้าง</div>
-                                        <div className="text-[10px] text-purple-600">รายการวัสดุพัสดุ</div>
+                                        <div className="text-xs font-bold text-purple-900">2. รายงานขอซื้อ/ขอจ้าง</div>
+                                        <div className="text-[10px] text-purple-600">แบบฟอร์ม 7 ส่วน + กรรมการ</div>
                                     </a>
                                     <a href={route('procurements.download_document', [project.id, 'estimation'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                         <div className="text-lg mb-1">📊</div>
-                                        <div className="text-xs font-bold text-purple-900">3. ตารางราคากลาง</div>
-                                        <div className="text-[10px] text-purple-600">คำนวณราคากลางอัตโนมัติ</div>
+                                        <div className="text-xs font-bold text-purple-900">3. ประมาณการรายละเอียด</div>
+                                        <div className="text-[10px] text-purple-600">ตารางประมาณการ/ราคากลาง</div>
                                     </a>
                                     <a href={route('procurements.download_document', [project.id, 'tor'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                         <div className="text-lg mb-1">📜</div>

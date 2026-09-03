@@ -109,7 +109,7 @@
         <button onclick="window.print()" style="padding: 6px 14px; background-color: #7c3aed; color: white; border: none; border-radius: 6px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer;">🖨️ สั่งพิมพ์เอกสาร / PDF</button>
     </div>
 
-    <div class="title">ตารางคำนวณและประมาณการราคากลางพัสดุ</div>
+    <div class="title">ตารางประมาณการรายละเอียดและราคากลางพัสดุ</div>
 
     <div class="text-left" style="font-size: 13pt; line-height: 1.4;">
         <strong>โครงการ:</strong> {{$project->title}}<br>
