@@ -20,6 +20,7 @@ class CentralAllocationController extends Controller
         $validated = $request->validate([
             'fiscal_year' => 'required|string',
             'document_number' => 'nullable|string|max:255',
+            'budget_code' => 'nullable|string|max:100',
             'title' => 'required|string|max:255',
             'funding_source_id' => 'required|exists:funding_sources,id',
             'amount' => 'required|numeric|min:0',
@@ -47,6 +48,7 @@ class CentralAllocationController extends Controller
 
         $validated = $request->validate([
             'document_number' => 'nullable|string|max:255',
+            'budget_code' => 'nullable|string|max:100',
             'title' => 'required|string|max:255',
             'funding_source_id' => 'required|exists:funding_sources,id',
             'amount' => 'required|numeric|min:0',
