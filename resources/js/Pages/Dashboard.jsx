@@ -16,6 +16,8 @@ export default function Dashboard({
     systemSettings = [],
     routinePlans = [],
     allUsers = [],
+    allVendors = [],
+    allFundingSources = [],
     centralAllocations = [],
     currentTab
 }) {
@@ -62,63 +64,96 @@ export default function Dashboard({
     const [procActiveTool, setProcActiveTool] = useState('vendor_po'); // 'vendor_po', 'committee_id', 'budget_code'
     const [procVendorSearch, setProcVendorSearch] = useState('');
     const [procTeacherSearch, setProcTeacherSearch] = useState('');
+    const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
+    const [isSavingVendor, setIsSavingVendor] = useState(false);
+    const [newVendorForm, setNewVendorForm] = useState({
+        name: '',
+        tax_id: '',
+        bank_name: 'ธนาคารกรุงไทย',
+        bank_account_number: '',
+        bank_account_name: '',
+        address: '',
+        phone: '',
+        contact_person: '',
+        category: 'วัสดุและอุปกรณ์ทั่วไป',
+    });
+
     const [procPoData, setProcPoData] = useState({
         vendor_name: '',
         vendor_address: '',
         vendor_tax_id: '',
         vendor_phone: '',
-        delivery_days: '๗',
+        delivery_days: '7',
         po_number: '',
         po_date: '',
     });
 
-    const verifiedVendors = [
+    const defaultVendorsSeed = [
         {
-            id: 1,
+            id: 'v-1',
             name: 'ห้างหุ้นส่วนจำกัด น่านศึกษาภัณฑ์',
             tax_id: '0543542001234',
+            bank_name: 'ธนาคารกรุงไทย',
+            bank_account_number: '507-1-23456-7',
+            bank_account_name: 'หจก. น่านศึกษาภัณฑ์',
             address: '124/5 ถ.สุมนเทวราช ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
             phone: '054-710234',
             category: 'เครื่องเขียน สื่อการสอน แบบเรียน อุปกรณ์สำนักงาน',
             icon: '📚'
         },
         {
-            id: 2,
+            id: 'v-2',
             name: 'บริษัท น่านไอที คอมพิวเตอร์ แอนด์ เซอร์วิส จำกัด',
             tax_id: '0545558005678',
+            bank_name: 'ธนาคารกสิกรไทย',
+            bank_account_number: '114-2-98765-4',
+            bank_account_name: 'บจก. น่านไอที คอมพิวเตอร์ แอนด์ เซอร์วิส',
             address: '88/12 ถ.อนันตวรฤทธิเดช ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
             phone: '054-771890',
             category: 'อุปกรณ์คอมพิวเตอร์ ไอที เครื่องพิมพ์ โทเนอร์ ซอฟต์แวร์',
             icon: '💻'
         },
         {
-            id: 3,
+            id: 'v-3',
             name: 'ร้าน น่านการช่างและวัสดุก่อสร้าง',
             tax_id: '3540100456789',
+            bank_name: 'ธนาคารกรุงเทพ',
+            bank_account_number: '325-0-54321-0',
+            bank_account_name: 'ร้าน น่านการช่างและวัสดุก่อสร้าง',
             address: '205 ถ.มหายศ ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
             phone: '054-750112',
             category: 'วัสดุฝึกงานช่าง เครื่องมือช่าง อุปกรณ์ไฟฟ้า สีและเคมีภัณฑ์',
             icon: '🛠️'
         },
         {
-            id: 4,
+            id: 'v-4',
             name: 'โรงพิมพ์ น่านพาณิชย์การพิมพ์และไวนิล',
             tax_id: '0543536009876',
+            bank_name: 'ธนาคารไทยพาณิชย์',
+            bank_account_number: '567-2-33445-5',
+            bank_account_name: 'โรงพิมพ์ น่านพาณิชย์การพิมพ์',
             address: '45/3 ถ.ผากอง ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
             phone: '054-712345',
             category: 'เอกสารประกอบการฝึกอบรม แผ่นพับ ป้ายไวนิล สิ่งพิมพ์',
             icon: '🖨️'
         },
         {
-            id: 5,
+            id: 'v-5',
             name: 'ร้าน น่านอีเล็คทรอนิคส์ แอนด์ ซัพพลาย',
             tax_id: '3540100789123',
+            bank_name: 'ธนาคารออมสิน',
+            bank_account_number: '020-1-88990-1',
+            bank_account_name: 'ร้าน น่านอีเล็คทรอนิคส์ แอนด์ ซัพพลาย',
             address: '99/4 ถ.เปรมประชาราษฎร์ ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000',
             phone: '054-774561',
             category: 'อุปกรณ์อิเล็กทรอนิกส์ ชิ้นส่วนวงจร เครื่องเสียง เครื่องวัดไฟฟ้า',
             icon: '⚡'
         }
     ];
+
+    const currentVendors = (allVendors && allVendors.length > 0) 
+        ? allVendors 
+        : (procurementData?.vendors && procurementData.vendors.length > 0 ? procurementData.vendors : defaultVendorsSeed);
 
     const copyToClipboard = (text, label) => {
         if (navigator && navigator.clipboard) {
@@ -133,6 +168,51 @@ export default function Dashboard({
                 timer: 2000
             });
         }
+    };
+
+    const handleCreateVendor = (e) => {
+        e.preventDefault();
+        if (!newVendorForm.name.trim()) {
+            Swal.fire({ icon: 'warning', title: 'กรุณาระบุชื่อร้านค้า', timer: 2000, showConfirmButton: false });
+            return;
+        }
+
+        setIsSavingVendor(true);
+        router.post(route('vendors.store'), newVendorForm, {
+            onSuccess: () => {
+                setIsSavingVendor(false);
+                setIsAddVendorOpen(false);
+                setProcPoData({
+                    ...procPoData,
+                    vendor_name: newVendorForm.name,
+                    vendor_tax_id: newVendorForm.tax_id,
+                    vendor_address: newVendorForm.address,
+                    vendor_phone: newVendorForm.phone,
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกข้อมูลร้านค้าสำเร็จ',
+                    text: `บันทึก "${newVendorForm.name}" และเลือกใช้ในใบสั่งซื้อทันที`,
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+                setNewVendorForm({
+                    name: '',
+                    tax_id: '',
+                    bank_name: 'ธนาคารกรุงไทย',
+                    bank_account_number: '',
+                    bank_account_name: '',
+                    address: '',
+                    phone: '',
+                    contact_person: '',
+                    category: 'วัสดุและอุปกรณ์ทั่วไป',
+                });
+            },
+            onError: () => {
+                setIsSavingVendor(false);
+                Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาดในการบันทึกร้านค้า' });
+            }
+        });
     };
 
     // Central allocations states
