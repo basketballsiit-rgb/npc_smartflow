@@ -10,42 +10,42 @@
         body {
             font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
             font-size: 14pt;
-            line-height: 1.15;
+            line-height: 1.2;
             color: #000;
-            padding: 0.3in 0.7in;
+            padding: 0.4in 0.7in;
             max-width: 7.2in;
             margin: auto;
         }
         .title {
             text-align: center;
             font-weight: bold;
-            font-size: 16pt;
-            margin-bottom: 6px;
-            line-height: 1.15;
+            font-size: 16.5pt;
+            margin-bottom: 10px;
+            line-height: 1.2;
         }
         .tor-item {
-            margin-top: 0px;
-            margin-bottom: 2px;
+            margin-top: 0;
+            margin-bottom: 8px; /* ระยะห่างระหว่างข้อ 0.5 บรรทัด */
             padding: 0;
         }
         .section-title {
             font-weight: bold;
-            margin-top: 2px;
-            margin-bottom: 0px;
+            margin-top: 0;
+            margin-bottom: 2px;
             padding: 0;
             font-size: 14pt;
-            line-height: 1.15;
+            line-height: 1.2;
         }
         .content {
             text-indent: 0.5in;
             text-align: justify;
-            line-height: 1.15;
-            margin-top: 0px;
-            margin-bottom: 2px;
+            line-height: 1.2;
+            margin-top: 0;
+            margin-bottom: 0;
             padding: 0;
         }
         .committee-block {
-            margin-top: 15px;
+            margin-top: 25px;
             width: 100%;
             text-align: center;
             page-break-inside: avoid;
@@ -53,11 +53,11 @@
         .committee-title {
             font-weight: bold;
             text-align: left;
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-size: 13.5pt;
         }
         .committee-member {
-            margin: 4px 4px;
+            margin: 6px 4px;
             display: inline-block;
             min-width: 28%;
             vertical-align: top;
