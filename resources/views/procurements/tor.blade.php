@@ -7,29 +7,36 @@
         body {
             font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
             font-size: 14pt;
-            line-height: 1.3;
+            line-height: 1.25;
             color: #000;
-            padding: 0.5in 0.7in;
+            padding: 0.4in 0.7in;
             max-width: 7.2in;
             margin: auto;
         }
         .title {
             text-align: center;
             font-weight: bold;
-            font-size: 17pt;
-            margin-bottom: 16px;
+            font-size: 16.5pt;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+        .tor-item {
+            margin-bottom: 6px;
         }
         .section-title {
             font-weight: bold;
-            margin-top: 12px;
+            margin-top: 4px;
+            margin-bottom: 2px;
+            font-size: 14pt;
             text-decoration: underline;
         }
         .content {
             text-indent: 0.5in;
             text-align: justify;
+            line-height: 1.25;
         }
         .committee-block {
-            margin-top: 35px;
+            margin-top: 25px;
             width: 100%;
             text-align: center;
             page-break-inside: avoid;
@@ -37,11 +44,11 @@
         .committee-title {
             font-weight: bold;
             text-align: left;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             font-size: 13.5pt;
         }
         .committee-member {
-            margin: 10px 4px;
+            margin: 8px 4px;
             display: inline-block;
             min-width: 28%;
             vertical-align: top;
@@ -93,35 +100,43 @@
     }
 @endphp
 <body>
-    <div class="no-print" style="margin-bottom: 15px; text-align: right;">
+    <div class="no-print" style="margin-bottom: 12px; text-align: right;">
         <button onclick="window.print()" style="padding: 6px 14px; background-color: #7c3aed; color: white; border: none; border-radius: 6px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer;">🖨️ สั่งพิมพ์เอกสาร / PDF</button>
     </div>
 
     <div class="title">ข้อกำหนดขอบเขตงาน (Terms of Reference : TOR)<br>การจัดหาพัสดุสำหรับโครงการ "{{$project->title}}"</div>
 
     @if(!empty($procurement->tor_specifications))
-        <div class="content" style="white-space: pre-line; text-indent: 0;">
+        <div class="content" style="white-space: pre-line; text-indent: 0; line-height: 1.25;">
             {!! nl2br(e($procurement->tor_specifications)) !!}
         </div>
     @else
-        <div class="section-title">1. วัตถุประสงค์</div>
-        <div class="content">
-            วิทยาลัยสารพัดช่างน่าน แผนกวิชา {{$project->department?->name}} มีความประสงค์จัดหาวัสดุอุปกรณ์พัสดุ เพื่อนำไปใช้สนับสนุนการจัดกิจกรรมและกระบวนการเรียนการสอนของโครงการ "{{$project->title}}"
+        <div class="tor-item">
+            <div class="section-title">1. วัตถุประสงค์</div>
+            <div class="content">
+                วิทยาลัยสารพัดช่างน่าน แผนกวิชา {{$project->department?->name}} มีความประสงค์จัดหาวัสดุอุปกรณ์พัสดุ เพื่อนำไปใช้สนับสนุนการจัดกิจกรรมและกระบวนการเรียนการสอนของโครงการ "{{$project->title}}"
+            </div>
         </div>
 
-        <div class="section-title">2. คุณลักษณะเฉพาะและขอบเขตงาน</div>
-        <div class="content">
-            พัสดุและรายการวัสดุที่จัดหาต้องมีคุณลักษณะที่เหมาะสมกับการใช้งานการเรียนการสอน ตามเกณฑ์มาตรฐานสายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุระบุตามบัญชีเอกสารแนบเสนอซื้อเสนอจ้าง เลขที่ {{$procurement->procurement_number}}
+        <div class="tor-item">
+            <div class="section-title">2. คุณลักษณะเฉพาะและขอบเขตงาน</div>
+            <div class="content">
+                พัสดุและรายการวัสดุที่จัดหาต้องมีคุณลักษณะที่เหมาะสมกับการใช้งานการเรียนการสอน ตามเกณฑ์มาตรฐานสายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุระบุตามบัญชีเอกสารแนบเสนอซื้อเสนอจ้าง เลขที่ {{$procurement->procurement_number}}
+            </div>
         </div>
 
-        <div class="section-title">3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ</div>
-        <div class="content">
-            ผู้จำหน่ายหรือผู้รับจ้างจะต้องส่งมอบพัสดุทั้งหมด ณ วิทยาลัยสารพัดช่างน่าน ภายในกำหนดเวลา 7 วัน นับถัดจากวันที่ได้รับใบสั่งซื้อสั่งจ้างจากทางวิทยาลัย
+        <div class="tor-item">
+            <div class="section-title">3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ</div>
+            <div class="content">
+                ผู้จำหน่ายหรือผู้รับจ้างจะต้องส่งมอบพัสดุทั้งหมด ณ วิทยาลัยสารพัดช่างน่าน ภายในกำหนดเวลา 7 วัน นับถัดจากวันที่ได้รับใบสั่งซื้อสั่งจ้างจากทางวิทยาลัย
+            </div>
         </div>
 
-        <div class="section-title">4. การตรวจรับพัสดุ</div>
-        <div class="content">
-            การตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้องตรงตามเอกสารประมาณการและใบเสนอซื้อเสนอจ้างทุกประการ
+        <div class="tor-item">
+            <div class="section-title">4. การตรวจรับพัสดุ</div>
+            <div class="content">
+                การตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้องตรงตามเอกสารประมาณการและใบเสนอซื้อเสนอจ้างทุกประการ
+            </div>
         </div>
     @endif
 
