@@ -7,7 +7,7 @@
         body {
             font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
             font-size: 14pt;
-            line-height: 1.25;
+            line-height: 1.18;
             color: #000;
             padding: 0.4in 0.7in;
             max-width: 7.2in;
@@ -16,27 +16,29 @@
         .title {
             text-align: center;
             font-weight: bold;
-            font-size: 16.5pt;
-            margin-bottom: 10px;
+            font-size: 16pt;
+            margin-bottom: 8px;
             line-height: 1.2;
         }
         .tor-item {
-            margin-bottom: 6px;
+            margin-bottom: 3px;
         }
         .section-title {
             font-weight: bold;
-            margin-top: 4px;
-            margin-bottom: 2px;
+            margin-top: 2px;
+            margin-bottom: 0px;
             font-size: 14pt;
-            text-decoration: underline;
+            line-height: 1.18;
         }
         .content {
             text-indent: 0.5in;
             text-align: justify;
-            line-height: 1.25;
+            line-height: 1.18;
+            margin-top: 0px;
+            margin-bottom: 1px;
         }
         .committee-block {
-            margin-top: 25px;
+            margin-top: 20px;
             width: 100%;
             text-align: center;
             page-break-inside: avoid;
@@ -44,11 +46,11 @@
         .committee-title {
             font-weight: bold;
             text-align: left;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-size: 13.5pt;
         }
         .committee-member {
-            margin: 8px 4px;
+            margin: 6px 4px;
             display: inline-block;
             min-width: 28%;
             vertical-align: top;
