@@ -97,7 +97,12 @@ Route::middleware('auth')->group(function () {
     // Central Budget Allocation Routes
     Route::post('/admin/central-allocations', [CentralAllocationController::class, 'store'])->name('admin.central_allocations.store');
     Route::put('/admin/central-allocations/{centralAllocation}', [CentralAllocationController::class, 'update'])->name('admin.central_allocations.update');
-    Route::delete('/admin/central-allocations/{centralAllocation}', [CentralAllocationController::class, 'destroy'])->name('admin.central_allocations.destroy');
+    // Standard Material Item Catalog Routes
+    Route::get('/api/standard-items/search', [\App\Http\Controllers\StandardItemController::class, 'search'])->name('standard_items.search');
+    Route::get('/api/standard-items', [\App\Http\Controllers\StandardItemController::class, 'index'])->name('standard_items.index');
+    Route::post('/api/standard-items', [\App\Http\Controllers\StandardItemController::class, 'store'])->name('standard_items.store');
+    Route::put('/api/standard-items/{standardItem}', [\App\Http\Controllers\StandardItemController::class, 'update'])->name('standard_items.update');
+    Route::delete('/api/standard-items/{standardItem}', [\App\Http\Controllers\StandardItemController::class, 'destroy'])->name('standard_items.destroy');
 
     Route::post('/admin/departments', [AdminController::class, 'storeDepartment'])->name('admin.departments.store');
     Route::put('/admin/departments/{department}', [AdminController::class, 'updateDepartment'])->name('admin.departments.update');
