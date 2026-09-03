@@ -369,9 +369,12 @@ export default function Dashboard({
         background_rationale: '',
     });
 
-    const isPlanStaff = auth.user.is_admin || role === 'admin' || role === 'plan_head' || auth.user.role?.name === 'plan_head' || auth.user.role?.name === 'admin' || (auth.user.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN'));
-    const isAdmin = auth.user.is_admin || role === 'admin' || auth.user.role?.name === 'admin';
-    const isProcurementStaff = isAdmin || role === 'procurement_head' || auth.user.role?.name === 'procurement_head' || (auth.user.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC'));
+        const isAdmin = Boolean(auth.user?.is_admin || role === 'admin' || auth.user?.role?.name === 'admin');
+    const isPlanHead = Boolean(role === 'plan_head' || auth.user?.is_plan_head || auth.user?.role?.name === 'plan_head');
+    const isProcurementHead = Boolean(role === 'procurement_head' || auth.user?.role?.name === 'procurement_head');
+    const isExecutive = Boolean(role === 'executive' || auth.user?.role?.name === 'executive');
+    const isPlanStaff = isAdmin || isPlanHead || Boolean(auth.user?.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN'));
+    const isProcurementStaff = isAdmin || isProcurementHead || Boolean(auth.user?.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC'));
 
     const handleRollbackProcurement = (proj, targetStatus) => {
         const isToPending = targetStatus === 'pending';
@@ -6186,9 +6189,9 @@ ${itemsListText}
     // 5. Dedicated Document & Loan Tracking Center Tab
     const renderDocumentTrackingTab = () => {
         // Collect projects based on user authority
-        const sourceProjects = (isAdmin || isPlanHead || isProcurementHead || isExecutive)
-            ? (allProjectsMaster || teacherData?.projects || [])
-            : (teacherData?.projects || []);
+        const sourceProjects = (Array.isArray(allProjectsMaster) && allProjectsMaster.length > 0)
+            ? allProjectsMaster
+            : (Array.isArray(teacherData?.projects) ? teacherData.projects : []);
 
         // Filter projects that have been approved or in proposal stage
         const trackingList = sourceProjects.map(p => {
