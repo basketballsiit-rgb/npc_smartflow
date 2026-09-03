@@ -142,6 +142,7 @@
                 <td class="text-right">{{number_format($item->unit_price, 2)}}</td>
                 <td class="text-right font-bold">{{number_format($item->total_price, 2)}}</td>
             </tr>
+            @endforeach
             @php
                 $totalProcSum = $items->sum('total_price') ?: $items->reduce(function($carry, $i) {
                     return $carry + (floatval($i->quantity) * floatval($i->unit_price));
