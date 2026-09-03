@@ -4,12 +4,15 @@
     <meta charset="UTF-8">
     <title>ข้อกำหนดขอบเขตงาน (TOR) - {{ $project->title }}</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
             font-size: 14pt;
-            line-height: 1.18;
+            line-height: 1.15;
             color: #000;
-            padding: 0.4in 0.7in;
+            padding: 0.3in 0.7in;
             max-width: 7.2in;
             margin: auto;
         }
@@ -17,28 +20,32 @@
             text-align: center;
             font-weight: bold;
             font-size: 16pt;
-            margin-bottom: 8px;
-            line-height: 1.2;
+            margin-bottom: 6px;
+            line-height: 1.15;
         }
         .tor-item {
-            margin-bottom: 3px;
+            margin-top: 0px;
+            margin-bottom: 2px;
+            padding: 0;
         }
         .section-title {
             font-weight: bold;
             margin-top: 2px;
             margin-bottom: 0px;
+            padding: 0;
             font-size: 14pt;
-            line-height: 1.18;
+            line-height: 1.15;
         }
         .content {
             text-indent: 0.5in;
             text-align: justify;
-            line-height: 1.18;
+            line-height: 1.15;
             margin-top: 0px;
-            margin-bottom: 1px;
+            margin-bottom: 2px;
+            padding: 0;
         }
         .committee-block {
-            margin-top: 20px;
+            margin-top: 15px;
             width: 100%;
             text-align: center;
             page-break-inside: avoid;
@@ -50,7 +57,7 @@
             font-size: 13.5pt;
         }
         .committee-member {
-            margin: 6px 4px;
+            margin: 4px 4px;
             display: inline-block;
             min-width: 28%;
             vertical-align: top;
