@@ -142,6 +142,32 @@
         }
     }
 
+    if (!function_exists('toThaiDigits')) {
+        function toThaiDigits($str) {
+            $thaiDigits = ['0'=>'๐', '1'=>'๑', '2'=>'๒', '3'=>'๓', '4'=>'๔', '5'=>'๕', '6'=>'๖', '7'=>'๗', '8'=>'๘', '9'=>'๙'];
+            return strtr((string)$str, $thaiDigits);
+        }
+    }
+
+    if (!function_exists('formatThaiLoanItemDesc')) {
+        function formatThaiLoanItemDesc($desc, $itemIndex) {
+            $desc = trim(preg_replace('/[💵📦💰📑📝🛒📄📊]/u', '', $desc));
+            // Strip leading dashes or bullet points e.g. "- ", "• ", "- ๑. ", "- 1. "
+            $desc = preg_replace('/^[\-\–\—\•\*\s]+/u', '', $desc);
+            
+            // If it starts with a number like "1. ", "๑. ", "1) ", "๑) ", "1 ", "๑ "
+            if (preg_match('/^([0-9]+|[๐-๙]+)[\.\)]\s*(.*)$/u', $desc, $m)) {
+                $thaiNum = toThaiDigits($m[1]);
+                $rest = $m[2];
+                $desc = $thaiNum . '. ' . $rest;
+            } else {
+                $thaiIdx = toThaiDigits($itemIndex);
+                $desc = $thaiIdx . '. ' . $desc;
+            }
+            return $desc;
+        }
+    }
+
     if (!function_exists('convertToThaiBahtTextLoan')) {
         function convertToThaiBahtTextLoan($number) {
             if (!is_numeric($number)) return '';
@@ -237,22 +263,23 @@
             $actItems = [];
             $actSum = 0;
 
-            foreach ($act['loan_items'] ?? [] as $it) {
+            foreach ($act['loan_items'] ?? [] as $itIdx => $it) {
                 if (!empty($it['description']) && trim($it['description']) !== '') {
                     $qty = floatval($it['quantity'] ?? 1);
                     $price = floatval($it['unit_price'] ?? 0);
                     $tot = $qty * $price;
                     $actSum += $tot;
                     
+                    $formattedDesc = formatThaiLoanItemDesc($it['description'], $itIdx + 1);
+                    
                     $itemObj = [
-                        'description' => trim(preg_replace('/[💵📦💰📑📝🛒📄📊]/u', '', $it['description'])),
+                        'description' => $formattedDesc,
                         'quantity' => $qty,
                         'unit' => $it['unit'] ?? 'รายการ',
                         'unit_price' => $price,
                         'total_price' => $tot,
                     ];
                     $actItems[] = $itemObj;
-                    $allLoanItems[] = $itemObj;
                 }
             }
 
@@ -269,29 +296,45 @@
         }
     }
 
+    // Build flattened all items with sequential Thai numbers
+    if (!empty($structuredActivities)) {
+        $flatIdx = 1;
+        foreach ($structuredActivities as $act) {
+            foreach ($act['items'] as $it) {
+                $descWithoutNum = preg_replace('/^[๐-๙0-9]+\.\s*/u', '', $it['description']);
+                $allLoanItems[] = array_merge($it, [
+                    'description' => toThaiDigits($flatIdx) . '. ' . $descWithoutNum,
+                ]);
+                $flatIdx++;
+            }
+        }
+    }
+
     if (empty($allLoanItems) && $project->procurement && $project->procurement->items) {
         $filtered = $project->procurement->items->filter(function($i) {
             return preg_match('/ค่าตอบแทน|วิทยากร|ค่าอาหาร|อาหารกลางวัน|อาหารว่าง|เครื่องดื่ม|เดินทาง|พาหนะ|ยานพาหนะ|เบี้ยเลี้ยง|ที่พัก|สมนาคุณ|เงินยืม/u', $i->description);
         });
+        $flatIdx = 1;
         foreach ($filtered as $i) {
             $qty = floatval($i->quantity ?? 1);
             $price = floatval($i->unit_price ?? 0);
             $tot = $qty * $price;
             $allLoanItems[] = [
-                'description' => trim(preg_replace('/[💵📦💰📑📝🛒📄📊]/u', '', $i->description)),
+                'description' => formatThaiLoanItemDesc($i->description, $flatIdx),
                 'quantity' => $qty,
                 'unit' => $i->unit ?? 'รายการ',
                 'unit_price' => $price,
                 'total_price' => $tot,
             ];
+            $flatIdx++;
         }
     }
 
     if (empty($allLoanItems)) {
         $allLoanItems = [
-            ['description' => 'ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => 3600],
-            ['description' => 'ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => 4000],
-            ['description' => 'ค่าอาหารว่างและเครื่องดื่ม', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => 3500],
+            ['description' => '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => 3600],
+            ['description' => '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => 4000],
+            ['description' => '๓. ค่าอาหารว่างและเครื่องดื่ม', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => 3500],
         ];
     }
 
@@ -356,9 +399,9 @@
                                 {{ $baseContractNum }}
                             </span>
                         </div>
-                        <div style="font-size: 15pt; line-height: 1.0;">วันครบกำหนด</div>
-                        <div class="underline-dotted" style="font-size: 14pt; margin-top: 2px; min-height: 20px; text-align: center; width: 100%;">
-                            30 วันนับแต่วันรับเงิน
+                        <div style="font-size: 15pt; line-height: 1.0; margin-top: 4px;">วันครบกำหนด</div>
+                        <div class="underline-dotted" style="font-size: 14pt; margin-top: 4px; min-height: 20px; text-align: center; width: 100%;">
+                            &nbsp;
                         </div>
                     </td>
                 </tr>
@@ -383,7 +426,7 @@
                     @foreach($allLoanItems as $item)
                         <tr>
                             <td class="col-border-right">
-                                - {{ $item['description'] }}
+                                {{ $item['description'] }}
                                 @if(!empty($item['quantity']) && $item['quantity'] > 1)
                                     ({{ number_format($item['quantity'], 0) }} {{ $item['unit'] }} x {{ number_format($item['unit_price'], 2) }} บาท)
                                 @endif
@@ -492,6 +535,25 @@
         const projectTitle = @json($project->title);
         const fiscalYear = @json($project->academic_year ?? '2569');
 
+        function toThaiDigits(num) {
+            const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+            return String(num).replace(/[0-9]/g, d => thaiDigits[d]);
+        }
+
+        function cleanThaiItemDesc(desc, idx) {
+            let clean = (desc || '').replace(/[💵📦💰📑📝🛒📄📊]/g, '').trim();
+            // Remove leading dashes or bullets
+            clean = clean.replace(/^[\-\–\—\•\*\s]+/g, '').trim();
+            
+            // Check if already has a number prefix like "1. ", "๑. ", "1) "
+            const match = clean.match(/^([0-9]+|[๐-๙]+)[\.\)]\s*(.*)$/);
+            if (match) {
+                const thaiNum = toThaiDigits(match[1]);
+                return thaiNum + '. ' + match[2];
+            }
+            return toThaiDigits(idx) + '. ' + clean;
+        }
+
         function formatMoney(num) {
             return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
@@ -524,12 +586,13 @@
             // 3. Render Table Rows
             const tbody = document.getElementById('loan-items-tbody');
             let rowsHtml = '';
-            activeDataset.items.forEach(it => {
+            activeDataset.items.forEach((it, idx) => {
+                const formattedDesc = cleanThaiItemDesc(it.description, idx + 1);
                 const qtyText = (it.quantity && it.quantity > 1) ? ` (${parseFloat(it.quantity).toLocaleString()} ${it.unit || 'รายการ'} x ${formatMoney(it.unit_price)} บาท)` : '';
                 rowsHtml += `
                     <tr>
                         <td class="col-border-right">
-                            - ${it.description}${qtyText}
+                            ${formattedDesc}${qtyText}
                         </td>
                         <td class="col-amount">
                             ${formatMoney(it.total_price)}
