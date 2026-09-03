@@ -180,30 +180,30 @@
                 </tr>
                 @empty
                 <tr>
-                    <td class="text-center">๑</td>
+                    <td class="text-center">1</td>
                     <td>ค่าตอบแทนวิทยากรบรรยายและฝึกอบรม</td>
-                    <td class="text-center">๖</td>
+                    <td class="text-center">6</td>
                     <td class="text-center">ชั่วโมง</td>
-                    <td class="text-right font-bold">๓,๖๐๐.๐๐</td>
+                    <td class="text-right font-bold">3,600.00</td>
                 </tr>
                 <tr>
-                    <td class="text-center">๒</td>
+                    <td class="text-center">2</td>
                     <td>ค่าอาหารกลางวันผู้เข้าร่วมโครงการ</td>
-                    <td class="text-center">๕๐</td>
+                    <td class="text-center">50</td>
                     <td class="text-center">คน</td>
-                    <td class="text-right font-bold">๔,๐๐๐.๐๐</td>
+                    <td class="text-right font-bold">4,000.00</td>
                 </tr>
                 <tr>
-                    <td class="text-center">๓</td>
+                    <td class="text-center">3</td>
                     <td>ค่าอาหารว่างและเครื่องดื่ม</td>
-                    <td class="text-center">๕๐</td>
+                    <td class="text-center">50</td>
                     <td class="text-center">คน</td>
-                    <td class="text-right font-bold">๓,๕๐๐.๐๐</td>
+                    <td class="text-right font-bold">3,500.00</td>
                 </tr>
                 <tr>
-                    <td class="text-center">๔</td>
+                    <td class="text-center">4</td>
                     <td>ค่าใช้จ่ายในการเดินทางไปราชการ / ค่าพาหนะ</td>
-                    <td class="text-center">๑</td>
+                    <td class="text-center">1</td>
                     <td class="text-center">งาน</td>
                     <td class="text-right font-bold">-</td>
                 </tr>
@@ -216,7 +216,7 @@
         </table>
 
         <p class="indent" style="text-align: justify;">
-            ข้าพเจ้าสัญญาว่าจะปฏิบัติตามระเบียบของทางราชการทุกประการ และจะนำหลักฐานใบเสร็จรับเงินค่าใช้จ่ายที่ถูกต้อง พร้อมเงินเหลือจ่าย (ถ้ามี) มาส่งใช้คืนเงินยืมตามสัญญานี้ให้เสร็จสิ้นภายในกำหนด <strong>๓๐ วัน</strong> นับแต่วันที่ได้รับเงินยืมนี้ หากข้าพเจ้าไม่ส่งใช้คืนเงินยืมตามกำหนด ข้าพเจ้ายินยอมให้ผู้บังคับบัญชาหักเงินเดือน หรือเงินอื่นใดที่ข้าพเจ้าพึงได้รับจากทางราชการเพื่อชดใช้เงินยืมนี้ได้ทันที
+            ข้าพเจ้าสัญญาว่าจะปฏิบัติตามระเบียบของทางราชการทุกประการ และจะนำหลักฐานใบเสร็จรับเงินค่าใช้จ่ายที่ถูกต้อง พร้อมเงินเหลือจ่าย (ถ้ามี) มาส่งใช้คืนเงินยืมตามสัญญานี้ให้เสร็จสิ้นภายในกำหนด <strong>30 วัน</strong> นับแต่วันที่ได้รับเงินยืมนี้ หากข้าพเจ้าไม่ส่งใช้คืนเงินยืมตามกำหนด ข้าพเจ้ายินยอมให้ผู้บังคับบัญชาหักเงินเดือน หรือเงินอื่นใดที่ข้าพเจ้าพึงได้รับจากทางราชการเพื่อชดใช้เงินยืมนี้ได้ทันที
         </p>
 
         <table class="signature-table">
