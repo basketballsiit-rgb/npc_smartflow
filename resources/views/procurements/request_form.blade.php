@@ -4,19 +4,22 @@
     <meta charset="UTF-8">
     <title>รายงานขอซื้อ/ขอจ้าง (ใบเสนอซื้อจ้าง) - {{ $project->title }}</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
-            font-size: 12.5pt;
+            font-size: 12pt;
             line-height: 1.15;
             color: #000;
-            padding: 0.1in 0.3in;
-            max-width: 7.5in;
+            padding: 0.2in 0.4in 0.2in 0.6in;
+            max-width: 7.2in;
             margin: auto;
         }
         .header-container {
             position: relative;
-            min-height: 45px;
-            margin-bottom: 3px;
+            min-height: 48px;
+            margin-bottom: 4px;
         }
         .garuda-img {
             position: absolute;
@@ -39,44 +42,46 @@
         .meta-table td {
             padding: 0;
             vertical-align: top;
-            font-size: 12.5pt;
+            font-size: 12pt;
             line-height: 1.15;
         }
         .subject-title {
             font-weight: bold;
         }
         .paragraph {
-            text-indent: 0.5in;
+            text-indent: 0.45in;
             text-align: justify;
             margin-bottom: 2px;
-            line-height: 1.18;
+            line-height: 1.16;
         }
         .grid-box-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
-            border: 1px solid #000;
+            border: 1.5px solid #000 !important;
+            table-layout: fixed;
         }
         .grid-box-table td {
-            border: 1px solid #000;
+            border: 1px solid #000 !important;
             vertical-align: top;
             padding: 4px 6px;
-            font-size: 11pt;
+            font-size: 10.8pt;
             line-height: 1.15;
         }
         .box-title {
             font-weight: bold;
-            font-size: 11.5pt;
+            font-size: 11.2pt;
             margin-bottom: 1px;
         }
         .bottom-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 4px;
+            table-layout: fixed;
         }
         .bottom-table td {
             vertical-align: top;
-            font-size: 11pt;
+            font-size: 10.8pt;
             line-height: 1.15;
             padding: 1px 4px;
         }
@@ -87,9 +92,9 @@
         @media print {
             body { 
                 padding: 0 !important; 
-                margin: 0 auto !important;
+                margin: 0 !important;
                 max-width: 100% !important;
-                font-size: 12pt !important;
+                font-size: 11.5pt !important;
                 line-height: 1.12 !important;
             }
             .no-print, 
@@ -103,7 +108,7 @@
             }
             @page {
                 size: A4 portrait;
-                margin: 0.6cm 1.0cm 0.6cm 1.0cm;
+                margin: 1.0cm 1.5cm 0.8cm 2.0cm;
             }
         }
     </style>
