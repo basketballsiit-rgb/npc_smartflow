@@ -337,7 +337,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             const actLabel = `[กิจกรรมที่ ${actIdx + 1}]`;
             (act.loan_items || []).forEach(item => {
                 flattenedProcurementItems.push({
-                    description: `${actLabel} 💵 ${item.description}`,
+                    description: `${actLabel} ${item.description}`,
                     quantity: item.quantity,
                     unit: item.unit,
                     unit_price: item.unit_price,
@@ -346,7 +346,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             });
             (act.procurement_items || []).forEach(item => {
                 flattenedProcurementItems.push({
-                    description: `${actLabel} 📦 ${item.description}`,
+                    description: `${actLabel} ${item.description}`,
                     quantity: item.quantity,
                     unit: item.unit,
                     unit_price: item.unit_price,

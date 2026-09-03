@@ -113,9 +113,13 @@
             </thead>
             <tbody>
                 @forelse($loanItems as $index => $item)
+                @php
+                    $cleanDesc = preg_replace('/[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]/u', '', $item->description);
+                    $cleanDesc = trim(str_replace(['💵', '📦', '💰', '📑', '📝', '🛒', '📄', '📊'], '', $cleanDesc));
+                @endphp
                 <tr>
                     <td class="text-center">{{ $index + 1 }}</td>
-                    <td>{{ $item->description }}</td>
+                    <td>{{ $cleanDesc }}</td>
                     <td class="text-center">{{ number_format($item->quantity, 0) }}</td>
                     <td class="text-center">{{ $item->unit }}</td>
                     <td class="text-right font-bold">{{ number_format($item->total_price, 2) }}</td>

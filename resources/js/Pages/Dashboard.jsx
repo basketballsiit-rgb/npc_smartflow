@@ -4340,7 +4340,7 @@ export default function Dashboard({
                                                     items.map((it, idx) => (
                                                         <tr key={it.id || idx} className="hover:bg-purple-50/30">
                                                             <td className="p-3 text-center text-slate-500 font-bold">{idx + 1}</td>
-                                                            <td className="p-3 font-semibold text-slate-800">{it.description}</td>
+                                                            <td className="p-3 font-semibold text-slate-800">{(it.description || '').replace(/[💵📦💰📑📝🛒📄📊]/g, '').trim()}</td>
                                                             <td className="p-3 text-center font-bold">{it.quantity}</td>
                                                             <td className="p-3 text-center text-slate-600">{it.unit}</td>
                                                             <td className="p-3 text-right font-mono">{parseFloat(it.unit_price).toLocaleString()} บ.</td>
