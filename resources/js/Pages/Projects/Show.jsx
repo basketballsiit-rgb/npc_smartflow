@@ -51,6 +51,54 @@ export default function Show({ project, strategyCategories = [], fundingSources 
         project.procurement?.tor_specifications || defaultTorText
     );
 
+    const handleGenerateAiTor = () => {
+        const validItems = procurementItems.filter(item => item.description && item.description.trim() !== '');
+        
+        if (validItems.length === 0) {
+            Swal.fire({
+                title: 'ไม่พบรายการพัสดุ',
+                text: 'กรุณากรอกรายการพัสดุในตารางด้านบนก่อน เพื่อให้ AI นำรายการพัสดุมาช่วยร่างข้อกำหนด TOR',
+                icon: 'info',
+                confirmButtonColor: '#7c3aed'
+            });
+            return;
+        }
+
+        const itemsListText = validItems.map((item, idx) => {
+            const cleanDesc = item.description.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').replace(/[💵📦💰📑📝🛒📄📊]/g, '').trim();
+            const qty = item.quantity || 1;
+            const unit = item.unit || 'ชิ้น';
+            return `     2.${idx + 1} ${cleanDesc} จำนวน ${qty} ${unit}`;
+        }).join('\n');
+
+        const deptName = project.department?.name || 'ฝ่ายวิชาการ / สาขาวิชาการ';
+        const projectTitle = project.title || '';
+
+        const aiDraftedTor = `1. วัตถุประสงค์
+วิทยาลัยสารพัดช่างน่าน แผนกวิชา ${deptName} มีความประสงค์จัดหาวัสดุอุปกรณ์และพัสดุ เพื่อนำไปใช้สนับสนุนการจัดกิจกรรมและกระบวนการเรียนการสอนของโครงการ "${projectTitle}" ให้บรรลุวัตถุประสงค์และเกิดประสิทธิภาพสูงสุด
+
+2. คุณลักษณะเฉพาะและขอบเขตงาน
+พัสดุและรายการวัสดุที่จัดหาต้องเป็นของแท้ ของใหม่ ไม่เคยผ่านการใช้งานมาก่อน มีคุณภาพและมาตรฐานตามเกณฑ์สายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุจำนวน ${validItems.length} รายการ ดังนี้:
+${itemsListText}
+และพัสดุทั้งหมดต้องมีคุณสมบัติ คุณลักษณะเฉพาะ และมาตรฐานทางวิชาการที่ถูกต้องครบถ้วน พร้อมใช้งานได้ทันที
+
+3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ
+ผู้จำหน่ายหรือผู้รับจ้างจะต้องส่งมอบพัสดุทั้งหมด ณ วิทยาลัยสารพัดช่างน่าน ภายในกำหนดเวลา 7 วัน นับถัดจากวันที่ได้รับใบสั่งซื้อสั่งจ้างจากทางวิทยาลัย
+
+4. การตรวจรับพัสดุ
+การตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้อง ครบถ้วน ตรงตามเอกสารประมาณการ รายละเอียดคุณลักษณะเฉพาะ และใบเสนอซื้อเสนอจ้างทุกประการ`;
+
+        setTorSpecifications(aiDraftedTor);
+
+        Swal.fire({
+            title: '✨ AI ร่าง TOR สำเร็จ!',
+            html: `ดึงรายการพัสดุ <b>${validItems.length} รายการ</b> มาบรรจุในข้อกำหนด TOR (ข้อ 2) ให้เรียบร้อยแล้ว<br><span class="text-xs text-slate-500">สามารถตรวจสอบและปรับแต่งแก้ไขข้อความเพิ่มเติมในกล่องข้อความได้ตามต้องการ</span>`,
+            icon: 'success',
+            confirmButtonColor: '#7c3aed',
+            timer: 3000
+        });
+    };
+
     const allocatedBudget = parseFloat(project.budget?.allocated_amount || project.estimated_budget || 0);
     const totalProcurementSum = procurementItems.reduce((acc, item) => acc + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
     const isOverBudget = totalProcurementSum > (allocatedBudget + 0.01);
