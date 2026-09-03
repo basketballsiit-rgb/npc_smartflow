@@ -88,10 +88,20 @@
         }
         @media print {
             body {
-                padding: 0;
+                padding: 0 !important;
+                margin: 0 auto !important;
             }
-            .no-print {
-                display: none;
+            .no-print, .no-print * {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 1.5cm 2cm 1.5cm 2cm;
             }
         }
     </style>
