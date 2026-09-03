@@ -1409,19 +1409,22 @@ ${itemsListText}
                                 </div>
                                 {project.procurement?.id && !isEditingProcurement ? (
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <div className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-black shadow-2xs select-none">
-                                            <span className="text-sm">✅</span>
-                                            <span>บันทึกข้อมูล & ออกคำสั่งพัสดุแล้ว</span>
+                                        <div className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-black shadow-2xs select-none">
+                                            <span className="text-sm">🔒</span>
+                                            <span>บันทึกส่งงานพัสดุแล้ว (ดูอย่างเดียว)</span>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsEditingProcurement(true)}
-                                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-purple-50 text-purple-700 hover:text-purple-900 border border-purple-200 rounded-xl text-xs font-bold shadow-2xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                                            title="คลิกเพื่อแก้ไขรายการพัสดุ คณะกรรมการ หรือรายละเอียด TOR"
-                                        >
-                                            <span>✏️</span>
-                                            <span>แก้ไขข้อมูล</span>
-                                        </button>
+                                        {/* Only Procurement staff or Admin can unlock to edit after submission */}
+                                        {isProcStaffOrAdmin && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsEditingProcurement(true)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold shadow-2xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                title="ปลดล็อคแก้ไขข้อมูลพัสดุ (เฉพาะเจ้าหน้าที่พัสดุและแอดมิน)"
+                                            >
+                                                <span>✏️</span>
+                                                <span>แก้ไขข้อมูล (เฉพาะงานพัสดุ)</span>
+                                            </button>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="flex flex-wrap items-center gap-2">
@@ -1431,7 +1434,7 @@ ${itemsListText}
                                                 onClick={() => setIsEditingProcurement(false)}
                                                 className="px-3 py-2 text-slate-500 hover:text-slate-800 text-xs font-bold hover:bg-slate-100 rounded-xl transition cursor-pointer"
                                             >
-                                                ยกเลิกแก้ไข
+                                                ยกเลิกการแก้ไข
                                             </button>
                                         )}
                                         <button
@@ -1656,7 +1659,9 @@ ${itemsListText}
                                 </div>
                             </div>
 
-                            {/* Section 2: Committee Appointment Form (Read-Only when submitted) */}
+                            {/* Section 2: Committee Appointment Form (Visible ONLY to Procurement Staff & Admin) */}
+                            {isProcStaffOrAdmin && (
+                                {/* Section 2: Committee Appointment Form (Read-Only when submitted) */}
                             <div className="border border-purple-100 rounded-2xl p-5 bg-purple-50/20 space-y-4">
                                 <div className="flex items-center gap-2">
                                     <h4 className="text-sm font-extrabold text-purple-950">👥 แต่งตั้งคณะกรรมการจัดซื้อจัดจ้าง และตรวจรับพัสดุ (Committees)</h4>
@@ -1780,6 +1785,7 @@ ${itemsListText}
                                     </div>
                                 </div>
                             </div>
+                            )}
 
                             {/* Section 3: TOR Specifications Text Editor */}
                             <div className="border border-purple-100 rounded-2xl p-5 bg-purple-50/20 space-y-3 font-sans">
