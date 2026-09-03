@@ -170,10 +170,18 @@
         $thaiYear = date('Y') + 543;
         $thaiMonthNames = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
         $currentDateThai = date('j') . ' ' . $thaiMonthNames[date('n')-1] . ' ' . $thaiYear;
+
+        $garudaPath = public_path('images/garuda.png');
+        if (!file_exists($garudaPath)) {
+            $garudaPath = public_path('garuda.png');
+        }
+        $garudaSrc = file_exists($garudaPath) 
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($garudaPath)) 
+            : asset('images/garuda.png');
     @endphp
 
     <div class="header">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Garuda_Emblem_of_Thailand.svg/200px-Garuda_Emblem_of_Thailand.svg.png" class="garuda" alt="ตราครุฑ">
+        <img src="{{ $garudaSrc }}" class="garuda" alt="ตราครุฑ">
         <div class="title">ใบสั่งซื้อ / สั่งจ้าง</div>
         <div class="subtitle">วิทยาลัยสารพัดช่างน่าน สำนักงานคณะกรรมการการอาชีวศึกษา</div>
     </div>
