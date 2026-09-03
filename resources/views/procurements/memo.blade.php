@@ -75,6 +75,10 @@
             margin-top: 8px;
             font-size: 14pt;
         }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+        }
     </style>
 </head>
 @php
@@ -84,17 +88,31 @@
     $year = date('Y') + 543;
     $thaiDateStr = "{$day} {$month} {$year}";
 
+    if (!function_exists('cleanPersonName')) {
+        function cleanPersonName($name) {
+            if (!$name) return '..........................................................';
+            $cleaned = preg_replace('/\s*\(.*?\)/u', '', $name);
+            $cleaned = preg_replace('/\s*\[.*?\]/u', '', $cleaned);
+            $cleaned = trim(str_replace(['(', ')'], '', $cleaned));
+            return $cleaned ?: '..........................................................';
+        }
+    }
+
     // Clean name and position
     $rawProposerName = $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................');
     $extractedProposerPos = '';
-    if (preg_match('/\((.*?)\)/', $rawProposerName, $matches)) {
+    if (preg_match('/\((.*?)\)/u', $rawProposerName, $matches)) {
         $extractedProposerPos = trim($matches[1]);
     }
-    $cleanProposerName = trim(preg_replace('/\s*\(.*?\)/', '', $rawProposerName));
+    $cleanProposerName = cleanPersonName($rawProposerName);
     $displayProposerPos = $project->position ?: ($extractedProposerPos ?: ($project->user?->position ?: 'อาจารย์ประจำสาขา / ผู้รับผิดชอบโครงการ'));
 @endphp
 
 <body>
+    <div class="no-print" style="margin-bottom: 15px; text-align: right;">
+        <button onclick="window.print()" style="padding: 6px 14px; background-color: #7c3aed; color: white; border: none; border-radius: 6px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer;">🖨️ สั่งพิมพ์เอกสาร / PDF</button>
+    </div>
+
     <div class="header-container">
         <img src="{{ asset('images/garuda.png') }}" class="garuda-img" alt="ตราครุฑ">
         <div class="header-title">บันทึกข้อความ</div>
