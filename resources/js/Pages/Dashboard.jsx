@@ -5254,6 +5254,141 @@ ${itemsListText}
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* TOOL 5: คลังรายการวัสดุและราคากลางมาตรฐาน (Material & Standard Price Catalog) */}
+                                    {procActiveTool === 'item_catalog' && (
+                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-purple-100 space-y-4 animate-fadeIn">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                                <div>
+                                                    <h6 className="text-xs font-black uppercase text-purple-950 flex items-center gap-1.5">
+                                                        <span>📦</span> คลังรายการวัสดุและฐานข้อมูลราคากลางมาตรฐาน (Standard Items)
+                                                    </h6>
+                                                    <p className="text-[11px] text-slate-500">
+                                                        ฐานข้อมูลพัสดุ/ราคากลางสำหรับให้ครูและเจ้าหน้าที่ค้นหาและดึงไปใช้เสนอโครงการได้ทันที
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setEditingCatalogItem(null);
+                                                        setCatalogFormData({ name: '', unit: 'ชิ้น', standard_price: '', category: 'วัสดุสำนักงาน' });
+                                                        setIsAddCatalogItemOpen(true);
+                                                    }}
+                                                    className="px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition"
+                                                >
+                                                    <span>➕</span> เพิ่มรายการวัสดุใหม่
+                                                </button>
+                                            </div>
+
+                                            {/* Filters */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 text-xs">
+                                                <div className="sm:col-span-8">
+                                                    <input
+                                                        type="text"
+                                                        value={catalogSearch}
+                                                        onChange={(e) => setCatalogSearch(e.target.value)}
+                                                        placeholder="🔍 พิมพ์ชื่อรายการพัสดุ หรือราคากลาง เพื่อค้นหา..."
+                                                        className="w-full text-xs rounded-xl border border-purple-200 bg-white px-3 py-2 focus:ring-purple-500 focus:border-purple-500 shadow-2xs"
+                                                    />
+                                                </div>
+                                                <div className="sm:col-span-4">
+                                                    <select
+                                                        value={catalogCategoryFilter}
+                                                        onChange={(e) => setCatalogCategoryFilter(e.target.value)}
+                                                        className="w-full text-xs rounded-xl border border-purple-200 bg-white px-3 py-2 focus:ring-purple-500 focus:border-purple-500 shadow-2xs"
+                                                    >
+                                                        <option value="">-- ทุกหมวดหมู่พัสดุ --</option>
+                                                        <option value="วัสดุสำนักงาน">วัสดุสำนักงาน</option>
+                                                        <option value="วัสดุคอมพิวเตอร์">วัสดุคอมพิวเตอร์</option>
+                                                        <option value="วัสดุการศึกษา">วัสดุการศึกษา</option>
+                                                        <option value="วัสดุฝึก">วัสดุฝึก</option>
+                                                        <option value="วัสดุงานบ้านงานครัว">วัสดุงานบ้านงานครัว</option>
+                                                        <option value="วัสดุทั่วไป">วัสดุทั่วไป</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            {/* Standard Items Table */}
+                                            <div className="overflow-x-auto rounded-xl border border-purple-200 bg-white shadow-2xs">
+                                                <table className="w-full text-xs text-left">
+                                                    <thead className="bg-purple-100/70 text-purple-950 font-bold uppercase text-[11px]">
+                                                        <tr>
+                                                            <th className="px-3 py-2 text-center w-10">#</th>
+                                                            <th className="px-3 py-2">ชื่อรายการพัสดุ / วัสดุ</th>
+                                                            <th className="px-3 py-2">หมวดหมู่</th>
+                                                            <th className="px-3 py-2 text-center">หน่วยนับ</th>
+                                                            <th className="px-3 py-2 text-right">ราคากลางต่อหน่วย</th>
+                                                            <th className="px-3 py-2 text-center">ความถี่การใช้</th>
+                                                            <th className="px-3 py-2 text-center w-24">จัดการ</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-purple-50">
+                                                        {isLoadingCatalog ? (
+                                                            <tr>
+                                                                <td colSpan="7" className="text-center py-6 text-slate-500">
+                                                                    ⏳ กำลังโหลดข้อมูลรายการพัสดุ...
+                                                                </td>
+                                                            </tr>
+                                                        ) : standardCatalogItems.length === 0 ? (
+                                                            <tr>
+                                                                <td colSpan="7" className="text-center py-6 text-slate-500">
+                                                                    ไม่พบรายการพัสดุที่ตรงกับคำค้นหา
+                                                                </td>
+                                                            </tr>
+                                                        ) : (
+                                                            standardCatalogItems.map((item, idx) => (
+                                                                <tr key={item.id} className="hover:bg-purple-50/40 transition">
+                                                                    <td className="px-3 py-2 text-center text-slate-400 font-medium">{idx + 1}</td>
+                                                                    <td className="px-3 py-2 font-bold text-slate-800">{item.name}</td>
+                                                                    <td className="px-3 py-2">
+                                                                        <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-100 text-[10px] font-medium">
+                                                                            {item.category || 'ทั่วไป'}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-center font-bold text-slate-700">{item.unit}</td>
+                                                                    <td className="px-3 py-2 text-right font-mono font-bold text-purple-900">
+                                                                        {parseFloat(item.standard_price).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-center text-slate-500">
+                                                                        {item.usage_count || 1} ครั้ง
+                                                                    </td>
+                                                                    <td className="px-3 py-2 text-center">
+                                                                        <div className="flex items-center justify-center gap-1">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setEditingCatalogItem(item);
+                                                                                    setCatalogFormData({
+                                                                                        name: item.name,
+                                                                                        unit: item.unit,
+                                                                                        standard_price: item.standard_price,
+                                                                                        category: item.category || 'วัสดุทั่วไป'
+                                                                                    });
+                                                                                    setIsAddCatalogItemOpen(true);
+                                                                                }}
+                                                                                className="p-1 text-purple-700 hover:bg-purple-100 rounded text-xs"
+                                                                                title="แก้ไข"
+                                                                            >
+                                                                                ✏️
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDeleteCatalogItem(item.id, item.name)}
+                                                                                className="p-1 text-rose-600 hover:bg-rose-100 rounded text-xs"
+                                                                                title="ลบ"
+                                                                            >
+                                                                                🗑️
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            ))
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex justify-between items-center pt-3 border-t border-purple-100">
