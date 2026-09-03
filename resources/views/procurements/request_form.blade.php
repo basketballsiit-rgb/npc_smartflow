@@ -9,30 +9,30 @@
         }
         body {
             font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
-            font-size: 12pt;
-            line-height: 1.15;
+            font-size: 13.5pt;
+            line-height: 1.2;
             color: #000;
-            padding: 0.2in 0.4in 0.2in 0.6in;
-            max-width: 7.2in;
+            padding: 0.15in 0.35in 0.15in 0.55in;
+            max-width: 7.4in;
             margin: auto;
         }
         .header-container {
             position: relative;
-            min-height: 48px;
+            min-height: 50px;
             margin-bottom: 4px;
         }
         .garuda-img {
             position: absolute;
             left: 0;
             top: 0;
-            width: 44px;
+            width: 48px;
             height: auto;
         }
         .header-title {
             text-align: center;
             font-weight: bold;
-            font-size: 21pt;
-            line-height: 1;
+            font-size: 24pt;
+            line-height: 1.05;
         }
         .meta-table {
             width: 100%;
@@ -42,8 +42,8 @@
         .meta-table td {
             padding: 0;
             vertical-align: top;
-            font-size: 12pt;
-            line-height: 1.15;
+            font-size: 13.5pt;
+            line-height: 1.2;
         }
         .subject-title {
             font-weight: bold;
@@ -52,7 +52,8 @@
             text-indent: 0.45in;
             text-align: justify;
             margin-bottom: 2px;
-            line-height: 1.16;
+            line-height: 1.2;
+            font-size: 13.5pt;
         }
         .grid-box-table {
             width: 100%;
@@ -65,12 +66,12 @@
             border: 1px solid #000 !important;
             vertical-align: top;
             padding: 4px 6px;
-            font-size: 10.8pt;
-            line-height: 1.15;
+            font-size: 12pt;
+            line-height: 1.2;
         }
         .box-title {
             font-weight: bold;
-            font-size: 11.2pt;
+            font-size: 12.5pt;
             margin-bottom: 1px;
         }
         .bottom-table {
@@ -81,8 +82,8 @@
         }
         .bottom-table td {
             vertical-align: top;
-            font-size: 10.8pt;
-            line-height: 1.15;
+            font-size: 12pt;
+            line-height: 1.2;
             padding: 1px 4px;
         }
         .dotted-line {
@@ -94,8 +95,23 @@
                 padding: 0 !important; 
                 margin: 0 !important;
                 max-width: 100% !important;
+                font-size: 13pt !important;
+                line-height: 1.18 !important;
+            }
+            .paragraph {
+                font-size: 13pt !important;
+                line-height: 1.18 !important;
+            }
+            .grid-box-table td {
                 font-size: 11.5pt !important;
-                line-height: 1.12 !important;
+                line-height: 1.18 !important;
+            }
+            .box-title {
+                font-size: 12pt !important;
+            }
+            .bottom-table td {
+                font-size: 11.5pt !important;
+                line-height: 1.18 !important;
             }
             .no-print, 
             .no-print * { 
@@ -108,7 +124,7 @@
             }
             @page {
                 size: A4 portrait;
-                margin: 1.0cm 1.5cm 0.8cm 2.0cm;
+                margin: 0.8cm 1.2cm 0.6cm 1.8cm;
             }
         }
     </style>
