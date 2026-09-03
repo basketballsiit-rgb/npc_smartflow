@@ -1287,24 +1287,37 @@ ${itemsListText}
 
                             {/* Section 3: TOR Specifications Text Editor */}
                             <div className="border border-purple-100 rounded-2xl p-5 bg-purple-50/20 space-y-3 font-sans">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-sm font-extrabold text-purple-950">📝 รายละเอียดข้อกำหนดขอบเขตงาน (TOR Specification Text)</h4>
-                                    <button
-                                        type="button"
-                                        onClick={() => setTorSpecifications(defaultTorText)}
-                                        className="text-[11px] font-bold text-purple-700 hover:underline"
-                                    >
-                                        🔄 รีเซ็ตเป็นค่าเริ่มต้น
-                                    </button>
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                    <h4 className="text-sm font-extrabold text-purple-950 flex items-center gap-1.5">
+                                        <span>📝</span> รายละเอียดข้อกำหนดขอบเขตงาน (TOR Specification Text)
+                                    </h4>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateAiTor}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-purple-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                            title="ให้ AI ดึงรายการจัดซื้อจัดจ้างด้านบนมาช่วยร่างข้อกำหนด TOR ให้ทันที"
+                                        >
+                                            <span className="text-amber-300">✨</span>
+                                            <span>AI ช่วยร่าง TOR จากรายการพัสดุ</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setTorSpecifications(defaultTorText)}
+                                            className="text-[11px] font-bold text-purple-700 hover:underline px-2 py-1 rounded-lg hover:bg-purple-100/50 transition-colors"
+                                        >
+                                            🔄 รีเซ็ตเป็นค่าเริ่มต้น
+                                        </button>
+                                    </div>
                                 </div>
                                 <p className="text-xs text-slate-600">
-                                    ผู้ดำเนินโครงการหรือเจ้าหน้าที่พัสดุสามารถแก้ไขข้อความรายละเอียดขอบเขตงาน (TOR) วัตถุประสงค์ เงื่อนไขการส่งมอบ และการตรวจรับพัสดุได้ตามต้องการ
+                                    ผู้ดำเนินโครงการหรือเจ้าหน้าที่พัสดุสามารถกดปุ่ม <b className="text-purple-700">"✨ AI ช่วยร่าง TOR จากรายการพัสดุ"</b> เพื่อดึงรายการสิ่งของและจำนวนที่ระบุไว้ด้านบนมาใส่ในข้อกำหนดขอบเขตงาน (ข้อ 2) ให้อัตโนมัติ หรือแก้ไขข้อความได้ตามต้องการ
                                 </p>
                                 <textarea
-                                    rows={8}
+                                    rows={10}
                                     value={torSpecifications}
                                     onChange={(e) => setTorSpecifications(e.target.value)}
-                                    className="w-full rounded-xl border-purple-200 text-xs leading-relaxed focus:ring-purple-500 focus:border-purple-500 bg-white"
+                                    className="w-full rounded-xl border-purple-200 text-xs leading-relaxed focus:ring-purple-500 focus:border-purple-500 bg-white shadow-inner"
                                     placeholder="ระบุข้อกำหนดขอบเขตงาน (TOR Specifications)..."
                                 ></textarea>
                             </div>
