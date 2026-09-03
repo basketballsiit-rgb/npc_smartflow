@@ -88,6 +88,81 @@ export default function Dashboard({
         po_date: '',
     });
 
+    // Standard Items Catalog State (Tool 4)
+    const [standardCatalogItems, setStandardCatalogItems] = useState([]);
+    const [catalogSearch, setCatalogSearch] = useState('');
+    const [catalogCategoryFilter, setCatalogCategoryFilter] = useState('');
+    const [isLoadingCatalog, setIsLoadingCatalog] = useState(false);
+    const [isAddCatalogItemOpen, setIsAddCatalogItemOpen] = useState(false);
+    const [editingCatalogItem, setEditingCatalogItem] = useState(null);
+    const [catalogFormData, setCatalogFormData] = useState({
+        name: '',
+        unit: 'ชิ้น',
+        standard_price: '',
+        category: 'วัสดุสำนักงาน',
+    });
+
+    const loadCatalogItems = () => {
+        setIsLoadingCatalog(true);
+        axios.get(route('standard_items.index'), {
+            params: { search: catalogSearch, category: catalogCategoryFilter }
+        })
+        .then(res => {
+            if (res.data && res.data.items) {
+                setStandardCatalogItems(res.data.items.data || res.data.items);
+            }
+        })
+        .catch(() => {})
+        .finally(() => setIsLoadingCatalog(false));
+    };
+
+    useEffect(() => {
+        if (procActiveTool === 'item_catalog') {
+            loadCatalogItems();
+        }
+    }, [procActiveTool, catalogSearch, catalogCategoryFilter]);
+
+    const handleSaveCatalogItem = async (e) => {
+        e.preventDefault();
+        try {
+            if (editingCatalogItem) {
+                await axios.put(route('standard_items.update', editingCatalogItem.id), catalogFormData);
+                Swal.fire({ icon: 'success', title: 'อัปเดตสำเร็จ', text: 'แก้ไขข้อมูลรายการวัสดุเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+            } else {
+                await axios.post(route('standard_items.store'), catalogFormData);
+                Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', text: 'เพิ่มรายการเข้าสู่คลังราคากลางเรียบร้อยแล้ว', timer: 1500, showConfirmButton: false });
+            }
+            setIsAddCatalogItemOpen(false);
+            setEditingCatalogItem(null);
+            setCatalogFormData({ name: '', unit: 'ชิ้น', standard_price: '', category: 'วัสดุสำนักงาน' });
+            loadCatalogItems();
+        } catch (err) {
+            Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง' });
+        }
+    };
+
+    const handleDeleteCatalogItem = async (id, name) => {
+        const result = await Swal.fire({
+            title: 'ยืนยันการลบ?',
+            text: `ต้องการลบรายการ "${name}" ออกจากคลังราคากลางหรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'ใช่, ลบรายการ',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await axios.delete(route('standard_items.destroy', id));
+                Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', text: 'ลบรายการเรียบร้อยแล้ว', timer: 1200, showConfirmButton: false });
+                loadCatalogItems();
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถลบรายการได้' });
+            }
+        }
+    };
+
     const defaultVendorsSeed = [
         {
             id: 'v-1',
