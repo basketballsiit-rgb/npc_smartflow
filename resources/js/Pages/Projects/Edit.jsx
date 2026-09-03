@@ -1665,14 +1665,75 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                                 {(act.procurement_items || []).map((item, pIdx) => (
                                                                     <tr key={pIdx} className="border-b border-indigo-100/60 hover:bg-indigo-50/50">
                                                                         <td className="p-1.5 text-center text-slate-500">{pIdx + 1}</td>
-                                                                        <td className="p-1.5">
-                                                                            <input
-                                                                                type="text"
-                                                                                value={item.description}
-                                                                                onChange={(e) => handleActivityItemChange(actIdx, 'procurement_items', pIdx, 'description', e.target.value)}
-                                                                                className="w-full rounded border-indigo-200 px-2 py-1 text-xs focus:border-indigo-500"
-                                                                                required
-                                                                            />
+                                                                        <td className="p-1.5 relative">
+                                                                            <div className="relative">
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={item.description}
+                                                                                    onChange={(e) => handleItemDescriptionChange(actIdx, pIdx, e.target.value)}
+                                                                                    onFocus={() => {
+                                                                                        if (item.description && item.description.trim().length > 0) {
+                                                                                            handleItemDescriptionChange(actIdx, pIdx, item.description);
+                                                                                        }
+                                                                                    }}
+                                                                                    placeholder="พิมพ์ชื่อพัสดุ (มีระบบค้นหาราคากลางอัตโนมัติ)..."
+                                                                                    className="w-full rounded border-indigo-200 px-2 py-1 text-xs focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-2xs"
+                                                                                    required
+                                                                                />
+                                                                                {/* Autocomplete Suggestions Dropdown */}
+                                                                                {activeSuggestionKey === `${actIdx}-${pIdx}` && standardItemSuggestions.length > 0 && (
+                                                                                    <div className="absolute z-50 left-0 top-full mt-1 w-80 max-h-56 overflow-y-auto bg-white rounded-xl shadow-xl border border-indigo-200 py-1.5 text-xs animate-fadeIn">
+                                                                                        <div className="px-2.5 py-1 text-[10px] font-bold text-indigo-900 bg-indigo-50 flex justify-between items-center border-b border-indigo-100">
+                                                                                            <span>💡 เลือกจากฐานข้อมูลราคากลาง ({standardItemSuggestions.length} รายการ)</span>
+                                                                                            <button 
+                                                                                                type="button" 
+                                                                                                onClick={() => setActiveSuggestionKey(null)}
+                                                                                                className="text-slate-400 hover:text-slate-600 font-bold"
+                                                                                            >
+                                                                                                ✕
+                                                                                            </button>
+                                                                                        </div>
+                                                                                        {standardItemSuggestions.map((sItem) => (
+                                                                                            <div
+                                                                                                key={sItem.id}
+                                                                                                onClick={() => selectStandardItem(actIdx, pIdx, sItem)}
+                                                                                                className="px-2.5 py-1.5 hover:bg-indigo-50 cursor-pointer transition flex items-center justify-between border-b border-slate-50 last:border-0"
+                                                                                            >
+                                                                                                <div className="pr-2">
+                                                                                                    <div className="font-bold text-slate-800">{sItem.name}</div>
+                                                                                                    <div className="text-[10px] text-slate-500 flex items-center gap-1.5">
+                                                                                                        <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 font-medium">{sItem.category || 'ทั่วไป'}</span>
+                                                                                                        <span>หน่วย: {sItem.unit}</span>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                                <div className="text-right shrink-0">
+                                                                                                    <span className="font-bold text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded border border-indigo-200 text-[11px]">
+                                                                                                        {parseFloat(sItem.standard_price).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บ.
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                        <div className="p-1.5 bg-slate-50 border-t border-slate-100 text-center">
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => {
+                                                                                                    setQuickAddItemData({
+                                                                                                        name: item.description,
+                                                                                                        unit: item.unit || 'ชิ้น',
+                                                                                                        standard_price: item.unit_price || 0,
+                                                                                                        category: 'วัสดุทั่วไป'
+                                                                                                    });
+                                                                                                    setShowQuickAddItemModal(true);
+                                                                                                    setActiveSuggestionKey(null);
+                                                                                                }}
+                                                                                                className="text-[11px] font-bold text-purple-700 hover:text-purple-900 flex items-center justify-center gap-1 mx-auto"
+                                                                                            >
+                                                                                                <span>➕</span> บันทึก "{item.description || 'รายการนี้'}" เข้าราคากลางมาตรฐาน
+                                                                                            </button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
                                                                         </td>
                                                                         <td className="p-1.5">
                                                                             <input
@@ -1699,7 +1760,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                                                 step="0.01"
                                                                                 value={item.unit_price}
                                                                                 onChange={(e) => handleActivityItemChange(actIdx, 'procurement_items', pIdx, 'unit_price', parseFloat(e.target.value) || 0)}
-                                                                                className="w-full rounded border-indigo-200 px-2 py-1 text-xs text-right font-bold"
+                                                                                className="w-full rounded border-indigo-200 px-2 py-1 text-xs text-right font-bold text-indigo-900"
                                                                                 required
                                                                             />
                                                                         </td>
@@ -1722,13 +1783,25 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                             </tbody>
                                                         </table>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => addActivityItemRow(actIdx, 'procurement_items')}
-                                                        className="text-[11px] font-bold text-indigo-800 hover:text-indigo-950 pt-0.5 block"
-                                                    >
-                                                        + เพิ่มรายการจัดซื้อจัดจ้าง
-                                                    </button>
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => addActivityItemRow(actIdx, 'procurement_items')}
+                                                            className="text-[11px] font-bold text-indigo-800 hover:text-indigo-950 flex items-center gap-1"
+                                                        >
+                                                            <span>➕</span> เพิ่มรายการจัดซื้อจัดจ้าง
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setQuickAddItemData({ name: '', unit: 'ชิ้น', standard_price: 0, category: 'วัสดุทั่วไป' });
+                                                                setShowQuickAddItemModal(true);
+                                                            }}
+                                                            className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 flex items-center gap-1"
+                                                        >
+                                                            <span>📦</span> + เพิ่มรายการเข้าราคากลางมาตรฐาน
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                             </div>
