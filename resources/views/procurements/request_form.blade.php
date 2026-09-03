@@ -409,9 +409,14 @@
     <!-- Body text with blank checkboxes ( ) -->
     <div class="paragraph">
         ด้วยแผนกวิชา/งาน <span contenteditable="true" style="outline: none; font-weight: bold;">{{ $deptName }}</span> มีความประสงค์ขอ 
-        ( &nbsp;&nbsp;&nbsp; ) จัดซื้อวัสดุ/ครุภัณฑ์ &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) จัดจ้าง 
-        เพื่อใช้เป็น &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) วัสดุฝึก &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) อุปกรณ์การสอน &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) งานปรับปรุง &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) งานซ่อม/แก้ไขเปลี่ยนของเดิมที่ชำรุด &nbsp;&nbsp; 
-        ( &nbsp;&nbsp;&nbsp; ) อื่น ๆ <span contenteditable="true" style="outline: none;">ดำเนินโครงการ {{ $project->title }}</span>
+        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) จัดซื้อวัสดุ/ครุภัณฑ์</span> &nbsp;&nbsp; 
+        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) จัดจ้าง</span> 
+        เพื่อใช้เป็น &nbsp;&nbsp; 
+        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) วัสดุฝึก</span> &nbsp;&nbsp; 
+        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อุปกรณ์การสอน</span> &nbsp;&nbsp; 
+        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งานปรับปรุง</span> &nbsp;&nbsp; 
+        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งานซ่อม/แก้ไขเปลี่ยนของเดิมที่ชำรุด</span> &nbsp;&nbsp; 
+        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> <span contenteditable="true" style="outline: none;">ดำเนินโครงการ {{ $project->title }}</span>
         ประกอบการเรียนการสอนวิชา/งาน<span id="division-body-text" contenteditable="true" style="outline: none;">{{ $divisionName }}</span>
     </div>
 
@@ -420,8 +425,8 @@
     </div>
 
     <div class="paragraph" style="text-indent: 0;">
-        จำนวน <strong style="font-size: 13pt;">{{ $itemsCount }}</strong> รายการ &nbsp; 
-        เป็นเงิน <strong style="font-size: 13pt;">{{ number_format($finalProcAmount, 2) }}</strong> บาท 
+        จำนวน <strong style="font-size: 13.5pt;">{{ $itemsCount }}</strong> รายการ &nbsp; 
+        เป็นเงิน <strong style="font-size: 13.5pt;">{{ number_format($finalProcAmount, 2) }}</strong> บาท 
         (<strong>{{ $bahtText }}</strong>) &nbsp; 
         ต้องการใช้วัสดุวันที่ <span contenteditable="true" style="outline: none;">ภายในกำหนดการดำเนินโครงการ</span>
     </div>
@@ -437,7 +442,7 @@
     <div style="margin-left: auto; width: 3.2in; text-align: center; margin-top: 4px; margin-bottom: 4px;">
         <div>ลงชื่อ ....................................................................... ผู้ขอซื้อ/ขอจ้าง</div>
         <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $cleanProposerName }}</span> )</div>
-        <div style="font-size: 11.5pt; margin-top: 1px;">............../............../..............</div>
+        <div style="font-size: 12pt; margin-top: 1px;">............../............../..............</div>
     </div>
 
     <!-- 7-Section Approval Grid Box (Without inner divider lines between questions) -->
@@ -474,13 +479,13 @@
                 <div>
                     <div class="box-title">3. ความเห็นหัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ</div>
                     <div style="padding-left: 4px;">
-                        <strong>ตรวจสอบแล้ว</strong> &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) มีในแผน &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) ไม่มีในแผน ; ปรับแผนฯ<br>
+                        <strong>ตรวจสอบแล้ว</strong> &nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) มีในแผน</span> &nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) ไม่มีในแผน ; ปรับแผนฯ</span><br>
                         งปม. ที่ได้รับจาก สอศ. <span class="dotted-line" style="width: 75px;" contenteditable="true">&nbsp;</span> บาท คงเหลือ <span class="dotted-line" style="width: 70px;" contenteditable="true">&nbsp;</span> บาท<br>
                         เงินจัดสรรโครงการ/งาน/กิจกรรม <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท คงเหลือ <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;</span> บาท<br>
                         จำนวนที่ขออนุมัติจัดซื้อครั้งนี้ <span class="dotted-line" style="width: 90px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
-                        โดยให้เงินงบประมาณ ( &nbsp;&nbsp;&nbsp; ) รายได้สถานศึกษา ( &nbsp;&nbsp;&nbsp; ) งปม. <span class="dotted-line" style="width: 80px;" contenteditable="true">&nbsp;</span><br>
-                        ( &nbsp;&nbsp;&nbsp; ) เงินอุดหนุน ............................................................................<br>
-                        ( &nbsp;&nbsp;&nbsp; ) อื่น ๆ .....................................................................................
+                        โดยให้เงินงบประมาณ <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) รายได้สถานศึกษา</span> <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งปม.</span> <span class="dotted-line" style="width: 80px;" contenteditable="true">&nbsp;</span><br>
+                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) เงินอุดหนุน</span> ............................................................................<br>
+                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> .....................................................................................
                     </div>
                     <div style="text-align: center; margin-top: 4px;">
                         <div>ลงชื่อ ...................................................................</div>
@@ -508,7 +513,7 @@
                     <div class="box-title">5. ความเห็นหัวหน้างานการเงิน</div>
                     <div style="padding-left: 6px;">
                         - โดยภาพรวม มีงบเพียงพอ กรณีจัดซื้อด้วยเงิน / ใช้เงิน<br>
-                        ( &nbsp;&nbsp;&nbsp; ) บกศ &nbsp; ( &nbsp;&nbsp;&nbsp; ) เงินอุดหนุน &nbsp; ( &nbsp;&nbsp;&nbsp; ) งปม. &nbsp; ( &nbsp;&nbsp;&nbsp; ) อื่น ๆ ....................<br>
+                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) บกศ</span> &nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) เงินอุดหนุน</span> &nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งปม.</span> &nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> ....................<br>
                         มียอดคงเหลือ <span class="dotted-line" style="width: 130px;" contenteditable="true">&nbsp;</span> บาท
                     </div>
                     <div style="text-align: center; margin-top: 3px;">
@@ -522,8 +527,8 @@
                     <div class="box-title">6. ความเห็นของหัวหน้างานพัสดุ</div>
                     <div style="padding-left: 6px;">
                         - เห็นควรดำเนินการจัดซื้อ / จัดจ้าง ด้วยวิธี<br>
-                        ( &nbsp;&nbsp;&nbsp; ) วิธีเฉพาะเจาะจง &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) วิธีคัดเลือก &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) อื่นๆ ....................<br>
-                        ( &nbsp;&nbsp;&nbsp; ) วิธีประกาศเชิญชวนทั่วไป ......................................................
+                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) วิธีเฉพาะเจาะจง</span> &nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) วิธีคัดเลือก</span> &nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่นๆ</span> ....................<br>
+                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) วิธีประกาศเชิญชวนทั่วไป</span> ......................................................
                     </div>
                     <div style="text-align: center; margin-top: 3px;">
                         <div>ลงชื่อ ...................................................................</div>
@@ -547,7 +552,7 @@
     </table>
 
     <!-- Bottom Section: คำสั่งแต่งตั้งกรรมการ และ คำสั่งผู้อำนวยการ -->
-    <div style="margin-top: 4px; font-size: 11pt; line-height: 1.15;">
+    <div style="margin-top: 4px; font-size: 11.5pt; line-height: 1.18;">
         <strong>คำสั่ง</strong> เพื่อให้เป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 ข้อ 25 จึงขอแต่งตั้งบุคคลต่อไปนี้เป็นคณะกรรมการ คือ
     </div>
 
@@ -555,15 +560,15 @@
         <tr>
             <!-- Committees Column (Left) -->
             <td style="width: 50%;">
-                <div style="font-weight: bold; font-size: 11pt;">1. คณะกรรมการซื้อ / จ้างโดยวิธีเฉพาะเจาะจง</div>
-                <div style="padding-left: 8px; font-size: 10.5pt;">
+                <div style="font-weight: bold; font-size: 11.5pt;">1. คณะกรรมการซื้อ / จ้างโดยวิธีเฉพาะเจาะจง</div>
+                <div style="padding-left: 8px; font-size: 11pt;">
                     1.1 <span contenteditable="true" style="outline: none;">{{ $pChair ? $pChair . ' (ประธานกรรมการ)' : '..........................................................................................' }}</span><br>
                     1.2 <span contenteditable="true" style="outline: none;">{{ $pMem1 ? $pMem1 . ' (กรรมการ)' : '..........................................................................................' }}</span><br>
                     1.3 <span contenteditable="true" style="outline: none;">{{ $pMem2 ? $pMem2 . ' (กรรมการ)' : '..........................................................................................' }}</span>
                 </div>
 
-                <div style="font-weight: bold; font-size: 11pt; margin-top: 2px;">2. คณะกรรมการตรวจรับพัสดุ</div>
-                <div style="padding-left: 8px; font-size: 10.5pt;">
+                <div style="font-weight: bold; font-size: 11.5pt; margin-top: 2px;">2. คณะกรรมการตรวจรับพัสดุ</div>
+                <div style="padding-left: 8px; font-size: 11pt;">
                     2.1 <span contenteditable="true" style="outline: none;">{{ $iChair ? $iChair . ' (ประธานกรรมการ)' : '..........................................................................................' }}</span><br>
                     2.2 <span contenteditable="true" style="outline: none;">{{ $iMem1 ? $iMem1 . ' (กรรมการ)' : '..........................................................................................' }}</span><br>
                     2.3 <span contenteditable="true" style="outline: none;">{{ $iMem2 ? $iMem2 . ' (กรรมการ)' : '..........................................................................................' }}</span>
@@ -572,17 +577,17 @@
 
             <!-- Director Decision Column (Right) -->
             <td style="width: 50%; padding-left: 10px;">
-                <div style="font-weight: bold; font-size: 11pt;">คำสั่งผู้อำนวยการ</div>
-                <div style="font-size: 11pt; margin-top: 1px;">
-                    ( &nbsp;&nbsp;&nbsp; ) ทราบ &nbsp;&nbsp;&nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) อนุญาต/อนุมัติ<br>
-                    ( &nbsp;&nbsp;&nbsp; ) ไม่อนุญาต/อนุมัติเพราะ ...................................................................
+                <div style="font-weight: bold; font-size: 11.5pt;">คำสั่งผู้อำนวยการ</div>
+                <div style="font-size: 11.5pt; margin-top: 1px;">
+                    <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) ทราบ</span> &nbsp;&nbsp;&nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อนุญาต/อนุมัติ</span><br>
+                    <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) ไม่อนุญาต/อนุมัติเพราะ</span> ...................................................................
                 </div>
 
                 <div style="text-align: center; margin-top: 8px;">
                     <div>ลงชื่อ .......................................................................</div>
                     <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
-                    <div style="font-size: 11pt; margin-top: 1px;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
-                    <div style="font-size: 10.5pt; margin-top: 1px;">............../............../..............</div>
+                    <div style="font-size: 11.5pt; margin-top: 1px;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
+                    <div style="font-size: 11pt; margin-top: 1px;">............../............../..............</div>
                 </div>
             </td>
         </tr>
