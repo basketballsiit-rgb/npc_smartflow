@@ -331,27 +331,21 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     };
 
     const prepareSubmitData = (submitApproval = false) => {
-        // Flatten all activities' items into procurement_items for backend compatibility
+        // Flatten only actual procurement items (พัสดุ/วัสดุ/ครุภัณฑ์/จ้างทำของ) for procurement stage
+        // Note: Loan items (ค่าตอบแทน, ค่าอาหาร, ค่าใช้จ่ายเดินทาง) are for Loan Contract (กค.๑๐๑) and go directly to Finance!
         const flattenedProcurementItems = [];
         (data.activities || []).forEach((act, actIdx) => {
             const actLabel = `[กิจกรรมที่ ${actIdx + 1}]`;
-            (act.loan_items || []).forEach(item => {
-                flattenedProcurementItems.push({
-                    description: `${actLabel} ${item.description}`,
-                    quantity: item.quantity,
-                    unit: item.unit,
-                    unit_price: item.unit_price,
-                    total_price: item.total_price,
-                });
-            });
             (act.procurement_items || []).forEach(item => {
-                flattenedProcurementItems.push({
-                    description: `${actLabel} ${item.description}`,
-                    quantity: item.quantity,
-                    unit: item.unit,
-                    unit_price: item.unit_price,
-                    total_price: item.total_price,
-                });
+                if (item.description && item.description.trim() !== '') {
+                    flattenedProcurementItems.push({
+                        description: `${actLabel} ${item.description}`,
+                        quantity: item.quantity,
+                        unit: item.unit,
+                        unit_price: item.unit_price,
+                        total_price: item.total_price,
+                    });
+                }
             });
         });
 
