@@ -429,7 +429,7 @@
                     <div class="box-title">1. ความเห็น หัวหน้าแผนก/งาน<span contenteditable="true" style="outline: none;">{{ $deptName }}</span></div>
                     <div style="padding-left: 6px;">
                         มีในแผนได้จัดสรรงบ <span class="dotted-line" style="width: 120px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
-                        จ่ายครั้งนี้แล้วคงเหลือ <span class="dotted-line" style="width: 130px;" contenteditable="true">&nbsp;0.00</span> บาท
+                        จ่ายครั้งนี้แล้วคงเหลือ <span class="dotted-line" style="width: 130px;" contenteditable="true">&nbsp;</span> บาท
                     </div>
                     <div style="text-align: center; margin-top: 4px;">
                         <div>ลงชื่อ ...................................................................</div>
@@ -455,9 +455,9 @@
                     <div style="padding-left: 4px;">
                         <strong>ตรวจสอบแล้ว</strong> &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) มีในแผน &nbsp;&nbsp; ( &nbsp;&nbsp;&nbsp; ) ไม่มีในแผน ; ปรับแผนฯ<br>
                         งปม. ที่ได้รับจาก สอศ. <span class="dotted-line" style="width: 75px;" contenteditable="true">&nbsp;</span> บาท คงเหลือ <span class="dotted-line" style="width: 70px;" contenteditable="true">&nbsp;</span> บาท<br>
-                        เงินจัดสรรโครงการ/งาน/กิจกรรม <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท คงเหลือ <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;0.00</span> บาท<br>
+                        เงินจัดสรรโครงการ/งาน/กิจกรรม <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท คงเหลือ <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;</span> บาท<br>
                         จำนวนที่ขออนุมัติจัดซื้อครั้งนี้ <span class="dotted-line" style="width: 90px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
-                        โดยให้เงินงบประมาณ ( &nbsp;&nbsp;&nbsp; ) รายได้สถานศึกษา ( &nbsp;&nbsp;&nbsp; ) งปม. <span class="dotted-line" style="width: 80px;" contenteditable="true">&nbsp;{{ $project->budget?->fundingSource?->name ?? '2569' }}</span><br>
+                        โดยให้เงินงบประมาณ ( &nbsp;&nbsp;&nbsp; ) รายได้สถานศึกษา ( &nbsp;&nbsp;&nbsp; ) งปม. <span class="dotted-line" style="width: 80px;" contenteditable="true">&nbsp;</span><br>
                         ( &nbsp;&nbsp;&nbsp; ) เงินอุดหนุน ............................................................................<br>
                         ( &nbsp;&nbsp;&nbsp; ) อื่น ๆ .....................................................................................
                     </div>
@@ -488,7 +488,7 @@
                     <div style="padding-left: 6px;">
                         - โดยภาพรวม มีงบเพียงพอ กรณีจัดซื้อด้วยเงิน / ใช้เงิน<br>
                         ( &nbsp;&nbsp;&nbsp; ) บกศ &nbsp; ( &nbsp;&nbsp;&nbsp; ) เงินอุดหนุน &nbsp; ( &nbsp;&nbsp;&nbsp; ) งปม. &nbsp; ( &nbsp;&nbsp;&nbsp; ) อื่น ๆ ....................<br>
-                        มียอดคงเหลือ <span class="dotted-line" style="width: 130px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท
+                        มียอดคงเหลือ <span class="dotted-line" style="width: 130px;" contenteditable="true">&nbsp;</span> บาท
                     </div>
                     <div style="text-align: center; margin-top: 3px;">
                         <div>ลงชื่อ ...................................................................</div>
