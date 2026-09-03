@@ -149,6 +149,13 @@
         }
     }
 
+    if (!function_exists('formatThaiMoney')) {
+        function formatThaiMoney($number) {
+            $formatted = number_format(floatval($number), 2);
+            return toThaiDigits($formatted);
+        }
+    }
+
     if (!function_exists('formatThaiLoanItemDesc')) {
         function formatThaiLoanItemDesc($desc, $itemIndex) {
             $desc = trim(preg_replace('/[💵📦💰📑📝🛒📄📊]/u', '', $desc));
@@ -164,7 +171,8 @@
                 $thaiIdx = toThaiDigits($itemIndex);
                 $desc = $thaiIdx . '. ' . $desc;
             }
-            return $desc;
+            // Convert any remaining Arabic digits in the item description to Thai digits
+            return toThaiDigits($desc);
         }
     }
 
@@ -303,7 +311,7 @@
             foreach ($act['items'] as $it) {
                 $descWithoutNum = preg_replace('/^[๐-๙0-9]+\.\s*/u', '', $it['description']);
                 $allLoanItems[] = array_merge($it, [
-                    'description' => toThaiDigits($flatIdx) . '. ' . $descWithoutNum,
+                    'description' => toThaiDigits($flatIdx) . '. ' . toThaiDigits($descWithoutNum),
                 ]);
                 $flatIdx++;
             }
@@ -349,7 +357,7 @@
         'all' => [
             'name' => 'ทุกกิจกรรมรวมกัน',
             'contract_no' => $baseContractNum,
-            'purpose_text' => 'เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ "' . $project->title . '" ประจำปีงบประมาณ พ.ศ. ' . ($project->academic_year ?? '2569') . ' ดังรายละเอียดต่อไปนี้',
+            'purpose_text' => 'เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ "' . $project->title . '" ประจำปีงบประมาณ พ.ศ. ' . toThaiDigits($project->academic_year ?? '2569') . ' ดังรายละเอียดต่อไปนี้',
             'items' => $allLoanItems,
             'total_amount' => $allTotalSum,
             'baht_text' => $allBahtText,
@@ -366,10 +374,10 @@
                 <span>🎯</span> เลือกกิจกรรมที่ต้องการขอยืมเงิน:
             </label>
             <select id="activity-select" onchange="switchActivity(this.value)" style="padding: 6px 14px; border-radius: 10px; border: 2px solid #0284c7; font-family: inherit; font-size: 14pt; font-weight: bold; color: #0369a1; background-color: #ffffff; cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(2,132,199,0.1);">
-                <option value="all">ทุกกิจกรรมรวมกัน (ยอดรวมทั้งหมด {{ number_format($allTotalSum, 2) }} บาท)</option>
+                <option value="all">ทุกกิจกรรมรวมกัน (ยอดรวมทั้งหมด {{ formatThaiMoney($allTotalSum) }} บาท)</option>
                 @foreach($structuredActivities as $act)
                     <option value="{{ $act['index'] }}">
-                        กิจกรรมที่ {{ $act['index'] }}: {{ Str::limit($act['name'], 40) }} ({{ number_format($act['total_amount'], 2) }} บาท)
+                        กิจกรรมที่ {{ toThaiDigits($act['index']) }}: {{ Str::limit($act['name'], 40) }} ({{ formatThaiMoney($act['total_amount']) }} บาท)
                     </option>
                 @endforeach
             </select>
@@ -396,7 +404,7 @@
                         <div style="font-size: 15pt; margin-bottom: 2px; display: flex; align-items: baseline; gap: 4px;">
                             <span style="white-space: nowrap;">เลขที่</span>
                             <span class="underline-dotted" id="contract-no-display" style="flex-grow: 1; text-align: center; min-width: 50px; font-size: 14pt;">
-                                {{ $baseContractNum }}
+                                {{ toThaiDigits($baseContractNum) }}
                             </span>
                         </div>
                         <div style="font-size: 15pt; line-height: 1.0; margin-top: 4px;">วันครบกำหนด</div>
@@ -417,7 +425,7 @@
             </div>
 
             <div id="contract-purpose-display" style="padding: 0 12px 6px 12px; text-indent: 1.2cm; text-align: justify; line-height: 1.25; font-size: 15pt;">
-                เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"{{ $project->title }}"</span> ประจำปีงบประมาณ พ.ศ. {{ $project->academic_year ?? '2569' }} ดังรายละเอียดต่อไปนี้
+                เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"{{ $project->title }}"</span> ประจำปีงบประมาณ พ.ศ. {{ toThaiDigits($project->academic_year ?? '2569') }} ดังรายละเอียดต่อไปนี้
             </div>
 
             <!-- Details Table -->
@@ -426,20 +434,20 @@
                     @foreach($allLoanItems as $item)
                         <tr>
                             <td class="col-border-right">
-                                {{ $item['description'] }}
+                                {{ toThaiDigits($item['description']) }}
                                 @if(!empty($item['quantity']) && $item['quantity'] > 1)
-                                    ({{ number_format($item['quantity'], 0) }} {{ $item['unit'] }} x {{ number_format($item['unit_price'], 2) }} บาท)
+                                    ({{ toThaiDigits(number_format($item['quantity'], 0)) }} {{ $item['unit'] }} x {{ formatThaiMoney($item['unit_price']) }} บาท)
                                 @endif
                             </td>
                             <td class="col-amount">
-                                {{ number_format($item['total_price'], 2) }}
+                                {{ formatThaiMoney($item['total_price']) }}
                             </td>
                         </tr>
                     @endforeach
                     <tr style="border-top: 1px solid #000;">
                         <td class="col-border-right text-right bold" style="padding-right: 15px;">รวมเป็นเงินทั้งสิ้น</td>
                         <td class="col-amount bold" id="table-total-display">
-                            {{ number_format($allTotalSum, 2) }}
+                            {{ formatThaiMoney($allTotalSum) }}
                         </td>
                     </tr>
                 </tbody>
@@ -447,7 +455,7 @@
 
             <!-- Paragraph 2 -->
             <div style="padding: 6px 12px; text-indent: 1.2cm; text-align: justify; font-size: 15pt; line-height: 1.25;">
-                ข้าพเจ้าสัญญาว่าจะปฏิบัติตามระเบียบของทางราชการทุกประการ และจะนำใบสำคัญคู่จ่ายที่ถูกต้อง พร้อมทั้งเงินเหลือจ่าย (ถ้ามี) ส่งใช้ภายในกำหนดไว้ในระเบียบการเบิกจ่ายจากคลัง คือ ภายใน <span class="bold">30</span> วัน นับแต่วันที่ได้รับเงินนี้ หากข้าพเจ้าไม่ส่งตามกำหนด ข้าพเจ้ายินยอมให้หักเงินเดือน ค่าจ้าง เบี้ยหวัด บำนาญ หรือเงินอื่นใดที่ข้าพเจ้าพึงได้รับจากทางราชการชดใช้จำนวนเงินที่ยืมไปจนครบถ้วนได้ทันที
+                ข้าพเจ้าสัญญาว่าจะปฏิบัติตามระเบียบของทางราชการทุกประการ และจะนำใบสำคัญคู่จ่ายที่ถูกต้อง พร้อมทั้งเงินเหลือจ่าย (ถ้ามี) ส่งใช้ภายในกำหนดไว้ในระเบียบการเบิกจ่ายจากคลัง คือ ภายใน <span class="bold">๓๐</span> วัน นับแต่วันที่ได้รับเงินนี้ หากข้าพเจ้าไม่ส่งตามกำหนด ข้าพเจ้ายินยอมให้หักเงินเดือน ค่าจ้าง เบี้ยหวัด บำนาญ หรือเงินอื่นใดที่ข้าพเจ้าพึงได้รับจากทางราชการชดใช้จำนวนเงินที่ยืมไปจนครบถ้วนได้ทันที
             </div>
 
             <!-- Signature of Borrower -->
@@ -463,7 +471,7 @@
             <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px;">
                 <div style="margin-bottom: 2px;">เสนอ......ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 2px;">
-                    ได้ตรวจสอบแล้ว เห็นสมควรอนุมัติให้ยืมเงินตามใบยืมฉบับนี้ได้ จำนวน <span class="underline-dotted" id="checked-amount-num">{{ number_format($allTotalSum, 2) }}</span> บาท (<span class="underline-dotted" id="checked-amount-thai">{{ $allBahtText }}</span>)
+                    ได้ตรวจสอบแล้ว เห็นสมควรอนุมัติให้ยืมเงินตามใบยืมฉบับนี้ได้ จำนวน <span class="underline-dotted" id="checked-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท (<span class="underline-dotted" id="checked-amount-thai">{{ $allBahtText }}</span>)
                 </div>
                 
                 <table style="width: 100%; border: none; font-size: 14pt; margin-top: 4px; border-collapse: collapse;">
@@ -489,7 +497,7 @@
             <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 2px; font-size: 15pt;">คำอนุมัติ</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 2px;">
-                    อนุมัติให้ยืมตามเงื่อนไขข้างต้นได้ เป็นเงิน <span class="underline-dotted" id="approved-amount-num">{{ number_format($allTotalSum, 2) }}</span> บาท (<span class="underline-dotted" id="approved-amount-thai">{{ $allBahtText }}</span>)
+                    อนุมัติให้ยืมตามเงื่อนไขข้างต้นได้ เป็นเงิน <span class="underline-dotted" id="approved-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท (<span class="underline-dotted" id="approved-amount-thai">{{ $allBahtText }}</span>)
                 </div>
                 
                 <table style="width: 100%; border: none; font-size: 14pt; margin-top: 4px; border-collapse: collapse;">
@@ -511,7 +519,7 @@
             <div style="font-size: 15pt; line-height: 1.25; padding: 4px 12px 4px 12px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 2px; font-size: 15pt;">ใบรับเงิน</div>
                 <div style="text-indent: 1.2cm; margin-bottom: 4px;">
-                    ได้รับเงินยืมจำนวน <span class="underline-dotted" id="receipt-amount-num">{{ number_format($allTotalSum, 2) }}</span> บาท (<span class="underline-dotted" id="receipt-amount-thai">{{ $allBahtText }}</span>) ไปเป็นการถูกต้องแล้ว
+                    ได้รับเงินยืมจำนวน <span class="underline-dotted" id="receipt-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท (<span class="underline-dotted" id="receipt-amount-thai">{{ $allBahtText }}</span>) ไปเป็นการถูกต้องแล้ว
                 </div>
                 
                 <table style="width: 100%; border: none; margin-top: 4px; font-size: 14pt; border-collapse: collapse;">
@@ -533,11 +541,16 @@
     <script>
         const loanData = @json($clientPayload);
         const projectTitle = @json($project->title);
-        const fiscalYear = @json($project->academic_year ?? '2569');
+        const fiscalYearThai = @json(toThaiDigits($project->academic_year ?? '2569'));
 
         function toThaiDigits(num) {
             const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
             return String(num).replace(/[0-9]/g, d => thaiDigits[d]);
+        }
+
+        function formatThaiMoney(num) {
+            const formatted = parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return toThaiDigits(formatted);
         }
 
         function cleanThaiItemDesc(desc, idx) {
@@ -549,13 +562,9 @@
             const match = clean.match(/^([0-9]+|[๐-๙]+)[\.\)]\s*(.*)$/);
             if (match) {
                 const thaiNum = toThaiDigits(match[1]);
-                return thaiNum + '. ' + match[2];
+                return thaiNum + '. ' + toThaiDigits(match[2]);
             }
-            return toThaiDigits(idx) + '. ' + clean;
-        }
-
-        function formatMoney(num) {
-            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            return toThaiDigits(idx) + '. ' + toThaiDigits(clean);
         }
 
         function switchActivity(val) {
@@ -564,21 +573,22 @@
 
             if (val === 'all' || !val) {
                 activeDataset = loanData.all;
-                purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> ประจำปีงบประมาณ พ.ศ. ${fiscalYear} ดังรายละเอียดต่อไปนี้`;
+                purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> ประจำปีงบประมาณ พ.ศ. ${fiscalYearThai} ดังรายละเอียดต่อไปนี้`;
             } else {
                 const targetIdx = parseInt(val);
                 const found = loanData.activities.find(a => a.index === targetIdx);
                 if (found) {
                     activeDataset = found;
-                    purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> (<span class="bold">กิจกรรมที่ ${found.index}: ${found.name}</span>) ประจำปีงบประมาณ พ.ศ. ${fiscalYear} ดังรายละเอียดต่อไปนี้`;
+                    const actNameThai = toThaiDigits(found.name);
+                    purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> (<span class="bold">กิจกรรมที่ ${toThaiDigits(found.index)}: ${actNameThai}</span>) ประจำปีงบประมาณ พ.ศ. ${fiscalYearThai} ดังรายละเอียดต่อไปนี้`;
                 } else {
                     activeDataset = loanData.all;
-                    purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> ประจำปีงบประมาณ พ.ศ. ${fiscalYear} ดังรายละเอียดต่อไปนี้`;
+                    purposeHtml = `เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <span class="bold">"${projectTitle}"</span> ประจำปีงบประมาณ พ.ศ. ${fiscalYearThai} ดังรายละเอียดต่อไปนี้`;
                 }
             }
 
-            // 1. Update Contract Number
-            document.getElementById('contract-no-display').innerText = activeDataset.contract_no;
+            // 1. Update Contract Number (with Thai digits)
+            document.getElementById('contract-no-display').innerText = toThaiDigits(activeDataset.contract_no);
 
             // 2. Update Purpose Line
             document.getElementById('contract-purpose-display').innerHTML = purposeHtml;
@@ -588,14 +598,14 @@
             let rowsHtml = '';
             activeDataset.items.forEach((it, idx) => {
                 const formattedDesc = cleanThaiItemDesc(it.description, idx + 1);
-                const qtyText = (it.quantity && it.quantity > 1) ? ` (${parseFloat(it.quantity).toLocaleString()} ${it.unit || 'รายการ'} x ${formatMoney(it.unit_price)} บาท)` : '';
+                const qtyText = (it.quantity && it.quantity > 1) ? ` (${toThaiDigits(parseFloat(it.quantity).toLocaleString())} ${it.unit || 'รายการ'} x ${formatThaiMoney(it.unit_price)} บาท)` : '';
                 rowsHtml += `
                     <tr>
                         <td class="col-border-right">
                             ${formattedDesc}${qtyText}
                         </td>
                         <td class="col-amount">
-                            ${formatMoney(it.total_price)}
+                            ${formatThaiMoney(it.total_price)}
                         </td>
                     </tr>
                 `;
@@ -606,14 +616,14 @@
                 <tr style="border-top: 1px solid #000;">
                     <td class="col-border-right text-right bold" style="padding-right: 15px;">รวมเป็นเงินทั้งสิ้น</td>
                     <td class="col-amount bold" id="table-total-display">
-                        ${formatMoney(activeDataset.total_amount || activeDataset.total_price || 0)}
+                        ${formatThaiMoney(activeDataset.total_amount || activeDataset.total_price || 0)}
                     </td>
                 </tr>
             `;
             tbody.innerHTML = rowsHtml;
 
-            // 4. Update Lower Sections (Numbers & Thai Baht Text - Normal Weight Font)
-            const amtStr = formatMoney(activeDataset.total_amount || activeDataset.total_price || 0);
+            // 4. Update Lower Sections (Numbers & Thai Baht Text - Normal Weight Font & Thai Digits)
+            const amtStr = formatThaiMoney(activeDataset.total_amount || activeDataset.total_price || 0);
             const bahtStr = activeDataset.baht_text;
 
             document.getElementById('checked-amount-num').innerText = amtStr;
