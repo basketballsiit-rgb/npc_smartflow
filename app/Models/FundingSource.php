@@ -11,6 +11,8 @@ class FundingSource extends Model
     protected $fillable = [
         'name',
         'code',
+        'fiscal_year',
+        'budget_number',
         'description',
     ];
 
