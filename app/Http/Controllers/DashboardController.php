@@ -91,7 +91,7 @@ class DashboardController extends Controller
         // 1. Teacher / User Proposals Data (Always loaded for all users so anyone can view their own projects)
         $data['teacherData'] = [
             'projects' => Project::where('user_id', $user->id)
-                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals', 'fundingSource', 'budget.fundingSource'])
+                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals', 'fundingSource', 'budget.fundingSource', 'procurement'])
                 ->latest()
                 ->get(),
             'proposalsCount' => Project::where('user_id', $user->id)->count(),
@@ -253,7 +253,7 @@ class DashboardController extends Controller
 
         // Master Projects list for Admin, Plan Head, Procurement & Executives
         if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isExecutive()) {
-            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals'])
+            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals', 'procurement'])
                 ->latest()
                 ->get()
                 ->map(function ($p) {
@@ -271,6 +271,8 @@ class DashboardController extends Controller
                         'report_category' => $p->report_category,
                         'status' => $p->status,
                         'current_approval_step' => $p->current_approval_step,
+                        'procurement_status' => $p->procurement?->status,
+                        'procurement_number' => $p->procurement?->procurement_number,
                         'created_at' => $p->created_at ? $p->created_at->format('Y-m-d H:i') : '',
                         'proposer_name' => $p->user?->name ?? 'ไม่ระบุชื่อ',
                         'proposer_email' => $p->user?->email ?? '',

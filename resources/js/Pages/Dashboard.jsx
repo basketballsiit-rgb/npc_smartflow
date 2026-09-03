@@ -583,32 +583,68 @@ export default function Dashboard({
         });
     };
 
-    const renderProjectProgressBar = (status, step) => {
+    const renderProjectProgressBar = (status, step, project = null) => {
         if (status === 'preliminary') {
             return (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold whitespace-nowrap">
-                    🟡 รอจัดสรร
+                    💡 เสนอตั้งงบ
                 </span>
             );
         }
         if (status === 'budget_approved') {
             return (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold whitespace-nowrap">
-                    🟢 อนุมัติ
+                    ✅ จัดสรรงบแล้ว
                 </span>
             );
         }
         if (status === 'budget_rejected') {
             return (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-800 border border-rose-300 text-xs font-bold whitespace-nowrap">
-                    ❌ ไม่อนุมัติ
+                    ✕ ไม่ผ่านการจัดสรร
                 </span>
             );
         }
         if (status === 'approved' || step >= 6) {
+            const procStatus = project?.procurement?.status || project?.procurement_status;
+            if (procStatus === 'forwarded_to_finance') {
+                return (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-400 text-xs font-black whitespace-nowrap shadow-2xs">
+                        💰 งานการเงิน (ส่งเบิกจ่ายแล้ว)
+                    </span>
+                );
+            }
+            if (procStatus === 'received' || procStatus === 'processing') {
+                return (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 text-blue-950 border border-blue-400 text-xs font-bold whitespace-nowrap shadow-2xs">
+                        📦 งานพัสดุ (ลงรับแล้ว)
+                    </span>
+                );
+            }
             return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold whitespace-nowrap">
-                    ✅ อนุมัติแล้ว
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold whitespace-nowrap">
+                    📦 งานพัสดุ (รอลงรับ)
+                </span>
+            );
+        }
+        if (status === 'in_progress' || status === 'evaluating') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-900 border border-purple-200 text-xs font-bold whitespace-nowrap">
+                    ⭐ ดำเนินงาน/ประเมิน
+                </span>
+            );
+        }
+        if (status === 'reporting') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 text-xs font-bold whitespace-nowrap">
+                    📄 สรุปรายงานผล
+                </span>
+            );
+        }
+        if (status === 'completed' || status === 'cleared') {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 text-teal-900 border border-teal-200 text-xs font-bold whitespace-nowrap">
+                    🎉 ปิดโครงการสมบูรณ์
                 </span>
             );
         }
@@ -622,20 +658,39 @@ export default function Dashboard({
         if (status === 'draft') {
             return (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold whitespace-nowrap">
-                    📝 แบบร่าง
+                    📝 ร่างโครงการ
                 </span>
             );
         }
 
-        const currentStep = step || 1;
+        const currentStep = step || 2;
+        let stepRole = 'รอพิจารณา';
+        let stepIcon = '⏳';
+        if (currentStep === 2) {
+            stepRole = 'หัวหน้างาน/สาขา';
+            stepIcon = '👔';
+        } else if (currentStep === 3) {
+            stepRole = 'งานวางแผนฯ';
+            stepIcon = '📊';
+        } else if (currentStep === 4) {
+            stepRole = 'รองฝ่ายที่เกี่ยวข้อง';
+            stepIcon = '🎖️';
+        } else if (currentStep === 5) {
+            stepRole = 'รองฝ่ายแผนงานฯ';
+            stepIcon = '📑';
+        } else if (currentStep === 6) {
+            stepRole = 'ผู้อำนวยการ';
+            stepIcon = '🏛️';
+        }
+
         return (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-200 text-xs font-bold whitespace-nowrap">
-                ⏳ รออนุมัติ (ขั้น {currentStep})
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold whitespace-nowrap">
+                {stepIcon} ขั้นที่ {currentStep}: {stepRole}
             </span>
         );
     };
 
-    const getStatusBadge = (status, step) => renderProjectProgressBar(status, step);
+    const getStatusBadge = (status, step, project = null) => renderProjectProgressBar(status, step, project);
 
     // User Modal Open Handlers
     const openCreateUserModal = () => {
@@ -2075,7 +2130,7 @@ export default function Dashboard({
                                                     </div>
                                                 </td>
                                                 <td className="px-3 py-3.5 text-center align-top whitespace-nowrap">
-                                                    {getStatusBadge(project.status, project.current_approval_step)}
+                                                    {getStatusBadge(project.status, project.current_approval_step, project)}
                                                 </td>
                                                 <td className="px-3 py-3.5 text-right align-top whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-1.5">
@@ -4058,7 +4113,7 @@ ${itemsListText}
                                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget)}
                                             </td>
                                             <td className="px-6 py-4 text-center whitespace-nowrap">
-                                                {renderProjectProgressBar(p.status, p.current_approval_step)}
+                                                {renderProjectProgressBar(p.status, p.current_approval_step, p)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
                                                 <div className="flex items-center justify-end gap-2 whitespace-nowrap">
@@ -6057,7 +6112,7 @@ ${itemsListText}
                                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget)}
                                             </td>
                                             <td className="px-6 py-4 text-center whitespace-nowrap">
-                                                {getStatusBadge(p.status, p.current_approval_step)}
+                                                {getStatusBadge(p.status, p.current_approval_step, p)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
                                                 <div className="flex items-center justify-end gap-2 whitespace-nowrap">

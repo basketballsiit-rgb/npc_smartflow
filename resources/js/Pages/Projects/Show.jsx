@@ -470,119 +470,199 @@ ${itemsListText}
         });
     };
 
-    const getApprovalStepOfficerInfo = (step, status) => {
+    const getApprovalStepNameAndRole = (stepNumber) => {
+        switch (parseInt(stepNumber)) {
+            case 1:
+                return {
+                    title: 'ขั้นตอนที่ ๑: ผู้เสนอโครงการ (ยื่นขออนุมัติ)',
+                    role: 'ผู้เสนอโครงการ / ครูผู้รับผิดชอบ',
+                    icon: '📝',
+                };
+            case 2:
+                return {
+                    title: 'ขั้นตอนที่ ๒: หัวหน้างาน / หัวหน้าแผนกวิชา',
+                    role: 'หัวหน้างาน / หัวหน้าสาขาวิชา',
+                    icon: '👔',
+                };
+            case 3:
+                return {
+                    title: 'ขั้นตอนที่ ๓: งานวางแผนและงบประมาณ',
+                    role: 'หัวหน้างานวางแผนและงบประมาณ',
+                    icon: '📊',
+                };
+            case 4:
+                return {
+                    title: 'ขั้นตอนที่ ๔: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง',
+                    role: 'รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง',
+                    icon: '🎖️',
+                };
+            case 5:
+                return {
+                    title: 'ขั้นตอนที่ ๕: รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ',
+                    role: 'รองผู้อำนวยการฝ่ายแผนงานฯ',
+                    icon: '📑',
+                };
+            case 6:
+                return {
+                    title: 'ขั้นตอนที่ ๖: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+                    role: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+                    icon: '🏛️',
+                };
+            default:
+                return {
+                    title: `ขั้นตอนที่ ${stepNumber}`,
+                    role: 'ผู้เกี่ยวข้องตามลำดับ',
+                    icon: '⏳',
+                };
+        }
+    };
+
+    const getApprovalStepOfficerInfo = (step, status, procurement) => {
         if (status === 'budget_approved') {
             return {
-                title: '🟢 ได้รับจัดสรรงบประมาณแล้ว — อยู่ระหว่างจัดทำรายละเอียดโครงการฉบับเต็ม',
-                desc: 'โครงการผ่านความเห็นชอบจัดสรรงบประมาณจากงานแผนงานแล้ว กรุณากรอกรายละเอียดโครงการฉบับเต็มในแท็บที่ 1 และกด "🚀 ยื่นขออนุมัติโครงการ" เพื่อเริ่มกระบวนการอนุมัติ 6 ขั้นตอน',
+                title: '🟢 ได้รับจัดสรรงบประมาณแล้ว — อยู่ที่: ผู้เสนอโครงการ (จัดทำรายละเอียดโครงการฉบับเต็ม)',
+                desc: 'โครงการผ่านความเห็นชอบจัดสรรงบประมาณจากงานแผนงานแล้ว กรุณากรอกรายละเอียดโครงการฉบับเต็มในแท็บที่ 1 และกด "🚀 ยื่นขออนุมัติโครงการ" เพื่อเริ่มกระบวนการเสนออนุมัติ 6 ขั้นตอน',
                 color: 'bg-emerald-50 border-emerald-300 text-emerald-950',
-                icon: '📝'
+                icon: '📝',
+                roleName: 'ผู้เสนอโครงการ (ครู/ผู้รับผิดชอบ)'
             };
         }
         if (status === 'preliminary') {
             return {
-                title: '⏳ เสนอโครงการเบื้องต้น — อยู่ระหว่างรอการพิจารณาจัดสรรงบประมาณ',
+                title: '⏳ เสนอโครงการเบื้องต้น — อยู่ที่: คณะกรรมการกลั่นกรองงบประมาณ & งานแผนงาน',
                 desc: 'โครงการอยู่ระหว่างรอคณะกรรมการและงานแผนงานพิจารณากำหนดกรอบวงเงินงบประมาณและแหล่งเงินทุน',
                 color: 'bg-amber-50 border-amber-300 text-amber-950',
-                icon: '💡'
+                icon: '💡',
+                roleName: 'คณะกรรมการพิจารณางบประมาณ'
             };
         }
         if (status === 'approved') {
+            const procStatus = procurement?.status || 'pending';
+            if (procStatus === 'forwarded_to_finance') {
+                return {
+                    title: '💰 อยู่ที่: งานการเงิน (พัสดุส่งเรื่องเบิกจ่ายแล้ว — รอการเงินตรวจสอบสัญญายืมเงิน/เบิกจ่าย)',
+                    desc: 'งานพัสดุได้ส่งชุดเอกสารจัดซื้อจัดจ้าง/สัญญายืมเงิน (กค. ๑๐๑) ไปยังงานการเงินแล้ว อยู่ระหว่างงานการเงินดำเนินการตรวจสอบหลักฐานและเบิกจ่ายงบประมาณ',
+                    color: 'bg-emerald-50 border-emerald-300 text-emerald-950',
+                    icon: '💰',
+                    roleName: 'เจ้าหน้าที่งานการเงิน'
+                };
+            }
+            if (procStatus === 'received' || procStatus === 'processing') {
+                return {
+                    title: `📦 อยู่ที่: งานพัสดุ (ลงรับแล้ว เลขที่ ${procurement?.procurement_number || '-'} — กำลังจัดซื้อจัดจ้าง)`,
+                    desc: 'เจ้าหน้าที่งานพัสดุได้ลงรับเรื่องแล้ว อยู่ระหว่างการจัดทำเอกสารขอซื้อขอจ้าง/ออกใบสั่งซื้อสั่งจ้าง เมื่อตรวจเรียบร้อยจะส่งต่อไปยังงานการเงิน',
+                    color: 'bg-blue-50 border-blue-300 text-blue-950',
+                    icon: '📦',
+                    roleName: 'เจ้าหน้าที่งานพัสดุ'
+                };
+            }
             return {
-                title: '🎓 อนุมัติสมบูรณ์แล้ว (Approved) — พร้อมจัดซื้อจัดจ้าง (ขั้นตอนที่ 3)',
-                desc: 'โครงการผ่านการลงนามอนุมัติสมบูรณ์แล้ว ผู้ดำเนินโครงการสามารถกรอกข้อมูลพัสดุและจัดทำคำสั่งใน แท็บที่ 2 ได้ทันที',
-                color: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-                icon: '✅'
+                title: '📦 อยู่ที่: งานพัสดุ (โครงการอนุมัติแล้ว — รอเจ้าหน้าที่พัสดุลงรับชุดจัดซื้อจัดจ้าง)',
+                desc: 'โครงการผ่านการลงนามอนุมัติสมบูรณ์แล้ว ผู้ดำเนินโครงการและงานพัสดุสามารถจัดทำเอกสารจัดซื้อจัดจ้าง 4 ฉบับและสัญญายืมเงินในแท็บที่ 2 เพื่อให้พัสดุลงรับเรื่อง',
+                color: 'bg-amber-50 border-amber-300 text-amber-950',
+                icon: '📥',
+                roleName: 'เจ้าหน้าที่งานพัสดุ'
             };
         }
         if (status === 'in_progress' || status === 'evaluating') {
             return {
-                title: '⭐ อยู่ระหว่างดำเนินกิจกรรม & ประเมินผลโครงการ (ขั้นตอนที่ 4)',
-                desc: 'โครงการอยู่ระหว่างดำเนินกิจกรรมและประเมินผลความพึงพอใจด้วย AI ในแท็บที่ 3',
+                title: '⭐ อยู่ที่: ผู้รับผิดชอบโครงการ (ดำเนินกิจกรรม & ประเมินผลความพึงพอใจด้วย AI)',
+                desc: 'โครงการอยู่ระหว่างดำเนินกิจกรรมและเปิดให้ผู้เข้าร่วมทำแบบประเมินความพึงพอใจในแท็บที่ 3',
                 color: 'bg-purple-50 border-purple-200 text-purple-900',
-                icon: '📊'
+                icon: '📊',
+                roleName: 'ผู้รับผิดชอบโครงการ'
             };
         }
         if (status === 'reporting') {
             return {
-                title: '📄 อยู่ระหว่างจัดทำรายงานผลฉบับสมบูรณ์ (ขั้นตอนที่ 5)',
-                desc: 'สรุปรูปภาพและจัดทำเล่มรายงานผลโครงการรวมเล่ม PDF สมบูรณ์',
+                title: '📄 อยู่ที่: ผู้รับผิดชอบโครงการ (จัดทำรูปภาพ & รายงานผลฉบับสมบูรณ์)',
+                desc: 'โครงการอยู่ระหว่างสรุปรูปภาพผลงาน กิจกรรม และจัดทำเล่มรายงานผลโครงการรวมเล่ม PDF สมบูรณ์ในแท็บที่ 4',
                 color: 'bg-blue-50 border-blue-200 text-blue-900',
-                icon: '📄'
+                icon: '📄',
+                roleName: 'ผู้รับผิดชอบโครงการ'
             };
         }
         if (status === 'completed' || status === 'cleared') {
             return {
-                title: '🧾 เคลียร์เงินยืม & เบิกจ่ายสิ้นสุดโครงการ (ขั้นตอนที่ 6)',
-                desc: 'ส่งเอกสารหลักฐานเคลียร์เงินทดรองและรายงานผลเสร็จสิ้นสมบูรณ์',
+                title: '🎉 สิ้นสุดโครงการสมบูรณ์ — อยู่ที่: งานการเงิน & งานวางแผน (เคลียร์เงินยืม/ปิดโครงการ)',
+                desc: 'ส่งเอกสารหลักฐานเคลียร์เงินทดรองราชการและรายงานผลโครงการฉบับสมบูรณ์เสร็จสิ้นครบถ้วน',
                 color: 'bg-teal-50 border-teal-200 text-teal-900',
-                icon: '🎉'
+                icon: '🎉',
+                roleName: 'งานการเงิน & งานวางแผน'
             };
         }
         if (status === 'rejected') {
             return {
-                title: '✕ โครงการถูกส่งกลับแก้ไข (Returned for Revisions)',
+                title: '✕ โครงการถูกส่งกลับแก้ไข — อยู่ที่: ผู้เสนอโครงการ',
                 desc: 'โครงการถูกส่งกลับให้ผู้เสนอแก้ไขตามข้อเสนอแนะ กรุณาปรับปรุงข้อมูลแล้วกดปุ่ม "🚀 ยื่นขออนุมัติเพื่อดำเนินงานต่อ"',
                 color: 'bg-rose-50 border-rose-200 text-rose-900',
-                icon: '⚠️'
+                icon: '⚠️',
+                roleName: 'ผู้เสนอโครงการ'
             };
         }
         if (status === 'draft') {
             return {
-                title: '📝 อยู่ระหว่างการร่างโครงการ (Draft)',
-                desc: 'โครงการอยู่ระหว่างการกรอกข้อมูลโดยครูผู้เสนอ กดปุ่ม "🚀 ยื่นขออนุมัติเพื่อดำเนินงานต่อ" เพื่อส่งให้คณะกรรมการพิจารณา',
+                title: '📝 อยู่ที่: ผู้เสนอโครงการ (กำลังร่างข้อเสนอโครงการ)',
+                desc: 'โครงการอยู่ระหว่างการกรอกข้อมูลโดยครูผู้เสนอ เมื่อพร้อมแล้วให้กดปุ่ม "🚀 ยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2)" เพื่อส่งให้หัวหน้างานพิจารณา',
                 color: 'bg-slate-50 border-slate-200 text-slate-800',
-                icon: '📝'
+                icon: '📝',
+                roleName: 'ผู้เสนอโครงการ'
             };
         }
 
         switch (step) {
             case 2:
                 return {
-                    title: 'ขั้นที่ 2: รอการพิจารณาจาก "หัวหน้างาน / หัวหน้าสาขาวิชา"',
-                    desc: 'ระบบส่งเรื่องไปยัง หัวหน้างาน/หัวหน้าสาขาวิชา เพื่อตรวจสอบความเหมาะสมเบื้องต้น',
-                    color: 'bg-blue-50 border-blue-200 text-blue-900',
-                    icon: '👤'
+                    title: '👔 ขั้นตอนที่ ๒: อยู่ที่ "หัวหน้างาน / หัวหน้าแผนกวิชา" (รอตรวจสอบและลงนาม)',
+                    desc: `ระบบส่งเรื่องไปยัง หัวหน้างาน / หัวหน้าแผนกวิชา (${project.department?.name || 'ต้นสังกัด'}) เพื่อตรวจสอบความถูกต้องและลงนามเห็นชอบ`,
+                    color: 'bg-blue-50 border-blue-300 text-blue-950',
+                    icon: '👔',
+                    roleName: `หัวหน้า${project.department?.name || 'งาน/แผนกวิชา'}`
                 };
             case 3:
                 return {
-                    title: 'ขั้นที่ 3: รอการพิจารณาจาก "หัวหน้างานวางแผนและงบประมาณ"',
-                    desc: 'ระบบส่งเรื่องไปยัง เจ้าหน้าที่/หัวหน้างานวางแผน เพื่อตรวจสอบยุทธศาสตร์และผูกจัดสรรงบประมาณ',
-                    color: 'bg-cyan-50 border-cyan-200 text-cyan-900',
-                    icon: '💰'
+                    title: '📊 ขั้นตอนที่ ๓: อยู่ที่ "งานวางแผนและงบประมาณ" (รอตรวจสอบแผน & ล็อคงบประมาณ)',
+                    desc: 'ระบบส่งเรื่องไปยัง เจ้าหน้าที่/หัวหน้างานวางแผนและงบประมาณ เพื่อตรวจสอบความสอดคล้องยุทธศาสตร์และผูกจัดสรรงบประมาณ',
+                    color: 'bg-cyan-50 border-cyan-300 text-cyan-950',
+                    icon: '📊',
+                    roleName: 'หัวหน้างานวางแผนและงบประมาณ'
                 };
             case 4:
                 return {
-                    title: 'ขั้นที่ 4: รอการพิจารณาจาก "รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง"',
-                    desc: 'ระบบส่งเรื่องไปยัง รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง เพื่อพิจารณาอนุมัติตามสายงานฝ่าย',
-                    color: 'bg-indigo-50 border-indigo-200 text-indigo-900',
-                    icon: '🏢'
+                    title: '🎖️ ขั้นตอนที่ ๔: อยู่ที่ "รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง" (รอพิจารณากลั่นกรอง)',
+                    desc: `ระบบส่งเรื่องไปยัง รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง (${project.department?.division || 'ฝ่ายต้นสังกัด'}) เพื่อพิจารณากลั่นกรองตามสายงานบังคับบัญชา`,
+                    color: 'bg-indigo-50 border-indigo-300 text-indigo-950',
+                    icon: '🎖️',
+                    roleName: 'รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง'
                 };
             case 5:
                 return {
-                    title: 'ขั้นที่ 5: รอการพิจารณาจาก "รองผู้อำนวยการฝ่ายแผนงานฯ / รองฝ่ายบริหารฯ"',
-                    desc: 'ระบบส่งเรื่องไปยัง รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ / รองผู้อำนวยการฝ่ายบริหารทรัพยากร เพื่อพิจารณาความพร้อมด้านยุทธศาสตร์และทรัพยากร',
-                    color: 'bg-amber-50 border-amber-200 text-amber-900',
-                    icon: '🏛️'
+                    title: '📑 ขั้นตอนที่ ๕: อยู่ที่ "รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ" (รอพิจารณา)',
+                    desc: 'ระบบส่งเรื่องไปยัง รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ เพื่อพิจารณาความพร้อมด้านแผนงานและงบประมาณภาพรวมของวิทยาลัย',
+                    color: 'bg-violet-50 border-violet-300 text-violet-950',
+                    icon: '📑',
+                    roleName: 'รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ'
                 };
             case 6:
                 return {
-                    title: 'ขั้นที่ 6: รอการลงนามอนุมัติจาก "ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน"',
+                    title: '🏛️ ขั้นตอนที่ ๖: อยู่ที่ "ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน" (รอลงนามอนุมัติโครงการ)',
                     desc: 'ระบบส่งเรื่องไปยัง ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน เพื่อลงนามอนุมัติโครงการฉบับสมบูรณ์ (หลังจากอนุมัติแล้ว จะเปิดให้เริ่มกระบวนการจัดซื้อจัดจ้าง/ยืมเงิน ในแท็บที่ 2)',
-                    color: 'bg-purple-50 border-purple-200 text-purple-900',
-                    icon: '🎓'
+                    color: 'bg-purple-50 border-purple-300 text-purple-950',
+                    icon: '🏛️',
+                    roleName: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'
                 };
             default:
                 return {
-                    title: 'อยู่ระหว่างเสนอขออนุมัติ',
-                    desc: 'ระบบกำลังดำเนินการตามสายงานอนุมัติ',
+                    title: `⏳ ขั้นตอนที่ ${step}: อยู่ระหว่างรอพิจารณาอนุมัติ`,
+                    desc: 'ระบบกำลังดำเนินการส่งต่อตามสายงานอนุมัติราชการ',
                     color: 'bg-purple-50 border-purple-200 text-purple-900',
-                    icon: '⏳'
+                    icon: '⏳',
+                    roleName: `ผู้มีอำนาจลงนามขั้นตอนที่ ${step}`
                 };
         }
     };
 
-    const currentOfficerInfo = getApprovalStepOfficerInfo(project.current_approval_step, project.status);
+    const currentOfficerInfo = getApprovalStepOfficerInfo(project.current_approval_step, project.status, project.procurement);
 
     return (
         <AuthenticatedLayout
@@ -658,13 +738,31 @@ ${itemsListText}
                             </p>
                         </div>
                         <div className="flex items-center gap-x-3">
-                            <span className={`inline-flex items-center rounded-xl px-3 py-1.5 text-xs font-bold ${
-                                project.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                            <span className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black shadow-xs ${
+                                project.status === 'approved' ? (
+                                    project.procurement?.status === 'forwarded_to_finance' 
+                                        ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 ring-2 ring-emerald-400/30'
+                                        : project.procurement?.status === 'received'
+                                        ? 'bg-blue-100 text-blue-950 border border-blue-300'
+                                        : 'bg-amber-100 text-amber-950 border border-amber-300'
+                                ) :
                                 project.status === 'draft' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
-                                project.status === 'rejected' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
-                                'bg-amber-50 text-amber-800 border border-amber-200'
+                                project.status === 'rejected' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                'bg-amber-50 text-amber-900 border border-amber-300 ring-2 ring-amber-400/20'
                             }`}>
-                                สถานะ: {getStatusBadgeText(project.status)} (ขั้นตอนที่ {project.current_approval_step}/6)
+                                <span>{currentOfficerInfo.icon}</span>
+                                <span>
+                                    {project.status === 'approved' 
+                                        ? (project.procurement?.status === 'forwarded_to_finance'
+                                            ? 'สถานะ: อยู่ที่งานการเงิน (ส่งเรื่องเบิกจ่ายแล้ว)'
+                                            : project.procurement?.status === 'received'
+                                            ? `สถานะ: อยู่ที่งานพัสดุ (ลงรับแล้ว เลขที่ ${project.procurement.procurement_number || '-'})`
+                                            : 'สถานะ: อยู่ที่งานพัสดุ (รอลงรับเรื่อง)')
+                                        : (project.status === 'submitted' || project.status === 'pending_approval')
+                                        ? `สถานะ: อยู่ที่ ${currentOfficerInfo.roleName} (ขั้นตอนที่ ${project.current_approval_step || 2}/6)`
+                                        : `สถานะ: ${getStatusBadgeText(project.status)}`
+                                    }
+                                </span>
                             </span>
                             {(project.status === 'draft' || project.status === 'rejected' || project.status === 'budget_approved') && (project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
                                 <button
