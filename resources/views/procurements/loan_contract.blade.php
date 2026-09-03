@@ -340,9 +340,9 @@
 
     if (empty($allLoanItems)) {
         $allLoanItems = [
-            ['description' => '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => 3600],
-            ['description' => '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => 4000],
-            ['description' => '๓. ค่าอาหารว่างและเครื่องดื่ม', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => 3500],
+            ['description' => '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ (๖ ชม. x ๖๐๐ บาท)', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => 3600],
+            ['description' => '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (๕๐ คน x ๘๐ บาท x ๑ มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => 4000],
+            ['description' => '๓. ค่าอาหารว่างและเครื่องดื่ม (๕๐ คน x ๓๕ บาท x ๒ มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => 3500],
         ];
     }
 
@@ -432,12 +432,15 @@
             <table class="details-table">
                 <tbody id="loan-items-tbody">
                     @foreach($allLoanItems as $item)
+                        @php
+                            $hasBracket = preg_match('/\([^\)]*[\d\sxบาทมื้อคนชมชั่วโมง].*\)/u', $item['description']);
+                            $qtyText = (!$hasBracket && !empty($item['quantity']) && $item['quantity'] > 1 && !empty($item['unit_price'])) 
+                                ? ' (' . toThaiDigits(number_format($item['quantity'], 0)) . ' ' . $item['unit'] . ' x ' . formatThaiMoney($item['unit_price']) . ' บาท)'
+                                : '';
+                        @endphp
                         <tr>
                             <td class="col-border-right">
-                                {{ toThaiDigits($item['description']) }}
-                                @if(!empty($item['quantity']) && $item['quantity'] > 1)
-                                    ({{ toThaiDigits(number_format($item['quantity'], 0)) }} {{ $item['unit'] }} x {{ formatThaiMoney($item['unit_price']) }} บาท)
-                                @endif
+                                {{ toThaiDigits($item['description']) }}{{ $qtyText }}
                             </td>
                             <td class="col-amount">
                                 {{ formatThaiMoney($item['total_price']) }}
@@ -601,7 +604,10 @@
             let rowsHtml = '';
             activeDataset.items.forEach((it, idx) => {
                 const formattedDesc = cleanThaiItemDesc(it.description, idx + 1);
-                const qtyText = (it.quantity && it.quantity > 1) ? ` (${toThaiDigits(parseFloat(it.quantity).toLocaleString())} ${it.unit || 'รายการ'} x ${formatThaiMoney(it.unit_price)} บาท)` : '';
+                const hasBracket = /\([^\)]*[\d\sxบาทมื้อคนชมชั่วโมง].*\)/.test(formattedDesc);
+                const qtyText = (!hasBracket && it.quantity && it.quantity > 1 && it.unit_price) 
+                    ? ` (${toThaiDigits(parseFloat(it.quantity).toLocaleString())} ${it.unit || 'รายการ'} x ${formatThaiMoney(it.unit_price)} บาท)` 
+                    : '';
                 rowsHtml += `
                     <tr>
                         <td class="col-border-right">
