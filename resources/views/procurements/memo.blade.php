@@ -127,6 +127,14 @@
     }
     $cleanProposerName = cleanPersonName($rawProposerName);
     $displayProposerPos = $project->position ?: ($extractedProposerPos ?: ($project->user?->position ?: 'อาจารย์ประจำสาขา / ผู้รับผิดชอบโครงการ'));
+
+    $garudaPath = public_path('images/garuda.png');
+    if (!file_exists($garudaPath)) {
+        $garudaPath = public_path('garuda.png');
+    }
+    $garudaSrc = file_exists($garudaPath) 
+        ? 'data:image/png;base64,' . base64_encode(file_get_contents($garudaPath)) 
+        : asset('images/garuda.png');
 @endphp
 
 <body>
@@ -135,7 +143,7 @@
     </div>
 
     <div class="header-container">
-        <img src="{{ asset('images/garuda.png') }}" class="garuda-img" alt="ตราครุฑ">
+        <img src="{{ $garudaSrc }}" class="garuda-img" alt="ตราครุฑ">
         <div class="header-title">บันทึกข้อความ</div>
     </div>
     
