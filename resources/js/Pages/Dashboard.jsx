@@ -4790,53 +4790,99 @@ ${itemsListText}
                                                         <h6 className="text-xs font-black uppercase text-purple-950 flex items-center gap-1">
                                                             <span>🔍</span> ค้นหาฐานข้อมูลร้านค้า / ผู้ประกอบการ
                                                         </h6>
-                                                        <span className="text-[11px] text-slate-500 font-medium">คลิกเพื่อเลือกใช้ข้อมูล</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsAddVendorOpen(true)}
+                                                            className="px-2.5 py-1 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-[11px] flex items-center gap-1 shadow-xs transition cursor-pointer"
+                                                        >
+                                                            <span>➕</span> เพิ่มร้านค้าใหม่
+                                                        </button>
                                                     </div>
                                                     <input
                                                         type="text"
                                                         value={procVendorSearch}
                                                         onChange={(e) => setProcVendorSearch(e.target.value)}
-                                                        placeholder="พิมพ์ชื่อร้านค้า, หมวดสินค้า, หรือเลข 13 หลัก..."
+                                                        placeholder="พิมพ์ชื่อร้านค้า, หมวดสินค้า, เลข 13 หลัก หรือเลขบัญชี..."
                                                         className="w-full text-xs rounded-xl border border-purple-200 bg-white px-3 py-2 focus:ring-purple-500 focus:border-purple-500 shadow-2xs"
                                                     />
-                                                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                                                        {verifiedVendors
+                                                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                                                        {currentVendors
                                                             .filter(v => 
                                                                 !procVendorSearch || 
-                                                                v.name.includes(procVendorSearch) || 
-                                                                v.category.includes(procVendorSearch) ||
-                                                                v.tax_id.includes(procVendorSearch)
+                                                                (v.name && v.name.toLowerCase().includes(procVendorSearch.toLowerCase())) || 
+                                                                (v.category && v.category.toLowerCase().includes(procVendorSearch.toLowerCase())) ||
+                                                                (v.tax_id && v.tax_id.includes(procVendorSearch)) ||
+                                                                (v.bank_account_number && v.bank_account_number.includes(procVendorSearch))
                                                             )
                                                             .map((v) => (
                                                                 <div 
-                                                                    key={v.id}
+                                                                    key={v.id || v.name}
                                                                     onClick={() => {
                                                                         setProcPoData({
                                                                             ...procPoData,
                                                                             vendor_name: v.name,
-                                                                            vendor_tax_id: v.tax_id,
-                                                                            vendor_address: v.address,
-                                                                            vendor_phone: v.phone,
+                                                                            vendor_tax_id: v.tax_id || '',
+                                                                            vendor_address: v.address || '',
+                                                                            vendor_phone: v.phone || '',
                                                                             po_number: proc?.procurement_number || `สช.น. 0${p.id}/2569`
                                                                         });
                                                                     }}
-                                                                    className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                                                                    className={`p-3 rounded-2xl border transition-all cursor-pointer ${
                                                                         procPoData.vendor_name === v.name
-                                                                            ? 'bg-purple-100/70 border-purple-400 shadow-2xs'
+                                                                            ? 'bg-purple-100/80 border-purple-400 shadow-2xs'
                                                                             : 'bg-white hover:bg-purple-50/50 border-slate-200'
                                                                     }`}
                                                                 >
-                                                                    <div className="flex justify-between items-start">
-                                                                        <div className="space-y-1">
-                                                                            <p className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-                                                                                <span>{v.icon}</span> {v.name}
+                                                                    <div className="flex justify-between items-start gap-2">
+                                                                        <div className="space-y-1.5 flex-1 min-w-0">
+                                                                            <p className="text-xs font-black text-slate-850 flex items-center gap-1.5">
+                                                                                <span>{v.icon || '🏬'}</span> <span className="truncate">{v.name}</span>
                                                                             </p>
-                                                                            <p className="text-[11px] text-slate-500">เลข 13 หลัก: <b className="font-mono text-purple-900">{v.tax_id}</b> | โทร: <b>{v.phone}</b></p>
-                                                                            <p className="text-[10px] text-slate-400 line-clamp-1">{v.address}</p>
+                                                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-600">
+                                                                                {v.tax_id && (
+                                                                                    <span className="inline-flex items-center gap-1 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200 font-mono text-purple-950 text-[10px]">
+                                                                                        <span>เลขผู้เสียภาษี:</span> <b>{v.tax_id}</b>
+                                                                                        <button 
+                                                                                            type="button" 
+                                                                                            onClick={(e) => { e.stopPropagation(); copyToClipboard(v.tax_id, 'เลขผู้เสียภาษี'); }}
+                                                                                            className="hover:text-purple-600 ml-0.5 text-[9px]"
+                                                                                            title="คัดลอกเลขผู้เสียภาษี"
+                                                                                        >
+                                                                                            📋
+                                                                                        </button>
+                                                                                    </span>
+                                                                                )}
+                                                                                {v.phone && <span>โทร: <b>{v.phone}</b></span>}
+                                                                            </div>
+
+                                                                            {/* Bank Account Details */}
+                                                                            {(v.bank_account_number || v.bank_name) && (
+                                                                                <div className="p-2 rounded-xl bg-emerald-50/60 border border-emerald-200 text-[11px] text-emerald-950 flex justify-between items-center">
+                                                                                    <div>
+                                                                                        <p className="font-bold flex items-center gap-1">
+                                                                                            <span>🏦</span> {v.bank_name || 'ธนาคาร'}: <span className="font-mono text-emerald-800">{v.bank_account_number || '-'}</span>
+                                                                                        </p>
+                                                                                        {v.bank_account_name && (
+                                                                                            <p className="text-[10px] text-emerald-700">ชื่อบัญชี: {v.bank_account_name}</p>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    {v.bank_account_number && (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={(e) => { e.stopPropagation(); copyToClipboard(v.bank_account_number, 'เลขที่บัญชี'); }}
+                                                                                            className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold shrink-0 transition"
+                                                                                        >
+                                                                                            📋 คัดลอกเลขบัญชี
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
+
+                                                                            {v.address && <p className="text-[10px] text-slate-400 line-clamp-1">{v.address}</p>}
                                                                         </div>
                                                                         <button
                                                                             type="button"
-                                                                            className="px-2 py-1 bg-purple-600 text-white rounded-lg text-[10px] font-bold shrink-0 hover:bg-purple-700 transition"
+                                                                            className="px-2 py-1 bg-purple-600 text-white rounded-lg text-[10px] font-bold shrink-0 hover:bg-purple-700 transition self-start"
                                                                         >
                                                                             {procPoData.vendor_name === v.name ? '✓ เลือกแล้ว' : 'เลือกใช้'}
                                                                         </button>
