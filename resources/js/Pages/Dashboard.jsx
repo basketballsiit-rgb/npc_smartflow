@@ -4839,6 +4839,8 @@ ${itemsListText}
                         </table>
                     </div>
                 </div>
+                </>
+                )}
 
                 {/* 3. Procurement Details Modal */}
                 {viewingProcurementProject && (() => {
