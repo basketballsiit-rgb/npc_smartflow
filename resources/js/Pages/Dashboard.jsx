@@ -2064,26 +2064,35 @@ export default function Dashboard({
 
     const handleGenerateRoutineAiTor = () => {
         const validItems = routineProcItems.filter(item => item.description && item.description.trim() !== '');
-        if (validItems.length === 0) {
-            Swal.fire('ไม่พบรายการพัสดุ', 'กรุณากรอกรายการพัสดุในตารางด้านล่างก่อน เพื่อให้ AI นำรายการมาช่วยร่างข้อกำหนด TOR', 'info');
-            return;
-        }
-
-        const itemsListText = validItems.map((item, idx) => {
-            const cleanDesc = item.description.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').replace(/[💵📦💰📑📝🛒📄📊]/g, '').trim();
-            const qty = item.quantity || 1;
-            const unit = item.unit || 'ชิ้น';
-            return `     2.${idx + 1} ${cleanDesc} จำนวน ${qty} ${unit}`;
-        }).join('\n');
+        
+        // Filter out loan/activity allowance items
+        const isLoanExpense = (desc) => /ค่าตอบแทน|วิทยากร|ค่าอาหาร|อาหารกลางวัน|อาหารว่าง|เครื่องดื่ม|เดินทาง|พาหนะ|ยานพาหนะ|เบี้ยเลี้ยง|ที่พัก|สมนาคุณ|ค่าจ้างเหมาบริการบุคคล|เงินยืม/ui.test(desc);
+        const actualProcurementItems = validItems.filter(item => !isLoanExpense(item.description));
+        const loanCount = validItems.length - actualProcurementItems.length;
 
         const deptName = selectedRoutinePlanForProc?.department?.name || 'ฝ่ายบริหารทรัพยากร';
         const planTitle = selectedRoutinePlanForProc?.title || 'งบดำเนินงานประจำปี';
 
-        const aiDraftedTor = `1. วัตถุประสงค์
+        let aiDraftedTor = '';
+
+        if (actualProcurementItems.length > 0) {
+            const itemsListText = actualProcurementItems.map((item, idx) => {
+                const cleanDesc = item.description
+                    .replace(/\[.*?\]/g, '')
+                    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+                    .replace(/[💵📦💰📑📝🛒📄📊]/g, '')
+                    .replace(/^[\d๑-๙]+[\.\s]*/u, '')
+                    .trim();
+                const qty = item.quantity || 1;
+                const unit = item.unit || 'ชิ้น';
+                return `     2.${idx + 1} ${cleanDesc} จำนวน ${qty} ${unit}`;
+            }).join('\n');
+
+            aiDraftedTor = `1. วัตถุประสงค์
 วิทยาลัยสารพัดช่างน่าน แผนกวิชา ${deptName} มีความประสงค์จัดหาวัสดุอุปกรณ์และพัสดุ หมวด${planTitle} เพื่อใช้ในการดำเนินงานและการจัดการเรียนการสอนให้เกิดประสิทธิภาพสูงสุด
 
 2. คุณลักษณะเฉพาะและขอบเขตงาน
-พัสดุและรายการวัสดุที่จัดหาต้องเป็นของแท้ ของใหม่ ไม่เคยผ่านการใช้งานมาก่อน มีคุณภาพและมาตรฐานตามเกณฑ์สายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุจำนวน ${validItems.length} รายการ ดังนี้:
+พัสดุและรายการวัสดุที่จัดหาต้องเป็นของแท้ ของใหม่ ไม่เคยผ่านการใช้งานมาก่อน มีคุณภาพและมาตรฐานตามเกณฑ์สายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุจัดซื้อจัดจ้างจำนวน ${actualProcurementItems.length} รายการ ดังนี้:
 ${itemsListText}
 และพัสดุทั้งหมดต้องมีคุณสมบัติและมาตรฐานตามที่ทางวิทยาลัยกำหนด
 
@@ -2093,15 +2102,38 @@ ${itemsListText}
 4. การตรวจรับพัสดุ
 การตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้อง ครบถ้วน ตรงตามคุณลักษณะเฉพาะและใบเสนอซื้อเสนอจ้างทุกประการ`;
 
-        setRoutineProcData('tor_specifications', aiDraftedTor);
+            setRoutineProcData('tor_specifications', aiDraftedTor);
 
-        Swal.fire({
-            title: '✨ AI ร่าง TOR สำเร็จ!',
-            html: `ดึงรายการพัสดุ <b>${validItems.length} รายการ</b> มาบรรจุในข้อกำหนด TOR เรียบร้อยแล้ว`,
-            icon: 'success',
-            confirmButtonColor: '#7c3aed',
-            timer: 2500
-        });
+            Swal.fire({
+                title: '✨ AI ร่าง TOR สำเร็จ!',
+                html: `คัดกรองเฉพาะรายการพัสดุจัดซื้อจัดจ้าง <b>${actualProcurementItems.length} รายการ</b> มาบรรจุใน TOR ให้เรียบร้อยแล้ว` +
+                      (loanCount > 0 ? `<br><span class="text-xs text-amber-700 font-semibold">(คัดแยกรายการเงินยืมราชการ ${loanCount} รายการ ออกจาก TOR แล้ว)</span>` : ''),
+                icon: 'success',
+                confirmButtonColor: '#7c3aed',
+                timer: 3000
+            });
+        } else {
+            aiDraftedTor = `1. วัตถุประสงค์
+วิทยาลัยสารพัดช่างน่าน แผนกวิชา ${deptName} มีความประสงค์ดำเนินงานและจัดกิจกรรม หมวด${planTitle} ให้เกิดประสิทธิภาพสูงสุด
+
+2. คุณลักษณะเฉพาะและขอบเขตงาน
+รายการนี้เป็นการดำเนินงานในลักษณะการยืมเงินทดรองราชการ (แบบ กค.๑๐๑) เพื่อเป็นค่าใช้จ่ายในการดำเนินกิจกรรมทั้งหมด โดยไม่มีรายการพัสดุหรือครุภัณฑ์ที่ต้องจัดซื้อจัดจ้างตามขอบเขตงาน (TOR) เพิ่มเติม
+
+3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ
+ผู้ยืมเงินจะต้องดำเนินงานให้แล้วเสร็จ และส่งใช้เงินยืมทดรองราชการพร้อมหลักฐานใบสำคัญคู่จ่ายให้แก่งานการเงินภายในกำหนด 30 วัน
+
+4. การตรวจรับพัสดุ
+การตรวจสอบหลักฐานการจ่ายเงินจะดำเนินการโดยคณะกรรมการและงานการเงินของวิทยาลัย โดยต้องมีความถูกต้องครบถ้วนตามระเบียบของทางราชการทุกประการ`;
+
+            setRoutineProcData('tor_specifications', aiDraftedTor);
+
+            Swal.fire({
+                title: '💡 ตรวจพบรายการเงินยืมราชการ',
+                html: `รายการที่เลือกเป็น <b>ค่าใช้จ่ายยืมเงินราชการ</b><br>AI ได้ยกเว้นรายการเงินยืมออกจากบัญชีพัสดุ และปรับข้อกำหนด TOR ให้อัตโนมัติแล้ว`,
+                icon: 'info',
+                confirmButtonColor: '#7c3aed'
+            });
+        }
     };
 
     const handleRoutineProcurementSubmit = (e) => {
