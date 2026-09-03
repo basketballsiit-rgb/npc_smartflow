@@ -63,7 +63,7 @@ class DatabaseSeeder extends Seeder
         // 3. Seed Users
         $users = [
             [
-                'name' => 'ผู้ดูแลระบบ (Super Admin)',
+                'name' => 'ผู้ดูแลระบบ',
                 'email' => 'admin@smartflow.local',
                 'password' => Hash::make('password'),
                 'role_id' => $adminRole->id,
@@ -72,7 +72,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'name' => 'นายสมศักดิ์ ครูผู้สอน (อาจารย์ประจำสาขา)',
+                'name' => 'นายสมศักดิ์ ครูผู้สอน',
                 'email' => 'teacher@smartflow.local',
                 'password' => Hash::make('password'),
                 'role_id' => $teacherRole->id,
@@ -81,7 +81,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'name' => 'นางวิภา หัวหน้างานวางแผนและงบประมาณ',
+                'name' => 'นางวิภา วางแผน',
                 'email' => 'plan@smartflow.local',
                 'password' => Hash::make('password'),
                 'role_id' => $planRole->id,
@@ -90,7 +90,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'name' => 'นายปิติ หัวหน้างานพัสดุ',
+                'name' => 'นายปิติ พัสดุ',
                 'email' => 'procurement@smartflow.local',
                 'password' => Hash::make('password'),
                 'role_id' => $procurementRole->id,
@@ -99,7 +99,7 @@ class DatabaseSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'name' => 'นายอนันต์ ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+                'name' => 'นายอนันต์ กลิ่นสุคนธ์',
                 'email' => 'executive@smartflow.local',
                 'password' => Hash::make('password'),
                 'role_id' => $execRole->id,
