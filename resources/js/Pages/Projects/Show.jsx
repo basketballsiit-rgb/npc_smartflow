@@ -664,6 +664,121 @@ ${itemsListText}
 
     const currentOfficerInfo = getApprovalStepOfficerInfo(project.current_approval_step, project.status, project.procurement);
 
+    const getDocumentTrackingDetails = () => {
+        const proc = project.procurement;
+        const status = project.status;
+        const procStatus = proc?.status || 'pending';
+
+        // 1. Loan Agreement Tracking (สัญญายืมเงิน แบบ กค. ๑๐๑)
+        let loanInfo = {
+            location: 'ผู้เสนอโครงการ',
+            holder: project.user?.name || 'ครูผู้รับผิดชอบโครงการ',
+            statusText: '📝 รอการอนุมัติโครงการ',
+            badgeClass: 'bg-slate-100 text-slate-700 border border-slate-300',
+            actionDesc: 'สัญญายืมเงินจะเริ่มเดินเรื่องและมีผลบังคับใช้เมื่อโครงการได้รับการลงนามอนุมัติครบ ๖ ขั้นตอน',
+        };
+
+        if (status === 'approved') {
+            if (procStatus === 'forwarded_to_finance') {
+                loanInfo = {
+                    location: 'ห้องงานการเงิน (อาคารอำนวยการ ชั้น ๑)',
+                    holder: 'เจ้าหน้าที่งานการเงิน / หัวหน้างานการเงิน',
+                    statusText: '⏳ อยู่ที่งานการเงิน (ตรวจสัญญา & เสนอลงนามอนุมัติยืม)',
+                    badgeClass: 'bg-emerald-100 text-emerald-950 border border-emerald-400 font-black animate-pulse shadow-xs',
+                    actionDesc: 'งานการเงินกำลังตรวจสอบเอกสารสัญญา กค.๑๐๑ และนำเสนอผู้มีอำนาจลงนามอนุมัติจ่ายเงินยืมทดรองราชการ',
+                };
+            } else if (procStatus === 'received' || procStatus === 'processing') {
+                loanInfo = {
+                    location: 'ห้องงานพัสดุ (โต๊ะลงรับพัสดุ)',
+                    holder: 'เจ้าหน้าที่งานพัสดุผู้รับผิดชอบ',
+                    statusText: '📦 อยู่ที่งานพัสดุ (ตรวจรายการวัสดุ/แผนเงินยืม)',
+                    badgeClass: 'bg-blue-100 text-blue-900 border border-blue-300 font-bold',
+                    actionDesc: 'งานพัสดุลงรับเรื่องแล้ว กำลังตรวจความสอดคล้องของรายการขอยืมเงินให้ตรงตามแผน ก่อนส่งต่อชุดเอกสารให้งานการเงิน',
+                };
+            } else {
+                loanInfo = {
+                    location: 'ผู้เสนอโครงการ ➔ ห้องงานพัสดุ',
+                    holder: `${project.user?.name || 'ผู้เสนอโครงการ'} / งานพัสดุ`,
+                    statusText: '🟡 รอพัสดุลงรับพร้อมชุดจัดซื้อจัดจ้าง',
+                    badgeClass: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold',
+                    actionDesc: 'โครงการอนุมัติแล้ว ผู้เสนอจัดทำสัญญา กค.๑๐๑ ตอนที่ ๑ นำส่งพร้อมชุดเอกสารจัดซื้อจัดจ้างที่ห้องงานพัสดุ',
+                };
+            }
+        } else if (status === 'in_progress' || status === 'evaluating') {
+            loanInfo = {
+                location: `อยู่ที่ผู้ยืม (${project.user?.name || 'ผู้รับผิดชอบโครงการ'})`,
+                holder: project.user?.name || 'ผู้รับผิดชอบโครงการ',
+                statusText: '⭐ ได้รับเงินยืมแล้ว (กำลังดำเนินกิจกรรม)',
+                badgeClass: 'bg-purple-100 text-purple-950 border border-purple-300 font-bold',
+                actionDesc: 'ผู้ยืมได้รับเงินยืมทดรองราชการเรียบร้อยแล้ว กรุณาจัดเก็บใบเสร็จรับเงิน/ใบสำคัญรับเงินทุกรายการเพื่อเตรียมส่งล้างหนี้เงินยืมตามกำหนด',
+            };
+        } else if (status === 'reporting') {
+            loanInfo = {
+                location: `อยู่ที่ผู้ยืม (${project.user?.name || 'ผู้รับผิดชอบโครงการ'}) ➔ งานการเงิน`,
+                holder: project.user?.name || 'ผู้รับผิดชอบโครงการ',
+                statusText: '⏳ เตรียมส่งหลักฐานเคลียร์เงินยืม',
+                badgeClass: 'bg-blue-100 text-blue-950 border border-blue-300 font-bold',
+                actionDesc: 'อยู่ระหว่างรวบรวมหลักฐานใบเสร็จและจัดทำเล่มรายงานผลโครงการ เพื่อนำไปส่งเคลียร์เงินยืมที่งานการเงิน',
+            };
+        } else if (status === 'completed' || status === 'cleared') {
+            loanInfo = {
+                location: 'ห้องงานการเงิน (แฟ้มทะเบียนคุมสัญญายืมเงิน)',
+                holder: 'เจ้าหน้าที่งานการเงิน',
+                statusText: '✅ เคลียร์เงินยืมและปิดสัญญาสมบูรณ์',
+                badgeClass: 'bg-teal-100 text-teal-900 border border-teal-300 font-black',
+                actionDesc: 'ส่งหลักฐานใบเสร็จครบถ้วน งานการเงินออกใบรับใบสำคัญและบันทึกปลดหนี้สัญญาเงินยืม กค.๑๐๑ เสร็จสิ้นสมบูรณ์',
+            };
+        }
+
+        // 2. Procurement Package Tracking (ชุดเอกสารจัดซื้อจัดจ้าง ๔ ฉบับ & PO)
+        let procInfo = {
+            location: 'ผู้เสนอโครงการ',
+            holder: project.user?.name || 'ครูผู้รับผิดชอบโครงการ',
+            statusText: '📝 รอการอนุมัติโครงการ',
+            badgeClass: 'bg-slate-100 text-slate-700 border border-slate-300',
+            actionDesc: 'เอกสารขอซื้อขอจ้าง ๔ ฉบับ จะเปิดให้ดำเนินการในแท็บที่ ๒ เมื่อโครงการได้รับการอนุมัติ',
+        };
+
+        if (status === 'approved') {
+            if (procStatus === 'forwarded_to_finance') {
+                procInfo = {
+                    location: 'ห้องงานการเงิน (โต๊ะตั้งเบิกงบประมาณ)',
+                    holder: 'เจ้าหน้าที่งานการเงิน',
+                    statusText: '💰 ส่งงานการเงินแล้ว (รอเบิกจ่ายงบ)',
+                    badgeClass: 'bg-emerald-100 text-emerald-950 border border-emerald-400 font-bold',
+                    actionDesc: 'งานพัสดุได้ลงรับ ตรวจสอบเอกสาร ๔ ฉบับครบถ้วน และส่งมอบให้งานการเงินตั้งเบิกแล้ว',
+                };
+            } else if (procStatus === 'received' || procStatus === 'processing') {
+                procInfo = {
+                    location: 'ห้องงานพัสดุ (อาคารอำนวยการ)',
+                    holder: 'เจ้าหน้าที่งานพัสดุ',
+                    statusText: `📦 อยู่ที่งานพัสดุ (ลงรับแล้ว: ${proc?.procurement_number || '-'})`,
+                    badgeClass: 'bg-blue-100 text-blue-900 border border-blue-400 font-bold',
+                    actionDesc: 'เจ้าหน้าที่พัสดุกำลังจัดทำเอกสารขอซื้อขอจ้าง/ใบสั่งซื้อสั่งจ้าง (PO) เมื่อครบถ้วนจะกดส่งต่อให้งานการเงิน',
+                };
+            } else {
+                procInfo = {
+                    location: 'ห้องงานพัสดุ (เคาน์เตอร์ลงรับ)',
+                    holder: 'เจ้าหน้าที่งานพัสดุ',
+                    statusText: '🟡 รอพัสดุลงรับชุดจัดซื้อจัดจ้าง',
+                    badgeClass: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold',
+                    actionDesc: 'โครงการอนุมัติแล้ว รอเจ้าหน้าที่งานพัสดุลงรับชุดเอกสารในระบบและออกเลขที่พัสดุ PR',
+                };
+            }
+        } else if (['in_progress', 'evaluating', 'reporting', 'completed'].includes(status)) {
+            procInfo = {
+                location: 'ห้องงานพัสดุ & ห้องงานการเงิน',
+                holder: 'งานพัสดุ / คณะกรรมการตรวจรับพัสดุ',
+                statusText: '📦 จัดซื้อจัดจ้างแล้วเสร็จ (รอ/ตรวจรับครบ)',
+                badgeClass: 'bg-teal-50 text-teal-900 border border-teal-300 font-bold',
+                actionDesc: 'กระบวนการจัดซื้อจัดจ้างเสร็จสิ้นแล้ว คณะกรรมการดำเนินการตรวจรับพัสดุตามระเบียบ',
+            };
+        }
+
+        return { loanInfo, procInfo };
+    };
+
+
     return (
         <AuthenticatedLayout
             header={
@@ -787,7 +902,8 @@ ${itemsListText}
                         </div>
                     </div>
 
-                    {isPlanApproved && (
+                    {/* แสดงการแจ้งเตือนไปจัดซื้อจัดจ้าง เฉพาะเมื่อเพิ่งอนุมัติโครงการ และยังไม่ได้ส่งต่อการเงิน/ยังไม่เริ่มดำเนินงาน */}
+                    {project.status === 'approved' && project.procurement?.status !== 'forwarded_to_finance' && project.procurement?.status !== 'completed' && (
                         <div className="mb-6 p-4 rounded-2xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm font-sans">
                             <div className="flex items-center gap-3">
                                 <span className="text-2xl animate-bounce">📦</span>
@@ -1050,12 +1166,115 @@ ${itemsListText}
                                     </div>
                                 )}
 
-                                <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                                    <h3 className="text-base font-bold text-purple-950 mb-4">📜 ประวัติและบันทึกการอนุมัติโครงการ</h3>
+                                {/* Physical Document & Loan Tracking Widget (ติดตามเอกสารและสัญญายืมเงิน) */}
+                                <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/60 via-white to-purple-50/40 p-5 shadow-sm space-y-4 font-sans">
+                                    <div className="flex justify-between items-center border-b border-indigo-100 pb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xl">📍</span>
+                                            <div>
+                                                <h3 className="text-sm font-black text-indigo-950">
+                                                    ติดตามตำแหน่งเอกสาร & สัญญายืมเงิน
+                                                </h3>
+                                                <p className="text-[11px] text-indigo-800">
+                                                    ตรวจสอบจุดที่เอกสารกำลังดำเนินการ ป้องกันเอกสารหายระหว่างทาง
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-900 border border-indigo-200 shrink-0">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                                            สด Real-time
+                                        </span>
+                                    </div>
+
                                     <div className="space-y-3">
-                                        {(!project.approvals || project.approvals.length === 0) ? (
-                                            <p className="text-xs text-slate-400">ยังไม่มีประวัติการพิจารณาอนุมัติ</p>
-                                        ) : (
+                                        {/* Document Item 1: สัญญายืมเงิน (แบบ กค. ๑๐๑) */}
+                                        {(() => {
+                                            const { loanInfo } = getDocumentTrackingDetails();
+                                            return (
+                                                <div className="p-3.5 rounded-xl border bg-white shadow-2xs space-y-2 border-amber-200">
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-base">💰</span>
+                                                            <div>
+                                                                <h4 className="text-xs font-black text-slate-900">สัญญายืมเงิน (แบบ กค. ๑๐๑)</h4>
+                                                                <span className="text-[10px] text-slate-500">เงินยืมทดรองราชการเพื่อดำเนินงานโครงการ</span>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md shrink-0 ${loanInfo.badgeClass}`}>
+                                                            {loanInfo.statusText}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
+                                                        <div className="flex items-center justify-between text-[11px]">
+                                                            <span className="text-slate-500 font-medium">🏢 อยู่ที่งาน/สถานที่:</span>
+                                                            <span className="font-extrabold text-indigo-950">{loanInfo.location}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-[11px]">
+                                                            <span className="text-slate-500 font-medium">👤 ผู้ถือเอกสาร:</span>
+                                                            <span className="font-bold text-slate-800">{loanInfo.holder}</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-200/60 leading-relaxed">
+                                                            ℹ️ {loanInfo.actionDesc}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Document Item 2: ชุดเอกสารจัดซื้อจัดจ้าง ๔ ฉบับ */}
+                                        {(() => {
+                                            const { procInfo } = getDocumentTrackingDetails();
+                                            return (
+                                                <div className="p-3.5 rounded-xl border bg-white shadow-2xs space-y-2 border-purple-200">
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-base">📦</span>
+                                                            <div>
+                                                                <h4 className="text-xs font-black text-slate-900">ชุดเอกสารจัดซื้อจัดจ้าง (๔ ฉบับ & PO)</h4>
+                                                                <span className="text-[10px] text-slate-500">
+                                                                    {project.procurement?.procurement_number ? `เลขที่พัสดุ: ${project.procurement.procurement_number}` : 'รายงานขอซื้อขอจ้าง/ตรวจรับ'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md shrink-0 ${procInfo.badgeClass}`}>
+                                                            {procInfo.statusText}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
+                                                        <div className="flex items-center justify-between text-[11px]">
+                                                            <span className="text-slate-500 font-medium">🏢 อยู่ที่งาน/สถานที่:</span>
+                                                            <span className="font-extrabold text-indigo-950">{procInfo.location}</span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-[11px]">
+                                                            <span className="text-slate-500 font-medium">👤 ผู้ถือเอกสาร:</span>
+                                                            <span className="font-bold text-slate-800">{procInfo.holder}</span>
+                                                        </div>
+                                                        <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-200/60 leading-relaxed">
+                                                            ℹ️ {procInfo.actionDesc}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+
+                                {/* Approval Workflow & Sign-off History Card */}
+                                <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
+                                    <div className="flex justify-between items-center border-b border-purple-100 pb-3">
+                                        <h3 className="text-base font-black text-purple-950 flex items-center gap-1.5">
+                                            <span>📜</span> ลำดับขั้นตอน & ประวัติการลงนาม
+                                        </h3>
+                                        <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                                            {isPlanApproved ? 'อนุมัติโครงการแล้ว' : `ขั้นที่ ${project.current_approval_step || 1} จาก 6`}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        {/* Completed approval logs */}
+                                        {project.approvals && project.approvals.length > 0 ? (
                                             project.approvals
                                                 .filter((log, index, self) => 
                                                     index === self.findIndex((t) => (
@@ -1078,33 +1297,65 @@ ${itemsListText}
                                                 const isProposalInitial = log.comments?.includes('เบื้องต้น') || 
                                                                           log.comments?.includes('Preliminary');
 
+                                                const stepInfo = isProposalInitial ? {
+                                                    title: 'เสนอโครงการเบื้องต้น',
+                                                    role: 'ผู้เสนอโครงการ',
+                                                    icon: '💡'
+                                                } : isBudgetCommittee ? {
+                                                    title: 'มติคณะกรรมการจัดสรรงบประมาณ',
+                                                    role: 'คณะกรรมการจัดสรรงบฯ',
+                                                    icon: '⚖️'
+                                                } : getApprovalStepNameAndRole(log.step_number);
+
                                                 return (
-                                                    <div key={log.id} className="border-l-2 border-purple-500 pl-3 py-1 space-y-1">
-                                                        <div className="flex justify-between text-xs font-bold">
-                                                             <span className="text-slate-900">{log.user?.name}</span>
-                                                             <span className={isApproved ? 'text-emerald-600' : isRejected ? 'text-rose-600' : 'text-purple-700'}>
-                                                                 {isApproved ? '✅ อนุมัติแล้ว' : isRejected ? '❌ ตีกลับแก้ไข' : '📝 ยื่นขออนุมัติ'}
-                                                             </span>
-                                                         </div>
+                                                    <div key={log.id} className="border-l-4 border-purple-500 pl-3 py-2 space-y-1 bg-purple-50/40 rounded-r-xl pr-2 border-slate-100">
+                                                        <div className="flex justify-between items-start text-xs font-bold gap-2">
+                                                            <span className="text-purple-950 flex items-center gap-1">
+                                                                <span>{stepInfo.icon}</span>
+                                                                <span>{stepInfo.title}</span>
+                                                            </span>
+                                                            <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-extrabold ${isApproved ? 'bg-emerald-100 text-emerald-800' : isRejected ? 'bg-rose-100 text-rose-800' : 'bg-purple-100 text-purple-800'}`}>
+                                                                {isApproved ? '✅ อนุมัติแล้ว' : isRejected ? '❌ ตีกลับแก้ไข' : '📝 ยื่นขออนุมัติ'}
+                                                            </span>
+                                                        </div>
                                                         <div className="flex justify-between items-center text-xs text-slate-600">
-                                                            <span>
-                                                                {isProposalInitial ? (
-                                                                    <span>💡 <strong>เสนอตั้งงบเบื้องต้น:</strong> {log.comments || '-'}</span>
-                                                                ) : isBudgetCommittee ? (
-                                                                    <span>⚖️ <strong>มติจัดสรรงบประมาณ:</strong> {log.comments?.replace(/^มติคณะกรรมการ:\s*/, '') || '-'}</span>
-                                                                ) : (
-                                                                    <span><strong>ขั้นตอนที่ {log.step_number}:</strong> {log.comments || '-'}</span>
-                                                                )}
+                                                            <span className="text-slate-700">
+                                                                <span className="font-semibold text-slate-900">ผู้ลงนาม:</span> {log.user?.name || '-'} {log.user?.position ? `(${log.user.position})` : ''}
                                                             </span>
                                                             {log.created_at && (
-                                                                <span className="text-[11px] font-medium text-purple-600 shrink-0 ml-2">
+                                                                <span className="text-[11px] font-medium text-purple-700 shrink-0 ml-2">
                                                                     {new Date(log.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
                                                                 </span>
                                                             )}
                                                         </div>
+                                                        {log.comments && log.comments !== '-' && log.comments !== 'Approved' && (
+                                                            <div className="text-[11px] text-slate-600 bg-white/90 p-1.5 rounded-lg border border-purple-100 mt-1">
+                                                                💬 <strong>บันทึกความเห็น:</strong> {log.comments}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             })
+                                        ) : (
+                                            <p className="text-xs text-slate-400">ยังไม่มีประวัติการพิจารณาอนุมัติ</p>
+                                        )}
+
+                                        {/* Current Pending Step in Workflow */}
+                                        {(project.status === 'submitted' || project.status === 'pending_approval') && (
+                                            <div className="border-l-4 border-amber-500 pl-3 py-2 space-y-1 bg-amber-50/70 rounded-r-xl pr-2 shadow-2xs animate-pulse">
+                                                <div className="flex justify-between items-center text-xs font-bold">
+                                                    <span className="text-amber-950 flex items-center gap-1.5">
+                                                        <span>{getApprovalStepNameAndRole(project.current_approval_step || 2).icon}</span>
+                                                        <span>{getApprovalStepNameAndRole(project.current_approval_step || 2).title}</span>
+                                                    </span>
+                                                    <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-950 text-[10px] font-black">
+                                                        ⏳ อยู่ระหว่างรอลงนาม
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs text-amber-900">
+                                                    อยู่ที่: <strong>{getApprovalStepOfficerInfo(project.current_approval_step, project.status, project.procurement).roleName}</strong>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
