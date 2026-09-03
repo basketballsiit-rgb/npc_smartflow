@@ -61,7 +61,13 @@ export default function Dashboard({
     const [procurementFilterTab, setProcurementFilterTab] = useState('pending'); // 'pending', 'forwarded', 'all'
 
     // Procurement Toolkit States (เครื่องมือสนับสนุนงานพัสดุ 4 ด้าน)
-    const [procActiveTool, setProcActiveTool] = useState('vendor_po'); // 'vendor_po', 'committee_id', 'budget_code'
+    const [procActiveTool, setProcActiveTool] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('tool') || 'queue';
+        }
+        return 'queue';
+    });
     const [procVendorSearch, setProcVendorSearch] = useState('');
     const [procTeacherSearch, setProcTeacherSearch] = useState('');
     const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
