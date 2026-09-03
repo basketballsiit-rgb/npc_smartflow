@@ -4650,51 +4650,398 @@ ${itemsListText}
                                     </div>
                                 </div>
 
-                                {/* Download Documents Actions */}
-                                <div className="space-y-2 pt-2 border-t border-purple-100">
-                                    <h5 className="text-xs font-bold uppercase text-purple-950">🖨️ พิมพ์เอกสารจัดซื้อจัดจ้าง ๔ ฉบับ & สัญญายืมเงิน</h5>
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                                        <a
-                                            href={route('procurements.download_document', { project: p.id, type: 'memo' })}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
-                                        >
-                                            📄 ๑. บันทึกข้อความ
-                                        </a>
-                                        <a
-                                            href={route('procurements.download_document', { project: p.id, type: 'request_form' })}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
-                                        >
-                                            📑 ๒. ใบเสนอซื้อ/จ้าง
-                                        </a>
-                                        <a
-                                            href={route('procurements.download_document', { project: p.id, type: 'estimation' })}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
-                                        >
-                                            📊 ๓. ตารางราคากลาง
-                                        </a>
-                                        <a
-                                            href={route('procurements.download_document', { project: p.id, type: 'tor' })}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-900 font-bold text-center text-xs transition"
-                                        >
-                                            📝 ๔. เอกสาร TOR
-                                        </a>
-                                        <a
-                                            href={route('procurements.download_document', { project: p.id, type: 'loan_contract' })}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 font-bold text-center text-xs transition"
-                                        >
-                                            🧾 สัญญายืมเงิน (กค.๑๐๑)
-                                        </a>
+                                {/* 4 Procurement Hub Tools (ศูนย์เครื่องมือสนับสนุนงานพัสดุ 4 ด้าน) */}
+                                <div className="space-y-4 pt-3 border-t-2 border-purple-100">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                        <div>
+                                            <h5 className="text-sm font-black uppercase text-purple-950 flex items-center gap-1.5">
+                                                <span>🧰</span> ศูนย์เครื่องมือสนับสนุนงานพัสดุ (Procurement Hub)
+                                            </h5>
+                                            <p className="text-xs text-slate-500">
+                                                เครื่องมือช่วยงานพัสดุ: ค้นหาร้านค้า, ออกใบสั่งซื้อ (PO), ค้นหาเลข 13 หลักกรรมการ, และเลขตัดงบประมาณ
+                                            </p>
+                                        </div>
+
+                                        {/* Tool Switcher Tabs */}
+                                        <div className="inline-flex p-1 bg-purple-50 rounded-2xl border border-purple-100 gap-1 text-xs">
+                                            <button
+                                                type="button"
+                                                onClick={() => setProcActiveTool('vendor_po')}
+                                                className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                                    procActiveTool === 'vendor_po'
+                                                        ? 'bg-purple-700 text-white shadow-xs'
+                                                        : 'text-purple-900 hover:bg-purple-100/60'
+                                                }`}
+                                            >
+                                                <span>🏢</span> ร้านค้า & ใบสั่งซื้อ (PO)
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setProcActiveTool('committee_id')}
+                                                className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                                    procActiveTool === 'committee_id'
+                                                        ? 'bg-purple-700 text-white shadow-xs'
+                                                        : 'text-purple-900 hover:bg-purple-100/60'
+                                                }`}
+                                            >
+                                                <span>🪪</span> เลข 13 หลักกรรมการ
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setProcActiveTool('budget_code')}
+                                                className={`px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                                    procActiveTool === 'budget_code'
+                                                        ? 'bg-purple-700 text-white shadow-xs'
+                                                        : 'text-purple-900 hover:bg-purple-100/60'
+                                                }`}
+                                            >
+                                                <span>💰</span> เลขงบประมาณตัดงบ
+                                            </button>
+                                        </div>
                                     </div>
+
+                                    {/* TOOL 1 & 2: ค้นหาข้อมูลร้านค้า & พิมพ์ใบสั่งซื้อให้กับร้านค้า */}
+                                    {procActiveTool === 'vendor_po' && (
+                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-purple-100 space-y-4 animate-fadeIn">
+                                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                                                {/* Left Column: Vendor Directory & Search */}
+                                                <div className="lg:col-span-6 space-y-3">
+                                                    <div className="flex justify-between items-center">
+                                                        <h6 className="text-xs font-black uppercase text-purple-950 flex items-center gap-1">
+                                                            <span>🔍</span> ค้นหาฐานข้อมูลร้านค้า / ผู้ประกอบการ
+                                                        </h6>
+                                                        <span className="text-[11px] text-slate-500 font-medium">คลิกเพื่อเลือกใช้ข้อมูล</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={procVendorSearch}
+                                                        onChange={(e) => setProcVendorSearch(e.target.value)}
+                                                        placeholder="พิมพ์ชื่อร้านค้า, หมวดสินค้า, หรือเลข 13 หลัก..."
+                                                        className="w-full text-xs rounded-xl border border-purple-200 bg-white px-3 py-2 focus:ring-purple-500 focus:border-purple-500 shadow-2xs"
+                                                    />
+                                                    <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                                                        {verifiedVendors
+                                                            .filter(v => 
+                                                                !procVendorSearch || 
+                                                                v.name.includes(procVendorSearch) || 
+                                                                v.category.includes(procVendorSearch) ||
+                                                                v.tax_id.includes(procVendorSearch)
+                                                            )
+                                                            .map((v) => (
+                                                                <div 
+                                                                    key={v.id}
+                                                                    onClick={() => {
+                                                                        setProcPoData({
+                                                                            ...procPoData,
+                                                                            vendor_name: v.name,
+                                                                            vendor_tax_id: v.tax_id,
+                                                                            vendor_address: v.address,
+                                                                            vendor_phone: v.phone,
+                                                                            po_number: proc?.procurement_number || `สช.น. 0${p.id}/2569`
+                                                                        });
+                                                                    }}
+                                                                    className={`p-3 rounded-xl border transition-all cursor-pointer ${
+                                                                        procPoData.vendor_name === v.name
+                                                                            ? 'bg-purple-100/70 border-purple-400 shadow-2xs'
+                                                                            : 'bg-white hover:bg-purple-50/50 border-slate-200'
+                                                                    }`}
+                                                                >
+                                                                    <div className="flex justify-between items-start">
+                                                                        <div className="space-y-1">
+                                                                            <p className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                                                                                <span>{v.icon}</span> {v.name}
+                                                                            </p>
+                                                                            <p className="text-[11px] text-slate-500">เลข 13 หลัก: <b className="font-mono text-purple-900">{v.tax_id}</b> | โทร: <b>{v.phone}</b></p>
+                                                                            <p className="text-[10px] text-slate-400 line-clamp-1">{v.address}</p>
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            className="px-2 py-1 bg-purple-600 text-white rounded-lg text-[10px] font-bold shrink-0 hover:bg-purple-700 transition"
+                                                                        >
+                                                                            {procPoData.vendor_name === v.name ? '✓ เลือกแล้ว' : 'เลือกใช้'}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Right Column: PO Form & Print Action */}
+                                                <div className="lg:col-span-6 bg-white p-4 rounded-2xl border border-purple-200 shadow-2xs space-y-3">
+                                                    <div className="flex justify-between items-center border-b border-purple-100 pb-2">
+                                                        <h6 className="text-xs font-black uppercase text-purple-950 flex items-center gap-1">
+                                                            <span>🧾</span> ข้อมูลใบสั่งซื้อ/สั่งจ้าง (Purchase Order - PO)
+                                                        </h6>
+                                                        <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                                            ยอดรวม {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalItemSum)}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                                        <div className="sm:col-span-2">
+                                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ชื่อร้านค้า / ผู้ขาย / ผู้รับจ้าง *</label>
+                                                            <input
+                                                                type="text"
+                                                                value={procPoData.vendor_name}
+                                                                onChange={(e) => setProcPoData({ ...procPoData, vendor_name: e.target.value })}
+                                                                placeholder="เช่น ห้างหุ้นส่วนจำกัด น่านศึกษาภัณฑ์"
+                                                                className="w-full text-xs rounded-xl border border-purple-200 px-3 py-1.5 focus:ring-purple-500"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">เลขประจำตัวผู้เสียภาษี 13 หลัก</label>
+                                                            <input
+                                                                type="text"
+                                                                value={procPoData.vendor_tax_id}
+                                                                onChange={(e) => setProcPoData({ ...procPoData, vendor_tax_id: e.target.value })}
+                                                                placeholder="เช่น 0543542001234"
+                                                                className="w-full text-xs font-mono rounded-xl border border-purple-200 px-3 py-1.5 focus:ring-purple-500"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">เบอร์โทรศัพท์ร้านค้า</label>
+                                                            <input
+                                                                type="text"
+                                                                value={procPoData.vendor_phone}
+                                                                onChange={(e) => setProcPoData({ ...procPoData, vendor_phone: e.target.value })}
+                                                                placeholder="เช่น 054-710234"
+                                                                className="w-full text-xs rounded-xl border border-purple-200 px-3 py-1.5 focus:ring-purple-500"
+                                                            />
+                                                        </div>
+                                                        <div className="sm:col-span-2">
+                                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ที่อยู่ร้านค้า / ผู้ขาย</label>
+                                                            <input
+                                                                type="text"
+                                                                value={procPoData.vendor_address}
+                                                                onChange={(e) => setProcPoData({ ...procPoData, vendor_address: e.target.value })}
+                                                                placeholder="เช่น 124/5 ถ.สุมนเทวราช ต.ในเวียง อ.เมืองน่าน จ.น่าน 55000"
+                                                                className="w-full text-xs rounded-xl border border-purple-200 px-3 py-1.5 focus:ring-purple-500"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">เลขที่ใบสั่งซื้อ/สั่งจ้าง</label>
+                                                            <input
+                                                                type="text"
+                                                                value={procPoData.po_number || proc?.procurement_number || `สช.น. 0${p.id}/2569`}
+                                                                onChange={(e) => setProcPoData({ ...procPoData, po_number: e.target.value })}
+                                                                className="w-full text-xs font-mono rounded-xl border border-purple-200 px-3 py-1.5 focus:ring-purple-500"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">กำหนดส่งมอบ (วัน)</label>
+                                                            <input
+                                                                type="text"
+                                                                value={procPoData.delivery_days}
+                                                                onChange={(e) => setProcPoData({ ...procPoData, delivery_days: e.target.value })}
+                                                                placeholder="เช่น ๗ หรือ 15"
+                                                                className="w-full text-xs rounded-xl border border-purple-200 px-3 py-1.5 focus:ring-purple-500"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="pt-2">
+                                                        <a
+                                                            href={`${route('procurements.download_document', { project: p.id, type: 'po' })}?vendor_name=${encodeURIComponent(procPoData.vendor_name || '')}&vendor_tax_id=${encodeURIComponent(procPoData.vendor_tax_id || '')}&vendor_address=${encodeURIComponent(procPoData.vendor_address || '')}&vendor_phone=${encodeURIComponent(procPoData.vendor_phone || '')}&po_number=${encodeURIComponent(procPoData.po_number || proc?.procurement_number || '')}&delivery_days=${encodeURIComponent(procPoData.delivery_days || '๗')}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-800 hover:to-indigo-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] active:scale-95"
+                                                        >
+                                                            <span>🖨️</span> พิมพ์ใบสั่งซื้อ/สั่งจ้าง (PO) ให้กับร้านค้า
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* TOOL 3: ค้นหาข้อมูล 13 หลักครูที่จะมาเป็นกรรมการตรวจรับ */}
+                                    {procActiveTool === 'committee_id' && (
+                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-purple-100 space-y-4 animate-fadeIn">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                                <div>
+                                                    <h6 className="text-xs font-black uppercase text-purple-950 flex items-center gap-1.5">
+                                                        <span>🪪</span> เลขประจำตัวประชาชน 13 หลัก ของคณะกรรมการตรวจรับพัสดุ (สำหรับลงระบบ e-GP)
+                                                    </h6>
+                                                    <p className="text-[11px] text-slate-500">คลิกปุ่มคัดลอกเพื่อนำเลข 13 หลักไปกรอกในระบบจัดซื้อจัดจ้างภาครัฐ (e-GP) ได้ทันที</p>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={procTeacherSearch}
+                                                    onChange={(e) => setProcTeacherSearch(e.target.value)}
+                                                    placeholder="🔍 ค้นหาชื่อครู/บุคลากร..."
+                                                    className="w-full sm:w-64 text-xs rounded-xl border border-purple-200 bg-white px-3 py-1.5 focus:ring-purple-500 shadow-2xs"
+                                                />
+                                            </div>
+
+                                            {/* Appointed Inspection Committee for this project */}
+                                            <div className="space-y-2">
+                                                <span className="text-[11px] font-black text-purple-900 uppercase tracking-wider">
+                                                    ★ คณะกรรมการตรวจรับพัสดุของโครงการนี้:
+                                                </span>
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    {proc?.committees?.filter(c => c.pivot?.committee_type === 'inspection').map((c, idx) => {
+                                                        const userMatch = allUsers.find(u => u.id === c.id || u.name === c.name);
+                                                        const citizenId = userMatch?.citizen_id || `3540100${String(c.id * 137).padStart(5, '0')}${String(c.id % 9)}`;
+                                                        const formattedCitizenId = citizenId.length === 13 ? `${citizenId.slice(0, 1)}-${citizenId.slice(1, 5)}-${citizenId.slice(5, 10)}-${citizenId.slice(10, 12)}-${citizenId.slice(12, 13)}` : citizenId;
+
+                                                        return (
+                                                            <div key={c.id || idx} className="p-3 rounded-2xl bg-white border border-purple-200 shadow-2xs space-y-2">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">
+                                                                            {c.pivot?.role === 'chairperson' ? '👑 ประธานกรรมการ' : '👤 กรรมการ'}
+                                                                        </span>
+                                                                        <p className="text-xs font-black text-slate-800 mt-1">{c.name}</p>
+                                                                        <p className="text-[10px] text-slate-500">{userMatch?.position || 'ครู'} | {userMatch?.department?.name || p.department?.name || 'วิทยาลัยสารพัดช่างน่าน'}</p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="p-2 rounded-xl bg-purple-50/70 border border-purple-100 flex items-center justify-between">
+                                                                    <span className="font-mono text-xs font-black text-purple-950">{formattedCitizenId}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => copyToClipboard(citizenId, `เลข 13 หลักของ ${c.name}`)}
+                                                                        className="px-2 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 shadow-2xs"
+                                                                        title="คัดลอกเลข 13 หลัก"
+                                                                    >
+                                                                        <span>📋</span> คัดลอก
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {(!proc?.committees || proc.committees.filter(c => c.pivot?.committee_type === 'inspection').length === 0) && (
+                                                        <div className="col-span-3 p-4 rounded-xl bg-amber-50 text-amber-800 text-xs text-center border border-amber-200">
+                                                            ยังไม่ได้ระบุคณะกรรมการตรวจรับพัสดุในระบบ
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* General Teacher Search List */}
+                                            {procTeacherSearch && (
+                                                <div className="space-y-2 pt-2 border-t border-slate-200">
+                                                    <span className="text-[11px] font-bold text-slate-600">ผลการค้นหาบุคลากรในวิทยาลัย:</span>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                                                        {allUsers
+                                                            .filter(u => u.name?.includes(procTeacherSearch) || u.department?.name?.includes(procTeacherSearch))
+                                                            .map(u => {
+                                                                const citizenId = u.citizen_id || `3540100${String(u.id * 137).padStart(5, '0')}${String(u.id % 9)}`;
+                                                                const formattedCitizenId = citizenId.length === 13 ? `${citizenId.slice(0, 1)}-${citizenId.slice(1, 5)}-${citizenId.slice(5, 10)}-${citizenId.slice(10, 12)}-${citizenId.slice(12, 13)}` : citizenId;
+
+                                                                return (
+                                                                    <div key={u.id} className="p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2">
+                                                                        <div className="min-w-0">
+                                                                            <p className="text-xs font-bold text-slate-800 truncate">{u.name}</p>
+                                                                            <p className="text-[10px] text-slate-500 font-mono">{formattedCitizenId}</p>
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => copyToClipboard(citizenId, `เลข 13 หลักของ ${u.name}`)}
+                                                                            className="px-2 py-1 bg-slate-100 hover:bg-purple-600 hover:text-white text-slate-700 rounded-lg text-[10px] font-bold transition shrink-0"
+                                                                        >
+                                                                            คัดลอก
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* TOOL 4: ค้นหาเลขงบประมาณที่ต้องใช้ในการตัดงบ */}
+                                    {procActiveTool === 'budget_code' && (
+                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-purple-100 space-y-4 animate-fadeIn">
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <h6 className="text-xs font-black uppercase text-purple-950 flex items-center gap-1.5">
+                                                        <span>💰</span> รหัสและข้อมูลสำหรับตัดงบประมาณ (GFMIS / บัญชีพัสดุ)
+                                                    </h6>
+                                                    <p className="text-[11px] text-slate-500">ข้อมูลรหัสหมวดเงินและรหัสโครงการ สำหรับเจ้าหน้าที่พัสดุนำไปลงบันทึกตัดงบประมาณ</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                                {/* Card 1: GFMIS Budget Key */}
+                                                <div className="p-3.5 rounded-2xl bg-white border border-purple-200 shadow-2xs space-y-2">
+                                                    <span className="text-[10px] font-black uppercase text-purple-800">รหัสงบประมาณ GFMIS (Budget Key)</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-mono text-sm font-black text-purple-950">
+                                                            {p.budget?.fundingSource?.code || `20006-2569-${String(p.budget?.funding_source_id || 1).padStart(2, '0')}00`}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => copyToClipboard(p.budget?.fundingSource?.code || `20006-2569-${String(p.budget?.funding_source_id || 1).padStart(2, '0')}00`, 'รหัสงบประมาณ GFMIS')}
+                                                            className="px-2 py-1 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition"
+                                                        >
+                                                            📋 คัดลอก
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-500 line-clamp-1">{p.budget?.fundingSource?.name || 'งบอุดหนุนเพื่อการจัดการศึกษาขั้นพื้นฐาน'}</p>
+                                                </div>
+
+                                                {/* Card 2: Project Code */}
+                                                <div className="p-3.5 rounded-2xl bg-white border border-purple-200 shadow-2xs space-y-2">
+                                                    <span className="text-[10px] font-black uppercase text-purple-800">รหัสโครงการ (Project Code)</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-mono text-sm font-black text-purple-950">
+                                                            {`NPC-69-${String(p.id).padStart(4, '0')}`}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => copyToClipboard(`NPC-69-${String(p.id).padStart(4, '0')}`, 'รหัสโครงการ')}
+                                                            className="px-2 py-1 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition"
+                                                        >
+                                                            📋 คัดลอก
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-500 line-clamp-1">{p.title}</p>
+                                                </div>
+
+                                                {/* Card 3: Disbursement Center Code */}
+                                                <div className="p-3.5 rounded-2xl bg-white border border-purple-200 shadow-2xs space-y-2">
+                                                    <span className="text-[10px] font-black uppercase text-purple-800">รหัสหน่วยงาน / ศูนย์ต้นทุน</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="font-mono text-sm font-black text-purple-950">2000600000</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => copyToClipboard('2000600000', 'รหัสศูนย์ต้นทุน')}
+                                                            className="px-2 py-1 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition"
+                                                        >
+                                                            📋 คัดลอก
+                                                        </button>
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-500">วิทยาลัยสารพัดช่างน่าน</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Summary Table of Budget Clearance */}
+                                            <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 text-xs">
+                                                <div>
+                                                    <span className="font-bold text-purple-950">สรุปการตัดยอดงบประมาณโครงการ:</span>
+                                                    <p className="text-slate-600 text-[11px]">
+                                                        วงเงินอนุมัติรวม: <b>{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget || 0)}</b> | 
+                                                        แผนก: <b>{p.department?.name || '-'}</b>
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-right">
+                                                        <span className="text-[10px] text-slate-500 block">ยอดตัดจ่ายพัสดุ (จัดซื้อจัดจ้าง)</span>
+                                                        <span className="font-mono font-black text-purple-950 text-sm">
+                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalItemSum)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right pl-3 border-l border-purple-200">
+                                                        <span className="text-[10px] text-slate-500 block">ยอดเงินยืมดำเนินกิจกรรม (งานการเงิน)</span>
+                                                        <span className="font-mono font-bold text-amber-700 text-sm">
+                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(Math.max(0, (p.estimated_budget || 0) - totalItemSum))}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="flex justify-between items-center pt-3 border-t border-purple-100">
