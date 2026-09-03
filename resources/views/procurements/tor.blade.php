@@ -163,7 +163,7 @@
         if (!empty($currentTitle) || !empty($currentBody)) {
             $torSections[] = [
                 'title' => $currentTitle,
-                'body' => implode(' ', $currentBody)
+                'body' => $currentBody
             ];
         }
     }
@@ -182,7 +182,20 @@
                     <div class="section-title">{{ $sec['title'] }}</div>
                 @endif
                 @if(!empty($sec['body']))
-                    <div class="content">{{ $sec['body'] }}</div>
+                    <div class="content">
+                        @if(is_array($sec['body']))
+                            @foreach($sec['body'] as $bLine)
+                                @php $trimmedB = trim($bLine); @endphp
+                                @if(preg_match('/^(\d+\.\d+|[•\-\*])\s*/u', $trimmedB))
+                                    <div style="margin-left: 0.3in; text-indent: 0; line-height: 1.25;">{{ $trimmedB }}</div>
+                                @else
+                                    <div style="line-height: 1.25;">{{ $trimmedB }}</div>
+                                @endif
+                            @endforeach
+                        @else
+                            {{ $sec['body'] }}
+                        @endif
+                    </div>
                 @endif
             </div>
         @endforeach
