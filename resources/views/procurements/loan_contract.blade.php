@@ -125,18 +125,31 @@
         </p>
 
         @php
-            $loanItems = $project->procurement && $project->procurement->items
-                ? $project->procurement->items->filter(function($i) {
-                    return str_contains($i->description, 'วิทยากร') || 
-                           str_contains($i->description, 'อาหาร') || 
-                           str_contains($i->description, 'เดินทาง') || 
-                           str_contains($i->description, 'พาหนะ') ||
-                           str_contains($i->description, 'ยืมเงิน');
-                })
-                : collect();
+            $loanItems = collect();
+            $activities = is_array($project->activities) ? $project->activities : json_decode($project->activities ?? '[]', true);
+            if (is_array($activities) && count($activities) > 0) {
+                foreach ($activities as $actIdx => $act) {
+                    $actLabel = '[กิจกรรมที่ ' . ($actIdx + 1) . ']';
+                    foreach ($act['loan_items'] ?? [] as $it) {
+                        if (!empty($it['description']) && trim($it['description']) !== '') {
+                            $qty = floatval($it['quantity'] ?? 1);
+                            $price = floatval($it['unit_price'] ?? 0);
+                            $loanItems->push((object)[
+                                'description' => $actLabel . ' ' . trim($it['description']),
+                                'quantity' => $qty,
+                                'unit' => $it['unit'] ?? 'รายการ',
+                                'unit_price' => $price,
+                                'total_price' => $qty * $price,
+                            ]);
+                        }
+                    }
+                }
+            }
 
             if ($loanItems->isEmpty() && $project->procurement && $project->procurement->items) {
-                $loanItems = $project->procurement->items;
+                $loanItems = $project->procurement->items->filter(function($i) {
+                    return preg_match('/ค่าตอบแทน|วิทยากร|ค่าอาหาร|อาหารกลางวัน|อาหารว่าง|เครื่องดื่ม|เดินทาง|พาหนะ|ยานพาหนะ|เบี้ยเลี้ยง|ที่พัก|สมนาคุณ|เงินยืม/u', $i->description);
+                });
             }
 
             $totalLoan = $loanItems->sum('total_price');
