@@ -53,11 +53,12 @@
             font-size: 13pt;
         }
         .committee-member {
-            margin: 10px 0;
+            margin: 10px 4px;
             display: inline-block;
-            width: 31%;
+            min-width: 28%;
             vertical-align: top;
             font-size: 13pt;
+            white-space: nowrap;
         }
         .underline-dotted {
             border-bottom: 1px dotted #000;
@@ -77,8 +78,29 @@
             if (!$name) return '..........................................................';
             $cleaned = preg_replace('/\s*\(.*?\)/u', '', $name);
             $cleaned = preg_replace('/\s*\[.*?\]/u', '', $cleaned);
+            
+            $rolesToStrip = [
+                'หัวหน้างานวางแผนและงบประมาณ',
+                'หัวหน้างานวางแผน',
+                'หัวหน้างานพัสดุ',
+                'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+                'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
+                'รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ',
+                'รองผู้อำนวยการฝ่ายวิชาการ',
+                'รองผู้อำนวยการฝ่ายพัฒนากิจการนักเรียนนักศึกษา',
+                'หัวหน้างานการเงิน',
+                'หัวหน้าแผนกวิชา',
+                'หัวหน้างาน',
+                'อาจารย์ประจำสาขา',
+                'ครูผู้สอน',
+                'Super Admin',
+            ];
+            foreach ($rolesToStrip as $role) {
+                $cleaned = str_ireplace($role, '', $cleaned);
+            }
             $cleaned = trim(str_replace(['(', ')'], '', $cleaned));
-            return $cleaned ?: '..........................................................';
+            $cleaned = preg_replace('/\s+/u', ' ', $cleaned);
+            return trim($cleaned) ?: '..........................................................';
         }
     }
 @endphp
