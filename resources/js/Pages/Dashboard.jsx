@@ -2062,6 +2062,48 @@ export default function Dashboard({
         });
     };
 
+    const handleGenerateRoutineAiTor = () => {
+        const validItems = routineProcItems.filter(item => item.description && item.description.trim() !== '');
+        if (validItems.length === 0) {
+            Swal.fire('ไม่พบรายการพัสดุ', 'กรุณากรอกรายการพัสดุในตารางด้านล่างก่อน เพื่อให้ AI นำรายการมาช่วยร่างข้อกำหนด TOR', 'info');
+            return;
+        }
+
+        const itemsListText = validItems.map((item, idx) => {
+            const cleanDesc = item.description.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').replace(/[💵📦💰📑📝🛒📄📊]/g, '').trim();
+            const qty = item.quantity || 1;
+            const unit = item.unit || 'ชิ้น';
+            return `     2.${idx + 1} ${cleanDesc} จำนวน ${qty} ${unit}`;
+        }).join('\n');
+
+        const deptName = selectedRoutinePlanForProc?.department?.name || 'ฝ่ายบริหารทรัพยากร';
+        const planTitle = selectedRoutinePlanForProc?.title || 'งบดำเนินงานประจำปี';
+
+        const aiDraftedTor = `1. วัตถุประสงค์
+วิทยาลัยสารพัดช่างน่าน แผนกวิชา ${deptName} มีความประสงค์จัดหาวัสดุอุปกรณ์และพัสดุ หมวด${planTitle} เพื่อใช้ในการดำเนินงานและการจัดการเรียนการสอนให้เกิดประสิทธิภาพสูงสุด
+
+2. คุณลักษณะเฉพาะและขอบเขตงาน
+พัสดุและรายการวัสดุที่จัดหาต้องเป็นของแท้ ของใหม่ ไม่เคยผ่านการใช้งานมาก่อน มีคุณภาพและมาตรฐานตามเกณฑ์สายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุจำนวน ${validItems.length} รายการ ดังนี้:
+${itemsListText}
+และพัสดุทั้งหมดต้องมีคุณสมบัติและมาตรฐานตามที่ทางวิทยาลัยกำหนด
+
+3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ
+ผู้จำหน่ายหรือผู้รับจ้างจะต้องส่งมอบพัสดุทั้งหมด ณ วิทยาลัยสารพัดช่างน่าน ภายในกำหนดเวลา 7 วัน นับถัดจากวันที่ได้รับใบสั่งซื้อสั่งจ้างจากทางวิทยาลัย
+
+4. การตรวจรับพัสดุ
+การตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้อง ครบถ้วน ตรงตามคุณลักษณะเฉพาะและใบเสนอซื้อเสนอจ้างทุกประการ`;
+
+        setRoutineProcData('tor_specifications', aiDraftedTor);
+
+        Swal.fire({
+            title: '✨ AI ร่าง TOR สำเร็จ!',
+            html: `ดึงรายการพัสดุ <b>${validItems.length} รายการ</b> มาบรรจุในข้อกำหนด TOR เรียบร้อยแล้ว`,
+            icon: 'success',
+            confirmButtonColor: '#7c3aed',
+            timer: 2500
+        });
+    };
+
     const handleRoutineProcurementSubmit = (e) => {
         e.preventDefault();
         const totalSum = calculateRoutineProcTotal();
