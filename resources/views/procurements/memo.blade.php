@@ -164,8 +164,14 @@
         ด้วย แผนกวิชา {{$project->department?->name}} มีความประสงค์จะดำเนินโครงการ "{{$project->title}}" ประจำปีการศึกษา {{$project->academic_year}} โดยมีวัตถุประสงค์เพื่อพัฒนาคุณภาพนักเรียนนักศึกษาและการเรียนการสอนให้สอดคล้องตามมาตรฐานหลักสูตรวิชาชีพ 
     </div>
 
+    @php
+        $totalProcSum = $items->sum('total_price') ?: $items->reduce(function($carry, $i) {
+            return $carry + (floatval($i->quantity) * floatval($i->unit_price));
+        }, 0);
+        $finalProcAmount = $totalProcSum > 0 ? $totalProcSum : $project->estimated_budget;
+    @endphp
     <div class="paragraph">
-        ในการนี้ เพื่อให้โครงการดังกล่าวบรรลุตามวัตถุประสงค์และเป้าหมาย จึงใคร่ขออนุมัติจัดหาพัสดุและวัสดุสำหรับจัดทำโครงการดังกล่าว เป็นเงินจำนวนทั้งสิ้น {{number_format($project->estimated_budget, 2)}} บาท โดยขอใช้เงินสนับสนุนจากแหล่งงบประมาณ {{$project->budget?->fundingSource?->name ?? 'เงินรายได้สถานศึกษา'}}
+        ในการนี้ เพื่อให้โครงการดังกล่าวบรรลุตามวัตถุประสงค์และเป้าหมาย จึงใคร่ขออนุมัติจัดหาพัสดุและวัสดุสำหรับจัดทำโครงการดังกล่าว เป็นเงินจำนวนทั้งสิ้น {{number_format($finalProcAmount, 2)}} บาท โดยขอใช้เงินสนับสนุนจากแหล่งงบประมาณ {{$project->budget?->fundingSource?->name ?? 'เงินรายได้สถานศึกษา'}}
     </div>
 
     <div class="closing">
