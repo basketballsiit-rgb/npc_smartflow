@@ -131,6 +131,7 @@ ${itemsListText}
     const totalProcurementSum = procurementItems.reduce((acc, item) => acc + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
     const isOverBudget = totalProcurementSum > (allocatedBudget + 0.01);
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
+    const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
     const [savingProcurement, setSavingProcurement] = useState(false);
 
     const handleSaveProcurement = (e) => {
