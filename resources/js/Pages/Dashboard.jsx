@@ -6557,13 +6557,89 @@ ${itemsListText}
 
                                             {/* Action */}
                                             <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
-                                                <Link
-                                                    href={route('projects.show', item.id)}
-                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs hover:scale-105 active:scale-95 transition"
-                                                >
-                                                    <span>เปิดดู</span>
-                                                    <span>➔</span>
-                                                </Link>
+                                                <div className="flex flex-col items-center gap-1.5">
+                                                    {/* If user is procurement staff / admin, give quick intake/forward controls */}
+                                                    {isProcurementStaff && (
+                                                        <>
+                                                            {(!item.procurement || item.procurement.status === 'pending') && item.status === 'approved' && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        Swal.fire({
+                                                                            title: '📦 บันทึกรับเอกสารถึงงานพัสดุ',
+                                                                            html: `
+                                                                                <div class="text-left text-xs text-slate-700 space-y-3 font-sans">
+                                                                                    <p>ยืนยันว่าได้รับชุดเอกสารจัดซื้อจัดจ้างและสัญญายืมเงินของโครงการ <strong>"${item.title}"</strong> เรียบร้อยแล้ว</p>
+                                                                                    <div>
+                                                                                        <label class="block font-bold mb-1">กำหนดเลขที่พัสดุ (PR Number):</label>
+                                                                                        <input id="swal-pr-num" class="w-full px-3 py-2 border rounded-xl text-xs" value="PR-${String(item.id).padStart(5, '0')}" />
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label class="block font-bold mb-1">วันที่ลงรับเอกสาร:</label>
+                                                                                        <input id="swal-pr-date" type="date" class="w-full px-3 py-2 border rounded-xl text-xs" value="${new Date().toISOString().split('T')[0]}" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            `,
+                                                                            showCancelButton: true,
+                                                                            confirmButtonText: 'ยืนยันลงรับเรื่อง',
+                                                                            cancelButtonText: 'ยกเลิก',
+                                                                            confirmButtonColor: '#7e22ce',
+                                                                            preConfirm: () => ({
+                                                                                procurement_number: document.getElementById('swal-pr-num').value,
+                                                                                memo_date: document.getElementById('swal-pr-date').value
+                                                                            })
+                                                                        }).then((res) => {
+                                                                            if (res.isConfirmed) {
+                                                                                router.post(route('procurements.receive', item.id), res.value, {
+                                                                                    onSuccess: () => Swal.fire('สำเร็จ', 'บันทึกการรับเอกสารเรียบร้อยแล้ว', 'success')
+                                                                                });
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    title="บันทึกว่าเอกสารถึงงานพัสดุแล้ว"
+                                                                >
+                                                                    <span>📦</span> ลงรับเรื่อง
+                                                                </button>
+                                                            )}
+
+                                                            {(item.procurement?.status === 'received' || item.procurement?.status === 'processing') && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        Swal.fire({
+                                                                            title: '💰 ส่งต่อให้งานการเงิน',
+                                                                            text: `ยืนยันการส่งมอบชุดเอกสารจัดซื้อจัดจ้างและสัญญายืมเงินของโครงการ "${item.title}" ให้งานการเงินดำเนินการเบิกจ่าย?`,
+                                                                            icon: 'question',
+                                                                            showCancelButton: true,
+                                                                            confirmButtonText: 'ยืนยันส่งงานการเงิน',
+                                                                            cancelButtonText: 'ยกเลิก',
+                                                                            confirmButtonColor: '#059669'
+                                                                        }).then((res) => {
+                                                                            if (res.isConfirmed) {
+                                                                                router.post(route('procurements.forward_to_finance', item.id), {}, {
+                                                                                    onSuccess: () => Swal.fire('สำเร็จ', 'ส่งเรื่องต่อให้งานการเงินเรียบร้อยแล้ว', 'success')
+                                                                                });
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    title="ส่งเรื่องต่อให้งานการเงิน"
+                                                                >
+                                                                    <span>💰</span> ส่งงานการเงิน
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+
+                                                    <Link
+                                                        href={route('projects.show', item.id)}
+                                                        className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-[11px] rounded-xl shadow-2xs hover:scale-105 transition"
+                                                    >
+                                                        <span>เปิดดู</span>
+                                                        <span>➔</span>
+                                                    </Link>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
