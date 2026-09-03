@@ -73,10 +73,20 @@
         </table>
     </div>
 
+    @php
+        $rawProposerName = $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................');
+        $extractedProposerPos = '';
+        if (preg_match('/\((.*?)\)/', $rawProposerName, $matches)) {
+            $extractedProposerPos = trim($matches[1]);
+        }
+        $cleanProposerName = trim(preg_replace('/\s*\(.*?\)/', '', $rawProposerName));
+        $displayProposerPos = $project->position ?: ($extractedProposerPos ?: ($project->user?->position ?: 'อาจารย์ประจำสาขา / ผู้รับผิดชอบโครงการ'));
+    @endphp
+
     <div style="margin-top: 8px;">
         <p class="indent" style="text-align: justify;">
-            ข้าพเจ้า <strong>{{ $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................') }}</strong>
-            ตำแหน่ง <strong>{{ $project->position ?: 'ครู / ผู้รับผิดชอบโครงการ' }}</strong>
+            ข้าพเจ้า <strong>{{ $cleanProposerName }}</strong>
+            ตำแหน่ง <strong>{{ $displayProposerPos }}</strong>
             สังกัด <strong>{{ $project->department ? $project->department->name : 'วิทยาลัยสารพัดช่างน่าน' }}</strong>
             มีความประสงค์ขอยืมเงินจาก <strong>{{ $project->fundingSource ? $project->fundingSource->name : 'เงินรายได้สถานศึกษา (Revenue)' }}</strong>
             เพื่อเป็นค่าใช้จ่ายในการดำเนินงานโครงการ <strong>"{{ $project->title }}"</strong> ประจำปีงบประมาณ พ.ศ. <strong>{{ $project->academic_year }}</strong>
@@ -169,8 +179,8 @@
             <tr>
                 <td style="width: 50%;">
                     ลายมือชื่อ ..................................................... ผู้ยืมเงิน<br>
-                    ( <strong>{{ $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................') }}</strong> )<br>
-                    ตำแหน่ง {{ $project->position ?: 'ครู / ผู้รับผิดชอบโครงการ' }}
+                    ( <strong>{{ $cleanProposerName }}</strong> )<br>
+                    ตำแหน่ง {{ $displayProposerPos }}
                 </td>
                 <td style="width: 50%;">
                     ลายมือชื่อ ..................................................... ผู้จ่ายเงิน<br>
