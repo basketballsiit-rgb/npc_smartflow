@@ -1896,6 +1896,108 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                     </div>
                 </div>
             </div>
+
+            {/* Quick Add Standard Item Modal */}
+            {showQuickAddItemModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-purple-200">
+                        <div className="flex justify-between items-center border-b border-purple-100 pb-3">
+                            <h4 className="text-base font-black text-purple-950 flex items-center gap-2">
+                                <span>📦</span> เพิ่มรายการเข้าราคากลางมาตรฐาน
+                            </h4>
+                            <button
+                                type="button"
+                                onClick={() => setShowQuickAddItemModal(false)}
+                                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 font-bold flex items-center justify-center transition"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <form onSubmit={handleSaveNewStandardItem} className="space-y-3.5 text-xs">
+                            <div>
+                                <label className="block font-bold text-slate-700 mb-1">
+                                    ชื่อรายการพัสดุ / วัสดุ / ครุภัณฑ์ <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={quickAddItemData.name}
+                                    onChange={(e) => setQuickAddItemData({ ...quickAddItemData, name: e.target.value })}
+                                    placeholder="เช่น กระดาษถ่ายเอกสาร A4 80 แกรม ดับเบิ้ลเอ"
+                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                    required
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block font-bold text-slate-700 mb-1">
+                                        หน่วยนับ <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={quickAddItemData.unit}
+                                        onChange={(e) => setQuickAddItemData({ ...quickAddItemData, unit: e.target.value })}
+                                        placeholder="เช่น รีม, กล่อง, ชุด, ด้าม, ขวด"
+                                        className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block font-bold text-slate-700 mb-1">
+                                        ราคากลางต่อหน่วย (บาท) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={quickAddItemData.standard_price}
+                                        onChange={(e) => setQuickAddItemData({ ...quickAddItemData, standard_price: parseFloat(e.target.value) || 0 })}
+                                        className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-bold text-purple-900 focus:ring-purple-500 focus:border-purple-500"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block font-bold text-slate-700 mb-1">
+                                    หมวดหมู่พัสดุ
+                                </label>
+                                <select
+                                    value={quickAddItemData.category}
+                                    onChange={(e) => setQuickAddItemData({ ...quickAddItemData, category: e.target.value })}
+                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs focus:ring-purple-500 focus:border-purple-500"
+                                >
+                                    <option value="วัสดุสำนักงาน">วัสดุสำนักงาน</option>
+                                    <option value="วัสดุคอมพิวเตอร์">วัสดุคอมพิวเตอร์</option>
+                                    <option value="วัสดุการศึกษา">วัสดุการศึกษา</option>
+                                    <option value="วัสดุฝึก">วัสดุฝึก</option>
+                                    <option value="วัสดุงานบ้านงานครัว">วัสดุงานบ้านงานครัว</option>
+                                    <option value="วัสดุทั่วไป">วัสดุทั่วไป</option>
+                                </select>
+                            </div>
+
+                            <p className="text-[11px] text-slate-500 bg-purple-50 p-2.5 rounded-xl border border-purple-100">
+                                💡 รายการนี้จะถูกบันทึกเข้าฐานข้อมูลกลาง และจะแสดงในระบบค้นหาอัตโนมัติ (Live Search) ให้กับทุกคนทันที
+                            </p>
+
+                            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowQuickAddItemModal(false)}
+                                    className="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-50"
+                                >
+                                    ยกเลิก
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold shadow-md shadow-purple-700/20 flex items-center gap-1.5"
+                                >
+                                    <span>💾</span> บันทึกเข้าราคากลาง
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }
