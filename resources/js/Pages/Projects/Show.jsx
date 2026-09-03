@@ -1076,7 +1076,7 @@ ${itemsListText}
                                             <button
                                                 type="button"
                                                 onClick={handleReceiveProcurement}
-                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95"
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
                                             >
                                                 <span>📥</span> พัสดุกดลงรับชุดจัดซื้อจัดจ้าง
                                             </button>
@@ -1085,9 +1085,29 @@ ${itemsListText}
                                             <button
                                                 type="button"
                                                 onClick={handleForwardToFinance}
-                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95"
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
                                             >
                                                 <span>📤</span> ตั้งเบิกส่งงานการเงิน ➔
+                                            </button>
+                                        )}
+                                        {project.procurement?.status === 'forwarded_to_finance' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRollbackProcurement('received')}
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                title="ยกเลิกการส่งการเงิน และดึงเรื่องกลับมาให้งานพัสดุแก้ไข (Admin/พัสดุ)"
+                                            >
+                                                <span>↩️</span> ยกเลิกส่งการเงิน (ดึงกลับให้พัสดุ)
+                                            </button>
+                                        )}
+                                        {project.procurement?.status === 'received' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRollbackProcurement('pending')}
+                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                title="ยกเลิกการลงรับ และส่งคืนให้ผู้เสนอโครงการแก้ไขรายการพัสดุ"
+                                            >
+                                                <span>↩️</span> ยกเลิกการลงรับ (ส่งคืนผู้เสนอ)
                                             </button>
                                         )}
                                     </div>
