@@ -368,36 +368,83 @@
     </div>
     <div style="clear: both;"></div>
 
-    <!-- 3 & 4. รองผู้อำนวยการฝ่ายฯ ที่เกี่ยวข้อง & ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน -->
-    <div style="margin-top: 25px; width: 100%; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;">
-        <!-- Left: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง -->
-        <div style="width: 48%; text-align: left;">
-            <div style="margin-bottom: 4px;">เรียน ผู้อำนวยการ วช.น่าน เพื่อโปรด</div>
-            <div style="border-bottom: 1px dotted #000; height: 18px; margin-bottom: 4px;"></div>
-            <div style="border-bottom: 1px dotted #000; height: 18px; margin-bottom: 10px;"></div>
-            
-            <div style="text-align: center; margin-top: 10px;">
-                <div style="border-bottom: 1px dotted #000; height: 26px; width: 85%; margin: 0 auto 6px auto;"></div>
-                <div>( <span id="deputy-name-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorName }}</span> )</div>
-                <div style="font-size: 15pt; margin-top: 2px;"><span id="deputy-title-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorTitle }}</span></div>
-                <div style="font-size: 14pt; margin-top: 4px;">............../............../..............</div>
-            </div>
-        </div>
+    <!-- 3 & 4. รองผู้อำนวยการฝ่ายฯ ที่เกี่ยวข้อง & ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน (Aligned 2-Column Structure) -->
+    <table style="width: 100%; border-collapse: collapse; margin-top: 22px; table-layout: fixed;">
+        <tr>
+            <!-- Left Header -->
+            <td style="width: 50%; vertical-align: top; padding-right: 12px;">
+                <div style="font-size: 16pt; line-height: 1.35; margin-bottom: 4px;">
+                    เรียน ผู้อำนวยการ วช.น่าน เพื่อโปรด
+                </div>
+            </td>
+            <!-- Right Header (Invisible/Empty placeholder with exact line-height for 100% horizontal alignment) -->
+            <td style="width: 50%; vertical-align: top; padding-left: 12px;">
+                <div style="font-size: 16pt; line-height: 1.35; margin-bottom: 4px; visibility: hidden;">
+                    เรียน ผู้อำนวยการ วช.น่าน เพื่อโปรด
+                </div>
+            </td>
+        </tr>
 
-        <!-- Right: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน -->
-        <div style="width: 48%; text-align: left;">
-            <div style="height: 24px;"></div>
-            <div style="border-bottom: 1px dotted #000; height: 18px; margin-bottom: 4px;"></div>
-            <div style="border-bottom: 1px dotted #000; height: 18px; margin-bottom: 10px;"></div>
-            
-            <div style="text-align: center; margin-top: 10px;">
-                <div style="border-bottom: 1px dotted #000; height: 26px; width: 85%; margin: 0 auto 6px auto;"></div>
-                <div>( <span contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
-                <div style="font-size: 15pt; margin-top: 2px;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
-                <div style="font-size: 14pt; margin-top: 4px;">............../............../..............</div>
-            </div>
-        </div>
-    </div>
+        <!-- Dotted Line Row 1 -->
+        <tr>
+            <td style="padding-right: 12px; padding-bottom: 4px;">
+                <div style="border-bottom: 1px dotted #000; height: 18px; width: 100%;"></div>
+            </td>
+            <td style="padding-left: 12px; padding-bottom: 4px;">
+                <div style="border-bottom: 1px dotted #000; height: 18px; width: 100%;"></div>
+            </td>
+        </tr>
+
+        <!-- Dotted Line Row 2 -->
+        <tr>
+            <td style="padding-right: 12px; padding-bottom: 16px;">
+                <div style="border-bottom: 1px dotted #000; height: 18px; width: 100%;"></div>
+            </td>
+            <td style="padding-left: 12px; padding-bottom: 16px;">
+                <div style="border-bottom: 1px dotted #000; height: 18px; width: 100%;"></div>
+            </td>
+        </tr>
+
+        <!-- Signature Line Row -->
+        <tr>
+            <td style="padding-right: 12px; text-align: center; padding-bottom: 4px;">
+                <div style="border-bottom: 1px dotted #000; height: 26px; width: 85%; margin: 0 auto;"></div>
+            </td>
+            <td style="padding-left: 12px; text-align: center; padding-bottom: 4px;">
+                <div style="border-bottom: 1px dotted #000; height: 26px; width: 85%; margin: 0 auto;"></div>
+            </td>
+        </tr>
+
+        <!-- Name Row -->
+        <tr>
+            <td style="padding-right: 12px; text-align: center; font-size: 16pt; line-height: 1.3;">
+                ( <span id="deputy-name-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorName }}</span> )
+            </td>
+            <td style="padding-left: 12px; text-align: center; font-size: 16pt; line-height: 1.3;">
+                ( <span contenteditable="true" style="outline: none;">{{ $directorName }}</span> )
+            </td>
+        </tr>
+
+        <!-- Position Row -->
+        <tr>
+            <td style="padding-right: 12px; text-align: center; font-size: 15pt; line-height: 1.3; padding-top: 2px;">
+                <span id="deputy-title-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorTitle }}</span>
+            </td>
+            <td style="padding-left: 12px; text-align: center; font-size: 15pt; line-height: 1.3; padding-top: 2px;">
+                ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
+            </td>
+        </tr>
+
+        <!-- Date Row -->
+        <tr>
+            <td style="padding-right: 12px; text-align: center; font-size: 14pt; line-height: 1.3; padding-top: 4px;">
+                ............../............../..............
+            </td>
+            <td style="padding-left: 12px; text-align: center; font-size: 14pt; line-height: 1.3; padding-top: 4px;">
+                ............../............../..............
+            </td>
+        </tr>
+    </table>
 
     <script>
         const deputiesData = @json($deputyOptions);
