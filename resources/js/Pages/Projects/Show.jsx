@@ -214,21 +214,44 @@ ${itemsListText}
         });
     };
 
-    const handleForwardToFinance = () => {
+    const handleRollbackProcurement = (targetStatus) => {
+        const isToPending = targetStatus === 'pending';
+        const titleText = isToPending 
+            ? '↩️ ยกเลิกการลงรับ / ส่งคืนผู้เสนอโครงการแก้ไข' 
+            : '↩️ ยกเลิกการส่งการเงิน / ดึงกลับให้งานพัสดุแก้ไข';
+        const descText = isToPending
+            ? `ต้องการยกเลิกการลงรับเรื่องจัดซื้อจัดจ้างของโครงการ "${project.title}" และส่งคืนให้ผู้เสนอโครงการสามารถแก้ไขรายการพัสดุใช่หรือไม่?`
+            : `ต้องการดึงเรื่องจัดซื้อจัดจ้างของโครงการ "${project.title}" กลับมาจากงานการเงิน เพื่อให้งานพัสดุตรวจสอบหรือแก้ไขข้อมูลใช่หรือไม่?`;
+
         Swal.fire({
-            title: '📤 ตั้งเบิกชุดจัดซื้อจัดจ้าง ➔ ส่งงานการเงิน',
-            text: `ต้องการตั้งเบิกชุดจัดซื้อจัดจ้างโครงการ "${project.title}" และส่งต่อให้งานการเงินดำเนินการเบิกจ่ายหรือไม่?`,
-            icon: 'question',
+            title: titleText,
+            html: `
+                <div class="text-left text-xs text-slate-600 space-y-2 font-sans">
+                    <p>${descText}</p>
+                    <div class="pt-2">
+                        <label class="block font-bold text-slate-800 mb-1">เหตุผลในการยกเลิก/ส่งคืน (ระบุหรือไม่ก็ได้):</label>
+                        <textarea id="swal-rollback-reason-show" class="w-full rounded-xl border border-rose-200 focus:ring-rose-500 focus:border-rose-500 px-3 py-2 text-xs" rows="2" placeholder="เช่น รายการพัสดุไม่ถูกต้อง, ขอปรับปรุงราคา/จำนวน..."></textarea>
+                    </div>
+                </div>
+            `,
+            icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#10b981',
+            confirmButtonColor: '#e11d48',
             cancelButtonColor: '#64748b',
-            confirmButtonText: '📤 ยืนยันตั้งเบิกส่งการเงิน',
-            cancelButtonText: 'ยกเลิก'
+            confirmButtonText: '↩️ ยืนยันยกเลิก/ส่งคืนแก้ไข',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                return {
+                    target_status: targetStatus,
+                    reason: document.getElementById('swal-rollback-reason-show')?.value || ''
+                };
+            }
         }).then((result) => {
             if (result.isConfirmed) {
-                router.post(route('procurements.forward_to_finance', project.id), {}, {
+                router.post(route('procurements.rollback', project.id), result.value, {
                     onSuccess: () => {
-                        Swal.fire('สำเร็จ', 'ตั้งเบิกและส่งต่อให้งานการเงินเรียบร้อยแล้ว', 'success');
+                        setIsEditingProcurement(true);
+                        Swal.fire('สำเร็จ', isToPending ? 'ส่งคืนให้ผู้เสนอโครงการแก้ไขเรียบร้อยแล้ว' : 'ดึงเรื่องกลับมาให้งานพัสดุแก้ไขเรียบร้อยแล้ว', 'success');
                     }
                 });
             }
