@@ -564,4 +564,70 @@ class AdminController extends Controller
 
         return redirect()->back()->with('success', 'ลบข้อมูลฝ่าย/สังกัดแผนกเรียบร้อยแล้ว');
     }
+
+    /**
+     * Store a newly created funding source (by Plan Staff or Admin).
+     */
+    public function storeFundingSource(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์จัดการแหล่งงบประมาณ');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:100',
+            'fiscal_year' => 'nullable|string|max:10',
+            'budget_number' => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        \App\Models\FundingSource::create($validated);
+
+        return redirect()->back()->with('success', 'เพิ่มแหล่งเงินงบประมาณ ' . $validated['name'] . ' สำเร็จเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Update the specified funding source.
+     */
+    public function updateFundingSource(Request $request, \App\Models\FundingSource $fundingSource)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์จัดการแหล่งงบประมาณ');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'nullable|string|max:100',
+            'fiscal_year' => 'nullable|string|max:10',
+            'budget_number' => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+        ]);
+
+        $fundingSource->update($validated);
+
+        return redirect()->back()->with('success', 'อัปเดตแหล่งเงินงบประมาณสำเร็จเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Delete funding source.
+     */
+    public function deleteFundingSource(\App\Models\FundingSource $fundingSource)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์จัดการแหล่งงบประมาณ');
+        }
+
+        if (\App\Models\Budget::where('funding_source_id', $fundingSource->id)->exists() || 
+            Project::where('funding_source_id', $fundingSource->id)->exists()) {
+            return redirect()->back()->with('error', 'ไม่สามารถลบแหล่งงบประมาณนี้ได้ เนื่องจากมีโครงการ/งบประมาณผูกอยู่');
+        }
+
+        $fundingSource->delete();
+
+        return redirect()->back()->with('success', 'ลบแหล่งเงินงบประมาณเรียบร้อยแล้ว');
+    }
 }
