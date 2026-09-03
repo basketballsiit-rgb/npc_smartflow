@@ -54,31 +54,35 @@ export default function Show({ project, strategyCategories = [], fundingSources 
     const handleGenerateAiTor = () => {
         const validItems = procurementItems.filter(item => item.description && item.description.trim() !== '');
         
-        if (validItems.length === 0) {
-            Swal.fire({
-                title: 'ไม่พบรายการพัสดุ',
-                text: 'กรุณากรอกรายการพัสดุในตารางด้านบนก่อน เพื่อให้ AI นำรายการพัสดุมาช่วยร่างข้อกำหนด TOR',
-                icon: 'info',
-                confirmButtonColor: '#7c3aed'
-            });
-            return;
-        }
-
-        const itemsListText = validItems.map((item, idx) => {
-            const cleanDesc = item.description.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').replace(/[💵📦💰📑📝🛒📄📊]/g, '').trim();
-            const qty = item.quantity || 1;
-            const unit = item.unit || 'ชิ้น';
-            return `     2.${idx + 1} ${cleanDesc} จำนวน ${qty} ${unit}`;
-        }).join('\n');
+        // Filter out loan/activity allowance items (ค่าตอบแทน, ค่าอาหาร, ค่าเดินทาง ฯลฯ)
+        const isLoanExpense = (desc) => /ค่าตอบแทน|วิทยากร|ค่าอาหาร|อาหารกลางวัน|อาหารว่าง|เครื่องดื่ม|เดินทาง|พาหนะ|ยานพาหนะ|เบี้ยเลี้ยง|ที่พัก|สมนาคุณ|ค่าจ้างเหมาบริการบุคคล|เงินยืม/ui.test(desc);
+        const actualProcurementItems = validItems.filter(item => !isLoanExpense(item.description));
+        const loanCount = validItems.length - actualProcurementItems.length;
 
         const deptName = project.department?.name || 'ฝ่ายวิชาการ / สาขาวิชาการ';
         const projectTitle = project.title || '';
 
-        const aiDraftedTor = `1. วัตถุประสงค์
+        let aiDraftedTor = '';
+
+        if (actualProcurementItems.length > 0) {
+            // Case: มีรายการพัสดุ/ครุภัณฑ์/วัสดุจริง
+            const itemsListText = actualProcurementItems.map((item, idx) => {
+                const cleanDesc = item.description
+                    .replace(/\[.*?\]/g, '')
+                    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+                    .replace(/[💵📦💰📑📝🛒📄📊]/g, '')
+                    .replace(/^[\d๑-๙]+[\.\s]*/u, '')
+                    .trim();
+                const qty = item.quantity || 1;
+                const unit = item.unit || 'ชิ้น';
+                return `     2.${idx + 1} ${cleanDesc} จำนวน ${qty} ${unit}`;
+            }).join('\n');
+
+            aiDraftedTor = `1. วัตถุประสงค์
 วิทยาลัยสารพัดช่างน่าน แผนกวิชา ${deptName} มีความประสงค์จัดหาวัสดุอุปกรณ์และพัสดุ เพื่อนำไปใช้สนับสนุนการจัดกิจกรรมและกระบวนการเรียนการสอนของโครงการ "${projectTitle}" ให้บรรลุวัตถุประสงค์และเกิดประสิทธิภาพสูงสุด
 
 2. คุณลักษณะเฉพาะและขอบเขตงาน
-พัสดุและรายการวัสดุที่จัดหาต้องเป็นของแท้ ของใหม่ ไม่เคยผ่านการใช้งานมาก่อน มีคุณภาพและมาตรฐานตามเกณฑ์สายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุจำนวน ${validItems.length} รายการ ดังนี้:
+พัสดุและรายการวัสดุที่จัดหาต้องเป็นของแท้ ของใหม่ ไม่เคยผ่านการใช้งานมาก่อน มีคุณภาพและมาตรฐานตามเกณฑ์สายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุจัดซื้อจัดจ้างจำนวน ${actualProcurementItems.length} รายการ ดังนี้:
 ${itemsListText}
 และพัสดุทั้งหมดต้องมีคุณสมบัติ คุณลักษณะเฉพาะ และมาตรฐานทางวิชาการที่ถูกต้องครบถ้วน พร้อมใช้งานได้ทันที
 
@@ -88,15 +92,39 @@ ${itemsListText}
 4. การตรวจรับพัสดุ
 การตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้อง ครบถ้วน ตรงตามเอกสารประมาณการ รายละเอียดคุณลักษณะเฉพาะ และใบเสนอซื้อเสนอจ้างทุกประการ`;
 
-        setTorSpecifications(aiDraftedTor);
+            setTorSpecifications(aiDraftedTor);
 
-        Swal.fire({
-            title: '✨ AI ร่าง TOR สำเร็จ!',
-            html: `ดึงรายการพัสดุ <b>${validItems.length} รายการ</b> มาบรรจุในข้อกำหนด TOR (ข้อ 2) ให้เรียบร้อยแล้ว<br><span class="text-xs text-slate-500">สามารถตรวจสอบและปรับแต่งแก้ไขข้อความเพิ่มเติมในกล่องข้อความได้ตามต้องการ</span>`,
-            icon: 'success',
-            confirmButtonColor: '#7c3aed',
-            timer: 3000
-        });
+            Swal.fire({
+                title: '✨ AI ร่าง TOR สำเร็จ!',
+                html: `คัดกรองเฉพาะรายการพัสดุจัดซื้อจัดจ้าง <b>${actualProcurementItems.length} รายการ</b> มาบรรจุใน TOR ให้เรียบร้อยแล้ว` + 
+                      (loanCount > 0 ? `<br><span class="text-xs text-amber-700 font-semibold">(คัดแยกรายการเงินยืมราชการ ${loanCount} รายการ เช่น ค่าตอบแทน/ค่าอาหาร/ค่าเดินทาง ออกจาก TOR ให้แล้ว)</span>` : ''),
+                icon: 'success',
+                confirmButtonColor: '#7c3aed',
+                timer: 3500
+            });
+        } else {
+            // Case: ทุกรายการเป็นเงินยืมทดรองราชการ (ค่าตอบแทน, ค่าอาหาร, ค่าเดินทาง)
+            aiDraftedTor = `1. วัตถุประสงค์
+วิทยาลัยสารพัดช่างน่าน แผนกวิชา ${deptName} มีความประสงค์ดำเนินกิจกรรมและจัดการเรียนการสอนตามโครงการ "${projectTitle}" ให้บรรลุวัตถุประสงค์และเกิดประสิทธิภาพสูงสุด
+
+2. คุณลักษณะเฉพาะและขอบเขตงาน
+โครงการนี้ดำเนินการจัดกิจกรรมโดยใช้งบประมาณในลักษณะการยืมเงินทดรองราชการ (แบบ กค.๑๐๑) เพื่อเป็นค่าใช้จ่ายในการดำเนินงาน (ค่าตอบแทนวิทยากร ค่าอาหารกลางวัน อาหารว่างและเครื่องดื่ม และค่าใช้จ่ายในการเดินทาง) ทั้งหมด โดยไม่มีรายการพัสดุหรือครุภัณฑ์ที่ต้องจัดซื้อจัดจ้างตามขอบเขตงาน (TOR) เพิ่มเติม
+
+3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ
+ผู้ยืมเงินหรือผู้รับผิดชอบโครงการจะต้องดำเนินกิจกรรมให้แล้วเสร็จ และส่งใช้เงินยืมทดรองราชการพร้อมหลักฐานใบสำคัญคู่จ่ายให้แก่งานการเงิน วิทยาลัยสารพัดช่างน่าน ภายในกำหนด 30 วัน นับถัดจากวันเสร็จสิ้นโครงการ
+
+4. การตรวจรับพัสดุ
+การตรวจรับและตรวจสอบเอกสารหลักฐานการจ่ายเงินจะดำเนินการโดยคณะกรรมการและงานการเงินของวิทยาลัย โดยต้องมีความถูกต้องครบถ้วนตามระเบียบของทางราชการทุกประการ`;
+
+            setTorSpecifications(aiDraftedTor);
+
+            Swal.fire({
+                title: '💡 ตรวจพบรายการเงินยืมราชการ',
+                html: `รายการในโครงการเป็น <b>ค่าตอบแทน/ค่าอาหาร/ค่าพาหนะเดินทาง (สัญญายืมเงิน กค.๑๐๑)</b><br>AI ได้ยกเว้นรายการเงินยืมออกจากบัญชีพัสดุ และปรับข้อกำหนด TOR สำหรับโครงการยืมเงินจัดกิจกรรมให้เรียบร้อยแล้ว`,
+                icon: 'info',
+                confirmButtonColor: '#7c3aed'
+            });
+        }
     };
 
     const allocatedBudget = parseFloat(project.budget?.allocated_amount || project.estimated_budget || 0);
