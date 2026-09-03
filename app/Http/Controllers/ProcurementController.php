@@ -243,6 +243,53 @@ class ProcurementController extends Controller
     }
 
     /**
+     * Admin or Procurement/Finance officer rolls back/cancels the procurement status
+     * in case of an error, allowing the supply staff, finance staff, or project creator to make corrections.
+     */
+    public function rollbackStatus(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isProcurementHead() && !$user->isPlanHead()) {
+            abort(403, 'เฉพาะผู้ดูแลระบบหรือเจ้าหน้าที่งานพัสดุเท่านั้นที่สามารถยกเลิก/ส่งคืนสถานะจัดซื้อจัดจ้างได้');
+        }
+
+        $request->validate([
+            'target_status' => 'required|string|in:pending,received,processing,reset_all',
+            'reason' => 'nullable|string|max:500'
+        ]);
+
+        $procurement = $project->procurement;
+        if (!$procurement) {
+            return redirect()->back()->with('error', 'ไม่พบข้อมูลการจัดซื้อจัดจ้างของโครงการนี้');
+        }
+
+        $target = $request->input('target_status');
+        $reason = $request->input('reason');
+
+        if ($target === 'reset_all') {
+            $procurement->status = 'pending';
+            $procurement->save();
+            return redirect()->back()->with('message', 'รีเซ็ตสถานะการจัดซื้อจัดจ้างของโครงการ "' . $project->title . '" เรียบร้อยแล้ว');
+        }
+
+        $procurement->status = $target;
+        $procurement->save();
+
+        $statusLabel = [
+            'pending' => 'รอพัสดุลงรับเรื่อง (เปิดให้ผู้เสนอโครงการแก้ไขได้)',
+            'received' => 'พัสดุลงรับเรื่องแล้ว (เปิดให้งานพัสดุแก้ไข/ตรวจสอบ)',
+            'processing' => 'อยู่ระหว่างดำเนินการ'
+        ][$target] ?? $target;
+
+        $msg = 'ยกเลิก/ส่งคืนสถานะการจัดซื้อจัดจ้างโครงการ "' . $project->title . '" ไปยังสถานะ: ' . $statusLabel . ' เรียบร้อยแล้ว';
+        if ($reason) {
+            $msg .= ' (เหตุผล: ' . $reason . ')';
+        }
+
+        return redirect()->back()->with('message', $msg);
+    }
+
+    /**
      * Download or view the dynamic HTML/PDF stub for procurement documents.
      */
     public function downloadDocument(Project $project, $type)
