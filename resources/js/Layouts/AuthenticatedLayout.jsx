@@ -366,6 +366,20 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className="text-sm">📋</span>
                                     {isSidebarOpen && <span>โครงการของฉัน</span>}
                                 </Link>
+
+                                <Link
+                                    href={route('dashboard', { tab: 'document_tracking' })}
+                                    className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
+                                        url.includes('tab=document_tracking')
+                                            ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
+                                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
+                                    }`}
+                                    title="ติดตามเอกสารจัดซื้อจัดจ้างและสัญญายืมเงิน"
+                                >
+                                    <span className="text-amber-300/80 font-mono text-[10px]">●</span>
+                                    <span className="text-sm">📍</span>
+                                    {isSidebarOpen && <span>ติดตามเอกสาร & สัญญายืมเงิน</span>}
+                                </Link>
                                 <Link
                                     href={route('admin.routine_budgets.index')}
                                     className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${

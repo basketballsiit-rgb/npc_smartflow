@@ -439,6 +439,11 @@ export default function Dashboard({
     const [activeTab, setActiveTab] = useState(getDefaultTab());
 
     // All Projects Master Tracking Filter States
+    
+    // Document & Loan Tracking States
+    const [docTrackingFilter, setDocTrackingFilter] = useState('all'); // all, at_procurement, at_finance, with_borrower, completed
+    const [docTrackingSearch, setDocTrackingSearch] = useState('');
+
     const [projectSearch, setProjectSearch] = useState('');
     const [projectStatusFilter, setProjectStatusFilter] = useState('all');
     const [projectYearFilter, setProjectYearFilter] = useState('all');
@@ -6177,6 +6182,397 @@ ${itemsListText}
         );
     };
 
+    
+    // 5. Dedicated Document & Loan Tracking Center Tab
+    const renderDocumentTrackingTab = () => {
+        // Collect projects based on user authority
+        const sourceProjects = (isAdmin || isPlanHead || isProcurementHead || isExecutive)
+            ? (allProjectsMaster || teacherData?.projects || [])
+            : (teacherData?.projects || []);
+
+        // Filter projects that have been approved or in proposal stage
+        const trackingList = sourceProjects.map(p => {
+            const proc = p.procurement;
+            const procStatus = p.procurement_status || proc?.status || 'pending';
+            const status = p.status;
+
+            // Compute Loan Contract (สัญญายืมเงิน แบบ กค. ๑๐๑) status & location
+            let loanLocation = 'ผู้เสนอโครงการ';
+            let loanHolder = p.user?.name || p.proposer_name || 'ครูผู้รับผิดชอบ';
+            let loanStatusText = '📝 รอการอนุมัติโครงการ';
+            let loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
+            let loanCategory = 'pending';
+
+            if (status === 'approved') {
+                if (procStatus === 'forwarded_to_finance') {
+                    loanLocation = 'ห้องงานการเงิน (อาคารอำนวยการ ชั้น ๑)';
+                    loanHolder = 'เจ้าหน้าที่งานการเงิน';
+                    loanStatusText = '💰 อยู่ที่งานการเงิน (ตรวจสัญญา/รอเบิกจ่าย)';
+                    loanBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-400 font-bold';
+                    loanCategory = 'at_finance';
+                } else if (procStatus === 'received' || procStatus === 'processing') {
+                    loanLocation = 'ห้องงานพัสดุ (โต๊ะลงรับ)';
+                    loanHolder = 'เจ้าหน้าที่งานพัสดุ';
+                    loanStatusText = '📦 อยู่ที่งานพัสดุ (ตรวจแผนเงินยืม)';
+                    loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300';
+                    loanCategory = 'at_procurement';
+                } else {
+                    loanLocation = 'ผู้เสนอโครงการ ➔ ห้องงานพัสดุ';
+                    loanHolder = loanHolder + ' / งานพัสดุ';
+                    loanStatusText = '🟡 รอพัสดุลงรับพร้อมชุดจัดซื้อ';
+                    loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
+                    loanCategory = 'at_procurement';
+                }
+            } else if (status === 'in_progress' || status === 'evaluating') {
+                loanLocation = `อยู่ที่ผู้ยืม (${loanHolder})`;
+                loanStatusText = '⭐ ได้รับเงินยืมแล้ว (กำลังดำเนินกิจกรรม)';
+                loanBadgeClass = 'bg-purple-100 text-purple-950 border-purple-300 font-bold';
+                loanCategory = 'with_borrower';
+            } else if (status === 'reporting') {
+                loanLocation = `อยู่ที่ผู้ยืม (${loanHolder}) ➔ งานการเงิน`;
+                loanStatusText = '⏳ เตรียมส่งหลักฐานเคลียร์เงินยืม';
+                loanBadgeClass = 'bg-blue-100 text-blue-950 border-blue-300 font-bold';
+                loanCategory = 'with_borrower';
+            } else if (status === 'completed' || status === 'cleared') {
+                loanLocation = 'ห้องงานการเงิน (แฟ้มคุมสัญญายืมเงิน)';
+                loanHolder = 'เจ้าหน้าที่งานการเงิน';
+                loanStatusText = '✅ เคลียร์เงินยืมและปิดสัญญาสมบูรณ์';
+                loanBadgeClass = 'bg-teal-100 text-teal-900 border-teal-300 font-black';
+                loanCategory = 'completed';
+            }
+
+            // Compute Procurement Package (ชุดจัดซื้อจัดจ้าง ๔ ฉบับ & PO) status & location
+            let procLocation = 'ผู้เสนอโครงการ';
+            let procHolder = p.user?.name || p.proposer_name || 'ครูผู้รับผิดชอบ';
+            let procStatusText = '📝 รอการอนุมัติโครงการ';
+            let procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
+            let procCategory = 'pending';
+
+            if (status === 'approved') {
+                if (procStatus === 'forwarded_to_finance') {
+                    procLocation = 'ห้องงานการเงิน (โต๊ะตั้งเบิกงบประมาณ)';
+                    procHolder = 'เจ้าหน้าที่งานการเงิน';
+                    procStatusText = '💰 ส่งงานการเงินแล้ว (รอเบิกจ่ายงบ)';
+                    procBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-400 font-bold';
+                    procCategory = 'at_finance';
+                } else if (procStatus === 'received' || procStatus === 'processing') {
+                    procLocation = 'ห้องงานพัสดุ (อาคารอำนวยการ)';
+                    procHolder = 'เจ้าหน้าที่งานพัสดุ';
+                    procStatusText = `📦 อยู่ที่งานพัสดุ (ลงรับแล้ว: ${p.procurement_number || proc?.procurement_number || '-'})`;
+                    procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-400 font-bold';
+                    procCategory = 'at_procurement';
+                } else {
+                    procLocation = 'ห้องงานพัสดุ (เคาน์เตอร์ลงรับ)';
+                    procHolder = 'เจ้าหน้าที่งานพัสดุ';
+                    procStatusText = '🟡 รอพัสดุลงรับชุดจัดซื้อจัดจ้าง';
+                    procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
+                    procCategory = 'at_procurement';
+                }
+            } else if (['in_progress', 'evaluating', 'reporting', 'completed'].includes(status)) {
+                procLocation = 'ห้องงานพัสดุ & ห้องงานการเงิน';
+                procHolder = 'งานพัสดุ / คณะกรรมการตรวจรับพัสดุ';
+                procStatusText = '📦 จัดซื้อจัดจ้างแล้วเสร็จ (รอ/ตรวจรับครบ)';
+                procBadgeClass = 'bg-teal-50 text-teal-900 border-teal-300 font-bold';
+                procCategory = 'completed';
+            }
+
+            return {
+                ...p,
+                loanLocation,
+                loanHolder,
+                loanStatusText,
+                loanBadgeClass,
+                loanCategory,
+                procLocation,
+                procHolder,
+                procStatusText,
+                procBadgeClass,
+                procCategory,
+                prNumber: p.procurement_number || proc?.procurement_number || null,
+            };
+        });
+
+        // Metrics count
+        const countProcurement = trackingList.filter(p => p.loanCategory === 'at_procurement' || p.procCategory === 'at_procurement').length;
+        const countFinance = trackingList.filter(p => p.loanCategory === 'at_finance' || p.procCategory === 'at_finance').length;
+        const countBorrower = trackingList.filter(p => p.loanCategory === 'with_borrower').length;
+        const countCompleted = trackingList.filter(p => p.loanCategory === 'completed').length;
+
+        // Filtered list
+        const filtered = trackingList.filter(p => {
+            if (docTrackingFilter === 'at_procurement' && !(p.loanCategory === 'at_procurement' || p.procCategory === 'at_procurement')) return false;
+            if (docTrackingFilter === 'at_finance' && !(p.loanCategory === 'at_finance' || p.procCategory === 'at_finance')) return false;
+            if (docTrackingFilter === 'with_borrower' && p.loanCategory !== 'with_borrower') return false;
+            if (docTrackingFilter === 'completed' && p.loanCategory !== 'completed') return false;
+
+            if (docTrackingSearch.trim()) {
+                const q = docTrackingSearch.toLowerCase();
+                const title = (p.title || '').toLowerCase();
+                const proposer = (p.user?.name || p.proposer_name || '').toLowerCase();
+                const dept = (p.department?.name || '').toLowerCase();
+                const pr = (p.prNumber || '').toLowerCase();
+                return title.includes(q) || proposer.includes(q) || dept.includes(q) || pr.includes(q);
+            }
+            return true;
+        });
+
+        return (
+            <div className="space-y-6 font-sans">
+                {/* Header Banner */}
+                <div className="rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-bold border border-white/15">
+                                <span>📍</span> Real-time Document & Loan Tracking Center
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                                <span>📍</span> ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน
+                            </h2>
+                            <p className="text-xs sm:text-sm text-purple-200 max-w-2xl leading-relaxed">
+                                ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค.๑๐๑) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4 Quick KPI Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <button
+                        onClick={() => setDocTrackingFilter('at_procurement')}
+                        className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
+                            docTrackingFilter === 'at_procurement'
+                                ? 'bg-blue-500 text-white border-blue-600 shadow-md ring-2 ring-blue-400/50'
+                                : 'bg-white text-slate-800 border-blue-200 hover:bg-blue-50/50 shadow-xs'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">📦</span>
+                            <span className={`text-2xl font-black ${docTrackingFilter === 'at_procurement' ? 'text-white' : 'text-blue-700'}`}>
+                                {countProcurement}
+                            </span>
+                        </div>
+                        <h4 className="text-xs font-bold mt-2">อยู่ที่งานพัสดุ</h4>
+                        <p className={`text-[11px] mt-0.5 ${docTrackingFilter === 'at_procurement' ? 'text-blue-100' : 'text-slate-500'}`}>
+                            รอลงรับ / กำลังทำเอกสารขอซื้อขอจ้าง
+                        </p>
+                    </button>
+
+                    <button
+                        onClick={() => setDocTrackingFilter('at_finance')}
+                        className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
+                            docTrackingFilter === 'at_finance'
+                                ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-400/50'
+                                : 'bg-white text-slate-800 border-emerald-200 hover:bg-emerald-50/50 shadow-xs'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">💰</span>
+                            <span className={`text-2xl font-black ${docTrackingFilter === 'at_finance' ? 'text-white' : 'text-emerald-700'}`}>
+                                {countFinance}
+                            </span>
+                        </div>
+                        <h4 className="text-xs font-bold mt-2">อยู่ที่งานการเงิน</h4>
+                        <p className={`text-[11px] mt-0.5 ${docTrackingFilter === 'at_finance' ? 'text-emerald-100' : 'text-slate-500'}`}>
+                            ตรวจสัญญา กค.๑๐๑ / รอเบิกจ่าย
+                        </p>
+                    </button>
+
+                    <button
+                        onClick={() => setDocTrackingFilter('with_borrower')}
+                        className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
+                            docTrackingFilter === 'with_borrower'
+                                ? 'bg-purple-600 text-white border-purple-700 shadow-md ring-2 ring-purple-400/50'
+                                : 'bg-white text-slate-800 border-purple-200 hover:bg-purple-50/50 shadow-xs'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">⭐</span>
+                            <span className={`text-2xl font-black ${docTrackingFilter === 'with_borrower' ? 'text-white' : 'text-purple-700'}`}>
+                                {countBorrower}
+                            </span>
+                        </div>
+                        <h4 className="text-xs font-bold mt-2">อยู่ที่ผู้ยืมเงิน</h4>
+                        <p className={`text-[11px] mt-0.5 ${docTrackingFilter === 'with_borrower' ? 'text-purple-100' : 'text-slate-500'}`}>
+                            รับเงินแล้ว / กำลังดำเนินกิจกรรม
+                        </p>
+                    </button>
+
+                    <button
+                        onClick={() => setDocTrackingFilter('completed')}
+                        className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
+                            docTrackingFilter === 'completed'
+                                ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-400/50'
+                                : 'bg-white text-slate-800 border-teal-200 hover:bg-teal-50/50 shadow-xs'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">✅</span>
+                            <span className={`text-2xl font-black ${docTrackingFilter === 'completed' ? 'text-white' : 'text-teal-700'}`}>
+                                {countCompleted}
+                            </span>
+                        </div>
+                        <h4 className="text-xs font-bold mt-2">เคลียร์เงินยืมสมบูรณ์</h4>
+                        <p className={`text-[11px] mt-0.5 ${docTrackingFilter === 'completed' ? 'text-teal-100' : 'text-slate-500'}`}>
+                            ส่งใบเสร็จล้างหนี้และปิดสัญญาแล้ว
+                        </p>
+                    </button>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {[
+                            { id: 'all', label: 'ทั้งหมด' },
+                            { id: 'at_procurement', label: '📦 อยู่ที่งานพัสดุ' },
+                            { id: 'at_finance', label: '💰 อยู่ที่งานการเงิน' },
+                            { id: 'with_borrower', label: '⭐ อยู่ที่ผู้ยืมเงิน' },
+                            { id: 'completed', label: '✅ เคลียร์สมบูรณ์' },
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setDocTrackingFilter(tab.id)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                    docTrackingFilter === tab.id
+                                        ? 'bg-purple-700 text-white shadow-xs'
+                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="relative min-w-[240px]">
+                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
+                        <input
+                            type="text"
+                            value={docTrackingSearch}
+                            onChange={(e) => setDocTrackingSearch(e.target.value)}
+                            placeholder="ค้นหาชื่อโครงการ, ผู้เสนอ, เลขที่ PR..."
+                            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
+                        />
+                    </div>
+                </div>
+
+                {/* Tracking Data Table */}
+                <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-black uppercase text-slate-600 tracking-wider">
+                                    <th className="px-4 py-3.5"># & ข้อมูลโครงการ</th>
+                                    <th className="px-4 py-3.5 text-right">งบประมาณ</th>
+                                    <th className="px-4 py-3.5 min-w-[260px]">💰 สัญญายืมเงิน (แบบ กค. ๑๐๑)</th>
+                                    <th className="px-4 py-3.5 min-w-[260px]">📦 ชุดเอกสารจัดซื้อจัดจ้าง (๔ ฉบับ)</th>
+                                    <th className="px-4 py-3.5 text-center whitespace-nowrap">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-xs">
+                                {filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                                            <div className="text-3xl mb-2">📭</div>
+                                            <p className="font-bold">ไม่พบข้อมูลโครงการตามเงื่อนไขที่เลือก</p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filtered.map((item, idx) => (
+                                        <tr key={item.id} className="hover:bg-purple-50/20 transition-colors">
+                                            {/* Project Info */}
+                                            <td className="px-4 py-3.5 align-top">
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                                                            #{idx + 1}
+                                                        </span>
+                                                        <Link
+                                                            href={route('projects.show', item.id)}
+                                                            className="font-extrabold text-purple-950 hover:text-purple-700 transition line-clamp-2 leading-snug"
+                                                        >
+                                                            {item.title}
+                                                        </Link>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500">
+                                                        <span>👤 {item.user?.name || item.proposer_name || 'ไม่ระบุ'}</span>
+                                                        <span>•</span>
+                                                        <span>🏢 {item.department?.name || '-'}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Budget */}
+                                            <td className="px-4 py-3.5 text-right align-top whitespace-nowrap">
+                                                <span className="font-black text-slate-900">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(item.allocated_budget || item.estimated_budget || 0)}
+                                                </span>
+                                            </td>
+
+                                            {/* Loan Contract (กค. ๑๐๑) */}
+                                            <td className="px-4 py-3.5 align-top">
+                                                <div className="space-y-1.5 p-2.5 rounded-xl bg-amber-50/40 border border-amber-200/70">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${item.loanBadgeClass}`}>
+                                                            {item.loanStatusText}
+                                                        </span>
+                                                        {item.status === 'approved' || ['in_progress', 'evaluating', 'completed'].includes(item.status) ? (
+                                                            <a
+                                                                href={route('procurements.download_document', [item.id, 'loan_contract'])}
+                                                                target="_blank"
+                                                                className="text-[10px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100/80 px-2 py-0.5 rounded border border-amber-300 hover:scale-105 transition"
+                                                                title="พิมพ์สัญญายืมเงิน แบบ กค. ๑๐๑"
+                                                            >
+                                                                📄 พิมพ์ กค.๑๐๑
+                                                            </a>
+                                                        ) : null}
+                                                    </div>
+                                                    <div className="text-[11px] space-y-0.5 text-slate-700">
+                                                        <div><span className="text-slate-500 font-semibold">📍 ตำแหน่ง:</span> <strong className="text-indigo-950">{item.loanLocation}</strong></div>
+                                                        <div><span className="text-slate-500 font-semibold">👤 ผู้ถือ:</span> <span>{item.loanHolder}</span></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Procurement Package */}
+                                            <td className="px-4 py-3.5 align-top">
+                                                <div className="space-y-1.5 p-2.5 rounded-xl bg-purple-50/40 border border-purple-200/70">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${item.procBadgeClass}`}>
+                                                            {item.procStatusText}
+                                                        </span>
+                                                        {item.prNumber && (
+                                                            <span className="text-[10px] font-mono font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                                                {item.prNumber}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-[11px] space-y-0.5 text-slate-700">
+                                                        <div><span className="text-slate-500 font-semibold">📍 ตำแหน่ง:</span> <strong className="text-indigo-950">{item.procLocation}</strong></div>
+                                                        <div><span className="text-slate-500 font-semibold">👤 ผู้ถือ:</span> <span>{item.procHolder}</span></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+
+                                            {/* Action */}
+                                            <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
+                                                <Link
+                                                    href={route('projects.show', item.id)}
+                                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs hover:scale-105 active:scale-95 transition"
+                                                >
+                                                    <span>เปิดดู</span>
+                                                    <span>➔</span>
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <AuthenticatedLayout
             header={
@@ -6196,6 +6592,7 @@ ${itemsListText}
                         {activeTab === 'admin_strategies' && renderAdminStrategiesTab()}
                         {activeTab === 'admin_settings' && renderAdminSettingsTab()}
                         {activeTab === 'all_projects' && renderAllProjectsTab()}
+                        {activeTab === 'document_tracking' && renderDocumentTrackingTab()}
                         {activeTab === 'proposals' && renderProposalsTab()}
                         {activeTab === 'budgets' && renderBudgetsTab()}
                         {activeTab === 'action_plan_report' && renderActionPlanReportTab()}

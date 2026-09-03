@@ -1166,100 +1166,38 @@ ${itemsListText}
                                     </div>
                                 )}
 
-                                {/* Physical Document & Loan Tracking Widget (ติดตามเอกสารและสัญญายืมเงิน) */}
-                                <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/60 via-white to-purple-50/40 p-5 shadow-sm space-y-4 font-sans">
-                                    <div className="flex justify-between items-center border-b border-indigo-100 pb-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xl">📍</span>
-                                            <div>
-                                                <h3 className="text-sm font-black text-indigo-950">
-                                                    ติดตามตำแหน่งเอกสาร & สัญญายืมเงิน
-                                                </h3>
-                                                <p className="text-[11px] text-indigo-800">
-                                                    ตรวจสอบจุดที่เอกสารกำลังดำเนินการ ป้องกันเอกสารหายระหว่างทาง
-                                                </p>
+                                {/* Sleek Quick Link to Dedicated Document Tracking Center */}
+                                {isPlanApproved && (
+                                    <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-white p-3.5 shadow-2xs font-sans">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <span className="text-xl shrink-0">📍</span>
+                                                <div className="min-w-0">
+                                                    <h4 className="text-xs font-black text-indigo-950 truncate">
+                                                        {project.procurement?.status === 'forwarded_to_finance'
+                                                            ? '💰 เอกสารอยู่ที่งานการเงิน (ส่งเบิกจ่ายแล้ว)'
+                                                            : project.procurement?.status === 'received'
+                                                            ? '📦 เอกสารอยู่ที่งานพัสดุ (ลงรับแล้ว)'
+                                                            : ['in_progress', 'evaluating'].includes(project.status)
+                                                            ? '⭐ สัญญายืมเงินอยู่ที่ผู้ยืม (กำลังดำเนินงาน)'
+                                                            : project.status === 'completed'
+                                                            ? '✅ เคลียร์เงินยืมและปิดสัญญาสมบูรณ์'
+                                                            : '🟡 เอกสารอยู่ที่งานพัสดุ (รอลงรับ)'}
+                                                    </h4>
+                                                    <p className="text-[11px] text-slate-500 truncate">
+                                                        ตรวจสอบตำแหน่งสัญญายืมเงิน กค.๑๐๑ และเอกสารจัดซื้อจัดจ้าง
+                                                    </p>
+                                                </div>
                                             </div>
+                                            <Link
+                                                href={route('dashboard', { tab: 'document_tracking' })}
+                                                className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white shadow-2xs transition shrink-0 whitespace-nowrap active:scale-95"
+                                            >
+                                                <span>เปิดศูนย์ติดตาม ➔</span>
+                                            </Link>
                                         </div>
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-900 border border-indigo-200 shrink-0">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                                            สด Real-time
-                                        </span>
                                     </div>
-
-                                    <div className="space-y-3">
-                                        {/* Document Item 1: สัญญายืมเงิน (แบบ กค. ๑๐๑) */}
-                                        {(() => {
-                                            const { loanInfo } = getDocumentTrackingDetails();
-                                            return (
-                                                <div className="p-3.5 rounded-xl border bg-white shadow-2xs space-y-2 border-amber-200">
-                                                    <div className="flex justify-between items-start gap-2">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-base">💰</span>
-                                                            <div>
-                                                                <h4 className="text-xs font-black text-slate-900">สัญญายืมเงิน (แบบ กค. ๑๐๑)</h4>
-                                                                <span className="text-[10px] text-slate-500">เงินยืมทดรองราชการเพื่อดำเนินงานโครงการ</span>
-                                                            </div>
-                                                        </div>
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md shrink-0 ${loanInfo.badgeClass}`}>
-                                                            {loanInfo.statusText}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
-                                                        <div className="flex items-center justify-between text-[11px]">
-                                                            <span className="text-slate-500 font-medium">🏢 อยู่ที่งาน/สถานที่:</span>
-                                                            <span className="font-extrabold text-indigo-950">{loanInfo.location}</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between text-[11px]">
-                                                            <span className="text-slate-500 font-medium">👤 ผู้ถือเอกสาร:</span>
-                                                            <span className="font-bold text-slate-800">{loanInfo.holder}</span>
-                                                        </div>
-                                                        <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-200/60 leading-relaxed">
-                                                            ℹ️ {loanInfo.actionDesc}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-
-                                        {/* Document Item 2: ชุดเอกสารจัดซื้อจัดจ้าง ๔ ฉบับ */}
-                                        {(() => {
-                                            const { procInfo } = getDocumentTrackingDetails();
-                                            return (
-                                                <div className="p-3.5 rounded-xl border bg-white shadow-2xs space-y-2 border-purple-200">
-                                                    <div className="flex justify-between items-start gap-2">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-base">📦</span>
-                                                            <div>
-                                                                <h4 className="text-xs font-black text-slate-900">ชุดเอกสารจัดซื้อจัดจ้าง (๔ ฉบับ & PO)</h4>
-                                                                <span className="text-[10px] text-slate-500">
-                                                                    {project.procurement?.procurement_number ? `เลขที่พัสดุ: ${project.procurement.procurement_number}` : 'รายงานขอซื้อขอจ้าง/ตรวจรับ'}
-                                                                </span>
-                                                            </div>
-                                                        </div>
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md shrink-0 ${procInfo.badgeClass}`}>
-                                                            {procInfo.statusText}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100 space-y-1">
-                                                        <div className="flex items-center justify-between text-[11px]">
-                                                            <span className="text-slate-500 font-medium">🏢 อยู่ที่งาน/สถานที่:</span>
-                                                            <span className="font-extrabold text-indigo-950">{procInfo.location}</span>
-                                                        </div>
-                                                        <div className="flex items-center justify-between text-[11px]">
-                                                            <span className="text-slate-500 font-medium">👤 ผู้ถือเอกสาร:</span>
-                                                            <span className="font-bold text-slate-800">{procInfo.holder}</span>
-                                                        </div>
-                                                        <p className="text-[11px] text-slate-600 pt-1 border-t border-slate-200/60 leading-relaxed">
-                                                            ℹ️ {procInfo.actionDesc}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
-                                    </div>
-                                </div>
+                                )}
 
                                 {/* Approval Workflow & Sign-off History Card */}
                                 <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
