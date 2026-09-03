@@ -1661,7 +1661,6 @@ ${itemsListText}
 
                             {/* Section 2: Committee Appointment Form (Visible ONLY to Procurement Staff & Admin) */}
                             {isProcStaffOrAdmin && (
-                                {/* Section 2: Committee Appointment Form (Read-Only when submitted) */}
                             <div className="border border-purple-100 rounded-2xl p-5 bg-purple-50/20 space-y-4">
                                 <div className="flex items-center gap-2">
                                     <h4 className="text-sm font-extrabold text-purple-950">👥 แต่งตั้งคณะกรรมการจัดซื้อจัดจ้าง และตรวจรับพัสดุ (Committees)</h4>
