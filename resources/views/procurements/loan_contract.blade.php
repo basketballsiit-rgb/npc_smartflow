@@ -502,11 +502,11 @@
             <!-- Lower Section 2: Approved by Director -->
             <div style="font-size: 15pt; line-height: 1.3; padding: 4px 12px 6px 12px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 2px; font-size: 15pt;">คำอนุมัติ</div>
-                <div style="text-indent: 1.2cm; margin-bottom: 2px;">
+                <div style="text-indent: 1.2cm; margin-bottom: 4px;">
                     อนุมัติให้ยืมตามเงื่อนไขข้างต้นได้ เป็นเงิน <span class="underline-dotted" id="approved-amount-num">{{ formatThaiMoney($allTotalSum) }}</span> บาท ( <span class="underline-dotted" id="approved-amount-thai">{{ $allBahtText }}</span> )
                 </div>
                 
-                <table style="width: 100%; border: none; font-size: 14pt; margin-top: 6px; border-collapse: collapse;">
+                <table style="width: 100%; border: none; font-size: 14pt; margin-top: 16px; border-collapse: collapse;">
                     <tr>
                         <td style="width: 45%;"></td>
                         <td style="width: 55%; text-align: center; vertical-align: top; padding: 2px 0;">
