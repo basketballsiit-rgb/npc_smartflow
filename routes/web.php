@@ -14,6 +14,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\RoutineBudgetController;
 use App\Http\Controllers\CentralAllocationController;
+use App\Http\Controllers\VendorController;
 use App\Http\Controllers\Auth\KeycloakController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -64,7 +65,14 @@ Route::post('projects/{project}/survey/submit', [SurveyController::class, 'submi
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/citizen-id', [ProfileController::class, 'updateCitizenId'])->name('profile.update_citizen_id');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Vendor Directory Routes
+    Route::get('/vendors', [VendorController::class, 'index'])->name('vendors.index');
+    Route::post('/vendors', [VendorController::class, 'store'])->name('vendors.store');
+    Route::put('/vendors/{vendor}', [VendorController::class, 'update'])->name('vendors.update');
+    Route::delete('/vendors/{vendor}', [VendorController::class, 'destroy'])->name('vendors.destroy');
 
     // Admin User & Department Routes
     Route::post('/admin/users', [AdminController::class, 'storeUser'])->name('admin.users.store');
@@ -72,6 +80,11 @@ Route::middleware('auth')->group(function () {
     Route::patch('/admin/users/{user}/toggle', [AdminController::class, 'toggleUserStatus'])->name('admin.users.toggle');
     Route::delete('/admin/users/{user}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
     Route::post('/admin/settings', [AdminController::class, 'updateSettings'])->name('admin.settings.update');
+
+    // Funding Sources Management (Plan Staff & Admin)
+    Route::post('/admin/funding-sources', [AdminController::class, 'storeFundingSource'])->name('admin.funding_sources.store');
+    Route::put('/admin/funding-sources/{fundingSource}', [AdminController::class, 'updateFundingSource'])->name('admin.funding_sources.update');
+    Route::delete('/admin/funding-sources/{fundingSource}', [AdminController::class, 'deleteFundingSource'])->name('admin.funding_sources.delete');
 
     // Admin & Plan Head Routine Budget Routes
     Route::get('/admin/routine-budgets', [RoutineBudgetController::class, 'index'])->name('admin.routine_budgets.index');
