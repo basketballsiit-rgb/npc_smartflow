@@ -132,6 +132,52 @@ export default function Dashboard({
     });
 
     const isPlanStaff = auth.user.is_admin || role === 'admin' || role === 'plan_head' || auth.user.role?.name === 'plan_head' || auth.user.role?.name === 'admin' || (auth.user.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN'));
+    const isAdmin = auth.user.is_admin || role === 'admin' || auth.user.role?.name === 'admin';
+    const isProcurementStaff = isAdmin || role === 'procurement_head' || auth.user.role?.name === 'procurement_head' || (auth.user.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC'));
+
+    const handleRollbackProcurement = (proj, targetStatus) => {
+        const isToPending = targetStatus === 'pending';
+        const titleText = isToPending 
+            ? '↩️ ยกเลิกการลงรับ / ส่งคืนผู้เสนอโครงการแก้ไข' 
+            : '↩️ ยกเลิกการส่งการเงิน / ดึงกลับให้งานพัสดุแก้ไข';
+        const descText = isToPending
+            ? `ต้องการยกเลิกการลงรับเรื่องจัดซื้อจัดจ้างของโครงการ "${proj.title}" และส่งคืนให้ผู้เสนอโครงการสามารถแก้ไขรายการพัสดุใช่หรือไม่?`
+            : `ต้องการดึงเรื่องจัดซื้อจัดจ้างของโครงการ "${proj.title}" กลับมาจากงานการเงิน เพื่อให้งานพัสดุตรวจสอบหรือแก้ไขข้อมูลใช่หรือไม่?`;
+
+        Swal.fire({
+            title: titleText,
+            html: `
+                <div class="text-left text-xs text-slate-600 space-y-2 font-sans">
+                    <p>${descText}</p>
+                    <div class="pt-2">
+                        <label class="block font-bold text-slate-800 mb-1">เหตุผลในการยกเลิก/ส่งคืน (ระบุหรือไม่ก็ได้):</label>
+                        <textarea id="swal-rollback-reason" class="w-full rounded-xl border border-rose-200 focus:ring-rose-500 focus:border-rose-500 px-3 py-2 text-xs" rows="2" placeholder="เช่น รายการพัสดุไม่ถูกต้อง, ขอปรับปรุงราคา/จำนวน..."></textarea>
+                    </div>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '↩️ ยืนยันยกเลิก/ส่งคืนแก้ไข',
+            cancelButtonText: 'ยกเลิก',
+            preConfirm: () => {
+                return {
+                    target_status: targetStatus,
+                    reason: document.getElementById('swal-rollback-reason')?.value || ''
+                };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('procurements.rollback', proj.id), result.value, {
+                    onSuccess: () => {
+                        setViewingProcurementProject(null);
+                        Swal.fire('สำเร็จ', isToPending ? 'ส่งคืนให้ผู้เสนอโครงการแก้ไขเรียบร้อยแล้ว' : 'ดึงเรื่องกลับมาให้งานพัสดุแก้ไขเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
 
     useEffect(() => {
         if (flash?.error) {
