@@ -184,7 +184,7 @@
                 <strong>ผู้ขาย / ผู้รับจ้าง:</strong> {{ $vendorName ?: '..................................................................' }}
             </td>
             <td style="width: 45%; text-align: right;">
-                <strong>ใบสั่งซื้อ/สั่งจ้างเลขที่:</strong> {{ $poNumber ?: ($procurement->procurement_number ? 'สช.น. ' . thaiNumberPo($procurement->procurement_number) : 'สช.น. ' . thaiNumberPo($project->id) . '/' . thaiNumberPo($thaiYear)) }}
+                <strong>ใบสั่งซื้อ/สั่งจ้างเลขที่:</strong> {{ $poNumber ?: ($procurement->procurement_number ? 'สช.น. ' . $procurement->procurement_number : 'สช.น. 0' . $project->id . '/' . $thaiYear) }}
             </td>
         </tr>
         <tr>
@@ -192,7 +192,7 @@
                 <strong>ที่อยู่:</strong> {{ $vendorAddress ?: '..................................................................' }}
             </td>
             <td style="text-align: right;">
-                <strong>วันที่:</strong> {{ $poDate ? thaiNumberPo($poDate) : thaiNumberPo($currentDateThai) }}
+                <strong>วันที่:</strong> {{ $poDate ? $poDate : $currentDateThai }}
             </td>
         </tr>
         <tr>
@@ -224,12 +224,12 @@
         <tbody>
             @forelse($items as $index => $item)
                 <tr>
-                    <td class="text-center">{{ thaiNumberPo($index + 1) }}</td>
+                    <td class="text-center">{{ $index + 1 }}</td>
                     <td>{{ $item->description }}</td>
-                    <td class="text-center">{{ thaiNumberPo(number_format($item->quantity, 0)) }}</td>
+                    <td class="text-center">{{ number_format($item->quantity, 0) }}</td>
                     <td class="text-center">{{ $item->unit }}</td>
-                    <td class="text-right">{{ thaiNumberPo(number_format($item->unit_price, 2)) }}</td>
-                    <td class="text-right">{{ thaiNumberPo(number_format($item->total_price, 2)) }}</td>
+                    <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
+                    <td class="text-right">{{ number_format($item->total_price, 2) }}</td>
                 </tr>
             @empty
                 <tr>
@@ -241,7 +241,7 @@
                     ( {{ convertToThaiBahtTextPo($totalSum) }} )
                 </td>
                 <td class="text-right text-bold" style="font-size: 13.5pt;">
-                    {{ thaiNumberPo(number_format($totalSum, 2)) }}
+                    {{ number_format($totalSum, 2) }}
                 </td>
             </tr>
         </tbody>
@@ -249,9 +249,9 @@
 
     <div class="conditions">
         <strong>ข้อกำหนดและเงื่อนไขการส่งมอบ:</strong><br>
-        ๑. ผู้ขาย/ผู้รับจ้าง ตกลงจะส่งมอบพัสดุตามรายการข้างต้นให้ถูกต้องครบถ้วนภายใน <strong>{{ thaiNumberPo($deliveryDays) }}</strong> วัน นับถัดจากวันที่ได้รับใบสั่งซื้อนี้ ณ งานพัสดุ วิทยาลัยสารพัดช่างน่าน<br>
-        ๒. หากพ้นกำหนดส่งมอบ ผู้ขายยินยอมให้ปรับเป็นรายวันในอัตราร้อยละ ๐.๒๐ ของมูลค่าพัสดุที่ยังไม่ได้รับมอบ นับแต่วันที่ล่วงเลยกำหนดจนถึงวันที่ส่งมอบถูกต้องครบถ้วน<br>
-        ๓. การสั่งซื้อ/สั่งจ้างจะสมบูรณ์เมื่อคณะกรรมการตรวจรับพัสดุได้ดำเนินการตรวจรับของถูกต้องเรียบร้อยแล้ว
+        1. ผู้ขาย/ผู้รับจ้าง ตกลงจะส่งมอบพัสดุตามรายการข้างต้นให้ถูกต้องครบถ้วนภายใน <strong>{{ $deliveryDays ?: '7' }}</strong> วัน นับถัดจากวันที่ได้รับใบสั่งซื้อนี้ ณ งานพัสดุ วิทยาลัยสารพัดช่างน่าน<br>
+        2. หากพ้นกำหนดส่งมอบ ผู้ขายยินยอมให้ปรับเป็นรายวันในอัตราร้อยละ 0.20 ของมูลค่าพัสดุที่ยังไม่ได้รับมอบ นับแต่วันที่ล่วงเลยกำหนดจนถึงวันที่ส่งมอบถูกต้องครบถ้วน<br>
+        3. การสั่งซื้อ/สั่งจ้างจะสมบูรณ์เมื่อคณะกรรมการตรวจรับพัสดุได้ดำเนินการตรวจรับของถูกต้องเรียบร้อยแล้ว
     </div>
 
     <div class="sig-section">
@@ -259,13 +259,13 @@
             ลงชื่อ............................................................ผู้รับใบสั่งซื้อ<br>
             ( {{ $vendorName ?: '..........................................................' }} )<br>
             ผู้ขาย / ผู้รับมอบอำนาจ<br>
-            วันที่........เดือน...................พ.ศ. {{ thaiNumberPo($thaiYear) }}
+            วันที่........เดือน...................พ.ศ. {{ $thaiYear }}
         </div>
         <div class="sig-box">
             ลงชื่อ............................................................ผู้สั่งซื้อ/สั่งจ้าง<br>
             ( นายณัฐพงษ์ ยางสุวรรณ )<br>
             ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน<br>
-            วันที่........เดือน...................พ.ศ. {{ thaiNumberPo($thaiYear) }}
+            วันที่........เดือน...................พ.ศ. {{ $thaiYear }}
         </div>
     </div>
 </body>
