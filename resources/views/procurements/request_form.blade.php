@@ -112,9 +112,13 @@
     </div>
 
     <div class="sig-section">
+        @php
+            $rawProposerName = $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................');
+            $cleanProposerName = trim(preg_replace('/\s*\(.*?\)/', '', $rawProposerName));
+        @endphp
         <div class="sig-box">
             <div style="border-bottom: 1px dotted #000; height: 35px; width: 80%; margin: auto;"></div>
-            <div style="margin-top: 5px;">( {{$project->user?->name}} )</div>
+            <div style="margin-top: 5px;">( {{ $cleanProposerName }} )</div>
             <div style="font-size: 11pt; color: #666;">ผู้เสนอซื้อ/จ้าง</div>
         </div>
         <div class="sig-box" style="float: right;">
