@@ -29,6 +29,69 @@ export default function AuthenticatedLayout({ header, children }) {
         sessionStorage.setItem('sidebar-scroll', e.target.scrollTop);
     };
 
+    const [citizenIdInput, setCitizenIdInput] = useState('');
+    const [citizenIdError, setCitizenIdError] = useState('');
+    const [isSavingCitizenId, setIsSavingCitizenId] = useState(false);
+    const [showCitizenModal, setShowCitizenModal] = useState(() => {
+        if (user && !user.citizen_id && !user.has_citizen_id) {
+            const dismissed = sessionStorage.getItem('dismiss_citizen_modal');
+            return !dismissed;
+        }
+        return false;
+    });
+
+    const formatCitizenId = (val) => {
+        const clean = val.replace(/[^0-9]/g, '').slice(0, 13);
+        let formatted = '';
+        if (clean.length > 0) formatted += clean.substring(0, 1);
+        if (clean.length > 1) formatted += '-' + clean.substring(1, 5);
+        if (clean.length > 5) formatted += '-' + clean.substring(5, 10);
+        if (clean.length > 10) formatted += '-' + clean.substring(10, 12);
+        if (clean.length > 12) formatted += '-' + clean.substring(12, 13);
+        return formatted;
+    };
+
+    const handleCitizenIdChange = (e) => {
+        const formatted = formatCitizenId(e.target.value);
+        setCitizenIdInput(formatted);
+        setCitizenIdError('');
+    };
+
+    const handleSaveCitizenId = (e) => {
+        e.preventDefault();
+        const clean = citizenIdInput.replace(/[^0-9]/g, '');
+        if (clean.length !== 13) {
+            setCitizenIdError('กรุณากรอกเลขประจำตัวประชาชนให้ครบ 13 หลัก');
+            return;
+        }
+
+        let sum = 0;
+        for (let i = 0; i < 12; i++) {
+            sum += parseInt(clean.charAt(i), 10) * (13 - i);
+        }
+        const checkDigit = (11 - (sum % 11)) % 10;
+        if (checkDigit !== parseInt(clean.charAt(12), 10)) {
+            setCitizenIdError('เลขประจำตัวประชาชน 13 หลักไม่ถูกต้องตามรูปแบบ กรุณาตรวจสอบอีกครั้ง');
+            return;
+        }
+
+        setIsSavingCitizenId(true);
+        import('@inertiajs/react').then(({ router }) => {
+            router.post(route('profile.update_citizen_id'), {
+                citizen_id: clean,
+            }, {
+                onSuccess: () => {
+                    setIsSavingCitizenId(false);
+                    setShowCitizenModal(false);
+                },
+                onError: (errs) => {
+                    setIsSavingCitizenId(false);
+                    setCitizenIdError(errs.citizen_id || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+                }
+            });
+        });
+    };
+
     const userRoleName = user?.role?.name || (typeof user?.role === 'string' ? user.role : '');
     const isAdmin = user?.is_admin || userRoleName === 'admin';
     const isExecutive = user?.is_executive || userRoleName === 'executive' || isAdmin;
