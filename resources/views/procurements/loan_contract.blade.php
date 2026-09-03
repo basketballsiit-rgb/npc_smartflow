@@ -74,12 +74,22 @@
     </div>
 
     @php
+        if (!function_exists('cleanPersonName')) {
+            function cleanPersonName($name) {
+                if (!$name) return '..........................................................';
+                $cleaned = preg_replace('/\s*\(.*?\)/u', '', $name);
+                $cleaned = preg_replace('/\s*\[.*?\]/u', '', $cleaned);
+                $cleaned = trim(str_replace(['(', ')'], '', $cleaned));
+                return $cleaned ?: '..........................................................';
+            }
+        }
+
         $rawProposerName = $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................');
         $extractedProposerPos = '';
-        if (preg_match('/\((.*?)\)/', $rawProposerName, $matches)) {
+        if (preg_match('/\((.*?)\)/u', $rawProposerName, $matches)) {
             $extractedProposerPos = trim($matches[1]);
         }
-        $cleanProposerName = trim(preg_replace('/\s*\(.*?\)/', '', $rawProposerName));
+        $cleanProposerName = cleanPersonName($rawProposerName);
         $displayProposerPos = $project->position ?: ($extractedProposerPos ?: ($project->user?->position ?: 'อาจารย์ประจำสาขา / ผู้รับผิดชอบโครงการ'));
     @endphp
 
