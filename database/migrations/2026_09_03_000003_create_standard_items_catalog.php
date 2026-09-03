@@ -77,7 +77,7 @@ return new class extends Migration
                             'unit' => $pItem->unit ?: 'ชิ้น',
                             'standard_price' => $pItem->unit_price ?: 0,
                             'category' => 'วัสดุทั่วไป',
-                            'usage_count' => DB::raw('usage_count + 1'),
+                            'usage_count' => 1,
                             'created_at' => now(),
                             'updated_at' => now(),
                         ]
