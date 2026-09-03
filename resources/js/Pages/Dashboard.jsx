@@ -4276,6 +4276,29 @@ ${itemsListText}
                                                                 <span>📤</span> ส่งการเงิน
                                                             </button>
                                                         )}
+
+                                                        {/* Admin / Procurement Rollback Buttons */}
+                                                        {procStatus === 'forwarded_to_finance' && (isAdmin || isProcurementStaff) && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRollbackProcurement(p, 'received')}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-all shadow-2xs hover:scale-105"
+                                                                title="ยกเลิกการส่งการเงิน / ดึงกลับให้งานพัสดุแก้ไข (Admin Rollback)"
+                                                            >
+                                                                <span>↩️</span> ดึงกลับ
+                                                            </button>
+                                                        )}
+
+                                                        {procStatus === 'received' && (isAdmin || isProcurementStaff) && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleRollbackProcurement(p, 'pending')}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs transition-all shadow-2xs hover:scale-105"
+                                                                title="ยกเลิกการลงรับ / ส่งคืนผู้เสนอแก้ไข (Admin Rollback)"
+                                                            >
+                                                                <span>↩️</span> ส่งคืน
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -4359,7 +4382,7 @@ ${itemsListText}
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex items-center gap-2 shrink-0">
+                                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                                         {procStatus !== 'received' && procStatus !== 'forwarded_to_finance' && (
                                             <button
                                                 type="button"
@@ -4432,6 +4455,29 @@ ${itemsListText}
                                                 className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-sm"
                                             >
                                                 📤 ตั้งเบิก ➔ ส่งงานการเงิน
+                                            </button>
+                                        )}
+
+                                        {/* Admin Rollback Buttons in Modal */}
+                                        {procStatus === 'forwarded_to_finance' && (isAdmin || isProcurementStaff) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRollbackProcurement(p, 'received')}
+                                                className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                                                title="ยกเลิกการส่งการเงิน และดึงเรื่องกลับมาให้งานพัสดุแก้ไข"
+                                            >
+                                                <span>↩️</span> ยกเลิกส่งการเงิน (ดึงกลับให้พัสดุ)
+                                            </button>
+                                        )}
+
+                                        {procStatus === 'received' && (isAdmin || isProcurementStaff) && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRollbackProcurement(p, 'pending')}
+                                                className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs transition shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                                                title="ยกเลิกการลงรับ และส่งคืนให้ผู้เสนอโครงการแก้ไข"
+                                            >
+                                                <span>↩️</span> ยกเลิกการลงรับ (ส่งคืนผู้เสนอ)
                                             </button>
                                         )}
                                     </div>
