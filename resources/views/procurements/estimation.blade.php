@@ -142,10 +142,14 @@
                 <td class="text-right">{{number_format($item->unit_price, 2)}}</td>
                 <td class="text-right font-bold">{{number_format($item->total_price, 2)}}</td>
             </tr>
-            @endforeach
+            @php
+                $totalProcSum = $items->sum('total_price') ?: $items->reduce(function($carry, $i) {
+                    return $carry + (floatval($i->quantity) * floatval($i->unit_price));
+                }, 0);
+            @endphp
             <tr>
                 <td colspan="5" style="text-align: right; font-weight: bold;">รวมประมาณการราคากลางทั้งสิ้น</td>
-                <td class="text-right" style="font-weight: bold; font-size: 13pt;">{{number_format($project->estimated_budget, 2)}}</td>
+                <td class="text-right" style="font-weight: bold; font-size: 13pt;">{{number_format($totalProcSum, 2)}}</td>
             </tr>
         </tbody>
     </table>
