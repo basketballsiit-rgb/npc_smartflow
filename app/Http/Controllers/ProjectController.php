@@ -644,6 +644,21 @@ class ProjectController extends Controller
                     'unit_price' => $price,
                     'total_price' => $qty * $price,
                 ]);
+
+                // Auto-harvest into StandardItem catalog for live search & suggestions
+                $rawName = preg_replace('/^\[กิจกรรมที่\s*\d+\]\s*/u', '', $item['description']);
+                $cleanName = trim(preg_replace('/[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]/u', '', $rawName));
+                if (mb_strlen($cleanName) > 1) {
+                    \App\Models\StandardItem::updateOrCreate(
+                        ['name' => $cleanName],
+                        [
+                            'unit' => $item['unit'] ?: 'ชิ้น',
+                            'standard_price' => $item['unit_price'] ?: 0,
+                            'category' => 'วัสดุทั่วไป',
+                            'usage_count' => \Illuminate\Support\Facades\DB::raw('usage_count + 1'),
+                        ]
+                    );
+                }
             }
         }
 
