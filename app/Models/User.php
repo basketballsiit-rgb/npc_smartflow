@@ -24,6 +24,7 @@ class User extends Authenticatable
         'password',
         'role_id',
         'department_id',
+        'citizen_id',
         'position',
         'is_active',
     ];
@@ -49,6 +50,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'citizen_id' => 'encrypted',
         ];
     }
 
