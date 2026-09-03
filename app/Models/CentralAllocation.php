@@ -9,6 +9,7 @@ class CentralAllocation extends Model
     protected $fillable = [
         'fiscal_year',
         'document_number',
+        'budget_code',
         'title',
         'funding_source_id',
         'amount',
