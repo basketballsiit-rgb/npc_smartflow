@@ -10,7 +10,7 @@
         body {
             font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
             font-size: 14pt;
-            line-height: 1.2;
+            line-height: 1.25;
             color: #000;
             padding: 0.4in 0.7in;
             max-width: 7.2in;
@@ -20,28 +20,31 @@
             text-align: center;
             font-weight: bold;
             font-size: 16.5pt;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             line-height: 1.2;
         }
+        .tor-list {
+            width: 100%;
+        }
         .tor-item {
-            margin-top: 0;
-            margin-bottom: 8px; /* ระยะห่างระหว่างข้อ 0.5 บรรทัด */
-            padding: 0;
+            margin-top: 6px;
+            margin-bottom: 0px;
+        }
+        .tor-item:first-child {
+            margin-top: 0px;
         }
         .section-title {
             font-weight: bold;
-            margin-top: 0;
-            margin-bottom: 2px;
-            padding: 0;
             font-size: 14pt;
-            line-height: 1.2;
+            line-height: 1.25;
+            margin: 0 0 1px 0;
+            padding: 0;
         }
         .content {
             text-indent: 0.5in;
             text-align: justify;
-            line-height: 1.2;
-            margin-top: 0;
-            margin-bottom: 0;
+            line-height: 1.25;
+            margin: 0;
             padding: 0;
         }
         .committee-block {
@@ -107,6 +110,63 @@
             return trim($cleaned) ?: '..........................................................';
         }
     }
+
+    $rawTor = trim($procurement->tor_specifications ?? '');
+    
+    // Parse into structured sections
+    if (empty($rawTor)) {
+        $torSections = [
+            [
+                'title' => '1. วัตถุประสงค์',
+                'body' => 'วิทยาลัยสารพัดช่างน่าน แผนกวิชา ' . ($project->department?->name ?? 'ฝ่ายวิชาการ') . ' มีความประสงค์จัดหาวัสดุอุปกรณ์พัสดุ เพื่อนำไปใช้สนับสนุนการจัดกิจกรรมและกระบวนการเรียนการสอนของโครงการ "' . $project->title . '"'
+            ],
+            [
+                'title' => '2. คุณลักษณะเฉพาะและขอบเขตงาน',
+                'body' => 'พัสดุและรายการวัสดุที่จัดหาต้องมีคุณลักษณะที่เหมาะสมกับการใช้งานการเรียนการสอน ตามเกณฑ์มาตรฐานสายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุระบุตามบัญชีเอกสารแนบเสนอซื้อเสนอจ้าง' . ($procurement->procurement_number ? ' เลขที่ ' . $procurement->procurement_number : '')
+            ],
+            [
+                'title' => '3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ',
+                'body' => 'ผู้จำหน่ายหรือผู้รับจ้างจะต้องส่งมอบพัสดุทั้งหมด ณ วิทยาลัยสารพัดช่างน่าน ภายในกำหนดเวลา 7 วัน นับถัดจากวันที่ได้รับใบสั่งซื้อสั่งจ้างจากทางวิทยาลัย'
+            ],
+            [
+                'title' => '4. การตรวจรับพัสดุ',
+                'body' => 'การตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้องตรงตามเอกสารประมาณการและใบเสนอซื้อเสนอจ้างทุกประการ'
+            ]
+        ];
+    } else {
+        $lines = preg_split("/\r\n|\n|\r/", $rawTor);
+        $torSections = [];
+        $currentTitle = '';
+        $currentBody = [];
+
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            if (empty($trimmed)) continue;
+
+            if (preg_match('/^([0-9]+|[๑-๙]+)\.\s*(.+)$/u', $trimmed)) {
+                if (!empty($currentTitle) || !empty($currentBody)) {
+                    $torSections[] = [
+                        'title' => $currentTitle,
+                        'body' => implode(' ', $currentBody)
+                    ];
+                    $currentBody = [];
+                }
+                $currentTitle = $trimmed;
+            } else {
+                if (empty($currentTitle)) {
+                    $currentTitle = $trimmed;
+                } else {
+                    $currentBody[] = $trimmed;
+                }
+            }
+        }
+        if (!empty($currentTitle) || !empty($currentBody)) {
+            $torSections[] = [
+                'title' => $currentTitle,
+                'body' => implode(' ', $currentBody)
+            ];
+        }
+    }
 @endphp
 <body>
     <div class="no-print" style="margin-bottom: 12px; text-align: right;">
@@ -115,39 +175,18 @@
 
     <div class="title">ข้อกำหนดขอบเขตงาน (Terms of Reference : TOR)<br>การจัดหาพัสดุสำหรับโครงการ "{{$project->title}}"</div>
 
-    @if(!empty($procurement->tor_specifications))
-        <div class="content" style="white-space: pre-line; text-indent: 0; line-height: 1.25;">
-            {!! nl2br(e($procurement->tor_specifications)) !!}
-        </div>
-    @else
-        <div class="tor-item">
-            <div class="section-title">1. วัตถุประสงค์</div>
-            <div class="content">
-                วิทยาลัยสารพัดช่างน่าน แผนกวิชา {{$project->department?->name}} มีความประสงค์จัดหาวัสดุอุปกรณ์พัสดุ เพื่อนำไปใช้สนับสนุนการจัดกิจกรรมและกระบวนการเรียนการสอนของโครงการ "{{$project->title}}"
+    <div class="tor-list">
+        @foreach($torSections as $sec)
+            <div class="tor-item">
+                @if(!empty($sec['title']))
+                    <div class="section-title">{{ $sec['title'] }}</div>
+                @endif
+                @if(!empty($sec['body']))
+                    <div class="content">{{ $sec['body'] }}</div>
+                @endif
             </div>
-        </div>
-
-        <div class="tor-item">
-            <div class="section-title">2. คุณลักษณะเฉพาะและขอบเขตงาน</div>
-            <div class="content">
-                พัสดุและรายการวัสดุที่จัดหาต้องมีคุณลักษณะที่เหมาะสมกับการใช้งานการเรียนการสอน ตามเกณฑ์มาตรฐานสายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุระบุตามบัญชีเอกสารแนบเสนอซื้อเสนอจ้าง เลขที่ {{$procurement->procurement_number}}
-            </div>
-        </div>
-
-        <div class="tor-item">
-            <div class="section-title">3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ</div>
-            <div class="content">
-                ผู้จำหน่ายหรือผู้รับจ้างจะต้องส่งมอบพัสดุทั้งหมด ณ วิทยาลัยสารพัดช่างน่าน ภายในกำหนดเวลา 7 วัน นับถัดจากวันที่ได้รับใบสั่งซื้อสั่งจ้างจากทางวิทยาลัย
-            </div>
-        </div>
-
-        <div class="tor-item">
-            <div class="section-title">4. การตรวจรับพัสดุ</div>
-            <div class="content">
-                การตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้องตรงตามเอกสารประมาณการและใบเสนอซื้อเสนอจ้างทุกประการ
-            </div>
-        </div>
-    @endif
+        @endforeach
+    </div>
 
     <div class="committee-block">
         <div class="committee-title">คณะกรรมการตรวจรับพัสดุและควบคุมงาน</div>
