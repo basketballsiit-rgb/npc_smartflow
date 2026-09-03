@@ -2,69 +2,116 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>ใบเสนอซื้อจัดจ้าง - {{ $project->title }}</title>
+    <title>รายงานขอซื้อ/ขอจ้าง (ใบเสนอซื้อจ้าง) - {{ $project->title }}</title>
     <style>
         body {
             font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
-            font-size: 13.5pt;
+            font-size: 14pt;
             line-height: 1.25;
             color: #000;
-            padding: 0.5in 0.7in;
-            max-width: 7.2in;
+            padding: 0.4in 0.6in;
+            max-width: 7.4in;
             margin: auto;
         }
-        .title {
+        .header-container {
+            position: relative;
+            min-height: 55px;
+            margin-bottom: 8px;
+        }
+        .garuda-img {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 50px;
+            height: auto;
+        }
+        .header-title {
             text-align: center;
             font-weight: bold;
-            font-size: 17pt;
-            margin-bottom: 12px;
+            font-size: 24pt;
+            line-height: 1.1;
         }
-        table {
+        .meta-table {
+            width: 100%;
+            margin-bottom: 4px;
+            border-collapse: collapse;
+        }
+        .meta-table td {
+            padding: 1px 0;
+            vertical-align: top;
+            font-size: 14pt;
+        }
+        .subject-title {
+            font-weight: bold;
+        }
+        .paragraph {
+            text-indent: 0.6in;
+            text-align: justify;
+            margin-bottom: 4px;
+            line-height: 1.25;
+        }
+        .grid-box-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
+            margin-top: 8px;
+            border: 1.5px solid #000;
         }
-        th, td {
+        .grid-box-table td {
             border: 1px solid #000;
-            padding: 4px 6px;
-            font-size: 12.5pt;
-            text-align: left;
-        }
-        th {
-            text-align: center;
-            font-weight: bold;
-            background-color: #f8fafc;
-        }
-        .text-center {
-            text-align: center;
-        }
-        .text-right {
-            text-align: right;
-        }
-        .no-border td {
-            border: none;
-            padding: 2px 0;
-            font-size: 13pt;
-        }
-        .sig-section {
-            margin-top: 30px;
-            width: 100%;
-            page-break-inside: avoid;
-        }
-        .sig-box {
-            display: inline-block;
-            width: 48%;
-            text-align: center;
-            font-size: 13pt;
             vertical-align: top;
+            padding: 6px 8px;
+            font-size: 12pt;
+            line-height: 1.25;
+        }
+        .box-title {
+            font-weight: bold;
+            font-size: 12.5pt;
+            margin-bottom: 2px;
+        }
+        .bottom-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .bottom-table td {
+            vertical-align: top;
+            font-size: 12.5pt;
+            line-height: 1.25;
+            padding: 2px 4px;
+        }
+        .dotted-line {
+            border-bottom: 1px dotted #000;
+            display: inline-block;
         }
         @media print {
-            body { padding: 0; }
-            .no-print { display: none; }
+            body { 
+                padding: 0 !important; 
+                margin: 0 auto !important;
+                max-width: 100% !important;
+            }
+            .no-print, 
+            .no-print * { 
+                display: none !important; 
+                visibility: hidden !important;
+                height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 1.2cm 1.5cm 1.2cm 1.5cm;
+            }
         }
     </style>
 </head>
 @php
+    $months = [1=>'มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    $day = date('j');
+    $month = $months[(int)date('n')];
+    $year = date('Y') + 543;
+    $thaiDateStr = "{$day} {$month} {$year}";
+
     if (!function_exists('cleanPersonName')) {
         function cleanPersonName($name) {
             if (!$name) return '..........................................................';
@@ -95,84 +142,460 @@
             return trim($cleaned) ?: '..........................................................';
         }
     }
-    $cleanProposerName = cleanPersonName($project->responsible_person ?: $project->user?->name);
+
+    if (!function_exists('convertToThaiBahtTextReq')) {
+        function convertToThaiBahtTextReq($number) {
+            $number = floatval($number);
+            if ($number == 0) return 'ศูนย์บาทถ้วน';
+            
+            $baht = floor($number);
+            $satang = round(($number - $baht) * 100);
+            
+            $thaiDigits = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
+            $thaiUnits = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน'];
+            
+            $bahtText = '';
+            $bahtStr = strval($baht);
+            $len = strlen($bahtStr);
+            
+            for ($i = 0; $i < $len; $i++) {
+                $digit = intval($bahtStr[$i]);
+                $unitPos = $len - $i - 1;
+                
+                if ($digit !== 0) {
+                    if ($unitPos % 6 === 0 && $unitPos > 0) {
+                        $bahtText .= ($digit === 1 && $i > 0) ? 'เอ็ด' : $thaiDigits[$digit];
+                        $bahtText .= 'ล้าน';
+                    } elseif ($unitPos % 6 === 1) {
+                        if ($digit === 1) {
+                            $bahtText .= '';
+                        } elseif ($digit === 2) {
+                            $bahtText .= 'ยี่';
+                        } else {
+                            $bahtText .= $thaiDigits[$digit];
+                        }
+                        $bahtText .= 'สิบ';
+                    } elseif ($unitPos % 6 === 0) {
+                        if ($digit === 1 && $len > 1 && $i === $len - 1 && intval($bahtStr[$i-1]) > 0) {
+                            $bahtText .= 'เอ็ด';
+                        } else {
+                            $bahtText .= $thaiDigits[$digit];
+                        }
+                    } else {
+                        $bahtText .= $thaiDigits[$digit] . $thaiUnits[$unitPos % 6];
+                    }
+                }
+            }
+            
+            $bahtText .= 'บาท';
+            
+            if ($satang === 0 || $satang === 0.0) {
+                $bahtText .= 'ถ้วน';
+            } else {
+                $satangStr = str_pad(strval($satang), 2, '0', STR_PAD_LEFT);
+                $d1 = intval($satangStr[0]);
+                $d2 = intval($satangStr[1]);
+                
+                if ($d1 === 1) $bahtText .= 'สิบ';
+                elseif ($d1 === 2) $bahtText .= 'ยี่สิบ';
+                elseif ($d1 > 2) $bahtText .= $thaiDigits[$d1] . 'สิบ';
+                
+                if ($d2 === 1 && $d1 > 0) $bahtText .= 'เอ็ด';
+                elseif ($d2 > 0) $bahtText .= $thaiDigits[$d2];
+                
+                $bahtText .= 'สตางค์';
+            }
+            
+            return $bahtText;
+        }
+    }
+
+    // Proposer
+    $rawProposerName = $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................');
+    $cleanProposerName = cleanPersonName($rawProposerName);
+
+    // Department & Division details
+    $dept = $project->department;
+    $deptName = $dept ? $dept->name : 'งานพัฒนาหลักสูตรและการจัดการเรียนรู้';
+    $parentDept = $dept ? $dept->parent : null;
+    $divisionDept = $parentDept ?: $dept;
+    $divisionName = $divisionDept ? $divisionDept->name : 'ฝ่ายวิชาการ';
+    if (!str_starts_with($divisionName, 'ฝ่าย')) {
+        $divisionName = 'ฝ่าย' . $divisionName;
+    }
+
+    // Head of Department
+    $headUser = null;
+    if ($dept) {
+        $headUser = \App\Models\User::where('department_id', $dept->id)
+            ->where(function($q) {
+                $q->where('position', 'like', '%หัวหน้า%')
+                  ->orWhere('position', 'like', '%รักษาการ%');
+            })->first();
+    }
+    $headOfDeptName = $headUser ? cleanPersonName($headUser->name) : $cleanProposerName;
+
+    // Deputy Directors
+    $deputyOptions = [
+        'academic' => [
+            'division' => 'ฝ่ายวิชาการ',
+            'title' => 'รองผู้อำนวยการฝ่ายวิชาการ',
+            'name' => 'นายนิพนธ์ ร่องพืช',
+        ],
+        'student_affairs' => [
+            'division' => 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา',
+            'title' => 'รองผู้อำนวยการฝ่ายพัฒนากิจการนักเรียนนักศึกษา',
+            'name' => 'นายสุทธิชัย ศรีวิชัย',
+        ],
+        'resources' => [
+            'division' => 'ฝ่ายบริหารทรัพยากร',
+            'title' => 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
+            'name' => 'นายจักรพงศ์ พรหมสกุลปัญญา',
+        ],
+        'planning' => [
+            'division' => 'ฝ่ายยุทธศาสตร์และแผนงาน',
+            'title' => 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
+            'name' => 'นายนิพนธ์ ร่องพืช',
+        ],
+    ];
+
+    foreach ($deputyOptions as $k => $opt) {
+        $foundUser = \App\Models\User::where('position', 'like', "%{$opt['title']}%")
+            ->orWhere('position', 'like', "%{$opt['division']}%")
+            ->first();
+        if ($foundUser) {
+            $deputyOptions[$k]['name'] = cleanPersonName($foundUser->name);
+        }
+    }
+
+    $initialDeputyKey = 'academic';
+    if (str_contains($divisionName, 'บริหาร') || str_contains($divisionName, 'ทรัพยากร')) {
+        $initialDeputyKey = 'resources';
+    } elseif (str_contains($divisionName, 'กิจการ') || str_contains($divisionName, 'พัฒนา')) {
+        $initialDeputyKey = 'student_affairs';
+    } elseif (str_contains($divisionName, 'แผน') || str_contains($divisionName, 'ร่วมมือ') || str_contains($divisionName, 'ยุทธศาสตร์')) {
+        $initialDeputyKey = 'planning';
+    }
+
+    $deputyDirectorName = $deputyOptions[$initialDeputyKey]['name'];
+
+    // Specific Officers for Section 3, 5, 6, 7
+    $planHeadUser = \App\Models\User::where('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างานวางแผน%')->first();
+    $planHeadName = $planHeadUser ? cleanPersonName($planHeadUser->name) : 'นายพิพัฒน์ สีมา';
+
+    $financeHeadUser = \App\Models\User::where('position', 'like', '%หัวหน้างานการเงิน%')->orWhere('position', 'like', '%งานการเงิน%')->first();
+    $financeHeadName = $financeHeadUser ? cleanPersonName($financeHeadUser->name) : 'นางสาวดวงดาว ไชยเขียว';
+
+    $procHeadUser = \App\Models\User::where('position', 'like', '%หัวหน้างานพัสดุ%')->orWhere('position', 'like', '%งานพัสดุ%')->first();
+    $procHeadName = $procHeadUser ? cleanPersonName($procHeadUser->name) : 'นายกิตติศักดิ์ ขัดเงางาม';
+
+    $resourceDeputyName = $deputyOptions['resources']['name'] ?: 'นายจักรพงศ์ พรหมสกุลปัญญา';
+    $planDeputyName = $deputyOptions['planning']['name'] ?: 'นายนิพนธ์ ร่องพืช';
+
+    // College Director
+    $directorUser = \App\Models\User::where('position', 'like', '%ผู้อำนวยการวิทยาลัย%')
+        ->orWhere('position', 'like', '%ผู้อำนวยการ%')
+        ->where('position', 'not like', '%รองผู้อำนวยการ%')
+        ->first();
+    $directorSetting = \App\Models\SystemSetting::where('key', 'director_name')->first();
+    $directorName = $directorSetting ? cleanPersonName($directorSetting->value) : ($directorUser ? cleanPersonName($directorUser->name) : 'นายกเชษฐ์ กิ่งชนะ');
+
+    // Financial calculations
+    $itemsCount = $items->count() > 0 ? $items->count() : ($project->items ? $project->items->count() : 1);
+    $totalProcSum = $items->sum('total_price') ?: $items->reduce(function($carry, $i) {
+        return $carry + (floatval($i->quantity) * floatval($i->unit_price));
+    }, 0);
+    $finalProcAmount = $totalProcSum > 0 ? $totalProcSum : ($project->estimated_budget ?: 0);
+    $bahtText = convertToThaiBahtTextReq($finalProcAmount);
+
+    // Committees
+    $pChair = $purchasingCommittee->where('pivot.role', 'chairperson')->first()?->name;
+    $pMem1 = $purchasingCommittee->where('pivot.role', 'member')->values()->get(0)?->name;
+    $pMem2 = $purchasingCommittee->where('pivot.role', 'member')->values()->get(1)?->name;
+
+    $iChair = $inspectionCommittee->where('pivot.role', 'chairperson')->first()?->name;
+    $iMem1 = $inspectionCommittee->where('pivot.role', 'member')->values()->get(0)?->name;
+    $iMem2 = $inspectionCommittee->where('pivot.role', 'member')->values()->get(1)?->name;
+
+    // Garuda Logo
+    $garudaPath = public_path('images/garuda.png');
+    if (!file_exists($garudaPath)) {
+        $garudaPath = public_path('garuda.png');
+    }
+    $garudaSrc = file_exists($garudaPath) 
+        ? 'data:image/png;base64,' . base64_encode(file_get_contents($garudaPath)) 
+        : asset('images/garuda.png');
 @endphp
+
 <body>
-    <div class="no-print" style="margin-bottom: 15px; text-align: right;">
-        <button onclick="window.print()" style="padding: 6px 14px; background-color: #7c3aed; color: white; border: none; border-radius: 6px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer;">🖨️ สั่งพิมพ์เอกสาร / PDF</button>
+    <!-- Top Interactive Control Bar (Hidden when printing) -->
+    <div class="no-print" style="margin-bottom: 16px; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 10px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <label for="deputy-select" style="font-weight: bold; color: #1e293b; font-size: 13pt;">
+                👔 เลือกรองฝ่ายฯ ที่เกี่ยวข้อง:
+            </label>
+            <select id="deputy-select" onchange="changeDeputy(this.value)" style="padding: 5px 12px; border-radius: 8px; border: 2px solid #7c3aed; font-family: inherit; font-size: 13pt; font-weight: bold; color: #4c1d95; background-color: #ffffff; cursor: pointer;">
+                @foreach($deputyOptions as $key => $opt)
+                    <option value="{{ $key }}" {{ ($initialDeputyKey === $key) ? 'selected' : '' }}>
+                        {{ $opt['division'] }} — ({{ $opt['name'] }})
+                    </option>
+                @endforeach
+                <option value="custom">✏️ กำหนดเอง...</option>
+            </select>
+        </div>
+
+        <div>
+            <button onclick="window.print()" style="padding: 6px 18px; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; border: none; border-radius: 8px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(124,58,237,0.25);">
+                🖨️ สั่งพิมพ์เอกสาร / PDF
+            </button>
+        </div>
     </div>
 
-    <div class="title">ใบเสนอซื้อจัดจ้างพัสดุ / วัสดุ</div>
-
-    <table class="no-border" style="width: 100%;">
+    <!-- Header Section -->
+    <div class="header-container">
+        <img src="{{ $garudaSrc }}" class="garuda-img" alt="ตราครุฑ">
+        <div class="header-title">บันทึกข้อความ</div>
+    </div>
+    
+    <table class="meta-table">
         <tr>
-            <td style="font-weight: bold; width: 15%;">แผนกวิชา/งาน:</td>
-            <td style="width: 45%;">{{$project->department?->name}}</td>
-            <td style="font-weight: bold; text-align: right; width: 20%;">เลขที่เอกสาร:</td>
-            <td style="width: 20%;">{{$procurement->procurement_number}}</td>
+            <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 10px;">ส่วนราชการ</td>
+            <td colspan="3">
+                วิทยาลัยสารพัดช่างน่าน <span style="margin-left: 10px;">ฝ่าย <span id="division-header-text" contenteditable="true" style="outline: none;">{{ str_replace('ฝ่าย', '', $divisionName) }}</span> งาน / แผนกวิชา <span contenteditable="true" style="outline: none;">{{ $deptName }}</span></span>
+            </td>
         </tr>
         <tr>
-            <td style="font-weight: bold;">ชื่อโครงการ:</td>
-            <td colspan="3">{{$project->title}}</td>
+            <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 10px;">ที่</td>
+            <td><span contenteditable="true" style="outline: none;">{{ $procurement->procurement_number ?: '........../2569' }}</span></td>
+            <td style="white-space: nowrap; width: 1%; font-weight: bold; text-align: right; padding-right: 10px;">วันที่</td>
+            <td><span contenteditable="true" style="outline: none;">{{ $thaiDateStr }}</span></td>
+        </tr>
+        <tr>
+            <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 10px;">เรื่อง</td>
+            <td colspan="3" class="subject-title">รายงานขอซื้อ/ขอจ้าง</td>
         </tr>
     </table>
 
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 7%;">ลำดับ</th>
-                <th>รายการวัสดุ/อุปกรณ์ที่ประสงค์จัดซื้อจัดจ้าง</th>
-                <th style="width: 10%;">จำนวน</th>
-                <th style="width: 11%;">หน่วย</th>
-                <th style="width: 16%;">ราคาต่อหน่วย (บาท)</th>
-                <th style="width: 18%;">จำนวนเงิน (บาท)</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($items as $index => $item)
-            @php
-                $cleanDesc = preg_replace('/[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]/u', '', $item->description);
-                $cleanDesc = trim(str_replace(['💵', '📦', '💰', '📑', '📝', '🛒', '📄', '📊'], '', $cleanDesc));
-            @endphp
-            <tr>
-                <td class="text-center">{{$index + 1}}</td>
-                <td>{{$cleanDesc}}</td>
-                <td class="text-center">{{number_format($item->quantity, 0)}}</td>
-                <td class="text-center">{{$item->unit}}</td>
-                <td class="text-right">{{number_format($item->unit_price, 2)}}</td>
-                <td class="text-right font-bold">{{number_format($item->total_price, 2)}}</td>
-            </tr>
-            @endforeach
-            @php
-                $totalProcSum = $items->sum('total_price') ?: $items->reduce(function($carry, $i) {
-                    return $carry + (floatval($i->quantity) * floatval($i->unit_price));
-                }, 0);
-            @endphp
-            <tr>
-                <td colspan="5" style="text-align: right; font-weight: bold;">รวมเป็นเงินทั้งสิ้น</td>
-                <td class="text-right" style="font-weight: bold; font-size: 13pt;">{{number_format($totalProcSum, 2)}}</td>
-            </tr>
-        </tbody>
+    <div style="border-bottom: 1.5px solid #000; margin-bottom: 8px;"></div>
+
+    <div style="margin-top: 6px; margin-bottom: 6px; font-size: 14pt;">
+        <strong>เรียน</strong> ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
+    </div>
+
+    <!-- Body text with checkboxes -->
+    <div class="paragraph">
+        ด้วยแผนกวิชา/งาน <span contenteditable="true" style="outline: none; font-weight: bold;">{{ $deptName }}</span> มีความประสงค์ขอ 
+        ( <span style="font-weight: bold;">✓</span> ) จัดซื้อวัสดุ/ครุภัณฑ์ &nbsp;&nbsp; ( &nbsp; ) จัดจ้าง 
+        เพื่อใช้เป็น &nbsp;&nbsp; ( &nbsp; ) วัสดุฝึก &nbsp;&nbsp; ( &nbsp; ) อุปกรณ์การสอน &nbsp;&nbsp; ( &nbsp; ) งานปรับปรุง &nbsp;&nbsp; ( &nbsp; ) งานซ่อม/แก้ไขเปลี่ยนของเดิมที่ชำรุด &nbsp;&nbsp; 
+        ( <span style="font-weight: bold;">✓</span> ) อื่น ๆ <span contenteditable="true" style="outline: none;">ดำเนินโครงการ {{ $project->title }}</span>
+        ประกอบการเรียนการสอนวิชา/งาน<span id="division-body-text" contenteditable="true" style="outline: none;">{{ $divisionName }}</span>
+    </div>
+
+    <div class="paragraph" style="text-indent: 0;">
+        เหตุผลอื่นๆ <span contenteditable="true" style="outline: none;">เพื่อใช้ในการดำเนินกิจกรรมตามโครงการและพัฒนาคุณภาพการจัดการศึกษา</span>
+    </div>
+
+    <div class="paragraph" style="text-indent: 0;">
+        จำนวน <strong style="font-size: 14pt;">{{ $itemsCount }}</strong> รายการ &nbsp; 
+        เป็นเงิน <strong style="font-size: 14pt;">{{ number_format($finalProcAmount, 2) }}</strong> บาท 
+        (<strong>{{ $bahtText }}</strong>) &nbsp; 
+        ต้องการใช้วัสดุวันที่ <span contenteditable="true" style="outline: none;">ภายในกำหนดการดำเนินโครงการ</span>
+    </div>
+
+    <div class="paragraph" style="text-indent: 0.6in; font-weight: bold; margin-top: 4px;">
+        ดังรายละเอียดในประมาณการหน้าที่ 2
+    </div>
+    <div class="paragraph" style="text-indent: 0.6in; margin-top: 2px;">
+        จึงเรียนมาเพื่อโปรดพิจารณา
+    </div>
+
+    <!-- Signature of Proposer -->
+    <div style="margin-left: auto; width: 3.4in; text-align: center; margin-top: 10px; margin-bottom: 8px;">
+        <div>ลงชื่อ ....................................................................... ผู้ขอซื้อ/ขอจ้าง</div>
+        <div style="margin-top: 3px;">( <span contenteditable="true" style="outline: none;">{{ $cleanProposerName }}</span> )</div>
+        <div style="font-size: 13pt; margin-top: 2px;">............../............../..............</div>
+    </div>
+
+    <!-- 7-Section Approval Grid Box -->
+    <table class="grid-box-table">
+        <tr>
+            <!-- LEFT COLUMN (Box 1, 2, 3) -->
+            <td style="width: 50%;">
+                <!-- Box 1 -->
+                <div style="margin-bottom: 10px;">
+                    <div class="box-title">1. ความเห็น หัวหน้าแผนก/งาน<span contenteditable="true" style="outline: none;">{{ $deptName }}</span></div>
+                    <div style="padding-left: 10px;">
+                        มีในแผนได้จัดสรรงบ <span class="dotted-line" style="width: 130px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
+                        จ่ายครั้งนี้แล้วคงเหลือ <span class="dotted-line" style="width: 140px;" contenteditable="true">&nbsp;0.00</span> บาท
+                    </div>
+                    <div style="text-align: center; margin-top: 6px;">
+                        <div>ลงชื่อ ...................................................................</div>
+                        <div style="margin-top: 2px;">( <span contenteditable="true" style="outline: none;">{{ $headOfDeptName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+
+                <!-- Box 2 -->
+                <div style="margin-bottom: 10px;">
+                    <div class="box-title">2. ความเห็น รองผู้อำนวยการฝ่าย<span id="box2-div-text" contenteditable="true" style="outline: none;">{{ str_replace('ฝ่าย', '', $divisionName) }}</span></div>
+                    <div style="padding-left: 10px;">
+                        มีในแผนตามข้อ 1 / เห็นควรอนุญาต / อนุมัติ
+                    </div>
+                    <div style="text-align: center; margin-top: 6px;">
+                        <div>ลงชื่อ ...................................................................</div>
+                        <div style="margin-top: 2px;">( <span id="box2-name-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #000; margin: 6px 0;"></div>
+
+                <!-- Box 3 -->
+                <div>
+                    <div class="box-title">3. ความเห็นหัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ</div>
+                    <div style="padding-left: 6px;">
+                        <strong>ตรวจสอบแล้ว</strong> &nbsp;&nbsp; ( <span style="font-weight: bold;">✓</span> ) มีในแผน &nbsp;&nbsp; ( &nbsp; ) ไม่มีในแผน ; ปรับแผนฯ<br>
+                        งปม. ที่ได้รับจาก สอศ. <span class="dotted-line" style="width: 80px;" contenteditable="true">&nbsp;</span> บาท คงเหลือ <span class="dotted-line" style="width: 75px;" contenteditable="true">&nbsp;</span> บาท<br>
+                        เงินจัดสรรโครงการ/งาน/กิจกรรม <span class="dotted-line" style="width: 60px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท คงเหลือ <span class="dotted-line" style="width: 60px;" contenteditable="true">&nbsp;0.00</span> บาท<br>
+                        จำนวนที่ขออนุมัติจัดซื้อครั้งนี้ <span class="dotted-line" style="width: 100px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
+                        โดยให้เงินงบประมาณ ( &nbsp; ) รายได้สถานศึกษา ( <span style="font-weight: bold;">✓</span> ) งปม. <span class="dotted-line" style="width: 90px;" contenteditable="true">&nbsp;{{ $project->budget?->fundingSource?->name ?? '2569' }}</span><br>
+                        ( &nbsp; ) เงินอุดหนุน ............................................................................<br>
+                        ( &nbsp; ) อื่น ๆ .....................................................................................
+                    </div>
+                    <div style="text-align: center; margin-top: 6px;">
+                        <div>ลงชื่อ ...................................................................</div>
+                        <div style="margin-top: 2px;">( <span contenteditable="true" style="outline: none;">{{ $planHeadName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    </div>
+                </div>
+            </td>
+
+            <!-- RIGHT COLUMN (Box 4, 5, 6, 7) -->
+            <td style="width: 50%;">
+                <!-- Box 4 -->
+                <div style="margin-bottom: 8px;">
+                    <div class="box-title">4. ความเห็นรองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน</div>
+                    <div style="padding-left: 8px;">
+                        - ได้ตรวจสอบแล้วมีในแผนและมีงบพอจ่าย/เห็นควรอนุญาต/อนุมัติ
+                    </div>
+                    <div style="text-align: center; margin-top: 4px;">
+                        <div>ลงชื่อ ...................................................................</div>
+                        <div style="margin-top: 2px;">( <span contenteditable="true" style="outline: none;">{{ $planDeputyName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #000; margin: 5px 0;"></div>
+
+                <!-- Box 5 -->
+                <div style="margin-bottom: 8px;">
+                    <div class="box-title">5. ความเห็นหัวหน้างานการเงิน</div>
+                    <div style="padding-left: 8px;">
+                        - โดยภาพรวม มีงบเพียงพอ กรณีจัดซื้อด้วยเงิน / ใช้เงิน<br>
+                        ( &nbsp; ) บกศ &nbsp; ( &nbsp; ) เงินอุดหนุน &nbsp; ( <span style="font-weight: bold;">✓</span> ) งปม. &nbsp; ( &nbsp; ) อื่น ๆ ....................<br>
+                        มียอดคงเหลือ <span class="dotted-line" style="width: 140px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท
+                    </div>
+                    <div style="text-align: center; margin-top: 4px;">
+                        <div>ลงชื่อ ...................................................................</div>
+                        <div style="margin-top: 2px;">( <span contenteditable="true" style="outline: none;">{{ $financeHeadName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #000; margin: 5px 0;"></div>
+
+                <!-- Box 6 -->
+                <div style="margin-bottom: 8px;">
+                    <div class="box-title">6. ความเห็นของหัวหน้างานพัสดุ</div>
+                    <div style="padding-left: 8px;">
+                        - เห็นควรดำเนินการจัดซื้อ / จัดจ้าง ด้วยวิธี<br>
+                        ( <span style="font-weight: bold;">✓</span> ) วิธีเฉพาะเจาะจง &nbsp;&nbsp; ( &nbsp; ) วิธีคัดเลือก &nbsp;&nbsp; ( &nbsp; ) อื่นๆ ....................<br>
+                        ( &nbsp; ) วิธีประกาศเชิญชวนทั่วไป ......................................................
+                    </div>
+                    <div style="text-align: center; margin-top: 4px;">
+                        <div>ลงชื่อ ...................................................................</div>
+                        <div style="margin-top: 2px;">( <span contenteditable="true" style="outline: none;">{{ $procHeadName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid #000; margin: 5px 0;"></div>
+
+                <!-- Box 7 -->
+                <div>
+                    <div class="box-title">7. ความเห็นรองผู้อำนวยการฝ่ายบริหารทรัพยากร</div>
+                    <div style="padding-left: 8px;">
+                        - มีข้อมูลครบถ้วน, มีงบประมาณเพียงพอ, เห็นควรอนุญาต/อนุมัติ
+                    </div>
+                    <div style="text-align: center; margin-top: 4px;">
+                        <div>ลงชื่อ ...................................................................</div>
+                        <div style="margin-top: 2px;">( <span contenteditable="true" style="outline: none;">{{ $resourceDeputyName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    </div>
+                </div>
+            </td>
+        </tr>
     </table>
 
-    <div style="margin-top: 15px; font-size: 13pt;">
-        <span style="font-weight: bold;">แหล่งงบประมาณ:</span> {{$project->budget?->fundingSource?->name ?? 'เงินรายได้สถานศึกษา'}}
-        @if($project->budget?->is_advance_payment)
-            <span style="margin-left: 15px; font-weight: bold; color: #b45309;">[ ✓ ขออนุมัติรับเงินสำรองจ่ายล่วงหน้า ]</span>
-        @endif
+    <!-- Bottom Section: คำสั่งแต่งตั้งกรรมการ และ คำสั่งผู้อำนวยการ -->
+    <div style="margin-top: 6px; font-size: 11.5pt; line-height: 1.25;">
+        <strong>คำสั่ง</strong> เพื่อให้เป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 ข้อ 25 จึงขอแต่งตั้งบุคคลต่อไปนี้เป็นคณะกรรมการ คือ
     </div>
 
-    <div class="sig-section">
-        <div class="sig-box">
-            <div style="border-bottom: 1px dotted #000; height: 30px; width: 80%; margin: auto;"></div>
-            <div style="margin-top: 4px;">( {{ $cleanProposerName }} )</div>
-            <div style="font-size: 12pt; color: #333; margin-top: 2px;">ผู้เสนอซื้อ/จ้าง</div>
-        </div>
-        <div class="sig-box" style="float: right;">
-            <div style="border-bottom: 1px dotted #000; height: 30px; width: 80%; margin: auto;"></div>
-            <div style="margin-top: 4px;">( .................................................... )</div>
-            <div style="font-size: 12pt; color: #333; margin-top: 2px;">หัวหน้าแผนกวิชา / ผู้เห็นชอบ</div>
-        </div>
-    </div>
+    <table class="bottom-table">
+        <tr>
+            <!-- Committees Column (Left) -->
+            <td style="width: 50%;">
+                <div style="font-weight: bold; font-size: 12pt;">1. คณะกรรมการซื้อ / จ้างโดยวิธีเฉพาะเจาะจง</div>
+                <div style="padding-left: 10px; font-size: 11.5pt;">
+                    1.1 <span contenteditable="true" style="outline: none;">{{ $pChair ? $pChair . ' (ประธานกรรมการ)' : '..........................................................................................' }}</span><br>
+                    1.2 <span contenteditable="true" style="outline: none;">{{ $pMem1 ? $pMem1 . ' (กรรมการ)' : '..........................................................................................' }}</span><br>
+                    1.3 <span contenteditable="true" style="outline: none;">{{ $pMem2 ? $pMem2 . ' (กรรมการ)' : '..........................................................................................' }}</span>
+                </div>
+
+                <div style="font-weight: bold; font-size: 12pt; margin-top: 4px;">2. คณะกรรมการตรวจรับพัสดุ</div>
+                <div style="padding-left: 10px; font-size: 11.5pt;">
+                    2.1 <span contenteditable="true" style="outline: none;">{{ $iChair ? $iChair . ' (ประธานกรรมการ)' : '..........................................................................................' }}</span><br>
+                    2.2 <span contenteditable="true" style="outline: none;">{{ $iMem1 ? $iMem1 . ' (กรรมการ)' : '..........................................................................................' }}</span><br>
+                    2.3 <span contenteditable="true" style="outline: none;">{{ $iMem2 ? $iMem2 . ' (กรรมการ)' : '..........................................................................................' }}</span>
+                </div>
+            </td>
+
+            <!-- Director Decision Column (Right) -->
+            <td style="width: 50%; padding-left: 15px;">
+                <div style="font-weight: bold; font-size: 12pt;">คำสั่งผู้อำนวยการ</div>
+                <div style="font-size: 12pt; margin-top: 2px;">
+                    ( &nbsp; ) ทราบ &nbsp;&nbsp;&nbsp;&nbsp; ( <span style="font-weight: bold;">✓</span> ) อนุญาต/อนุมัติ<br>
+                    ( &nbsp; ) ไม่อนุญาต/อนุมัติเพราะ ...................................................................
+                </div>
+
+                <div style="text-align: center; margin-top: 14px;">
+                    <div>ลงชื่อ .......................................................................</div>
+                    <div style="margin-top: 3px;">( <span contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
+                    <div style="font-size: 12pt; margin-top: 1px;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
+                    <div style="font-size: 11.5pt; margin-top: 2px;">............../............../..............</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <script>
+        const deputiesData = @json($deputyOptions);
+
+        function changeDeputy(key) {
+            if (key === 'custom') {
+                const currentName = document.getElementById('box2-name-text').innerText;
+                const customName = prompt('ระบุชื่อ-สกุล รองผู้อำนวยการฝ่าย:', currentName);
+                if (customName !== null && customName.trim() !== '') {
+                    document.getElementById('box2-name-text').innerText = customName.trim();
+                }
+                return;
+            }
+
+            const data = deputiesData[key];
+            if (data) {
+                document.getElementById('box2-name-text').innerText = data.name;
+                const cleanDivName = data.division.replace('ฝ่าย', '');
+                document.getElementById('box2-div-text').innerText = cleanDivName;
+                document.getElementById('division-header-text').innerText = cleanDivName;
+                document.getElementById('division-body-text').innerText = data.division;
+            }
+        }
+    </script>
 </body>
 </html>
