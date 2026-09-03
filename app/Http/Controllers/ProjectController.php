@@ -592,8 +592,8 @@ class ProjectController extends Controller
 
         $project->update($validated);
 
-        // Sync Procurement Estimated Items (flows directly to Procurement stage)
-        if ($request->has('procurement_items')) {
+        // Sync Procurement Estimated Items (flows directly to Procurement stage, excluding loan contract items)
+        if ($request->has('activities') || $request->has('procurement_items')) {
             $procurement = \App\Models\Procurement::firstOrCreate(
                 ['project_id' => $project->id],
                 [
@@ -602,20 +602,48 @@ class ProjectController extends Controller
                 ]
             );
 
-            $procurementItems = $request->input('procurement_items', []);
+            $procurementItems = [];
+            if ($request->has('activities')) {
+                $activities = $request->input('activities', []);
+                foreach ($activities as $actIdx => $act) {
+                    $actLabel = '[กิจกรรมที่ ' . ($actIdx + 1) . ']';
+                    foreach ($act['procurement_items'] ?? [] as $item) {
+                        if (!empty($item['description']) && trim($item['description']) !== '') {
+                            $procurementItems[] = [
+                                'description' => $actLabel . ' ' . trim($item['description']),
+                                'quantity' => (float)($item['quantity'] ?? 1),
+                                'unit' => $item['unit'] ?? 'รายการ',
+                                'unit_price' => (float)($item['unit_price'] ?? 0),
+                            ];
+                        }
+                    }
+                }
+            } else {
+                // Filter out any loan keywords
+                $loanRegex = '/ค่าตอบแทน|วิทยากร|ค่าอาหาร|อาหารกลางวัน|อาหารว่าง|เครื่องดื่ม|เดินทาง|พาหนะ|ยานพาหนะ|เบี้ยเลี้ยง|ที่พัก|สมนาคุณ|เงินยืม/u';
+                foreach ($request->input('procurement_items', []) as $item) {
+                    if (!empty($item['description']) && !preg_match($loanRegex, $item['description'])) {
+                        $procurementItems[] = [
+                            'description' => trim($item['description']),
+                            'quantity' => (float)($item['quantity'] ?? 1),
+                            'unit' => $item['unit'] ?? 'รายการ',
+                            'unit_price' => (float)($item['unit_price'] ?? 0),
+                        ];
+                    }
+                }
+            }
+
             $procurement->items()->delete();
             foreach ($procurementItems as $item) {
-                if (!empty($item['description'])) {
-                    $qty = (float)($item['quantity'] ?? 1);
-                    $price = (float)($item['unit_price'] ?? 0);
-                    $procurement->items()->create([
-                        'description' => $item['description'],
-                        'quantity' => $qty,
-                        'unit' => $item['unit'] ?? 'รายการ',
-                        'unit_price' => $price,
-                        'total_price' => $qty * $price,
-                    ]);
-                }
+                $qty = $item['quantity'];
+                $price = $item['unit_price'];
+                $procurement->items()->create([
+                    'description' => $item['description'],
+                    'quantity' => $qty,
+                    'unit' => $item['unit'],
+                    'unit_price' => $price,
+                    'total_price' => $qty * $price,
+                ]);
             }
         }
 
