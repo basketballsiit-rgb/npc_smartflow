@@ -55,7 +55,7 @@
         <button onclick="window.print()" style="padding: 8px 16px; background-color: #7c3aed; color: white; border: none; border-radius: 8px; font-family: inherit; font-size: 14pt; font-weight: bold; cursor: pointer;">🖨️ สั่งพิมพ์เอกสาร / บันทึกเป็น PDF</button>
     </div>
 
-    <div class="text-right font-bold" style="font-size: 13pt;">แบบ กค. ๑๐๑</div>
+    <div class="text-right font-bold" style="font-size: 13pt;">แบบ กค. 101</div>
     <div class="text-center">
         <div class="title">สัญญาการยืมเงิน</div>
         <div class="subtitle">วิทยาลัยสารพัดช่างน่าน</div>
