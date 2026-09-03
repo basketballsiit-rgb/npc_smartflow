@@ -6362,6 +6362,107 @@ ${itemsListText}
                                             {isSavingVendor ? '⏳ กำลังบันทึก...' : '💾 บันทึกข้อมูลร้านค้า'}
                                         </button>
                                     </div>
+                    {/* Add / Edit Standard Material Item Modal */}
+                    {isAddCatalogItemOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+                            <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-purple-200 space-y-4">
+                                <div className="flex items-center justify-between border-b border-purple-100 pb-3">
+                                    <div>
+                                        <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
+                                            <span>📦</span> {editingCatalogItem ? 'แก้ไขข้อมูลรายการพัสดุ' : 'เพิ่มรายการพัสดุ / ราคากลางใหม่'}
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            บันทึกเข้าฐานข้อมูลกลางสำหรับระบบค้นหาอัตโนมัติ (Live Search)
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAddCatalogItemOpen(false)}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleSaveCatalogItem} className="space-y-4 text-xs font-semibold text-slate-700">
+                                    <div className="space-y-1">
+                                        <label className="block text-slate-900 font-bold text-xs">
+                                            ชื่อรายการพัสดุ / วัสดุ / ครุภัณฑ์ <span className="text-rose-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={catalogFormData.name}
+                                            onChange={(e) => setCatalogFormData({ ...catalogFormData, name: e.target.value })}
+                                            placeholder="เช่น กระดาษถ่ายเอกสาร A4 80 แกรม ดับเบิ้ลเอ"
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="block text-slate-900 font-bold text-xs">
+                                                หน่วยนับ <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={catalogFormData.unit}
+                                                onChange={(e) => setCatalogFormData({ ...catalogFormData, unit: e.target.value })}
+                                                placeholder="เช่น รีม, กล่อง, ชุด, ด้าม, ขวด, เล่ม"
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-1">
+                                            <label className="block text-slate-900 font-bold text-xs">
+                                                ราคากลางต่อหน่วย (บาท) <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                required
+                                                value={catalogFormData.standard_price}
+                                                onChange={(e) => setCatalogFormData({ ...catalogFormData, standard_price: e.target.value })}
+                                                placeholder="เช่น 145.00"
+                                                className="w-full font-mono rounded-xl border-purple-200 px-3.5 py-2.5 text-xs font-bold text-purple-900 focus:border-purple-600 focus:ring-purple-600"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <label className="block text-slate-900 font-bold text-xs">
+                                            หมวดหมู่พัสดุ
+                                        </label>
+                                        <select
+                                            value={catalogFormData.category}
+                                            onChange={(e) => setCatalogFormData({ ...catalogFormData, category: e.target.value })}
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs focus:border-purple-600 focus:ring-purple-600"
+                                        >
+                                            <option value="วัสดุสำนักงาน">วัสดุสำนักงาน</option>
+                                            <option value="วัสดุคอมพิวเตอร์">วัสดุคอมพิวเตอร์</option>
+                                            <option value="วัสดุการศึกษา">วัสดุการศึกษา</option>
+                                            <option value="วัสดุฝึก">วัสดุฝึก</option>
+                                            <option value="วัสดุงานบ้านงานครัว">วัสดุงานบ้านงานครัว</option>
+                                            <option value="วัสดุทั่วไป">วัสดุทั่วไป</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="flex justify-end gap-x-3 pt-4 border-t border-purple-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAddCatalogItemOpen(false)}
+                                            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="rounded-xl px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-800 hover:to-indigo-700 shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                                        >
+                                            <span>💾</span> {editingCatalogItem ? 'บันทึกการแก้ไข' : 'บันทึกรายการ'}
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
                         </div>
