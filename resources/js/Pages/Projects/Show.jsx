@@ -131,10 +131,11 @@ ${itemsListText}
     const totalProcurementSum = procurementItems.reduce((acc, item) => acc + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
     const isOverBudget = totalProcurementSum > (allocatedBudget + 0.01);
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
-    const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
+    const [savingProcurement, setSavingProcurement] = useState(false);
 
     const handleSaveProcurement = (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
+        if (savingProcurement) return;
 
         if (isOverBudget) {
             Swal.fire({
@@ -147,6 +148,8 @@ ${itemsListText}
             return;
         }
 
+        setSavingProcurement(true);
+
         router.post(route('procurements.save', project.id), {
             purchasing_chair: purchasingChair,
             purchasing_member1: purchasingMember1,
@@ -158,7 +161,14 @@ ${itemsListText}
             tor_specifications: torSpecifications,
         }, {
             onSuccess: () => {
+                setSavingProcurement(false);
                 Swal.fire('บันทึกสำเร็จ!', 'บันทึกข้อมูลข้อกำหนด TOR และคำสั่งพัสดุเรียบร้อยแล้ว', 'success');
+            },
+            onError: () => {
+                setSavingProcurement(false);
+            },
+            onFinish: () => {
+                setSavingProcurement(false);
             }
         });
     };
