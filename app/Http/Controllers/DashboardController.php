@@ -35,6 +35,8 @@ class DashboardController extends Controller
         $data['allDepartments'] = Department::all();
         $data['systemSettings'] = SystemSetting::all();
         $data['allUsers'] = User::where('is_active', true)->orderBy('name', 'asc')->get();
+        $data['allVendors'] = \App\Models\Vendor::orderBy('name', 'asc')->get();
+        $data['allFundingSources'] = FundingSource::orderBy('fiscal_year', 'desc')->orderBy('name', 'asc')->get();
 
         // Fetch routine budget plans based on permissions
         if ($user->isAdmin() || $user->isPlanHead()) {
@@ -147,11 +149,13 @@ class DashboardController extends Controller
                     ->with(['user', 'department', 'procurement.items', 'procurement.committees'])
                     ->latest()
                     ->get(),
+                'vendors' => \App\Models\Vendor::orderBy('name', 'asc')->get(),
                 'users' => User::with('department')->get()->map(function ($u) {
                     return [
                         'id' => $u->id,
                         'name' => $u->name,
                         'email' => $u->email,
+                        'citizen_id' => $u->citizen_id,
                         'role_display' => $u->role?->display_name ?? 'Teacher',
                         'department_name' => $u->department?->name ?? 'N/A',
                         'position' => $u->position ?? 'ไม่ได้ระบุ',
