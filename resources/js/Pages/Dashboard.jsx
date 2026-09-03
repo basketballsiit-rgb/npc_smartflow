@@ -4215,65 +4215,357 @@ ${itemsListText}
 
         return (
             <div className="space-y-6 font-sans">
-                {/* 1. Stat Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <button
-                        type="button"
-                        onClick={() => setProcurementFilterTab('pending')}
-                        className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
-                            procurementFilterTab === 'pending' ? 'border-amber-400 bg-amber-50/90 ring-2 ring-amber-400' : 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50'
-                        }`}
-                    >
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-amber-900">🟡 รอดำเนินการ / รอลงรับ</span>
-                            <span className="text-xl">📦</span>
-                        </div>
-                        <p className="mt-2 text-3xl font-black text-amber-950">{pendingCount} <span className="text-xs font-normal text-amber-800">โครงการ</span></p>
-                        <p className="text-[11px] text-amber-700 mt-1">รอพัสดุลงรับ ({waitingIntakeCount}) | ลงรับแล้วรอเบิก ({receivedCount})</p>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setProcurementFilterTab('forwarded')}
-                        className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
-                            procurementFilterTab === 'forwarded' ? 'border-emerald-400 bg-emerald-50/90 ring-2 ring-emerald-400' : 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50'
-                        }`}
-                    >
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-emerald-900">🟢 ส่งงานการเงินแล้ว</span>
-                            <span className="text-xl">📤</span>
-                        </div>
-                        <p className="mt-2 text-3xl font-black text-emerald-950">{forwardedCount} <span className="text-xs font-normal text-emerald-800">โครงการ</span></p>
-                        <p className="text-[11px] text-emerald-700 mt-1">ส่งต่อให้งานการเงินเบิกจ่ายแล้ว</p>
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() => setProcurementFilterTab('all')}
-                        className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
-                            procurementFilterTab === 'all' ? 'border-purple-400 bg-purple-50/90 ring-2 ring-purple-400' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50'
-                        }`}
-                    >
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-purple-900">📁 รายการทั้งหมด</span>
-                            <span className="text-xl">📑</span>
-                        </div>
-                        <p className="mt-2 text-3xl font-black text-purple-950">{queue.length} <span className="text-xs font-normal text-purple-800">โครงการ</span></p>
-                        <p className="text-[11px] text-purple-700 mt-1">โครงการจัดซื้อจัดจ้างทั้งหมด</p>
-                    </button>
-
-                    <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-5 shadow-xs">
-                        <div className="flex justify-between items-center">
-                            <span className="text-xs font-black uppercase tracking-wider text-indigo-900">งบประมาณจัดซื้อรวม</span>
-                            <span className="text-xl">💰</span>
-                        </div>
-                        <p className="mt-2 text-2xl font-black text-indigo-950">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalBudgetSum)}</p>
-                        <p className="text-[11px] text-indigo-700 mt-1">วงเงินงบประมาณที่ได้รับจัดสรร</p>
+                {/* Top Module Header & Quick Tool Switcher */}
+                <div className="bg-white rounded-2xl border border-purple-100 p-4 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h3 className="text-xl font-black text-purple-950 flex items-center gap-2">
+                            <span>📦</span> ศูนย์จัดการงานพัสดุ & จัดซื้อจัดจ้าง
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                            จัดการคิวเสนอจัดซื้อจัดจ้าง คลังรายการวัสดุราคากลาง ฐานข้อมูลร้านค้า และข้อมูลกรรมการ
+                        </p>
+                    </div>
+                    {/* Tool Navigation Switcher */}
+                    <div className="flex flex-wrap bg-purple-50 p-1.5 rounded-2xl border border-purple-200 gap-1.5 text-xs">
+                        <button
+                            type="button"
+                            onClick={() => setProcActiveTool('queue')}
+                            className={`px-3.5 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                procActiveTool === 'queue'
+                                    ? 'bg-purple-700 text-white shadow-xs'
+                                    : 'text-purple-900 hover:bg-purple-100/70'
+                            }`}
+                        >
+                            <span>📋</span> จัดซื้อจัดจ้างโครงการ ({pendingCount})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setProcActiveTool('item_catalog')}
+                            className={`px-3.5 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                procActiveTool === 'item_catalog'
+                                    ? 'bg-purple-700 text-white shadow-xs'
+                                    : 'text-purple-900 hover:bg-purple-100/70'
+                            }`}
+                        >
+                            <span>📦</span> คลังวัสดุ & ราคากลาง
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setProcActiveTool('vendor_po')}
+                            className={`px-3.5 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                procActiveTool === 'vendor_po'
+                                    ? 'bg-purple-700 text-white shadow-xs'
+                                    : 'text-purple-900 hover:bg-purple-100/70'
+                            }`}
+                        >
+                            <span>🏢</span> ฐานข้อมูลร้านค้า
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setProcActiveTool('committee_id')}
+                            className={`px-3.5 py-2 rounded-xl font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                procActiveTool === 'committee_id'
+                                    ? 'bg-purple-700 text-white shadow-xs'
+                                    : 'text-purple-900 hover:bg-purple-100/70'
+                            }`}
+                        >
+                            <span>🪪</span> เลข 13 หลักกรรมการ
+                        </button>
                     </div>
                 </div>
 
-                {/* 2. Main Procurement Queue Container */}
-                <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
+                {/* VIEW 1: คลังวัสดุ & ราคากลาง (Direct view when procActiveTool === 'item_catalog') */}
+                {procActiveTool === 'item_catalog' && (
+                    <div className="p-6 rounded-3xl bg-white border border-purple-100 shadow-sm space-y-5 animate-fadeIn">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div>
+                                <h4 className="text-lg font-black uppercase text-purple-950 flex items-center gap-2">
+                                    <span>📦</span> ฐานข้อมูลคลังรายการวัสดุและราคากลางมาตรฐาน (Standard Items)
+                                </h4>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    รายการพัสดุและราคากลางที่ครูและเจ้าหน้าที่สามารถค้นหาและดึงไปใช้เสนอโครงการได้ทันที
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEditingCatalogItem(null);
+                                    setCatalogFormData({ name: '', unit: 'ชิ้น', standard_price: '', category: 'วัสดุสำนักงาน' });
+                                    setIsAddCatalogItemOpen(true);
+                                }}
+                                className="px-4 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-purple-700/20 transition cursor-pointer"
+                            >
+                                <span>➕</span> เพิ่มรายการวัสดุใหม่
+                            </button>
+                        </div>
+
+                        {/* Filters */}
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 text-xs">
+                            <div className="sm:col-span-8">
+                                <input
+                                    type="text"
+                                    value={catalogSearch}
+                                    onChange={(e) => setCatalogSearch(e.target.value)}
+                                    placeholder="🔍 พิมพ์ชื่อรายการพัสดุ หรือราคากลาง เพื่อค้นหา..."
+                                    className="w-full text-xs rounded-xl border border-purple-200 bg-white px-3.5 py-2.5 focus:ring-purple-500 focus:border-purple-500 shadow-2xs"
+                                />
+                            </div>
+                            <div className="sm:col-span-4">
+                                <select
+                                    value={catalogCategoryFilter}
+                                    onChange={(e) => setCatalogCategoryFilter(e.target.value)}
+                                    className="w-full text-xs rounded-xl border border-purple-200 bg-white px-3.5 py-2.5 focus:ring-purple-500 focus:border-purple-500 shadow-2xs font-semibold"
+                                >
+                                    <option value="">-- ทุกหมวดหมู่พัสดุ --</option>
+                                    <option value="วัสดุสำนักงาน">วัสดุสำนักงาน</option>
+                                    <option value="วัสดุคอมพิวเตอร์">วัสดุคอมพิวเตอร์</option>
+                                    <option value="วัสดุการศึกษา">วัสดุการศึกษา</option>
+                                    <option value="วัสดุฝึก">วัสดุฝึก</option>
+                                    <option value="วัสดุงานบ้านงานครัว">วัสดุงานบ้านงานครัว</option>
+                                    <option value="วัสดุทั่วไป">วัสดุทั่วไป</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Standard Items Table */}
+                        <div className="overflow-x-auto rounded-2xl border border-purple-200 bg-white shadow-2xs">
+                            <table className="w-full text-xs text-left">
+                                <thead className="bg-purple-100/70 text-purple-950 font-bold uppercase text-[11px]">
+                                    <tr>
+                                        <th className="px-4 py-3 text-center w-12">#</th>
+                                        <th className="px-4 py-3">ชื่อรายการพัสดุ / วัสดุ</th>
+                                        <th className="px-4 py-3">หมวดหมู่</th>
+                                        <th className="px-4 py-3 text-center">หน่วยนับ</th>
+                                        <th className="px-4 py-3 text-right">ราคากลางต่อหน่วย</th>
+                                        <th className="px-4 py-3 text-center">ความถี่การใช้</th>
+                                        <th className="px-4 py-3 text-center w-28">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-purple-50">
+                                    {isLoadingCatalog ? (
+                                        <tr>
+                                            <td colSpan="7" className="text-center py-8 text-slate-500 font-bold">
+                                                ⏳ กำลังโหลดข้อมูลรายการพัสดุ...
+                                            </td>
+                                        </tr>
+                                    ) : standardCatalogItems.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" className="text-center py-8 text-slate-500 font-medium">
+                                                ไม่พบรายการพัสดุที่ตรงกับคำค้นหา
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        standardCatalogItems.map((item, idx) => (
+                                            <tr key={item.id} className="hover:bg-purple-50/40 transition">
+                                                <td className="px-4 py-3 text-center text-slate-400 font-medium">{idx + 1}</td>
+                                                <td className="px-4 py-3 font-bold text-slate-800 text-[13px]">{item.name}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-100 text-[11px] font-semibold">
+                                                        {item.category || 'ทั่วไป'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-center font-bold text-slate-700 text-[13px]">{item.unit}</td>
+                                                <td className="px-4 py-3 text-right font-mono font-black text-purple-950 text-sm">
+                                                    {parseFloat(item.standard_price).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-slate-500 font-medium">
+                                                    {item.usage_count || 1} ครั้ง
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <div className="flex items-center justify-center gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditingCatalogItem(item);
+                                                                setCatalogFormData({
+                                                                    name: item.name,
+                                                                    unit: item.unit,
+                                                                    standard_price: item.standard_price,
+                                                                    category: item.category || 'วัสดุทั่วไป'
+                                                                });
+                                                                setIsAddCatalogItemOpen(true);
+                                                            }}
+                                                            className="p-1.5 text-purple-700 hover:bg-purple-100 rounded-lg text-xs font-bold"
+                                                            title="แก้ไข"
+                                                        >
+                                                            ✏️ แก้ไข
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteCatalogItem(item.id, item.name)}
+                                                            className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold"
+                                                            title="ลบ"
+                                                        >
+                                                            🗑️ ลบ
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* VIEW 2: ฐานข้อมูลร้านค้า (Direct view when procActiveTool === 'vendor_po') */}
+                {procActiveTool === 'vendor_po' && (
+                    <div className="p-6 rounded-3xl bg-white border border-purple-100 shadow-sm space-y-4 animate-fadeIn">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h4 className="text-lg font-black uppercase text-purple-950 flex items-center gap-2">
+                                    <span>🏢</span> ฐานข้อมูลร้านค้า / ผู้ประกอบการ
+                                </h4>
+                                <p className="text-xs text-slate-500">ข้อมูลร้านค้า เลขผู้เสียภาษี และเลขบัญชีธนาคารสำหรับออกใบสั่งซื้อ (PO)</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsAddVendorOpen(true)}
+                                className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition"
+                            >
+                                <span>➕</span> เพิ่มร้านค้าใหม่
+                            </button>
+                        </div>
+                        <input
+                            type="text"
+                            value={procVendorSearch}
+                            onChange={(e) => setProcVendorSearch(e.target.value)}
+                            placeholder="🔍 พิมพ์ชื่อร้านค้า, หมวดสินค้า, เลข 13 หลัก หรือเลขบัญชี..."
+                            className="w-full text-xs rounded-xl border border-purple-200 bg-white px-3.5 py-2.5 focus:ring-purple-500 focus:border-purple-500 shadow-2xs"
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {currentVendors
+                                .filter(v => 
+                                    !procVendorSearch || 
+                                    (v.name && v.name.toLowerCase().includes(procVendorSearch.toLowerCase())) || 
+                                    (v.category && v.category.toLowerCase().includes(procVendorSearch.toLowerCase())) ||
+                                    (v.tax_id && v.tax_id.includes(procVendorSearch)) ||
+                                    (v.bank_account_number && v.bank_account_number.includes(procVendorSearch))
+                                )
+                                .map((v) => (
+                                    <div key={v.id || v.name} className="p-4 rounded-2xl bg-purple-50/40 border border-purple-100 space-y-2">
+                                        <div className="font-bold text-purple-950 text-sm">{v.name}</div>
+                                        <div className="text-[11px] text-slate-600"><b>หมวด:</b> {v.category}</div>
+                                        <div className="text-[11px] text-slate-600"><b>เลข 13 หลัก:</b> <span className="font-mono">{v.tax_id || '-'}</span></div>
+                                        <div className="text-[11px] text-slate-600"><b>ธนาคาร:</b> {v.bank_name} {v.bank_account_number}</div>
+                                        <div className="text-[11px] text-slate-500 line-clamp-1"><b>ที่อยู่:</b> {v.address || '-'}</div>
+                                    </div>
+                                ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* VIEW 3: เลข 13 หลักกรรมการ (Direct view when procActiveTool === 'committee_id') */}
+                {procActiveTool === 'committee_id' && (
+                    <div className="p-6 rounded-3xl bg-white border border-purple-100 shadow-sm space-y-4 animate-fadeIn">
+                        <div>
+                            <h4 className="text-lg font-black uppercase text-purple-950 flex items-center gap-2">
+                                <span>🪪</span> ฐานข้อมูลเลขประจำตัวประชาชน 13 หลักของครูและบุคลากร
+                            </h4>
+                            <p className="text-xs text-slate-500">สำหรับนำไปใช้จัดทำคำสั่งแต่งตั้งคณะกรรมการและลงระบบ e-GP</p>
+                        </div>
+                        <input
+                            type="text"
+                            value={procTeacherSearch}
+                            onChange={(e) => setProcTeacherSearch(e.target.value)}
+                            placeholder="🔍 พิมพ์ชื่อครู/บุคลากร, แผนกวิชา เพื่อค้นหาเลข 13 หลัก..."
+                            className="w-full text-xs rounded-xl border border-purple-200 bg-white px-3.5 py-2.5 focus:ring-purple-500 focus:border-purple-500 shadow-2xs"
+                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            {allUsers
+                                .filter(u => 
+                                    !procTeacherSearch || 
+                                    (u.name && u.name.toLowerCase().includes(procTeacherSearch.toLowerCase())) ||
+                                    (u.department?.name && u.department.name.toLowerCase().includes(procTeacherSearch.toLowerCase()))
+                                )
+                                .slice(0, 30)
+                                .map((u) => (
+                                    <div key={u.id} className="p-3.5 rounded-2xl bg-purple-50/40 border border-purple-100 flex justify-between items-center">
+                                        <div>
+                                            <div className="font-bold text-slate-800 text-xs">{u.name}</div>
+                                            <div className="text-[10px] text-slate-500">{u.department?.name || 'บุคลากร'}</div>
+                                            <div className="font-mono text-xs font-bold text-purple-900 mt-1">
+                                                {u.citizen_id_formatted || u.citizen_id || 'ยังไม่ระบุ'}
+                                            </div>
+                                        </div>
+                                        {u.citizen_id && (
+                                            <button
+                                                type="button"
+                                                onClick={() => copyToClipboard(u.citizen_id.replace(/[^0-9]/g, ''), `เลข 13 หลักของ ${u.name}`)}
+                                                className="px-2.5 py-1.5 bg-purple-600 text-white rounded-xl text-[10px] font-bold hover:bg-purple-700 transition"
+                                            >
+                                                📋 คัดลอก
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* VIEW 4: คิวจัดซื้อจัดจ้างโครงการ (Default when procActiveTool === 'queue') */}
+                {procActiveTool === 'queue' && (
+                    <>
+                        {/* 1. Stat Summary Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setProcurementFilterTab('pending')}
+                                className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
+                                    procurementFilterTab === 'pending' ? 'border-amber-400 bg-amber-50/90 ring-2 ring-amber-400' : 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50'
+                                }`}
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-black uppercase tracking-wider text-amber-900">🟡 รอดำเนินการ / รอลงรับ</span>
+                                    <span className="text-xl">📦</span>
+                                </div>
+                                <p className="mt-2 text-3xl font-black text-amber-950">{pendingCount} <span className="text-xs font-normal text-amber-800">โครงการ</span></p>
+                                <p className="text-[11px] text-amber-700 mt-1">รอพัสดุลงรับ ({waitingIntakeCount}) | ลงรับแล้วรอเบิก ({receivedCount})</p>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setProcurementFilterTab('forwarded')}
+                                className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
+                                    procurementFilterTab === 'forwarded' ? 'border-emerald-400 bg-emerald-50/90 ring-2 ring-emerald-400' : 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50'
+                                }`}
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-black uppercase tracking-wider text-emerald-900">🟢 ส่งงานการเงินแล้ว</span>
+                                    <span className="text-xl">📤</span>
+                                </div>
+                                <p className="mt-2 text-3xl font-black text-emerald-950">{forwardedCount} <span className="text-xs font-normal text-emerald-800">โครงการ</span></p>
+                                <p className="text-[11px] text-emerald-700 mt-1">ส่งต่อให้งานการเงินเบิกจ่ายแล้ว</p>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setProcurementFilterTab('all')}
+                                className={`rounded-2xl border p-5 shadow-xs text-left transition-all hover:scale-[1.02] ${
+                                    procurementFilterTab === 'all' ? 'border-purple-400 bg-purple-50/90 ring-2 ring-purple-400' : 'border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50'
+                                }`}
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-black uppercase tracking-wider text-purple-900">📁 รายการทั้งหมด</span>
+                                    <span className="text-xl">📑</span>
+                                </div>
+                                <p className="mt-2 text-3xl font-black text-purple-950">{queue.length} <span className="text-xs font-normal text-purple-800">โครงการ</span></p>
+                                <p className="text-[11px] text-purple-700 mt-1">โครงการจัดซื้อจัดจ้างทั้งหมด</p>
+                            </button>
+
+                            <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-5 shadow-xs">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-xs font-black uppercase tracking-wider text-indigo-900">งบประมาณจัดซื้อรวม</span>
+                                    <span className="text-xl">💰</span>
+                                </div>
+                                <p className="mt-2 text-2xl font-black text-indigo-950">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalBudgetSum)}</p>
+                                <p className="text-[11px] text-indigo-700 mt-1">วงเงินงบประมาณที่ได้รับจัดสรร</p>
+                            </div>
+                        </div>
+
+                        {/* 2. Main Procurement Queue Container */}
+                        <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
                     {/* Header with Sub-Tabs */}
                     <div className="border-b border-purple-100 bg-purple-50/40 p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="space-y-1">
