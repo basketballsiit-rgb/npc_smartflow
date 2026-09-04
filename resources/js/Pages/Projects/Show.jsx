@@ -378,9 +378,15 @@ ${itemsListText}
 
     const getStatusBadgeText = (status) => {
         switch (status) {
-            case 'approved': return 'อนุมัติเรียบร้อย (Approved)';
-            case 'rejected': return 'ตีกลับแก้ไข (Rejected)';
-            case 'draft': return 'ร่างเสนอโครงการ (Draft)';
+            case 'approved': return 'อนุมัติโครงการแล้ว (Approved)';
+            case 'in_progress': return 'กำลังดำเนินโครงการ (In Progress)';
+            case 'evaluating': return 'ประเมินผลความพึงพอใจด้วย AI (Evaluating)';
+            case 'reporting': return 'สรุปเล่มรายงานผล (Reporting)';
+            case 'completed': return 'ปิดโครงการสมบูรณ์ (Completed)';
+            case 'cleared': return 'เคลียร์เงินยืมและปิดโครงการสมบูรณ์ (Cleared)';
+            case 'budget_approved': return 'จัดสรรงบประมาณแล้ว (Budget Allocated)';
+            case 'rejected': return 'ไม่อนุมัติ (Rejected)';
+            case 'draft': return 'แบบร่างโครงการ (Draft)';
             default: return 'รอการพิจารณาอนุมัติ (Pending)';
         }
     };
@@ -862,6 +868,10 @@ ${itemsListText}
                                         ? 'bg-blue-100 text-blue-950 border border-blue-300'
                                         : 'bg-amber-100 text-amber-950 border border-amber-300'
                                 ) :
+                                project.status === 'in_progress' ? 'bg-purple-100 text-purple-950 border border-purple-300 ring-2 ring-purple-400/20' :
+                                project.status === 'evaluating' ? 'bg-indigo-100 text-indigo-950 border border-indigo-300 ring-2 ring-indigo-400/20' :
+                                project.status === 'reporting' ? 'bg-blue-100 text-blue-950 border border-blue-300 ring-2 ring-blue-400/20' :
+                                (project.status === 'completed' || project.status === 'cleared') ? 'bg-teal-100 text-teal-950 border border-teal-300 ring-2 ring-teal-400/20' :
                                 project.status === 'draft' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
                                 project.status === 'rejected' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
                                 'bg-amber-50 text-amber-900 border border-amber-300 ring-2 ring-amber-400/20'
@@ -876,6 +886,14 @@ ${itemsListText}
                                             : 'สถานะ: อยู่ที่งานพัสดุ (รอลงรับเรื่อง)')
                                         : (project.status === 'submitted' || project.status === 'pending_approval')
                                         ? `สถานะ: อยู่ที่ ${currentOfficerInfo.roleName} (ขั้นตอนที่ ${project.current_approval_step || 2}/6)`
+                                        : project.status === 'in_progress'
+                                        ? 'สถานะ: ดำเนินกิจกรรม & ใช้จ่ายเงินยืม (In Progress)'
+                                        : project.status === 'evaluating'
+                                        ? 'สถานะ: ประเมินผลความพึงพอใจด้วย AI (Evaluating)'
+                                        : project.status === 'reporting'
+                                        ? 'สถานะ: สรุปเล่มรายงานผลโครงการ (Reporting)'
+                                        : (project.status === 'completed' || project.status === 'cleared')
+                                        ? 'สถานะ: เคลียร์เงินยืมและปิดโครงการสมบูรณ์ (Completed)'
                                         : `สถานะ: ${getStatusBadgeText(project.status)}`
                                     }
                                 </span>
