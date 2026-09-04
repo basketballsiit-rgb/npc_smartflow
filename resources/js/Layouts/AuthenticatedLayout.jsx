@@ -29,6 +29,29 @@ export default function AuthenticatedLayout({ header, children }) {
         sessionStorage.setItem('sidebar-scroll', e.target.scrollTop);
     };
 
+    // Collapsible Sidebar Sections State (Default open for active, or all open)
+    const [openSections, setOpenSections] = useState(() => {
+        const saved = localStorage.getItem('sidebar-open-sections');
+        if (saved) {
+            try { return JSON.parse(saved); } catch (e) {}
+        }
+        return {
+            admin: true,
+            proposal: true,
+            plan: true,
+            procurement: true,
+            executive: true,
+        };
+    });
+
+    const toggleSection = (sectionKey) => {
+        setOpenSections(prev => {
+            const next = { ...prev, [sectionKey]: !prev[sectionKey] };
+            localStorage.setItem('sidebar-open-sections', JSON.stringify(next));
+            return next;
+        });
+    };
+
     const [citizenIdInput, setCitizenIdInput] = useState('');
     const [citizenIdError, setCitizenIdError] = useState('');
     const [isSavingCitizenId, setIsSavingCitizenId] = useState(false);
@@ -250,15 +273,23 @@ export default function AuthenticatedLayout({ header, children }) {
                         {isAdmin && (
                             <div className="pt-2 space-y-1">
                                 {isSidebarOpen ? (
-                                    <div className="flex items-center gap-x-2 px-3 py-1.5 rounded-lg bg-black/30 text-amber-300 border-l-4 border-amber-400 text-xs font-bold uppercase tracking-wider shadow-2xs">
-                                        <span>⚙️</span>
-                                        <span>ผู้ดูแลระบบ (ADMIN)</span>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleSection('admin')}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/30 text-amber-300 border-l-4 border-amber-400 text-xs font-black uppercase tracking-wider shadow-2xs hover:bg-black/40 transition cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-x-2">
+                                            <span>⚙️</span>
+                                            <span>ผู้ดูแลระบบ (ADMIN)</span>
+                                        </div>
+                                        <span className="text-[11px] text-amber-300/80">{openSections.admin ? '▼' : '▶'}</span>
+                                    </button>
                                 ) : (
                                     <div className="h-px bg-white/20 my-1.5" />
                                 )}
 
-                                <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1">
+                                {(!isSidebarOpen || openSections.admin) && (
+                                <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'admin_users' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
@@ -312,21 +343,30 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span className="font-bold">สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                     </Link>
                                 </div>
+                                )}
                             </div>
                         )}
 
                         {/* 2. PROPOSAL / TEACHER MENUS */}
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
-                                <div className="flex items-center gap-x-2 px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-bold uppercase tracking-wider">
-                                    <span>📝</span>
-                                    <span>งานเสนอโครงการ</span>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleSection('proposal')}
+                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-x-2">
+                                        <span>📝</span>
+                                        <span>งานเสนอโครงการ</span>
+                                    </div>
+                                    <span className="text-[11px] text-purple-300">{openSections.proposal ? '▼' : '▶'}</span>
+                                </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
                             )}
 
-                            <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1">
+                            {(!isSidebarOpen || openSections.proposal) && (
+                            <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                 <Link
                                     href={route('projects.quick_create')}
                                     className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
@@ -395,21 +435,30 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
                                 </Link>
                             </div>
+                            )}
                         </div>
 
                         {/* 3. PLAN HEAD & BUDGET MENUS */}
                         {isPlanHead && (
                             <div className="pt-2 space-y-1">
                                 {isSidebarOpen ? (
-                                    <div className="flex items-center gap-x-2 px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 border-l-4 border-amber-400 text-xs font-bold uppercase tracking-wider">
-                                        <span>💰</span>
-                                        <span>งานวางแผน & อนุมัติ</span>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleSection('plan')}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-amber-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-x-2">
+                                            <span>💰</span>
+                                            <span>งานวางแผน & อนุมัติ</span>
+                                        </div>
+                                        <span className="text-[11px] text-amber-300">{openSections.plan ? '▼' : '▶'}</span>
+                                    </button>
                                 ) : (
                                     <div className="h-px bg-white/20 my-1.5" />
                                 )}
 
-                                <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1">
+                                {(!isSidebarOpen || openSections.plan) && (
+                                <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'budgets' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
@@ -489,6 +538,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                     </Link>
                                 </div>
+                                )}
                             </div>
                         )}
 
@@ -496,15 +546,23 @@ export default function AuthenticatedLayout({ header, children }) {
                         {isProcurementHead && (
                             <div className="pt-2 space-y-1">
                                 {isSidebarOpen ? (
-                                    <div className="flex items-center gap-x-2 px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-bold uppercase tracking-wider">
-                                        <span>📦</span>
-                                        <span>งานพัสดุ</span>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleSection('procurement')}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-x-2">
+                                            <span>📦</span>
+                                            <span>งานพัสดุ</span>
+                                        </div>
+                                        <span className="text-[11px] text-purple-300">{openSections.procurement ? '▼' : '▶'}</span>
+                                    </button>
                                 ) : (
                                     <div className="h-px bg-white/20 my-1.5" />
                                 )}
 
-                                <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1">
+                                {(!isSidebarOpen || openSections.procurement) && (
+                                <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'procurement' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
@@ -547,6 +605,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>คลังวัสดุ & ราคากลาง</span>}
                                     </Link>
                                 </div>
+                                )}
                             </div>
                         )}
 
@@ -554,15 +613,23 @@ export default function AuthenticatedLayout({ header, children }) {
                         {isExecutive && (
                             <div className="pt-2 space-y-1">
                                 {isSidebarOpen ? (
-                                    <div className="flex items-center gap-x-2 px-3 py-1.5 rounded-lg bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-bold uppercase tracking-wider">
-                                        <span>📈</span>
-                                        <span>สถิติ & ผู้บริหาร</span>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleSection('executive')}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-x-2">
+                                            <span>📈</span>
+                                            <span>สถิติ & ผู้บริหาร</span>
+                                        </div>
+                                        <span className="text-[11px] text-purple-300">{openSections.executive ? '▼' : '▶'}</span>
+                                    </button>
                                 ) : (
                                     <div className="h-px bg-white/20 my-1.5" />
                                 )}
 
-                                <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1">
+                                {(!isSidebarOpen || openSections.executive) && (
+                                <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'executive_overview' })}
                                         className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
@@ -590,6 +657,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>รายงานแผนปฏิบัติราชการ</span>}
                                     </Link>
                                 </div>
+                                )}
                             </div>
                         )}
 

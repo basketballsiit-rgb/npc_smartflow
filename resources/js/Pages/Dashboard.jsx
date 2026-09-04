@@ -4434,7 +4434,7 @@ ${itemsListText}
                                 <tbody className="divide-y divide-purple-50">
                                     {isLoadingCatalog ? (
                                         <tr>
-                                            <td colSpan="7" className="text-center py-8 text-slate-500 font-bold">
+                                            <td colSpan="6" className="text-center py-8 text-slate-500 font-bold">
                                                 ⏳ กำลังโหลดข้อมูลรายการพัสดุ...
                                             </td>
                                         </tr>
@@ -6205,9 +6205,8 @@ ${itemsListText}
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-100 border-b border-slate-200 text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">
-                                    <th className="px-5 py-3.5 min-w-[340px]">ฝ่ายงาน / ชื่อโครงการ</th>
-                                    <th className="px-4 py-3.5 min-w-[160px]">ผู้เสนอโครงการ / ฝ่าย</th>
-                                    <th className="px-3 py-3.5 text-center whitespace-nowrap">ปีงบประมาณ</th>
+                                    <th className="px-5 py-3.5 min-w-[360px]">ฝ่ายงาน / ชื่อโครงการ</th>
+                                    <th className="px-4 py-3.5 min-w-[170px]">ผู้เสนอโครงการ / ฝ่าย</th>
                                     <th className="px-4 py-3.5 text-right whitespace-nowrap">งบเสนอขอ</th>
                                     <th className="px-4 py-3.5 text-right whitespace-nowrap">งบจัดสรร</th>
                                     <th className="px-3 py-3.5 text-center whitespace-nowrap">สถานะ</th>
@@ -6252,9 +6251,7 @@ ${itemsListText}
                                                     <td className="px-4 py-3.5 text-xs text-slate-600 font-semibold whitespace-nowrap">
                                                         อนุมัติแล้ว: <strong className="text-emerald-700 font-bold">{dept.approvedCount}</strong>/{dept.projectCount} โครงการ
                                                     </td>
-                                                    <td className="px-3 py-3.5 text-center text-xs font-bold text-slate-400">
-                                                        -
-                                                    </td>
+                                                    
                                                     <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-slate-900 whitespace-nowrap">
                                                         ฿{new Intl.NumberFormat('th-TH').format(dept.estimatedSum)}
                                                     </td>
@@ -6311,10 +6308,7 @@ ${itemsListText}
                                                             })()}
                                                         </td>
 
-                                                        {/* Academic Year */}
-                                                        <td className="px-3 py-3.5 text-center text-xs font-bold text-slate-700 align-top whitespace-nowrap">
-                                                            {p.academic_year}
-                                                        </td>
+
 
                                                         {/* Estimated Budget */}
                                                         <td className="px-4 py-3.5 text-right font-mono font-bold text-xs sm:text-sm text-slate-900 align-top whitespace-nowrap">
@@ -6383,9 +6377,7 @@ ${itemsListText}
                                     <td className="px-4 py-4 text-xs font-bold text-slate-300">
                                         โครงการทั้งหมด: <strong className="text-white text-sm">{filteredProjects.length}</strong> โครงการ
                                     </td>
-                                    <td className="px-4 py-4 text-center text-xs text-slate-400">
-                                        -
-                                    </td>
+                                    
                                     <td className="px-4 py-4 text-right font-mono text-base font-black text-amber-300">
                                         ฿{new Intl.NumberFormat('th-TH').format(totalEstimatedSum)}
                                     </td>
