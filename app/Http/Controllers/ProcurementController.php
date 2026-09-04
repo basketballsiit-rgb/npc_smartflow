@@ -227,6 +227,70 @@ class ProcurementController extends Controller
     /**
      * Procurement staff forwards the completed procurement package to finance.
      */
+    /**
+     * Planning staff acknowledges and cuts budget for procurement package and/or loan contract.
+     */
+    public function planCutBudget(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานวางแผนและงบประมาณหรือผู้ดูแลระบบเท่านั้นที่สามารถตัดยอดงบประมาณได้');
+        }
+
+        $validated = $request->validate([
+            'target' => 'required|string|in:all,procurement,loan',
+            'plan_doc_number' => 'nullable|string|max:100',
+            'cut_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $procurement = $project->procurement;
+        if (!$procurement) {
+            $procurement = Procurement::create([
+                'project_id' => $project->id,
+                'status' => 'pending',
+                'loan_status' => 'pending',
+            ]);
+        }
+
+        $docNumber = $validated['plan_doc_number'] ?: ('ผง. ' . $project->id . '/' . (date('Y') + 543));
+        $now = now();
+        $target = $validated['target'];
+
+        if ($target === 'all' || $target === 'procurement') {
+            $procurement->plan_procurement_cut_at = $now;
+            $procurement->plan_procurement_doc_number = $docNumber;
+            // Advance status from pending to plan_cut so procurement staff can receive
+            if ($procurement->status === 'pending' || empty($procurement->status)) {
+                $procurement->status = 'plan_cut';
+            }
+        }
+
+        if ($target === 'all' || $target === 'loan') {
+            $procurement->plan_loan_cut_at = $now;
+            $procurement->plan_loan_doc_number = $docNumber;
+            if ($procurement->loan_status === 'pending' || empty($procurement->loan_status)) {
+                $procurement->loan_status = 'plan_cut';
+            }
+
+            // Encumber budget in budgets table
+            $budget = $project->budget;
+            if (!$budget) {
+                $budget = new \App\Models\Budget();
+                $budget->project_id = $project->id;
+                $budget->funding_source_id = $project->funding_source_id;
+            }
+            $budget->allocated_amount = (float)($project->allocated_budget ?: $project->estimated_budget);
+            $budget->encumbered_amount = $budget->allocated_amount;
+            $budget->save();
+        }
+
+        $procurement->save();
+
+        $targetText = $target === 'all' ? 'ทั้งชุดจัดซื้อจัดจ้างและสัญญายืมเงิน' : ($target === 'procurement' ? 'ชุดจัดซื้อจัดจ้าง (ส่งต่อไปยังพัสดุ)' : 'สัญญายืมเงิน (ส่งต่อไปยังการเงิน)');
+        return redirect()->back()->with('message', 'งานแผนงานได้ตัดยอดงบประมาณ ' . $targetText . ' เรียบร้อยแล้ว (เลขที่: ' . $docNumber . ')');
+    }
+
     public function forwardToFinance(Request $request, Project $project)
     {
         if (!auth()->user()->isProcurementHead() && !auth()->user()->isAdmin()) {
@@ -240,6 +304,119 @@ class ProcurementController extends Controller
         }
 
         return redirect()->back()->with('message', 'ตั้งเบิกชุดจัดซื้อจัดจ้างและส่งต่อให้งานการเงินเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Finance staff acknowledges and logs receipt of loan contract.
+     */
+    public function financeReceive(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isFinanceStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานการเงินหรือผู้ดูแลระบบเท่านั้นที่สามารถลงรับเอกสารการเงินได้');
+        }
+
+        $validated = $request->validate([
+            'finance_number' => 'nullable|string|max:100',
+            'receive_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $procurement = $project->procurement;
+        if (!$procurement) {
+            $procurement = Procurement::create([
+                'project_id' => $project->id,
+                'status' => 'pending',
+                'loan_status' => 'pending',
+            ]);
+        }
+
+        $procurement->loan_status = 'finance_received';
+        $procurement->finance_received_at = now();
+        $procurement->finance_doc_number = $validated['finance_number'] ?? ('กง. ' . $project->id . '/' . (date('Y') + 543));
+        $procurement->save();
+
+        return redirect()->back()->with('message', 'งานการเงินได้ลงรับสัญญายืมเงินและเอกสารที่เกี่ยวข้องเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Finance staff marks funds as disbursed / transferred to borrower with actual spent amount,
+     * closing the loan contract in one single step.
+     */
+    public function financeDisburse(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isFinanceStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานการเงินหรือผู้ดูแลระบบเท่านั้นที่สามารถบันทึกจ่ายเงินยืมได้');
+        }
+
+        $validated = $request->validate([
+            'actual_spent_amount' => 'required|numeric|min:0',
+            'payment_ref' => 'nullable|string|max:100',
+            'disburse_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $actualSpent = (float)$validated['actual_spent_amount'];
+        $allocAmount = (float)($project->allocated_budget ?: $project->estimated_budget);
+        $diff = $allocAmount - $actualSpent;
+
+        $procurement = $project->procurement;
+        if (!$procurement) {
+            $procurement = Procurement::create([
+                'project_id' => $project->id,
+                'status' => 'pending',
+                'loan_status' => 'pending',
+            ]);
+        }
+
+        $procurement->loan_status = 'cleared';
+        $procurement->finance_disbursed_at = now();
+        $procurement->finance_disbursed_amount = $actualSpent;
+        $procurement->finance_payment_ref = $validated['payment_ref'] ?? 'โอนเงินยืม KTB';
+        $procurement->save();
+
+        // Update budget table
+        $budget = $project->budget;
+        if (!$budget) {
+            $budget = new \App\Models\Budget();
+            $budget->project_id = $project->id;
+            $budget->funding_source_id = $project->funding_source_id;
+            $budget->allocated_amount = $allocAmount;
+        }
+        $budget->spent_amount = $actualSpent;
+        $budget->advance_cleared_at = now();
+        $budget->save();
+
+        if ($project->status === 'approved') {
+            $project->status = 'in_progress';
+            $project->save();
+        }
+
+        $diffMsg = $diff > 0 
+            ? (' (มียอดเงินคงเหลือคืนงบประมาณโครงการ: ฿' . number_format($diff, 2) . ')')
+            : ($diff < 0 ? (' (ใช้จ่ายเกินวงเงินที่ตั้งไว้: ฿' . number_format(abs($diff), 2) . ')') : ' (ใช้จ่ายพอดีตามวงเงิน)');
+
+        return redirect()->back()->with('message', 'งานการเงินได้โอนเงิน/จ่ายจริง ฿' . number_format($actualSpent, 2) . ' และปิดยอดการเคลียร์เงินยืมสมบูรณ์แล้ว' . $diffMsg);
+    }
+
+    /**
+     * Fallback to clear loan manually if needed.
+     */
+    public function financeClear(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isFinanceStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานการเงินหรือผู้ดูแลระบบเท่านั้นที่สามารถปิดสัญญายืมเงินได้');
+        }
+
+        $procurement = $project->procurement;
+        if ($procurement) {
+            $procurement->loan_status = 'cleared';
+            $procurement->save();
+        }
+
+        return redirect()->back()->with('message', 'งานการเงินได้ตรวจหลักฐานและปิดสัญญายืมเงิน (เคลียร์สมบูรณ์) เรียบร้อยแล้ว');
     }
 
     /**

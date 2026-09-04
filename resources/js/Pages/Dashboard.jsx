@@ -6219,86 +6219,88 @@ ${itemsListText}
         const trackingList = sourceProjects.map(p => {
             const proc = p.procurement;
             const procStatus = p.procurement_status || proc?.status || 'pending';
+            const loanStatus = p.loan_status || proc?.loan_status || 'pending';
             const status = p.status;
+            const allocBudget = (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0);
 
-            // Compute Loan Contract (สัญญายืมเงิน แบบ กค. ๑๐๑) status & location
-            let loanLocation = 'ผู้เสนอโครงการ';
-            let loanHolder = p.user?.name || p.proposer_name || 'ครูผู้รับผิดชอบ';
-            let loanStatusText = '📝 รอการอนุมัติโครงการ';
+            // ==========================================
+            // 1. Compute Loan Contract (สัญญายืมเงิน กค. ๑๐๑) Status & Location
+            // ==========================================
+            let loanLocation = 'อยู่ที่งานแผนงาน';
+            let loanHolder = 'เจ้าหน้าที่งานแผนงาน';
+            let loanStatusText = '🏢 รอแผนงานตัดยอดสัญญายืมเงิน';
             let loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
             let loanCategory = 'pending';
 
-            if (status === 'approved') {
-                if (procStatus === 'forwarded_to_finance') {
-                    loanLocation = 'ห้องงานการเงิน (อาคารอำนวยการ ชั้น ๑)';
-                    loanHolder = 'เจ้าหน้าที่งานการเงิน';
-                    loanStatusText = '💰 อยู่ที่งานการเงิน (ตรวจสัญญา/รอเบิกจ่าย)';
-                    loanBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-400 font-bold';
-                    loanCategory = 'at_finance';
-                } else if (procStatus === 'received' || procStatus === 'processing') {
-                    loanLocation = 'ห้องงานพัสดุ (โต๊ะลงรับ)';
-                    loanHolder = 'เจ้าหน้าที่งานพัสดุ';
-                    loanStatusText = '📦 อยู่ที่งานพัสดุ (ตรวจแผนเงินยืม)';
-                    loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300';
-                    loanCategory = 'at_procurement';
-                } else {
-                    loanLocation = 'ผู้เสนอโครงการ ➔ ห้องงานพัสดุ';
-                    loanHolder = loanHolder + ' / งานพัสดุ';
-                    loanStatusText = '🟡 รอพัสดุลงรับพร้อมชุดจัดซื้อ';
-                    loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
-                    loanCategory = 'at_procurement';
-                }
-            } else if (status === 'in_progress' || status === 'evaluating') {
-                loanLocation = `อยู่ที่ผู้ยืม (${loanHolder})`;
-                loanStatusText = '⭐ ได้รับเงินยืมแล้ว (กำลังดำเนินกิจกรรม)';
-                loanBadgeClass = 'bg-purple-100 text-purple-950 border-purple-300 font-bold';
-                loanCategory = 'with_borrower';
-            } else if (status === 'reporting') {
-                loanLocation = `อยู่ที่ผู้ยืม (${loanHolder}) ➔ งานการเงิน`;
-                loanStatusText = '⏳ เตรียมส่งหลักฐานเคลียร์เงินยืม';
-                loanBadgeClass = 'bg-blue-100 text-blue-950 border-blue-300 font-bold';
-                loanCategory = 'with_borrower';
-            } else if (status === 'completed' || status === 'cleared') {
-                loanLocation = 'ห้องงานการเงิน (แฟ้มคุมสัญญายืมเงิน)';
-                loanHolder = 'เจ้าหน้าที่งานการเงิน';
-                loanStatusText = '✅ เคลียร์เงินยืมและปิดสัญญาสมบูรณ์';
-                loanBadgeClass = 'bg-teal-100 text-teal-900 border-teal-300 font-black';
+            const isLoanCleared = loanStatus === 'cleared' || p.finance_disbursed_at || proc?.finance_disbursed_at || p.budget?.advance_cleared_at || status === 'cleared' || status === 'completed';
+            const isLoanFinReceived = loanStatus === 'finance_received' || p.finance_received_at || proc?.finance_received_at;
+            const isLoanPlanCut = loanStatus === 'plan_cut' || p.plan_loan_cut_at || proc?.plan_loan_cut_at || (p.encumbered_amount && p.encumbered_amount > 0);
+
+            if (isLoanCleared) {
+                const spent = (parseFloat(p.finance_disbursed_amount) || parseFloat(proc?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0);
+                const diff = allocBudget - spent;
+                loanLocation = 'งานการเงิน / ปิดสัญญาแล้ว';
+                loanHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'ปิดเคลียร์เงินยืมสมบูรณ์';
+                loanStatusText = `🎉 เคลียร์ปิดยอดแล้ว (จ่ายจริง: ฿${new Intl.NumberFormat('th-TH').format(spent)} | ${diff >= 0 ? `เหลืองบคืน: ฿${new Intl.NumberFormat('th-TH').format(diff)}` : `เกินงบ: ฿${new Intl.NumberFormat('th-TH').format(Math.abs(diff))}`})`;
+                loanBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
                 loanCategory = 'completed';
+            } else if (isLoanFinReceived) {
+                loanLocation = 'อยู่ที่งานการเงิน';
+                loanHolder = (p.finance_doc_number || proc?.finance_doc_number) ? `เลขรับ กง: ${p.finance_doc_number || proc?.finance_doc_number}` : 'เจ้าหน้าที่งานการเงิน';
+                loanStatusText = '📥 การเงินลงรับแล้ว (รอโอนเงินยืม)';
+                loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                loanCategory = 'at_finance';
+            } else if (isLoanPlanCut) {
+                loanLocation = 'อยู่ที่งานการเงิน';
+                loanHolder = (p.plan_loan_doc_number || proc?.plan_loan_doc_number) ? `เลขตัดยอดแผน: ${p.plan_loan_doc_number || proc?.plan_loan_doc_number}` : 'รอเจ้าหน้าที่การเงินลงรับ';
+                loanStatusText = '⏳ แผนตัดยอดแล้ว (รอการเงินลงรับ)';
+                loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                loanCategory = 'at_finance';
+            } else {
+                loanLocation = 'อยู่ที่งานแผนงาน';
+                loanHolder = 'เจ้าหน้าที่งานวางแผนและงบประมาณ';
+                loanStatusText = '🏢 รอแผนงานตัดยอดสัญญายืมเงิน';
+                loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
+                loanCategory = 'at_planning';
             }
 
-            // Compute Procurement Package (ชุดจัดซื้อจัดจ้าง ๔ ฉบับ & PO) status & location
-            let procLocation = 'ผู้เสนอโครงการ';
-            let procHolder = p.user?.name || p.proposer_name || 'ครูผู้รับผิดชอบ';
-            let procStatusText = '📝 รอการอนุมัติโครงการ';
+            // ==========================================
+            // 2. Compute Procurement Package (ชุดจัดซื้อจัดจ้าง ๔ ฉบับ) Status & Location
+            // ==========================================
+            let procLocation = 'อยู่ที่งานแผนงาน';
+            let procHolder = 'เจ้าหน้าที่งานแผนงาน';
+            let procStatusText = '🏢 รอแผนงานตัดยอดจัดซื้อ';
             let procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
             let procCategory = 'pending';
 
-            if (status === 'approved') {
-                if (procStatus === 'forwarded_to_finance') {
-                    procLocation = 'ห้องงานการเงิน (โต๊ะตั้งเบิกงบประมาณ)';
-                    procHolder = 'เจ้าหน้าที่งานการเงิน';
-                    procStatusText = '💰 ส่งงานการเงินแล้ว (รอเบิกจ่ายงบ)';
-                    procBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-400 font-bold';
-                    procCategory = 'at_finance';
-                } else if (procStatus === 'received' || procStatus === 'processing') {
-                    procLocation = 'ห้องงานพัสดุ (อาคารอำนวยการ)';
-                    procHolder = 'เจ้าหน้าที่งานพัสดุ';
-                    procStatusText = `📦 อยู่ที่งานพัสดุ (ลงรับแล้ว: ${p.procurement_number || proc?.procurement_number || '-'})`;
-                    procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-400 font-bold';
-                    procCategory = 'at_procurement';
-                } else {
-                    procLocation = 'ห้องงานพัสดุ (เคาน์เตอร์ลงรับ)';
-                    procHolder = 'เจ้าหน้าที่งานพัสดุ';
-                    procStatusText = '🟡 รอพัสดุลงรับชุดจัดซื้อจัดจ้าง';
-                    procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300';
-                    procCategory = 'at_procurement';
-                }
-            } else if (['in_progress', 'evaluating', 'reporting', 'completed'].includes(status)) {
-                procLocation = 'ห้องงานพัสดุ & ห้องงานการเงิน';
-                procHolder = 'งานพัสดุ / คณะกรรมการตรวจรับพัสดุ';
-                procStatusText = '📦 จัดซื้อจัดจ้างแล้วเสร็จ (รอ/ตรวจรับครบ)';
-                procBadgeClass = 'bg-teal-50 text-teal-900 border-teal-300 font-bold';
-                procCategory = 'completed';
+            const isProcPlanCut = procStatus === 'plan_cut' || p.plan_procurement_cut_at || proc?.plan_procurement_cut_at;
+            const isProcReceived = procStatus === 'received' || p.procurement_number || proc?.procurement_number;
+            const isProcForwardedToFin = procStatus === 'forwarded_to_finance' || proc?.status === 'forwarded_to_finance';
+
+            if (isProcForwardedToFin) {
+                procLocation = 'อยู่ที่งานการเงิน';
+                procHolder = 'เจ้าหน้าที่งานการเงิน (รอเบิกจ่าย)';
+                procStatusText = '💰 ส่งงานการเงินเบิกจ่ายแล้ว';
+                procBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-bold';
+                procCategory = 'at_finance';
+            } else if (isProcReceived) {
+                procLocation = 'อยู่ที่งานพัสดุ';
+                procHolder = (p.procurement_number || proc?.procurement_number) ? `เลขที่ PR: ${p.procurement_number || proc?.procurement_number}` : 'เจ้าหน้าที่งานพัสดุ';
+                procStatusText = '📦 พัสดุลงรับเรื่องแล้ว (ดำเนินการจัดซื้อ)';
+                procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                procCategory = 'at_procurement';
+            } else if (isProcPlanCut) {
+                procLocation = 'อยู่ที่งานพัสดุ';
+                procHolder = (p.plan_procurement_doc_number || proc?.plan_procurement_doc_number) ? `เลขตัดยอดแผน: ${p.plan_procurement_doc_number || proc?.plan_procurement_doc_number}` : 'รอเจ้าหน้าที่พัสดุลงรับ';
+                procStatusText = '⏳ แผนตัดยอดแล้ว (รอพัสดุลงรับ)';
+                procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                procCategory = 'at_procurement';
+            } else {
+                procLocation = 'อยู่ที่งานแผนงาน';
+                procHolder = 'เจ้าหน้าที่งานวางแผนและงบประมาณ';
+                procStatusText = '🏢 รอแผนงานตัดยอดจัดซื้อ';
+                procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
+                procCategory = 'at_planning';
             }
 
             return {
@@ -6577,13 +6579,75 @@ ${itemsListText}
                                                 </div>
                                             </td>
 
-                                            {/* Action */}
+                                             {/* Action */}
                                             <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
                                                 <div className="flex flex-col items-center gap-1.5">
-                                                    {/* If user is procurement staff / admin, give quick intake/forward controls */}
+                                                    {/* 1. Planning Staff Actions: Cut budget for procurement and/or loan */}
+                                                    {isPlanStaff && (
+                                                        <>
+                                                            {(!item.plan_procurement_cut_at || !item.plan_loan_cut_at) && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const today = new Date().toISOString().split('T')[0];
+                                                                        const defaultDoc = 'ผง. ' + item.id + '/' + (new Date().getFullYear() + 543);
+                                                                        Swal.fire({
+                                                                            title: '📊 แผนงานตัดยอดงบประมาณ',
+                                                                            html: `
+                                                                                <div class="text-left text-xs text-slate-700 space-y-3 font-sans">
+                                                                                    <p class="text-slate-600 leading-relaxed">
+                                                                                        บันทึกการตัดยอดงบประมาณโครงการ <strong>"${item.title}"</strong> 
+                                                                                        (วงเงิน ฿${new Intl.NumberFormat('th-TH').format(item.allocated_budget || item.estimated_budget || 0)})
+                                                                                    </p>
+                                                                                    <div>
+                                                                                        <label class="block font-bold mb-1 text-slate-800">เลือกรายการที่ต้องการตัดยอด:</label>
+                                                                                        <select id="swal-plan-target" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold">
+                                                                                            <option value="all" selected>ตัดยอดทั้ง ๒ ส่วน (ส่งพัสดุ + ส่งการเงิน)</option>
+                                                                                            <option value="procurement">เฉพาะชุดจัดซื้อจัดจ้าง (๔ ฉบับ) ➔ ส่งต่อพัสดุ</option>
+                                                                                            <option value="loan">เฉพาะสัญญายืมเงิน (กค.๑๐๑) ➔ ส่งต่อการเงิน</option>
+                                                                                        </select>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label class="block font-bold mb-1 text-slate-800">เลขที่หนังสือตัดยอดแผนงาน:</label>
+                                                                                        <input id="swal-plan-doc" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${defaultDoc}" />
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label class="block font-bold mb-1 text-slate-800">วันที่ตัดยอดงบประมาณ:</label>
+                                                                                        <input id="swal-plan-date" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${today}" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            `,
+                                                                            showCancelButton: true,
+                                                                            confirmButtonText: '✓ ยืนยันตัดยอดงบประมาณ',
+                                                                            cancelButtonText: 'ยกเลิก',
+                                                                            confirmButtonColor: '#4f46e5',
+                                                                            preConfirm: () => ({
+                                                                                target: document.getElementById('swal-plan-target').value,
+                                                                                plan_doc_number: document.getElementById('swal-plan-doc').value,
+                                                                                cut_date: document.getElementById('swal-plan-date').value
+                                                                            })
+                                                                        }).then((res) => {
+                                                                            if (res.isConfirmed) {
+                                                                                router.post(route('procurements.plan_cut_budget', item.id), res.value, {
+                                                                                    onSuccess: () => Swal.fire('สำเร็จ!', 'งานแผนงานตัดยอดงบประมาณเรียบร้อยแล้ว', 'success')
+                                                                                });
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    title="แผนงานตัดยอดและส่งต่อให้พัสดุ/การเงิน"
+                                                                >
+                                                                    <span>📊</span> แผนตัดยอดงบ
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
+
+                                                    {/* 2. Procurement Staff Actions: Receive package after planning cuts budget */}
                                                     {isProcurementStaff && (
                                                         <>
-                                                            {(!item.procurement || item.procurement.status === 'pending') && item.status === 'approved' && (
+                                                            {(item.plan_procurement_cut_at || item.procurement_status === 'plan_cut' || item.status === 'approved') && 
+                                                             (!item.procurement || item.procurement.status === 'pending' || item.procurement.status === 'plan_cut') && (
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => {
@@ -6591,7 +6655,7 @@ ${itemsListText}
                                                                             title: '📦 บันทึกรับเอกสารถึงงานพัสดุ',
                                                                             html: `
                                                                                 <div class="text-left text-xs text-slate-700 space-y-3 font-sans">
-                                                                                    <p>ยืนยันว่าได้รับชุดเอกสารจัดซื้อจัดจ้างและสัญญายืมเงินของโครงการ <strong>"${item.title}"</strong> เรียบร้อยแล้ว</p>
+                                                                                    <p>ยืนยันว่าได้รับชุดเอกสารจัดซื้อจัดจ้างของโครงการ <strong>"${item.title}"</strong> เรียบร้อยแล้ว</p>
                                                                                     <div>
                                                                                         <label class="block font-bold mb-1">กำหนดเลขที่พัสดุ (PR Number):</label>
                                                                                         <input id="swal-pr-num" class="w-full px-3 py-2 border rounded-xl text-xs" value="PR-${String(item.id).padStart(5, '0')}" />
@@ -6621,7 +6685,7 @@ ${itemsListText}
                                                                     className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
                                                                     title="บันทึกว่าเอกสารถึงงานพัสดุแล้ว"
                                                                 >
-                                                                    <span>📦</span> ลงรับเรื่อง
+                                                                    <span>📦</span> พัสดุลงรับเรื่อง
                                                                 </button>
                                                             )}
 
@@ -6631,7 +6695,7 @@ ${itemsListText}
                                                                     onClick={() => {
                                                                         Swal.fire({
                                                                             title: '💰 ส่งต่อให้งานการเงิน',
-                                                                            text: `ยืนยันการส่งมอบชุดเอกสารจัดซื้อจัดจ้างและสัญญายืมเงินของโครงการ "${item.title}" ให้งานการเงินดำเนินการเบิกจ่าย?`,
+                                                                            text: `ยืนยันการส่งมอบชุดเอกสารจัดซื้อจัดจ้างของโครงการ "${item.title}" ให้งานการเงินดำเนินการเบิกจ่าย?`,
                                                                             icon: 'question',
                                                                             showCancelButton: true,
                                                                             confirmButtonText: 'ยืนยันส่งงานการเงิน',
@@ -6654,6 +6718,117 @@ ${itemsListText}
                                                         </>
                                                     )}
 
+                                                    {/* 3. Finance Staff Actions: Receive loan and disburse/clear with actual spent amount */}
+                                                    {isFinanceStaff && (
+                                                        <>
+                                                            {(item.plan_loan_cut_at || item.loan_status === 'plan_cut' || item.loan_status === 'pending') && 
+                                                             (!item.finance_received_at && item.loan_status !== 'finance_received' && item.loan_status !== 'cleared') && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const today = new Date().toISOString().split('T')[0];
+                                                                        const defaultFinDoc = 'กง. ' + item.id + '/' + (new Date().getFullYear() + 543);
+                                                                        Swal.fire({
+                                                                            title: '📥 การเงินลงรับสัญญายืมเงิน',
+                                                                            html: `
+                                                                                <div class="text-left text-xs space-y-3 font-sans">
+                                                                                    <p class="text-slate-600 leading-relaxed">
+                                                                                        ลงรับสัญญายืมเงิน (แบบ กค. ๑๐๑) ของโครงการ <strong>"${item.title}"</strong> เพื่อเตรียมโอนเงินยืม
+                                                                                    </p>
+                                                                                    <div>
+                                                                                        <label class="font-bold text-slate-700 block mb-1">เลขที่รับการเงิน:</label>
+                                                                                        <input id="swal-fin-num" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${defaultFinDoc}">
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label class="font-bold text-slate-700 block mb-1">วันที่ลงรับเอกสาร:</label>
+                                                                                        <input id="swal-fin-date" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${today}">
+                                                                                    </div>
+                                                                                </div>
+                                                                            `,
+                                                                            showCancelButton: true,
+                                                                            confirmButtonText: '✓ ยืนยันการเงินลงรับ',
+                                                                            cancelButtonText: 'ยกเลิก',
+                                                                            confirmButtonColor: '#2563eb',
+                                                                            preConfirm: () => ({
+                                                                                finance_number: document.getElementById('swal-fin-num').value,
+                                                                                receive_date: document.getElementById('swal-fin-date').value
+                                                                            })
+                                                                        }).then((res) => {
+                                                                            if (res.isConfirmed) {
+                                                                                router.post(route('procurements.finance_receive', item.id), res.value, {
+                                                                                    onSuccess: () => Swal.fire('สำเร็จ!', 'งานการเงินลงรับสัญญายืมเงินเรียบร้อยแล้ว', 'success')
+                                                                                });
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    title="งานการเงินลงรับสัญญายืมเงิน"
+                                                                >
+                                                                    <span>📥</span> การเงินลงรับ
+                                                                </button>
+                                                            )}
+
+                                                            {(item.finance_received_at || item.loan_status === 'finance_received') && item.loan_status !== 'cleared' && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        const today = new Date().toISOString().split('T')[0];
+                                                                        const defaultAmount = item.allocated_budget || item.estimated_budget || 0;
+                                                                        Swal.fire({
+                                                                            title: '💸 โอนเงินยืม & ปิดยอดเคลียร์',
+                                                                            html: `
+                                                                                <div class="text-left text-xs space-y-3 font-sans">
+                                                                                    <div class="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 leading-relaxed">
+                                                                                        <p class="font-bold">โครงการ: ${item.title}</p>
+                                                                                        <p>วงเงินงบประมาณที่ได้รับอนุมัติ: <strong>฿${new Intl.NumberFormat('th-TH').format(defaultAmount)}</strong></p>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label class="font-bold text-slate-800 block mb-1">ยอดเงินที่โอนหรือจ่ายจริง (บาท) *:</label>
+                                                                                        <input id="swal-pay-amount" type="number" step="0.01" class="w-full px-3 py-2 border-2 border-emerald-400 rounded-xl text-sm font-black text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" value="${defaultAmount}">
+                                                                                        <span class="text-[10px] text-slate-500">ระบบจะนำยอดจ่ายจริงไปหักลบกับงบประมาณ เพื่อสรุปยอดเงินคงเหลือคืนคลัง</span>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label class="font-bold text-slate-700 block mb-1">เลขอ้างอิงการโอน / เลขที่เช็ค:</label>
+                                                                                        <input id="swal-pay-ref" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" placeholder="เช่น โอนเงินผ่าน KTB / เช็คเลขที่..." value="โอนเงินยืม KTB">
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <label class="font-bold text-slate-700 block mb-1">วันที่โอนเงิน/จ่ายเงิน:</label>
+                                                                                        <input id="swal-pay-date" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${today}">
+                                                                                    </div>
+                                                                                </div>
+                                                                            `,
+                                                                            showCancelButton: true,
+                                                                            confirmButtonText: '✓ ยืนยันโอนเงิน & ปิดยอดสมบูรณ์',
+                                                                            cancelButtonText: 'ยกเลิก',
+                                                                            confirmButtonColor: '#059669',
+                                                                            preConfirm: () => {
+                                                                                const amt = document.getElementById('swal-pay-amount').value;
+                                                                                if (!amt || isNaN(amt) || parseFloat(amt) < 0) {
+                                                                                    Swal.showValidationMessage('กรุณาระบุยอดเงินที่จ่ายจริงให้ถูกต้อง');
+                                                                                    return false;
+                                                                                }
+                                                                                return {
+                                                                                    actual_spent_amount: amt,
+                                                                                    payment_ref: document.getElementById('swal-pay-ref').value,
+                                                                                    disburse_date: document.getElementById('swal-pay-date').value
+                                                                                };
+                                                                            }
+                                                                        }).then((res) => {
+                                                                            if (res.isConfirmed) {
+                                                                                router.post(route('procurements.finance_disburse', item.id), res.value, {
+                                                                                    onSuccess: () => Swal.fire('สำเร็จ!', 'บันทึกการโอนเงินและปิดยอดเคลียร์เงินยืมสมบูรณ์แล้ว', 'success')
+                                                                                });
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    title="บันทึกจ่ายเงินจริงและปิดยอดเคลียร์เงินยืม"
+                                                                >
+                                                                    <span>💸</span> โอนเงิน & ปิดยอด
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    )}
                                                     <button
                                                         type="button"
                                                         onClick={() => setSelectedApprovalProject(item)}

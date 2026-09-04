@@ -14,6 +14,16 @@ class Procurement extends Model
         'memo_subject',
         'tor_specifications',
         'status',
+        'loan_status',
+        'plan_procurement_cut_at',
+        'plan_procurement_doc_number',
+        'plan_loan_cut_at',
+        'plan_loan_doc_number',
+        'finance_received_at',
+        'finance_doc_number',
+        'finance_disbursed_at',
+        'finance_disbursed_amount',
+        'finance_payment_ref',
     ];
 
     /**
@@ -23,6 +33,11 @@ class Procurement extends Model
     {
         return [
             'memo_date' => 'date',
+            'plan_procurement_cut_at' => 'datetime',
+            'plan_loan_cut_at' => 'datetime',
+            'finance_received_at' => 'datetime',
+            'finance_disbursed_at' => 'datetime',
+            'finance_disbursed_amount' => 'decimal:2',
         ];
     }
 
