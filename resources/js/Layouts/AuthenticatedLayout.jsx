@@ -130,6 +130,35 @@ export default function AuthenticatedLayout({ header, children }) {
         return 'ครูผู้เสนอโครงการ';
     };
 
+    // Auto-open the section that contains the currently active URL/page
+    useEffect(() => {
+        if (url.includes('tab=admin_') || (url.includes('tab=all_projects') && isAdmin)) {
+            setOpenSections(prev => ({ ...prev, admin: true }));
+        }
+        if (url.includes('tab=proposals') || (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create'))) || (!isPlanHead && url.includes('routine-budgets'))) {
+            setOpenSections(prev => ({ ...prev, proposal: true }));
+        }
+        if (url.includes('tab=budgets') || url.includes('tab=reviews') || url.includes('tab=clearings') || (isPlanHead && url.includes('routine-budgets'))) {
+            setOpenSections(prev => ({ ...prev, plan: true }));
+        }
+        if (url.includes('tab=procurement')) {
+            setOpenSections(prev => ({ ...prev, procurement: true }));
+        }
+        if (url.includes('tab=executive_overview')) {
+            setOpenSections(prev => ({ ...prev, executive: true }));
+        }
+    }, [url]);
+
+    const getSubLinkClass = (isActive) =>
+        `flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs transition-all ${
+            isActive
+                ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-purple-950 font-bold shadow-md ring-1 ring-amber-300'
+                : 'text-purple-100 hover:bg-white/10 hover:text-white font-normal'
+        }`;
+
+    const getPrefixClass = (isActive, defaultColor = 'text-purple-300/80') =>
+        `${isActive ? 'text-purple-950 font-bold' : defaultColor} font-mono text-[10px]`;
+
     return (
         <div className="min-h-screen bg-slate-100/70 font-sans text-slate-800 flex flex-col">
             
@@ -292,53 +321,37 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'admin_users' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=admin_users') || (!url.includes('tab=') && route().current('dashboard'))
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=admin_users') || (!url.includes('tab=') && route().current('dashboard') && isAdmin))}
                                         title="จัดการผู้ใช้งานและสิทธิ์"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=admin_users') || (!url.includes('tab=') && route().current('dashboard') && isAdmin), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">👤</span>
                                         {isSidebarOpen && <span>จัดการผู้ใช้ & สิทธิ์</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'admin_strategies' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=admin_strategies')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=admin_strategies'))}
                                         title="จัดการยุทธศาสตร์ & IQA"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=admin_strategies'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">🎯</span>
                                         {isSidebarOpen && <span>จัดการยุทธศาสตร์</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'admin_settings' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=admin_settings')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=admin_settings'))}
                                         title="ตั้งค่าระบบ & ปีงบประมาณ/ปีการศึกษา"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=admin_settings'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">🛠️</span>
                                         {isSidebarOpen && <span>ตั้งค่าระบบ & ปีงบประมาณ</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'all_projects' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=all_projects')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=all_projects'))}
                                         title="สรุปโครงการทั้งหมดของวิทยาลัยและยอดงบแยกตามฝ่าย"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">🏛️</span>
                                         {isSidebarOpen && <span className="font-bold">สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                     </Link>
@@ -369,68 +382,47 @@ export default function AuthenticatedLayout({ header, children }) {
                             <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                 <Link
                                     href={route('projects.quick_create')}
-                                    className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                        route().current('projects.quick_create')
-                                            ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                    }`}
+                                    className={getSubLinkClass(route().current('projects.quick_create'))}
                                     title="เสนอโครงการเบื้องต้น (ขอตั้งงบ)"
                                 >
-                                    <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                    <span className={getPrefixClass(route().current('projects.quick_create'))}>└─</span>
                                     <span className="text-sm">💡</span>
                                     {isSidebarOpen && <span>เสนอโครงการเบื้องต้น (ขอตั้งงบ)</span>}
                                 </Link>
                                 <Link
                                     href={route('projects.create')}
-                                    className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                        route().current('projects.create')
-                                            ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                    }`}
+                                    className={getSubLinkClass(route().current('projects.create'))}
                                     title="จัดทำข้อเสนอโครงการฉบับเต็ม"
                                 >
-                                    <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                    <span className={getPrefixClass(route().current('projects.create'))}>└─</span>
                                     <span className="text-sm">➕</span>
                                     {isSidebarOpen && <span>จัดทำโครงการฉบับเต็ม</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals' })}
-                                    className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                        url.includes('tab=proposals')
-                                            ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                    }`}
+                                    className={getSubLinkClass(url.includes('tab=proposals'))}
                                     title="เสนอโครงการของฉัน"
                                 >
-                                    <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                    <span className={getPrefixClass(url.includes('tab=proposals'))}>└─</span>
                                     <span className="text-sm">📋</span>
                                     {isSidebarOpen && <span>โครงการของฉัน</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
-                                    className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                        url.includes('tab=document_tracking')
-                                            ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                    }`}
+                                    className={getSubLinkClass(url.includes('tab=document_tracking'))}
                                     title="ติดตามเอกสารและโครงการ"
                                 >
-                                    <span className="text-purple-300/80 font-mono text-[10px]">●</span>
+                                    <span className={getPrefixClass(url.includes('tab=document_tracking'))}>●</span>
                                     <span className="text-sm">📍</span>
                                     {isSidebarOpen && <span>ติดตามเอกสารและโครงการ</span>}
                                 </Link>
 
-                                
                                 <Link
                                     href={route('admin.routine_budgets.index')}
-                                    className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                        url.includes('routine-budgets') && !isPlanHead
-                                            ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                            : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                    }`}
+                                    className={getSubLinkClass(url.includes('routine-budgets'))}
                                     title="งบดำเนินงานประจำปี & จัดซื้อจัดจ้างตรง"
                                 >
-                                    <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                    <span className={getPrefixClass(url.includes('routine-budgets'))}>└─</span>
                                     <span className="text-sm">🗓️</span>
                                     {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
                                 </Link>
@@ -461,79 +453,55 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'budgets' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=budgets')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=budgets'))}
                                         title="งบประมาณสถานศึกษา"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=budgets'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">💰</span>
                                         {isSidebarOpen && <span>งบประมาณสถานศึกษา</span>}
                                     </Link>
                                     <Link
                                         href={route('admin.routine_budgets.index')}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('routine-budgets')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('routine-budgets'))}
                                         title="แผนงบดำเนินงานประจำปี & แดชบอร์ด"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">📅</span>
                                         {isSidebarOpen && <span>งบประจำปี & แดชบอร์ด</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'action_plan_report' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=action_plan_report')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=action_plan_report'))}
                                         title="รายงานงบรายจ่ายแผนปฏิบัติราชการ"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=action_plan_report'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">📊</span>
                                         {isSidebarOpen && <span>รายงานแผนปฏิบัติราชการ</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'reviews' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=reviews')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=reviews'))}
                                         title="ตรวจสอบ & อนุมัติโครงการ"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=reviews'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">🔍</span>
                                         {isSidebarOpen && <span>ตรวจสอบ & อนุมัติ</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'clearings' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=clearings')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=clearings'))}
                                         title="เคลียร์เงินยืมทดรอง"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=clearings'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">🧾</span>
                                         {isSidebarOpen && <span>เคลียร์เงินยืมทดรอง</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'all_projects' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=all_projects')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=all_projects'))}
                                         title="ติดตามโครงการทั้งหมดในระบบ"
                                     >
-                                        <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-amber-300/80')}>└─</span>
                                         <span className="text-sm">📁</span>
                                         {isSidebarOpen && <span>สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                     </Link>
@@ -565,42 +533,30 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'procurement' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=procurement') && !url.includes('tool=item_catalog')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=procurement') && !url.includes('tool=item_catalog'))}
                                         title="จัดซื้อจัดจ้าง & กรรมการ"
                                     >
-                                        <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=procurement') && !url.includes('tool=item_catalog'))}>└─</span>
                                         <span className="text-sm">📋</span>
                                         {isSidebarOpen && <span>จัดซื้อจัดจ้าง & กรรมการ</span>}
                                     </Link>
 
                                     <Link
                                         href={route('dashboard', { tab: 'document_tracking' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=document_tracking')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=document_tracking'))}
                                         title="ติดตามเอกสารจัดซื้อจัดจ้างและสัญญายืมเงิน"
                                     >
-                                        <span className="text-purple-300/80 font-mono text-[10px]">●</span>
+                                        <span className={getPrefixClass(url.includes('tab=document_tracking'))}>●</span>
                                         <span className="text-sm">📍</span>
                                         {isSidebarOpen && <span>ติดตามเอกสาร & สัญญายืมเงิน</span>}
                                     </Link>
 
                                     <Link
                                         href={route('dashboard', { tab: 'procurement', tool: 'item_catalog' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tool=item_catalog')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tool=item_catalog'))}
                                         title="คลังวัสดุ & ราคากลาง"
                                     >
-                                        <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tool=item_catalog'))}>└─</span>
                                         <span className="text-sm">📦</span>
                                         {isSidebarOpen && <span>คลังวัสดุ & ราคากลาง</span>}
                                     </Link>
@@ -632,27 +588,19 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'executive_overview' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=executive_overview')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=executive_overview'))}
                                         title="ภาพรวม ๔ ฝ่ายหลัก"
                                     >
-                                        <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=executive_overview'))}>└─</span>
                                         <span className="text-sm">📈</span>
                                         {isSidebarOpen && <span>ภาพรวม ๔ ฝ่ายหลัก</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'action_plan_report' })}
-                                        className={`flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs font-normal transition-all ${
-                                            url.includes('tab=action_plan_report')
-                                                ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                                : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                                        }`}
+                                        className={getSubLinkClass(url.includes('tab=action_plan_report'))}
                                         title="รายงานงบรายจ่ายแผนปฏิบัติราชการ"
                                     >
-                                        <span className="text-purple-300/80 font-mono text-[10px]">└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=action_plan_report'))}>└─</span>
                                         <span className="text-sm">📊</span>
                                         {isSidebarOpen && <span>รายงานแผนปฏิบัติราชการ</span>}
                                     </Link>
@@ -670,10 +618,10 @@ export default function AuthenticatedLayout({ header, children }) {
                             )}
                             <Link
                                 href={route('profile.edit')}
-                                className={`flex items-center gap-x-3 px-3.5 py-2 rounded-xl transition-all text-xs font-normal ${
+                                className={`flex items-center gap-x-3 px-3.5 py-2 rounded-xl transition-all text-xs ${
                                     route().current('profile.edit')
-                                        ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
-                                        : 'text-purple-100 hover:bg-white/10 hover:text-white'
+                                        ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-purple-950 font-bold shadow-md ring-1 ring-amber-300'
+                                        : 'text-purple-100 hover:bg-white/10 hover:text-white font-normal'
                                 }`}
                                 title="ผู้ใช้งานระบบ"
                             >
