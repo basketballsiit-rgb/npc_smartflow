@@ -40,6 +40,7 @@ export default function AuthenticatedLayout({ header, children }) {
             proposal: true,
             plan: true,
             procurement: true,
+            finance: true,
             executive: true,
         };
     });
@@ -120,6 +121,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const isExecutive = user?.is_executive || userRoleName === 'executive' || isAdmin;
     const isPlanHead = user?.is_plan_head || userRoleName === 'plan_head' || isAdmin;
     const isProcurementHead = Boolean(user?.is_procurement_head || userRoleName === 'procurement_head' || isAdmin || (user?.department && (user.department.name?.includes('พัสดุ') || user.department.code === 'PROC')) || user?.position?.includes('พัสดุ'));
+    const isFinanceStaff = Boolean(userRoleName === 'finance_head' || userRoleName === 'finance_staff' || isAdmin || (user?.department && (user.department.name?.includes('การเงิน') || user.department.code === 'FIN')) || user?.position?.includes('การเงิน'));
 
     // Determine user role label for the top-right header display
     const getRoleLabel = () => {
@@ -127,6 +129,7 @@ export default function AuthenticatedLayout({ header, children }) {
         if (isExecutive) return 'ผู้บริหาร';
         if (isPlanHead) return 'หัวหน้างานแผนงาน';
         if (isProcurementHead) return 'หัวหน้างานพัสดุ';
+        if (isFinanceStaff) return 'หัวหน้างานการเงิน';
         return 'ครูผู้เสนอโครงการ';
     };
 
@@ -143,6 +146,9 @@ export default function AuthenticatedLayout({ header, children }) {
         }
         if (url.includes('tab=procurement')) {
             setOpenSections(prev => ({ ...prev, procurement: true }));
+        }
+        if (url.includes('tab=clearings') || url.includes('tab=document_tracking')) {
+            setOpenSections(prev => ({ ...prev, finance: true, procurement: true }));
         }
         if (url.includes('tab=executive_overview')) {
             setOpenSections(prev => ({ ...prev, executive: true }));
@@ -559,6 +565,71 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <span className={getPrefixClass(url.includes('tool=item_catalog'))}>└─</span>
                                         <span className="text-sm">📦</span>
                                         {isSidebarOpen && <span>คลังวัสดุ & ราคากลาง</span>}
+                                    </Link>
+                                </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* 4.1 FINANCE MENUS */}
+                        {isFinanceStaff && (
+                            <div className="pt-2 space-y-1">
+                                {isSidebarOpen ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleSection('finance')}
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-emerald-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-x-2">
+                                            <span>💳</span>
+                                            <span>งานการเงิน</span>
+                                        </div>
+                                        <span className="text-[11px] text-emerald-300">{openSections.finance ? '▼' : '▶'}</span>
+                                    </button>
+                                ) : (
+                                    <div className="h-px bg-white/20 my-1.5" />
+                                )}
+
+                                {(!isSidebarOpen || openSections.finance) && (
+                                <div className="pl-2.5 border-l-2 border-emerald-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
+                                    <Link
+                                        href={route('admin.routine_budgets.index')}
+                                        className={getSubLinkClass(url.includes('routine-budgets'))}
+                                        title="งบประจำปี & ลงรับ/โอนเงินยืมจัดซื้อตรง"
+                                    >
+                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-emerald-300/80')}>└─</span>
+                                        <span className="text-sm">💵</span>
+                                        {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
+                                    </Link>
+
+                                    <Link
+                                        href={route('dashboard', { tab: 'document_tracking' })}
+                                        className={getSubLinkClass(url.includes('tab=document_tracking'))}
+                                        title="ติดตามเอกสารจัดซื้อจัดจ้างและสัญญายืมเงิน"
+                                    >
+                                        <span className={getPrefixClass(url.includes('tab=document_tracking'), 'text-emerald-300/80')}>●</span>
+                                        <span className="text-sm">📍</span>
+                                        {isSidebarOpen && <span>ติดตามเอกสาร & สัญญายืมเงิน</span>}
+                                    </Link>
+
+                                    <Link
+                                        href={route('dashboard', { tab: 'clearings' })}
+                                        className={getSubLinkClass(url.includes('tab=clearings'))}
+                                        title="คิวเคลียร์เงินยืมทดรองจ่าย"
+                                    >
+                                        <span className={getPrefixClass(url.includes('tab=clearings'), 'text-emerald-300/80')}>└─</span>
+                                        <span className="text-sm">🧾</span>
+                                        {isSidebarOpen && <span>เคลียร์เงินยืมทดรอง</span>}
+                                    </Link>
+
+                                    <Link
+                                        href={route('dashboard', { tab: 'all_projects' })}
+                                        className={getSubLinkClass(url.includes('tab=all_projects'))}
+                                        title="สรุปโครงการทั้งหมดของวิทยาลัย"
+                                    >
+                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-emerald-300/80')}>└─</span>
+                                        <span className="text-sm">📁</span>
+                                        {isSidebarOpen && <span>สรุปโครงการทั้งหมด</span>}
                                     </Link>
                                 </div>
                                 )}

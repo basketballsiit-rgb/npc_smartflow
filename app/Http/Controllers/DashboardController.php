@@ -25,7 +25,8 @@ class DashboardController extends Controller
                ($user->isExecutive() ? 'executive' :
                ($user->isPlanHead() ? 'plan_head' :
                ($user->isProcurementHead() ? 'procurement_head' :
-               ($user->isDepartmentHead() ? 'department_head' : 'teacher'))));
+               ($user->isFinanceStaff() ? 'finance_head' :
+               ($user->isDepartmentHead() ? 'department_head' : 'teacher')))));
 
         $data = [
             'role' => $role,
@@ -255,8 +256,8 @@ class DashboardController extends Controller
             ];
         }
 
-        // Master Projects list for Admin, Plan Head, Procurement & Executives
-        if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isExecutive() || $request->query('tab') === 'document_tracking') {
+        // Master Projects list for Admin, Plan Head, Procurement, Finance & Executives
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isFinanceStaff() || $user->isExecutive() || $request->query('tab') === 'document_tracking') {
             $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement'])
                 ->latest()
                 ->get()

@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'teacher', 'display_name' => 'ครูผู้สอน / ผู้เสนอโครงการ', 'description' => 'เสนอโครงการ ดำเนินการ DO ประเมินผล CHECK และติดตามรายงาน'],
             ['name' => 'plan_head', 'display_name' => 'หัวหน้างานวางแผน', 'description' => 'ตรวจสอบและอนุมัติโครงการ ผูกพันงบประมาณ'],
             ['name' => 'procurement_head', 'display_name' => 'หัวหน้างานพัสดุ', 'description' => 'จัดการคิวพัสดุ แต่งตั้งกรรมการ และออกเอกสารจัดซื้อจัดจ้าง'],
+            ['name' => 'finance_head', 'display_name' => 'หัวหน้างานการเงิน', 'description' => 'ตรวจสอบและลงรับสัญญายืมเงิน โอนเงิน/จ่ายเงินจริง และปิดยอดเคลียร์เงินยืม'],
             ['name' => 'executive', 'display_name' => 'ผู้บริหาร (ผู้อำนวยการ/รองฯ)', 'description' => 'พิจารณาอนุมัติขั้นสุดท้าย ดูรายงานและสถิติภาพรวม'],
         ];
 
@@ -38,6 +39,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'ฝ่ายวิชาการ / สาขาวิชาการ', 'code' => 'ACAD'],
             ['name' => 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', 'code' => 'STUD'],
             ['name' => 'ฝ่ายบริหารงานทั่วไป / งานพัสดุ', 'code' => 'ADMIN'],
+            ['name' => 'ฝ่ายบริหารจัดการ / งานการเงิน', 'code' => 'FIN'],
         ];
 
         foreach ($departments as $deptData) {
@@ -59,6 +61,8 @@ class DatabaseSeeder extends Seeder
         $acadDept = Department::where('code', 'ACAD')->first();
         $studDept = Department::where('code', 'STUD')->first();
         $adminDept = Department::where('code', 'ADMIN')->first();
+        $finDept = Department::where('code', 'FIN')->first();
+        $finRole = Role::where('name', 'finance_head')->first();
 
         // 3. Seed Users
         $users = [
@@ -96,6 +100,15 @@ class DatabaseSeeder extends Seeder
                 'role_id' => $procurementRole->id,
                 'department_id' => $adminDept->id,
                 'position' => 'หัวหน้างานพัสดุ',
+                'is_active' => true,
+            ],
+            [
+                'name' => 'นางสาวพิมพ์ใจ การเงิน',
+                'email' => 'finance@smartflow.local',
+                'password' => Hash::make('password'),
+                'role_id' => $finRole->id,
+                'department_id' => $finDept ? $finDept->id : $adminDept->id,
+                'position' => 'หัวหน้างานการเงินและบัญชี',
                 'is_active' => true,
             ],
             [
