@@ -464,6 +464,10 @@ export default function Dashboard({
     const [projectStatusFilter, setProjectStatusFilter] = useState('all');
     const [projectYearFilter, setProjectYearFilter] = useState('all');
     const [projectDeptFilter, setProjectDeptFilter] = useState('all');
+    const [expandedDepts, setExpandedDepts] = useState({}); // { [deptId]: boolean }
+    const toggleDeptExpand = (deptId) => {
+        setExpandedDepts(prev => ({ ...prev, [deptId]: !prev[deptId] }));
+    };
 
     useEffect(() => {
         if (currentTab) {
@@ -5982,7 +5986,7 @@ ${itemsListText}
 
         const years = Array.from(new Set(allProjectsMaster.map(p => p.academic_year))).sort().reverse();
 
-        // Group budgets by department (แยกตามฝ่าย/งาน)
+        // Group budgets & projects by department (แยกตามฝ่าย/งาน รวมรายละเอียดโครงการในตารางเดียว)
         const deptSummaryMap = {};
         filteredProjects.forEach(p => {
             const deptId = p.department_id || 'other';
@@ -5995,6 +5999,7 @@ ${itemsListText}
                     estimatedSum: 0,
                     allocatedSum: 0,
                     approvedCount: 0,
+                    projects: []
                 };
             }
             deptSummaryMap[deptId].projectCount += 1;
@@ -6003,6 +6008,7 @@ ${itemsListText}
             if (p.status === 'approved' || p.current_approval_step >= 6) {
                 deptSummaryMap[deptId].approvedCount += 1;
             }
+            deptSummaryMap[deptId].projects.push(p);
         });
         const deptSummaryList = Object.values(deptSummaryMap).sort((a, b) => b.estimatedSum - a.estimatedSum);
 
@@ -6072,135 +6078,7 @@ ${itemsListText}
                     </div>
                 </div>
 
-                {/* Department Budget Breakdown Summary Table (สรุปงบประมาณแยกตามฝ่าย) */}
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-slate-100 pb-3">
-                        <div>
-                            <h4 className="text-base font-black text-purple-950 flex items-center gap-2">
-                                <span>🏢</span> สรุปยอดงบประมาณโครงการ แยกตามฝ่าย/หน่วยงาน
-                            </h4>
-                            <p className="text-xs text-slate-500">คลิกที่ชื่อฝ่ายหรือเลือกตัวกรองด้านล่างเพื่อดูรายละเอียดโครงการของแต่ละฝ่าย</p>
-                        </div>
-                        <span className="px-3 py-1 rounded-full bg-purple-50 text-purple-800 border border-purple-200 text-xs font-bold">
-                            {deptSummaryList.length} ฝ่าย/หน่วยงาน
-                        </span>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-purple-50/60 border-y border-purple-100 text-xs font-black uppercase text-purple-900">
-                                    <th className="px-4 py-3">ฝ่าย / หน่วยงาน</th>
-                                    <th className="px-4 py-3 text-center">จำนวนโครงการ</th>
-                                    <th className="px-4 py-3 text-center">อนุมัติแล้ว</th>
-                                    <th className="px-4 py-3 text-right">งบประมาณเสนอขอ (บาท)</th>
-                                    <th className="px-4 py-3 text-right">งบประมาณที่จัดสรร (บาท)</th>
-                                    <th className="px-4 py-3 text-center">การกรอง</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm">
-                                {deptSummaryList.map((d) => (
-                                    <tr key={d.id} className="hover:bg-purple-50/30 transition-colors">
-                                        <td className="px-4 py-3 font-extrabold text-slate-900">
-                                            🏢 {d.name}
-                                        </td>
-                                        <td className="px-4 py-3 text-center font-bold text-slate-700">
-                                            {d.projectCount} โครงการ
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 font-black text-xs">
-                                                {d.approvedCount} โครงการ
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono font-bold text-slate-900">
-                                            ฿{new Intl.NumberFormat('th-TH').format(d.estimatedSum)}
-                                        </td>
-                                        <td className="px-4 py-3 text-right font-mono font-black text-purple-900">
-                                            ฿{new Intl.NumberFormat('th-TH').format(d.allocatedSum || d.estimatedSum)}
-                                        </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <button
-                                                type="button"
-                                                onClick={() => setProjectDeptFilter(String(d.id))}
-                                                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
-                                                    String(projectDeptFilter) === String(d.id)
-                                                        ? 'bg-purple-700 text-white shadow-xs'
-                                                        : 'bg-slate-100 text-slate-700 hover:bg-purple-100 hover:text-purple-900'
-                                                }`}
-                                            >
-                                                {String(projectDeptFilter) === String(d.id) ? '✓ กำลังเลือกฝ่ายนี้' : '🔍 กรองดูเฉพาะฝ่ายนี้'}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr className="bg-slate-100/90 font-black text-xs sm:text-sm text-purple-950 border-t-2 border-purple-200">
-                                    <td className="px-4 py-3.5">
-                                        รวมทั้งสิ้นทั้งสถานศึกษา ({deptSummaryList.length} ฝ่าย)
-                                    </td>
-                                    <td className="px-4 py-3.5 text-center">
-                                        {filteredProjects.length} โครงการ
-                                    </td>
-                                    <td className="px-4 py-3.5 text-center text-emerald-700">
-                                        {approvedCount} โครงการ
-                                    </td>
-                                    <td className="px-4 py-3.5 text-right font-mono text-base">
-                                        ฿{new Intl.NumberFormat('th-TH').format(totalEstimatedSum)}
-                                    </td>
-                                    <td className="px-4 py-3.5 text-right font-mono text-base text-purple-900">
-                                        ฿{new Intl.NumberFormat('th-TH').format(totalAllocatedSum || totalEstimatedSum)}
-                                    </td>
-                                    <td className="px-4 py-3.5 text-center">
-                                        {projectDeptFilter !== 'all' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setProjectDeptFilter('all')}
-                                                className="text-xs text-purple-700 hover:underline font-bold"
-                                            >
-                                                แสดงทุกฝ่าย
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-
-                {/* 6-Step Workflow Visual Distribution Graph Bar */}
-                <div className="rounded-2xl border border-purple-100 bg-white p-5 shadow-sm space-y-3 font-sans">
-                    <h4 className="text-sm font-black text-purple-950 flex items-center gap-2">
-                        <span>📊</span> กราฟกระจายสถานะโครงการตามขั้นตอนการอนุมัติ (6-Step Workflow Graph)
-                    </h4>
-                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-                        <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-center shadow-2xs">
-                            <span className="text-[11px] font-bold text-purple-800 block">ขั้นที่ 1: เสนอโครงการ</span>
-                            <span className="text-xl font-black text-purple-900">{step1Count}</span>
-                        </div>
-                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-center shadow-2xs">
-                            <span className="text-[11px] font-bold text-blue-800 block">ขั้นที่ 2: หัวหน้าแผนก</span>
-                            <span className="text-xl font-black text-blue-900">{step2Count}</span>
-                        </div>
-                        <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200 text-center shadow-2xs">
-                            <span className="text-[11px] font-bold text-cyan-800 block">ขั้นที่ 3: งานวางแผน</span>
-                            <span className="text-xl font-black text-cyan-900">{step3Count}</span>
-                        </div>
-                        <div className="p-3 bg-violet-50 rounded-xl border border-violet-200 text-center shadow-2xs">
-                            <span className="text-[11px] font-bold text-violet-800 block">ขั้นที่ 4: งานพัสดุ</span>
-                            <span className="text-xl font-black text-violet-900">{step4Count}</span>
-                        </div>
-                        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-center shadow-2xs">
-                            <span className="text-[11px] font-bold text-amber-900 block">ขั้นที่ 5: รองผู้อำนวยการ</span>
-                            <span className="text-xl font-black text-amber-950">{step5Count}</span>
-                        </div>
-                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-center shadow-2xs">
-                            <span className="text-[11px] font-bold text-emerald-800 block">ขั้นที่ 6: ผู้อำนวยการอนุมัติ</span>
-                            <span className="text-xl font-black text-emerald-900">{approvedCount}</span>
-                        </div>
-                    </div>
-                </div>
-
+                {/* Unified Department Overview and Project Details Table */}
                 {/* Filters */}
                 <div className="rounded-2xl border border-purple-100 bg-white p-4 shadow-sm grid grid-cols-1 sm:grid-cols-4 gap-4 items-center">
                     <div>
@@ -6251,102 +6129,264 @@ ${itemsListText}
                     </div>
                 </div>
 
-                {/* Master Table */}
-                <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
+                {/* 6-Step Workflow Visual Distribution Graph Bar */}
+                <div className="rounded-2xl border border-purple-100 bg-white p-5 shadow-sm space-y-3 font-sans">
+                    <h4 className="text-sm font-black text-purple-950 flex items-center gap-2">
+                        <span>📊</span> กราฟกระจายสถานะโครงการตามขั้นตอนการอนุมัติ (6-Step Workflow Graph)
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                        <div className="p-3 bg-purple-50 rounded-xl border border-purple-200 text-center shadow-2xs">
+                            <span className="text-[11px] font-bold text-purple-800 block">ขั้นที่ 1: เสนอโครงการ</span>
+                            <span className="text-xl font-black text-purple-900">{step1Count}</span>
+                        </div>
+                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-200 text-center shadow-2xs">
+                            <span className="text-[11px] font-bold text-blue-800 block">ขั้นที่ 2: หัวหน้าแผนก</span>
+                            <span className="text-xl font-black text-blue-900">{step2Count}</span>
+                        </div>
+                        <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-200 text-center shadow-2xs">
+                            <span className="text-[11px] font-bold text-cyan-800 block">ขั้นที่ 3: งานวางแผน</span>
+                            <span className="text-xl font-black text-cyan-900">{step3Count}</span>
+                        </div>
+                        <div className="p-3 bg-violet-50 rounded-xl border border-violet-200 text-center shadow-2xs">
+                            <span className="text-[11px] font-bold text-violet-800 block">ขั้นที่ 4: งานพัสดุ</span>
+                            <span className="text-xl font-black text-violet-900">{step4Count}</span>
+                        </div>
+                        <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-center shadow-2xs">
+                            <span className="text-[11px] font-bold text-amber-900 block">ขั้นที่ 5: รองผู้อำนวยการ</span>
+                            <span className="text-xl font-black text-amber-950">{step5Count}</span>
+                        </div>
+                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-center shadow-2xs">
+                            <span className="text-[11px] font-bold text-emerald-800 block">ขั้นที่ 6: ผู้อำนวยการอนุมัติ</span>
+                            <span className="text-xl font-black text-emerald-900">{approvedCount}</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Unified Master Table: Department Groups with Project Rows Inside */}
+                <div className="rounded-3xl border border-slate-200 bg-white shadow-md overflow-hidden font-sans">
+                    <div className="p-5 bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h4 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                                <span>🏛️</span> ตารางสรุปงบประมาณและรายละเอียดโครงการแยกตามฝ่าย (รวมในตารางเดียว)
+                            </h4>
+                            <p className="text-xs text-purple-200 mt-0.5">
+                                แสดงยอดรวมงบประมาณของแต่ละฝ่าย พร้อมรายการโครงการ ผู้รับผิดชอบ สถานะ และปุ่มจัดการในตารางเดียวกัน
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const allExpanded = deptSummaryList.every(d => expandedDepts[d.id] !== false);
+                                    const newExp = {};
+                                    deptSummaryList.forEach(d => {
+                                        newExp[d.id] = !allExpanded;
+                                    });
+                                    setExpandedDepts(newExp);
+                                }}
+                                className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 border border-white/20 text-white font-bold text-xs transition cursor-pointer"
+                            >
+                                ↕️ สลับย่อ/ขยายทุกฝ่าย
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="border-b border-purple-100 bg-purple-50/50 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
-                                    <th className="px-6 py-3.5">ชื่อโครงการ</th>
-                                    <th className="px-6 py-3.5">ผู้เสนอโครงการ / ฝ่ายงาน</th>
-                                    <th className="px-6 py-3.5 text-center">ปีการศึกษา</th>
-                                    <th className="px-6 py-3.5">งบเสนอขอ</th>
-                                    <th className="px-6 py-3.5 text-center">สถานะปัจจุบัน</th>
-                                    <th className="px-6 py-3.5 text-right">การดำเนินการ (CRUD)</th>
+                                <tr className="bg-slate-100 border-b border-slate-200 text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">
+                                    <th className="px-5 py-3.5 w-2/5">ฝ่ายงาน / ชื่อโครงการ</th>
+                                    <th className="px-4 py-3.5 w-1/5">ผู้เสนอโครงการ / ผู้รับผิดชอบ</th>
+                                    <th className="px-4 py-3.5 text-center whitespace-nowrap">ปีการศึกษา</th>
+                                    <th className="px-4 py-3.5 text-right whitespace-nowrap">งบประมาณเสนอขอ</th>
+                                    <th className="px-4 py-3.5 text-right whitespace-nowrap">งบประมาณจัดสรร</th>
+                                    <th className="px-4 py-3.5 text-center whitespace-nowrap">สถานะปัจจุบัน</th>
+                                    <th className="px-4 py-3.5 text-right whitespace-nowrap">จัดการ</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-purple-100 text-sm">
-                                {filteredProjects.length === 0 ? (
+                            <tbody className="divide-y divide-slate-200">
+                                {deptSummaryList.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-10 text-center text-sm text-slate-500">
-                                            ไม่พบข้อมูลโครงการตามเงื่อนไขที่ค้นหา
+                                        <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
+                                            <div className="text-3xl mb-2">📭</div>
+                                            <p className="font-bold text-sm">ไม่พบข้อมูลโครงการตามเงื่อนไขที่เลือก</p>
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredProjects.map((p) => (
-                                        <tr key={p.id} className="hover:bg-purple-50/20 transition-all">
-                                            <td className="px-6 py-4 font-bold text-slate-900 max-w-xs truncate" title={p.title}>
-                                                {p.title}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-semibold text-slate-800 text-xs">{p.proposer_name}</div>
-                                                <div className="text-[11px] text-purple-600 font-medium">{p.department_name}</div>
-                                            </td>
-                                            <td className="px-6 py-4 text-center text-slate-600 font-medium text-xs">
-                                                {p.academic_year}
-                                            </td>
-                                            <td className="px-6 py-4 font-bold text-purple-700 text-xs whitespace-nowrap">
-                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget)}
-                                            </td>
-                                            <td className="px-6 py-4 text-center whitespace-nowrap">
-                                                {getStatusBadge(p.status, p.current_approval_step, p)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-2 whitespace-nowrap">
-                                                    <Link
-                                                        href={route('projects.show', p.id)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="ติดตาม / จัดการโครงการ"
-                                                    >
-                                                        👁️ จัดการ ➔
-                                                    </Link>
-                                                    {(p.status === 'draft' || p.status === 'rejected') && (
+                                    deptSummaryList.map((dept) => {
+                                        const isExpanded = expandedDepts[dept.id] !== false; // Default expanded
+                                        return (
+                                            <React.Fragment key={dept.id}>
+                                                {/* Department Header Row */}
+                                                <tr className="bg-purple-50/80 hover:bg-purple-100/70 transition-colors border-t-2 border-purple-200">
+                                                    <td className="px-5 py-3.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleDeptExpand(dept.id)}
+                                                                className="w-6 h-6 rounded-lg bg-purple-200 text-purple-900 hover:bg-purple-300 font-bold text-xs flex items-center justify-center transition cursor-pointer"
+                                                                title={isExpanded ? 'คลิกเพื่อย่อ' : 'คลิกเพื่อขยายดูโครงการ'}
+                                                            >
+                                                                {isExpanded ? '▼' : '▶'}
+                                                            </button>
+                                                            <div>
+                                                                <span className="font-black text-sm sm:text-base text-purple-950">
+                                                                    🏢 {dept.name}
+                                                                </span>
+                                                                <span className="ml-2 px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-900 text-xs font-extrabold">
+                                                                    {dept.projectCount} โครงการ
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-xs text-slate-600 font-semibold">
+                                                        อนุมัติแล้ว: <strong className="text-emerald-700">{dept.approvedCount}</strong> จาก {dept.projectCount} โครงการ
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-center text-xs font-bold text-slate-500">
+                                                        -
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-slate-900">
+                                                        ฿{new Intl.NumberFormat('th-TH').format(dept.estimatedSum)}
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-purple-900">
+                                                        ฿{new Intl.NumberFormat('th-TH').format(dept.allocatedSum || dept.estimatedSum)}
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-center">
+                                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 font-black text-xs border border-emerald-300">
+                                                            อนุมัติ {dept.approvedCount}/{dept.projectCount}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3.5 text-right">
                                                         <button
-                                                            onClick={() => handleResubmitProject(p)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
+                                                            type="button"
+                                                            onClick={() => toggleDeptExpand(dept.id)}
+                                                            className="text-xs font-bold text-purple-700 hover:text-purple-950 underline cursor-pointer"
                                                         >
-                                                            🚀 ยื่นขออนุมัติ
+                                                            {isExpanded ? 'ย่อรายการโครงการ' : 'ขยายดูโครงการ (' + dept.projectCount + ')'}
                                                         </button>
-                                                    )}
-                                                    {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && (
-                                                        <button
-                                                            onClick={() => handleAdminApproveProject(p, 'step')}
-                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-2.5 py-2 text-xs font-extrabold text-purple-950 shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="อนุมัติข้ามขั้นตอนปัจจุบันทันที (Admin Step Override)"
-                                                        >
-                                                            ⚡ อนุมัติลัด
-                                                        </button>
-                                                    )}
-                                                    {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && (
-                                                        <button
-                                                            onClick={() => handleAdminApproveProject(p, 'full')}
-                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 px-2.5 py-2 text-xs font-extrabold text-white shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="อนุมัติรวดเดียวสมบูรณ์ 6 ขั้นตอน (Admin Full 6-Step Override)"
-                                                        >
-                                                            👑 อนุมัติรวดเดียว
-                                                        </button>
-                                                    )}
-                                                    <Link
-                                                        href={route('projects.edit', p.id)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="แก้ไขโครงการ"
-                                                    >
-                                                        ✏️ แก้ไข
-                                                    </Link>
-                                                    <button
-                                                        onClick={() => handleDeleteProject(p)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="ลบโครงการ"
-                                                    >
-                                                        🗑️ ลบ
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
+                                                    </td>
+                                                </tr>
+
+                                                {/* Projects Inside This Department */}
+                                                {isExpanded && dept.projects.map((p, pIdx) => (
+                                                    <tr key={p.id} className="hover:bg-slate-50 transition-colors bg-white">
+                                                        {/* Project Title with indentation */}
+                                                        <td className="px-5 py-3 pl-11 align-top">
+                                                            <div className="flex items-start gap-2">
+                                                                <span className="text-slate-400 font-mono text-xs mt-0.5">└─ #{pIdx + 1}</span>
+                                                                <div className="space-y-1">
+                                                                    <Link
+                                                                        href={route('projects.show', p.id)}
+                                                                        className="font-black text-xs sm:text-sm text-purple-950 hover:text-purple-700 transition leading-snug line-clamp-2"
+                                                                    >
+                                                                        {p.title}
+                                                                    </Link>
+                                                                    {p.funding_source_name && (
+                                                                        <div className="text-[11px] text-slate-500 font-medium">
+                                                                            🏷️ แหล่งเงิน: <span className="text-purple-900 font-bold">{p.funding_source_name}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Proposer */}
+                                                        <td className="px-4 py-3 text-xs align-top">
+                                                            <div className="font-bold text-slate-800">👤 {p.proposer_name}</div>
+                                                            <div className="text-[11px] text-slate-500">{p.department_name}</div>
+                                                        </td>
+
+                                                        {/* Academic Year */}
+                                                        <td className="px-4 py-3 text-center text-xs font-bold text-slate-600 align-top">
+                                                            {p.academic_year}
+                                                        </td>
+
+                                                        {/* Estimated Budget */}
+                                                        <td className="px-4 py-3 text-right font-mono font-bold text-xs sm:text-sm text-slate-900 align-top">
+                                                            ฿{new Intl.NumberFormat('th-TH').format(p.estimated_budget || 0)}
+                                                        </td>
+
+                                                        {/* Allocated Budget */}
+                                                        <td className="px-4 py-3 text-right font-mono font-black text-xs sm:text-sm text-purple-950 align-top">
+                                                            ฿{new Intl.NumberFormat('th-TH').format(p.allocated_budget || p.allocated_amount || p.estimated_budget || 0)}
+                                                        </td>
+
+                                                        {/* Current Status */}
+                                                        <td className="px-4 py-3 text-center align-top whitespace-nowrap">
+                                                            {getStatusBadge(p.status, p.current_approval_step, p)}
+                                                        </td>
+
+                                                        {/* CRUD Action Buttons */}
+                                                        <td className="px-4 py-3 text-right align-top whitespace-nowrap">
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <Link
+                                                                    href={route('projects.show', p.id)}
+                                                                    className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs hover:scale-105 transition"
+                                                                    title="เปิดดูรายละเอียดโครงการ"
+                                                                >
+                                                                    เปิดดู ➔
+                                                                </Link>
+                                                                <Link
+                                                                    href={route('projects.print', p.id)}
+                                                                    target="_blank"
+                                                                    className="px-2.5 py-1 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs border border-purple-200 transition"
+                                                                    title="พิมพ์เอกสารโครงการ (PDF)"
+                                                                >
+                                                                    🖨️ PDF
+                                                                </Link>
+                                                                <Link
+                                                                    href={route('projects.edit', p.id)}
+                                                                    className="px-2 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition"
+                                                                    title="แก้ไขโครงการ"
+                                                                >
+                                                                    ✏️
+                                                                </Link>
+                                                                {(role === 'admin' || auth.user.is_admin) && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeleteProject(p)}
+                                                                        className="px-2 py-1 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-xs border border-rose-300 transition cursor-pointer"
+                                                                        title="ลบโครงการ"
+                                                                    >
+                                                                        🗑️
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </React.Fragment>
+                                        );
+                                    })
                                 )}
                             </tbody>
+                            <tfoot>
+                                <tr className="bg-slate-900 text-white font-black text-xs sm:text-sm border-t-2 border-slate-700">
+                                    <td className="px-5 py-4">
+                                        🏛️ ยอดรวมทั้งสิ้นทั้งสถานศึกษา ({deptSummaryList.length} ฝ่าย)
+                                    </td>
+                                    <td className="px-4 py-4 text-xs font-bold text-slate-300">
+                                        โครงการทั้งหมด: <strong className="text-white text-sm">{filteredProjects.length}</strong> โครงการ
+                                    </td>
+                                    <td className="px-4 py-4 text-center text-xs text-slate-400">
+                                        -
+                                    </td>
+                                    <td className="px-4 py-4 text-right font-mono text-base font-black text-amber-300">
+                                        ฿{new Intl.NumberFormat('th-TH').format(totalEstimatedSum)}
+                                    </td>
+                                    <td className="px-4 py-4 text-right font-mono text-base font-black text-emerald-400">
+                                        ฿{new Intl.NumberFormat('th-TH').format(totalAllocatedSum || totalEstimatedSum)}
+                                    </td>
+                                    <td className="px-4 py-4 text-center">
+                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 text-xs font-black">
+                                            อนุมัติแล้ว {approvedCount} โครงการ
+                                        </span>
+                                    </td>
+                                    <td className="px-4 py-4 text-right text-xs text-slate-300">
+                                        รวมทุกหน่วยงาน
+                                    </td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
