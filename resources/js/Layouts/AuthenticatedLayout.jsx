@@ -305,11 +305,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 ? 'bg-white/25 text-white font-semibold shadow-xs border-r-4 border-amber-400'
                                                 : 'text-purple-100 hover:bg-white/10 hover:text-white'
                                         }`}
-                                        title="ติดตามโครงการทั้งหมดในระบบ"
+                                        title="สรุปโครงการทั้งหมดของวิทยาลัยและยอดงบแยกตามฝ่าย"
                                     >
                                         <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
-                                        <span className="text-sm">📁</span>
-                                        {isSidebarOpen && <span>ติดตามโครงการทั้งหมด</span>}
+                                        <span className="text-sm">🏛️</span>
+                                        {isSidebarOpen && <span className="font-bold">สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                     </Link>
                                 </div>
                             </div>
@@ -486,7 +486,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     >
                                         <span className="text-amber-300/80 font-mono text-[10px]">└─</span>
                                         <span className="text-sm">📁</span>
-                                        {isSidebarOpen && <span>ติดตามโครงการทั้งหมด</span>}
+                                        {isSidebarOpen && <span>สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                     </Link>
                                 </div>
                             </div>

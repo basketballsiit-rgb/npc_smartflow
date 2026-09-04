@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 export default function Create({ 
     approvedProjects = [],
@@ -13,6 +13,8 @@ export default function Create({
 }) {
     const hasApprovedProjects = approvedProjects && approvedProjects.length > 0;
     const hasOtherProjects = otherProjects && otherProjects.length > 0;
+    const { auth } = usePage().props;
+    const isPlanOrAdmin = auth?.user?.is_admin || auth?.user?.role_id === 1 || auth?.user?.role_id === 3 || auth?.user?.role?.name?.includes('plan') || auth?.user?.role?.name?.includes('admin');
 
     const renderStatusBadge = (status, step) => {
         if (status === 'preliminary') {
@@ -61,6 +63,26 @@ export default function Create({
             <Head title="จัดทำและติดตามข้อเสนอโครงการ" />
 
             <div className="max-w-6xl mx-auto py-6 space-y-8 font-sans px-4 sm:px-6">
+                {/* Plan Staff & Admin Overview Banner */}
+                {isPlanOrAdmin && (
+                    <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-4 sm:p-5 rounded-2xl shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-amber-300">
+                        <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">🏛️</span>
+                                <h4 className="font-black text-sm sm:text-base">สำหรับเจ้าหน้าที่งานแผนงานและผู้ดูแลระบบ</h4>
+                            </div>
+                            <p className="text-xs text-amber-100">
+                                หน้านี้แสดงเฉพาะการ์ดข้อเสนอโครงการ หากต้องการดู <strong>ตารางสรุปโครงการทั้งหมดของวิทยาลัย และยอดงบประมาณแยกตามฝ่าย</strong> สามารถคลิกดูได้ทันที
+                            </p>
+                        </div>
+                        <Link
+                            href={route('dashboard', { tab: 'all_projects' })}
+                            className="px-4 py-2 bg-white text-orange-950 hover:bg-amber-50 font-black text-xs rounded-xl shadow-xs transition shrink-0 inline-flex items-center gap-1.5"
+                        >
+                            <span>📊</span> ดูสรุปโครงการทั้งวิทยาลัย (Table View) ➔
+                        </Link>
+                    </div>
+                )}
 
                 {/* Section 1: Projects ready for Full Proposal Input */}
                 {hasApprovedProjects ? (
