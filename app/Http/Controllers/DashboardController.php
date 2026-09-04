@@ -91,7 +91,7 @@ class DashboardController extends Controller
         // 1. Teacher / User Proposals Data (Always loaded for all users so anyone can view their own projects)
         $data['teacherData'] = [
             'projects' => Project::where('user_id', $user->id)
-                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals', 'fundingSource', 'budget.fundingSource', 'procurement'])
+                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement'])
                 ->latest()
                 ->get(),
             'proposalsCount' => Project::where('user_id', $user->id)->count(),
@@ -253,7 +253,7 @@ class DashboardController extends Controller
 
         // Master Projects list for Admin, Plan Head, Procurement & Executives
         if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isExecutive() || $request->query('tab') === 'document_tracking') {
-            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals', 'procurement'])
+            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement'])
                 ->latest()
                 ->get()
                 ->map(function ($p) {
@@ -281,6 +281,17 @@ class DashboardController extends Controller
                         'funding_source_name' => $fundingName,
                         'funding_source_id' => $fundingId,
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
+                        'approvals' => $p->approvals->map(function ($a) {
+                            return [
+                                'id' => $a->id,
+                                'step_number' => (int)$a->step_number,
+                                'status' => $a->status,
+                                'comments' => $a->comments,
+                                'user_name' => $a->user?->name ?? ($a->approver_name ?: '-'),
+                                'user_position' => $a->user?->position ?? '',
+                                'date' => $a->created_at ? $a->created_at->format('d/m/Y H:i') : '',
+                            ];
+                        }),
                     ];
                 });
         }

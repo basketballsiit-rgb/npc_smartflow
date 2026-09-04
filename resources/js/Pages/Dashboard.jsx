@@ -444,7 +444,8 @@ export default function Dashboard({
     // All Projects Master Tracking Filter States
     
     // Document & Loan Tracking States
-    const [docTrackingFilter, setDocTrackingFilter] = useState('all'); // all, at_procurement, at_finance, with_borrower, completed
+    const [docTrackingFilter, setDocTrackingFilter] = useState('all');
+    const [selectedApprovalProject, setSelectedApprovalProject] = useState(null); // all, at_procurement, at_finance, with_borrower, completed
     const [docTrackingSearch, setDocTrackingSearch] = useState('');
 
     const [projectSearch, setProjectSearch] = useState('');
@@ -6187,6 +6188,26 @@ ${itemsListText}
 
     
     // 5. Dedicated Document & Loan Tracking Center Tab
+    
+    const getTrackingApprovalStepInfo = (stepNumber) => {
+        switch (parseInt(stepNumber)) {
+            case 1:
+                return { title: 'ขั้นตอนที่ ๑: ผู้เสนอโครงการ', role: 'ครู/บุคลากรผู้รับผิดชอบ', icon: '👤' };
+            case 2:
+                return { title: 'ขั้นตอนที่ ๒: หัวหน้างาน/หัวหน้าแผนก', role: 'หัวหน้างาน/แผนกวิชา', icon: '📋' };
+            case 3:
+                return { title: 'ขั้นตอนที่ ๓: เจ้าหน้าที่งานแผนงาน', role: 'งานวางแผนและงบประมาณ', icon: '⚖️' };
+            case 4:
+                return { title: 'ขั้นตอนที่ ๔: หัวหน้างานวางแผนฯ', role: 'หัวหน้างานวางแผนและงบประมาณ', icon: '📊' };
+            case 5:
+                return { title: 'ขั้นตอนที่ ๕: รองผู้อำนวยการ', role: 'รองผู้อำนวยการฝ่ายแผนงานฯ', icon: '👔' };
+            case 6:
+                return { title: 'ขั้นตอนที่ ๖: ผู้อำนวยการวิทยาลัย', role: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน', icon: '🏛️' };
+            default:
+                return { title: `ขั้นตอนที่ ${stepNumber}`, role: 'ผู้เกี่ยวข้อง', icon: '📝' };
+        }
+    };
+
     const renderDocumentTrackingTab = () => {
         // Collect projects based on user authority
         const sourceProjects = (Array.isArray(allProjectsMaster) && allProjectsMaster.length > 0)
@@ -6632,11 +6653,20 @@ ${itemsListText}
                                                         </>
                                                     )}
 
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedApprovalProject(item)}
+                                                        className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-[11px] rounded-xl shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                        title="ดูประวัติการพิจารณาและลำดับการลงนาม 6 ขั้นตอน"
+                                                    >
+                                                        <span>📜</span>
+                                                        <span>ประวัติลงนาม</span>
+                                                    </button>
                                                     <Link
                                                         href={route('projects.show', item.id)}
-                                                        className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-[11px] rounded-xl shadow-2xs hover:scale-105 transition"
+                                                        className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-purple-100 text-purple-900 font-bold text-[11px] rounded-xl shadow-2xs hover:scale-105 transition"
                                                     >
-                                                        <span>เปิดดู</span>
+                                                        <span>เปิดโครงการ</span>
                                                         <span>➔</span>
                                                     </Link>
                                                 </div>
@@ -6648,6 +6678,147 @@ ${itemsListText}
                         </table>
                     </div>
                 </div>
+            
+                {/* Approval Timeline & Sign-off History Modal */}
+                {selectedApprovalProject && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                        <div className="w-full max-w-2xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8 max-h-[90vh] flex flex-col">
+                            {/* Modal Header */}
+                            <div className="flex justify-between items-start border-b border-purple-100 pb-4 mb-4">
+                                <div className="space-y-1 pr-4">
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-black">
+                                        <span>📜</span> ลำดับขั้นตอน & ประวัติการลงนาม
+                                    </div>
+                                    <h3 className="text-base sm:text-lg font-black text-purple-950 line-clamp-2 leading-snug mt-1">
+                                        {selectedApprovalProject.title}
+                                    </h3>
+                                    <div className="flex flex-wrap items-center gap-x-3 text-xs text-slate-500 pt-0.5">
+                                        <span>👤 ผู้เสนอ: <b>{selectedApprovalProject.user?.name || selectedApprovalProject.proposer_name || 'ไม่ระบุ'}</b></span>
+                                        <span>•</span>
+                                        <span>🏢 {selectedApprovalProject.department?.name || selectedApprovalProject.department_name || '-'}</span>
+                                        <span>•</span>
+                                        <span>💰 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedApprovalProject.allocated_budget || selectedApprovalProject.estimated_budget || 0)}</span>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedApprovalProject(null)}
+                                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Current Status Pill */}
+                            <div className="p-3 bg-purple-50/60 rounded-2xl border border-purple-100 flex items-center justify-between mb-4">
+                                <span className="text-xs font-bold text-purple-900">สถานะโครงการปัจจุบัน:</span>
+                                <span className="text-xs font-black px-3 py-1 rounded-xl bg-purple-600 text-white shadow-xs">
+                                    {['approved', 'in_progress', 'evaluating', 'reporting', 'completed'].includes(selectedApprovalProject.status)
+                                        ? '✓ ผ่านการอนุมัติโครงการครบทั้ง 6 ขั้นตอนแล้ว'
+                                        : selectedApprovalProject.status === 'rejected'
+                                        ? '✕ ไม่อนุมัติโครงการ'
+                                        : `⏳ อยู่ระหว่างการพิจารณา (ขั้นตอนที่ ${selectedApprovalProject.current_approval_step || 1} จาก 6)`}
+                                </span>
+                            </div>
+
+                            {/* Timeline List */}
+                            <div className="overflow-y-auto space-y-3 pr-1 flex-1">
+                                {Array.isArray(selectedApprovalProject.approvals) && selectedApprovalProject.approvals.length > 0 ? (
+                                    selectedApprovalProject.approvals
+                                        .filter((log, index, self) => 
+                                            index === self.findIndex((t) => (
+                                                t.step_number === log.step_number && 
+                                                t.status === log.status && 
+                                                t.comments === log.comments
+                                            ))
+                                        )
+                                        .map((log, idx) => {
+                                            const isStep1 = log.step_number === 1 || log.status === 'submitted' || log.comments?.includes('เสนอโครงการ');
+                                            const isApproved = log.status === 'approved' && !isStep1;
+                                            const isRejected = log.status === 'rejected';
+                                            const isBudgetCommittee = log.step_number === 0 || log.comments?.includes('จัดสรรงบประมาณ');
+                                            const isProposalInitial = log.comments?.includes('เบื้องต้น');
+
+                                            const stepInfo = isProposalInitial ? {
+                                                title: 'เสนอโครงการเบื้องต้น',
+                                                role: 'ผู้เสนอโครงการ',
+                                                icon: '💡'
+                                            } : isBudgetCommittee ? {
+                                                title: 'มติคณะกรรมการจัดสรรงบประมาณ',
+                                                role: 'คณะกรรมการจัดสรรงบประมาณ',
+                                                icon: '⚖️'
+                                            } : getTrackingApprovalStepInfo(log.step_number);
+
+                                            return (
+                                                <div key={log.id || idx} className="border-l-4 border-purple-500 pl-3.5 py-2.5 bg-purple-50/30 rounded-r-2xl border-purple-100 space-y-1.5 hover:bg-purple-50/60 transition-colors">
+                                                    <div className="flex justify-between items-start gap-2">
+                                                        <div className="flex items-center gap-1.5 text-xs font-black text-purple-950">
+                                                            <span>{stepInfo.icon}</span>
+                                                            <span>{stepInfo.title}</span>
+                                                        </div>
+                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-md shrink-0 ${
+                                                            isApproved ? 'bg-emerald-100 text-emerald-800' :
+                                                            isRejected ? 'bg-rose-100 text-rose-800' :
+                                                            'bg-purple-100 text-purple-800'
+                                                        }`}>
+                                                            {isApproved ? '✓ อนุมัติแล้ว' : isRejected ? '✕ ไม่อนุมัติ' : '🚀 ยื่นขออนุมัติ'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex flex-wrap justify-between items-center text-xs text-slate-600 gap-y-1">
+                                                        <span>
+                                                            <span className="font-bold text-slate-700">ผู้ลงนาม:</span> {log.user_name || log.user?.name || '-'} {log.user_position || log.user?.position ? `(${log.user_position || log.user?.position})` : ''}
+                                                        </span>
+                                                        <span className="text-[11px] text-slate-500 font-mono">
+                                                            {log.date || (log.created_at ? new Date(log.created_at).toLocaleDateString('th-TH') : '-')}
+                                                        </span>
+                                                    </div>
+
+                                                    {log.comments && (
+                                                        <div className="text-xs bg-white/90 p-2 rounded-xl text-slate-700 border border-purple-100/60 mt-1">
+                                                            <span className="font-bold text-purple-900">💬 ความเห็น:</span> {log.comments}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
+                                ) : (
+                                    <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                        <div className="text-3xl mb-1">⏳</div>
+                                        <p className="text-xs font-bold">ยังไม่มีข้อมูลบันทึกการลงนามในระบบ</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="flex flex-wrap justify-between items-center gap-2 pt-4 border-t border-purple-100 mt-4">
+                                <a
+                                    href={route('projects.print', selectedApprovalProject.id)}
+                                    target="_blank"
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 text-xs font-bold transition"
+                                >
+                                    <span>🖨️</span> พิมพ์เอกสารโครงการ (PDF)
+                                </a>
+                                <div className="flex items-center gap-2">
+                                    <Link
+                                        href={route('projects.show', selectedApprovalProject.id)}
+                                        className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition"
+                                    >
+                                        <span>เปิดหน้าโครงการ</span> <span>➔</span>
+                                    </Link>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedApprovalProject(null)}
+                                        className="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition cursor-pointer"
+                                    >
+                                        ปิดหน้าต่าง
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </div>
         );
     };

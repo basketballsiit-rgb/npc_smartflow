@@ -999,8 +999,8 @@ ${itemsListText}
 
                     {/* Tab 1: Plan & Details */}
                     {activeTab === 'plan' && (
-                        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-                            <div className="lg:col-span-2 space-y-6">
+                        <div className={`grid grid-cols-1 gap-8 ${(canApprove || ((auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'approved')) ? 'lg:grid-cols-3' : 'lg:grid-cols-1'}`}>
+                            <div className={`${(canApprove || ((auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'approved')) ? 'lg:col-span-2' : 'w-full'} space-y-6`}>
                                 <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6">
                                     <div className="bg-purple-50/80 p-4 rounded-xl border border-purple-100 flex justify-between items-center">
                                         <div>
@@ -1085,7 +1085,8 @@ ${itemsListText}
                             </div>
 
                             {/* Approver Side Panel */}
-                            <div className="lg:col-span-1 space-y-6">
+                            {(canApprove || ((auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'approved')) && (
+                                <div className="lg:col-span-1 space-y-6">
                                 {canApprove && (
                                     <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
                                         <h3 className="text-base font-bold text-rose-950 mb-3">⚡ การดำเนินการพิจารณาอนุมัติโครงการ</h3>
@@ -1185,105 +1186,8 @@ ${itemsListText}
                                     </div>
                                 )}
 
-                                {/* Approval Workflow & Sign-off History Card */}
-                                <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
-                                    <div className="flex justify-between items-center border-b border-purple-100 pb-3">
-                                        <h3 className="text-base font-black text-purple-950 flex items-center gap-1.5">
-                                            <span>📜</span> ลำดับขั้นตอน & ประวัติการลงนาม
-                                        </h3>
-                                        <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
-                                            {isPlanApproved ? 'อนุมัติโครงการแล้ว' : `ขั้นที่ ${project.current_approval_step || 1} จาก 6`}
-                                        </span>
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        {/* Completed approval logs */}
-                                        {project.approvals && project.approvals.length > 0 ? (
-                                            project.approvals
-                                                .filter((log, index, self) => 
-                                                    index === self.findIndex((t) => (
-                                                        t.step_number === log.step_number && 
-                                                        t.status === log.status && 
-                                                        t.comments === log.comments
-                                                    ))
-                                                )
-                                                .map((log) => {
-                                                const isStep1Submission = log.step_number === 1 || 
-                                                                          log.status === 'submitted' || 
-                                                                          log.comments?.includes('ยื่นขออนุมัติ') || 
-                                                                          log.comments?.includes('ยื่นเสนอ');
-                                                const isApproved = log.status === 'approved' && !isStep1Submission;
-                                                const isRejected = log.status === 'rejected';
-                                                const isBudgetCommittee = log.step_number === 0 || 
-                                                                          log.comments?.includes('มติคณะกรรมการ') || 
-                                                                          log.comments?.includes('จัดสรรงบ') || 
-                                                                          log.comments?.includes('Direct Allocation');
-                                                const isProposalInitial = log.comments?.includes('เบื้องต้น') || 
-                                                                          log.comments?.includes('Preliminary');
-
-                                                const stepInfo = isProposalInitial ? {
-                                                    title: 'เสนอโครงการเบื้องต้น',
-                                                    role: 'ผู้เสนอโครงการ',
-                                                    icon: '💡'
-                                                } : isBudgetCommittee ? {
-                                                    title: 'มติคณะกรรมการจัดสรรงบประมาณ',
-                                                    role: 'คณะกรรมการจัดสรรงบฯ',
-                                                    icon: '⚖️'
-                                                } : getApprovalStepNameAndRole(log.step_number);
-
-                                                return (
-                                                    <div key={log.id} className="border-l-4 border-purple-500 pl-3 py-2 space-y-1 bg-purple-50/40 rounded-r-xl pr-2 border-slate-100">
-                                                        <div className="flex justify-between items-start text-xs font-bold gap-2">
-                                                            <span className="text-purple-950 flex items-center gap-1">
-                                                                <span>{stepInfo.icon}</span>
-                                                                <span>{stepInfo.title}</span>
-                                                            </span>
-                                                            <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-extrabold ${isApproved ? 'bg-emerald-100 text-emerald-800' : isRejected ? 'bg-rose-100 text-rose-800' : 'bg-purple-100 text-purple-800'}`}>
-                                                                {isApproved ? '✅ อนุมัติแล้ว' : isRejected ? '❌ ตีกลับแก้ไข' : '📝 ยื่นขออนุมัติ'}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex justify-between items-center text-xs text-slate-600">
-                                                            <span className="text-slate-700">
-                                                                <span className="font-semibold text-slate-900">ผู้ลงนาม:</span> {log.user?.name || '-'} {log.user?.position ? `(${log.user.position})` : ''}
-                                                            </span>
-                                                            {log.created_at && (
-                                                                <span className="text-[11px] font-medium text-purple-700 shrink-0 ml-2">
-                                                                    {new Date(log.created_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        {log.comments && log.comments !== '-' && log.comments !== 'Approved' && (
-                                                            <div className="text-[11px] text-slate-600 bg-white/90 p-1.5 rounded-lg border border-purple-100 mt-1">
-                                                                💬 <strong>บันทึกความเห็น:</strong> {log.comments}
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })
-                                        ) : (
-                                            <p className="text-xs text-slate-400">ยังไม่มีประวัติการพิจารณาอนุมัติ</p>
-                                        )}
-
-                                        {/* Current Pending Step in Workflow */}
-                                        {(project.status === 'submitted' || project.status === 'pending_approval') && (
-                                            <div className="border-l-4 border-amber-500 pl-3 py-2 space-y-1 bg-amber-50/70 rounded-r-xl pr-2 shadow-2xs animate-pulse">
-                                                <div className="flex justify-between items-center text-xs font-bold">
-                                                    <span className="text-amber-950 flex items-center gap-1.5">
-                                                        <span>{getApprovalStepNameAndRole(project.current_approval_step || 2).icon}</span>
-                                                        <span>{getApprovalStepNameAndRole(project.current_approval_step || 2).title}</span>
-                                                    </span>
-                                                    <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-950 text-[10px] font-black">
-                                                        ⏳ อยู่ระหว่างรอลงนาม
-                                                    </span>
-                                                </div>
-                                                <div className="text-xs text-amber-900">
-                                                    อยู่ที่: <strong>{getApprovalStepOfficerInfo(project.current_approval_step, project.status, project.procurement).roleName}</strong>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                                )}
                         </div>
                     )}
 
