@@ -468,6 +468,10 @@ export default function Dashboard({
     const toggleDeptExpand = (deptId) => {
         setExpandedDepts(prev => ({ ...prev, [deptId]: !prev[deptId] }));
     };
+    const [expandedPrelimDepts, setExpandedPrelimDepts] = useState({}); // { [deptId]: boolean }
+    const togglePrelimDeptExpand = (deptId) => {
+        setExpandedPrelimDepts(prev => ({ ...prev, [deptId]: prev[deptId] === false ? true : false }));
+    };
 
     useEffect(() => {
         if (currentTab) {
@@ -3955,6 +3959,40 @@ ${itemsListText}
         const allocCount = planHeadData.preliminaryQueue?.filter(p => p.status === 'budget_approved').length || 0;
         const rejectCount = planHeadData.preliminaryQueue?.filter(p => p.status === 'budget_rejected').length || 0;
 
+        // Group preliminary projects by department
+        const prelimByDeptMap = {};
+        (planHeadData.preliminaryQueue || []).forEach(p => {
+            const deptId = p.department_id || p.department?.id || 'other';
+            const deptName = p.department?.name || 'ฝ่ายงานทั่วไป';
+            if (!prelimByDeptMap[deptId]) {
+                prelimByDeptMap[deptId] = {
+                    id: deptId,
+                    name: deptName,
+                    projectCount: 0,
+                    proposedSum: 0,
+                    allocatedSum: 0,
+                    prelimCount: 0,
+                    allocCount: 0,
+                    rejectCount: 0,
+                    projects: []
+                };
+            }
+            prelimByDeptMap[deptId].projectCount += 1;
+            const proposed = parseFloat(p.proposed_budget || p.estimated_budget || 0);
+            const allocated = parseFloat(p.allocated_budget || 0);
+            prelimByDeptMap[deptId].proposedSum += proposed;
+            prelimByDeptMap[deptId].allocatedSum += allocated;
+            if (p.status === 'preliminary') prelimByDeptMap[deptId].prelimCount += 1;
+            else if (p.status === 'budget_approved') prelimByDeptMap[deptId].allocCount += 1;
+            else if (p.status === 'budget_rejected') prelimByDeptMap[deptId].rejectCount += 1;
+
+            prelimByDeptMap[deptId].projects.push(p);
+        });
+        const prelimDeptList = Object.values(prelimByDeptMap).sort((a, b) => b.proposedSum - a.proposedSum);
+
+        const totalProposedSum = (planHeadData.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.proposed_budget || p.estimated_budget || 0), 0);
+        const totalAllocatedSum = (planHeadData.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.allocated_budget || 0), 0);
+
         return (
             <div className="space-y-8 font-sans">
                 {/* 1. Preliminary Budget Allocation Section */}
@@ -3968,10 +4006,27 @@ ${itemsListText}
                                 </h3>
                             </div>
                             <p className="text-xs text-slate-600 mt-0.5">
-                                คณะกรรมการและงานแผนงานพิจารณากำหนดกรอบงบประมาณและแหล่งเงินทุน 7 หมวด เพื่อให้ผู้เสนอจัดทำรายละเอียดโครงการฉบับสมบูรณ์
+                                คณะกรรมการและงานแผนงานพิจารณากำหนดกรอบงบประมาณและแหล่งเงินทุน 7 หมวด เพื่อให้ผู้เสนอจัดทำรายละเอียดโครงการฉบับสมบูรณ์ (จัดกลุ่มแยกตามฝ่าย)
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
+                            {prelimDeptList.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const allExpanded = prelimDeptList.every(d => expandedPrelimDepts[d.id] !== false);
+                                        const newExp = {};
+                                        prelimDeptList.forEach(d => {
+                                            newExp[d.id] = !allExpanded;
+                                        });
+                                        setExpandedPrelimDepts(newExp);
+                                    }}
+                                    className="inline-flex items-center gap-1 rounded-xl bg-white/80 hover:bg-white text-purple-950 font-bold text-xs px-3 py-2 border border-purple-200 transition cursor-pointer shadow-2xs"
+                                    title="สลับย่อ/ขยายโครงการทุกฝ่าย"
+                                >
+                                    <span>↕️</span> สลับย่อ/ขยายทุกฝ่าย
+                                </button>
+                            )}
                             {isPlanStaff && (
                                 <button
                                     onClick={openDirectAllocateModal}
@@ -3999,7 +4054,7 @@ ${itemsListText}
                         <table className="w-full text-left border-collapse table-fixed text-xs">
                             <thead>
                                 <tr className="border-b border-amber-100 bg-amber-50/40 text-[11px] font-bold uppercase text-purple-950">
-                                    <th className="w-[28%] min-w-[180px] px-3.5 py-3">ชื่อโครงการ</th>
+                                    <th className="w-[28%] min-w-[180px] px-3.5 py-3">ฝ่ายงาน / ชื่อโครงการ</th>
                                     <th className="w-[18%] min-w-[120px] px-3 py-3">ฝ่ายงาน / ผู้เสนอ</th>
                                     <th className="w-[14%] min-w-[95px] px-3 py-3 text-right">งบประมาณเสนอขอ</th>
                                     <th className="w-[17%] min-w-[110px] px-3 py-3">วงเงินจัดสรรจริง & แหล่งเงิน</th>
@@ -4015,92 +4070,174 @@ ${itemsListText}
                                         </td>
                                     </tr>
                                 ) : (
-                                    planHeadData.preliminaryQueue.map((p) => {
-                                        const fundingName = p.funding_source?.name || p.budget?.funding_source?.name || 'ยังไม่ระบุ';
+                                    prelimDeptList.map((dept) => {
+                                        const isExpanded = expandedPrelimDepts[dept.id] !== false; // Default expanded
                                         return (
-                                            <tr key={p.id} className="hover:bg-amber-50/20 transition-all">
-                                                <td className="px-3.5 py-2.5 align-top">
-                                                    <div className="font-bold text-slate-900 line-clamp-2 leading-snug break-words">
-                                                        {p.title}
-                                                    </div>
-                                                    <div className="text-[10px] text-slate-400 font-normal mt-0.5">ปีงบฯ {p.academic_year}</div>
-                                                </td>
-                                                <td className="px-3 py-2.5 align-top">
-                                                    <div className="font-semibold text-slate-800 text-[11px] truncate" title={p.department?.name}>
-                                                        {p.department?.name || 'ฝ่ายงานทั่วไป'}
-                                                    </div>
-                                                    <div className="text-[10px] text-purple-600 font-medium truncate" title={p.user?.name}>
-                                                        {p.user?.name || 'ไม่ระบุชื่อ'}
-                                                    </div>
-                                                </td>
-                                                <td className="px-3 py-2.5 text-right font-bold text-slate-800 text-xs align-top whitespace-nowrap">
-                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.proposed_budget || p.estimated_budget)}
-                                                </td>
-                                                <td className="px-3 py-2.5 text-xs align-top">
-                                                    {p.status === 'budget_approved' || p.allocated_budget > 0 ? (
-                                                        <div>
-                                                            <div className="font-extrabold text-emerald-700 text-xs">
-                                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.allocated_budget || p.estimated_budget)}
+                                            <Fragment key={dept.id}>
+                                                {/* Department Group Header */}
+                                                <tr className="bg-gradient-to-r from-amber-100/90 via-amber-50/80 to-purple-50/50 border-t-2 border-b border-amber-300 font-bold text-xs">
+                                                    <td colSpan={2} className="px-3.5 py-2.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => togglePrelimDeptExpand(dept.id)}
+                                                                className="w-5 h-5 rounded-md bg-amber-200 hover:bg-amber-300 text-amber-950 font-black text-[10px] flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs"
+                                                                title={isExpanded ? 'คลิกเพื่อย่อ' : 'คลิกเพื่อขยายดูโครงการ'}
+                                                            >
+                                                                {isExpanded ? '▼' : '▶'}
+                                                            </button>
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                <span className="font-black text-sm text-purple-950">
+                                                                    🏢 {dept.name}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 text-[10px] font-extrabold whitespace-nowrap">
+                                                                    {dept.projectCount} โครงการ
+                                                                </span>
+                                                                {dept.prelimCount > 0 && (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-amber-200/80 text-amber-900 text-[10px] font-bold border border-amber-300">
+                                                                        รอจัดสรร {dept.prelimCount}
+                                                                    </span>
+                                                                )}
+                                                                {dept.allocCount > 0 && (
+                                                                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-[10px] font-bold border border-emerald-300">
+                                                                        จัดสรรแล้ว {dept.allocCount}
+                                                                    </span>
+                                                                )}
                                                             </div>
-                                                            <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold mt-0.5 inline-block truncate max-w-full" title={`${fundingName} (${p.report_category || '6.1'})`}>
-                                                                {fundingName} ({p.report_category || '6.1'})
-                                                            </span>
                                                         </div>
-                                                    ) : (
-                                                        <span className="text-slate-400 text-[11px] italic">- รอจัดสรร -</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-2 py-2.5 text-center align-top whitespace-nowrap">
-                                                    {p.status === 'budget_approved' && (
-                                                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                                                            ✅ จัดสรรแล้ว
-                                                        </span>
-                                                    )}
-                                                    {p.status === 'budget_rejected' && (
-                                                        <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">
-                                                            ❌ ไม่อนุมัติ
-                                                        </span>
-                                                    )}
-                                                    {p.status === 'preliminary' && (
-                                                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
-                                                            🟡 รอจัดสรร
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-2.5 py-2.5 whitespace-nowrap text-right align-top">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        {p.status !== 'budget_approved' && (
-                                                            <button
-                                                                onClick={() => openCommitteeModal(p)}
-                                                                className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap"
-                                                                title="พิจารณาอนุมัติจัดสรรงบประมาณ หรือไม่อนุมัติ"
-                                                            >
-                                                                ⚖️ พิจารณา
-                                                            </button>
-                                                        )}
-                                                        <Link
-                                                            href={route('projects.show', p.id)}
-                                                            className="p-1 text-purple-700 hover:bg-purple-100 rounded-md transition text-xs"
-                                                            title="ดูรายละเอียด"
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-right font-black font-mono text-xs text-slate-900 whitespace-nowrap">
+                                                        ฿{new Intl.NumberFormat('th-TH').format(dept.proposedSum)}
+                                                    </td>
+                                                    <td className="px-3 py-2.5 text-xs font-black font-mono text-emerald-800 whitespace-nowrap">
+                                                        {dept.allocatedSum > 0 ? `฿${new Intl.NumberFormat('th-TH').format(dept.allocatedSum)}` : <span className="text-slate-400 font-normal">-</span>}
+                                                    </td>
+                                                    <td className="px-2 py-2.5 text-center text-[10px] font-bold text-slate-600">
+                                                        {dept.allocCount}/{dept.projectCount} โครงการ
+                                                    </td>
+                                                    <td className="px-2.5 py-2.5 text-right text-[11px] text-slate-500">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => togglePrelimDeptExpand(dept.id)}
+                                                            className="text-[11px] text-purple-700 hover:text-purple-900 font-bold underline cursor-pointer"
                                                         >
-                                                            👁️
-                                                        </Link>
-                                                        {(role === 'admin' || auth.user.is_admin) && (
-                                                            <button
-                                                                onClick={() => handleDeleteProject(p)}
-                                                                className="p-1 text-rose-600 hover:bg-rose-100 rounded-md transition text-xs"
-                                                                title="ลบข้อเสนอโครงการ"
-                                                            >
-                                                                🗑️
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                            {isExpanded ? 'ย่อรายการ' : 'ขยายดู'}
+                                                        </button>
+                                                    </td>
+                                                </tr>
+
+                                                {/* Project items under department */}
+                                                {isExpanded && dept.projects.map((p) => {
+                                                    const fundingName = p.funding_source?.name || p.budget?.funding_source?.name || 'ยังไม่ระบุ';
+                                                    return (
+                                                        <tr key={p.id} className="hover:bg-amber-50/20 transition-all bg-white">
+                                                            <td className="px-3.5 py-2.5 align-top pl-7">
+                                                                <div className="font-bold text-slate-900 line-clamp-2 leading-snug break-words">
+                                                                    <span className="text-amber-500 mr-1.5 font-mono">└─</span>
+                                                                    {p.title}
+                                                                </div>
+                                                                <div className="text-[10px] text-slate-400 font-normal mt-0.5 pl-5">ปีงบฯ {p.academic_year}</div>
+                                                            </td>
+                                                            <td className="px-3 py-2.5 align-top">
+                                                                <div className="font-semibold text-slate-800 text-[11px] truncate" title={p.department?.name}>
+                                                                    {p.department?.name || 'ฝ่ายงานทั่วไป'}
+                                                                </div>
+                                                                <div className="text-[10px] text-purple-600 font-medium truncate" title={p.user?.name}>
+                                                                    {p.user?.name || 'ไม่ระบุชื่อ'}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-right font-bold text-slate-800 text-xs align-top whitespace-nowrap">
+                                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.proposed_budget || p.estimated_budget)}
+                                                            </td>
+                                                            <td className="px-3 py-2.5 text-xs align-top">
+                                                                {p.status === 'budget_approved' || p.allocated_budget > 0 ? (
+                                                                    <div>
+                                                                        <div className="font-extrabold text-emerald-700 text-xs">
+                                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.allocated_budget || p.estimated_budget)}
+                                                                        </div>
+                                                                        <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold mt-0.5 inline-block truncate max-w-full" title={`${fundingName} (${p.report_category || '6.1'})`}>
+                                                                            {fundingName} ({p.report_category || '6.1'})
+                                                                        </span>
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-slate-400 text-[11px] italic">- รอจัดสรร -</span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-2 py-2.5 text-center align-top whitespace-nowrap">
+                                                                {p.status === 'budget_approved' && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                                                                        ✅ จัดสรรแล้ว
+                                                                    </span>
+                                                                )}
+                                                                {p.status === 'budget_rejected' && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">
+                                                                        ❌ ไม่อนุมัติ
+                                                                    </span>
+                                                                )}
+                                                                {p.status === 'preliminary' && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+                                                                        🟡 รอจัดสรร
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="px-2.5 py-2.5 whitespace-nowrap text-right align-top">
+                                                                <div className="flex items-center justify-end gap-1">
+                                                                    {p.status !== 'budget_approved' && (
+                                                                        <button
+                                                                            onClick={() => openCommitteeModal(p)}
+                                                                            className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap cursor-pointer"
+                                                                            title="พิจารณาอนุมัติจัดสรรงบประมาณ หรือไม่อนุมัติ"
+                                                                        >
+                                                                            ⚖️ พิจารณา
+                                                                        </button>
+                                                                    )}
+                                                                    <Link
+                                                                        href={route('projects.show', p.id)}
+                                                                        className="p-1 text-purple-700 hover:bg-purple-100 rounded-md transition text-xs"
+                                                                        title="ดูรายละเอียด"
+                                                                    >
+                                                                        👁️
+                                                                    </Link>
+                                                                    {(role === 'admin' || auth.user.is_admin) && (
+                                                                        <button
+                                                                            onClick={() => handleDeleteProject(p)}
+                                                                            className="p-1 text-rose-600 hover:bg-rose-100 rounded-md transition text-xs cursor-pointer"
+                                                                            title="ลบข้อเสนอโครงการ"
+                                                                        >
+                                                                            🗑️
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </Fragment>
                                         );
                                     })
                                 )}
                             </tbody>
+                            {planHeadData.preliminaryQueue && planHeadData.preliminaryQueue.length > 0 && (
+                                <tfoot className="border-t-2 border-amber-300 bg-amber-100/70 font-black text-xs text-purple-950">
+                                    <tr>
+                                        <td colSpan={2} className="px-3.5 py-3 font-bold text-sm">
+                                            📊 ยอดรวมทุกฝ่าย ({planHeadData.preliminaryQueue.length} โครงการ)
+                                        </td>
+                                        <td className="px-3 py-3 text-right font-mono font-black text-sm text-slate-950 whitespace-nowrap">
+                                            ฿{new Intl.NumberFormat('th-TH').format(totalProposedSum)}
+                                        </td>
+                                        <td className="px-3 py-3 font-mono font-black text-sm text-emerald-900 whitespace-nowrap">
+                                            ฿{new Intl.NumberFormat('th-TH').format(totalAllocatedSum)}
+                                        </td>
+                                        <td className="px-2 py-3 text-center text-xs font-bold text-slate-700 whitespace-nowrap">
+                                            {allocCount}/{planHeadData.preliminaryQueue.length} โครงการ
+                                        </td>
+                                        <td className="px-2.5 py-3 text-right text-xs text-slate-600">
+                                            {prelimCount > 0 ? `รอจัดสรร ${prelimCount}` : 'จัดสรรครบแล้ว'}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            )}
                         </table>
                     </div>
                 </div>
