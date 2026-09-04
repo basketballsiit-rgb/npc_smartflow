@@ -370,7 +370,10 @@ class ProcurementController extends Controller
 
         $procurement->loan_status = 'finance_received';
         $procurement->finance_received_at = now();
-        $procurement->finance_doc_number = $validated['finance_number'] ?? ('กง. ' . $project->id . '/' . (date('Y') + 543));
+        $procurement->finance_doc_number = $validated['finance_number'] 
+            ?? $procurement->plan_loan_doc_number 
+            ?? $procurement->plan_procurement_doc_number 
+            ?? ('กง. ' . $project->id . '/' . (date('Y') + 543));
         $procurement->save();
 
         return redirect()->back()->with('message', 'งานการเงินได้ลงรับสัญญายืมเงินและเอกสารที่เกี่ยวข้องเรียบร้อยแล้ว');

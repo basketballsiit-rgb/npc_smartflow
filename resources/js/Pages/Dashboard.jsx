@@ -7149,8 +7149,9 @@ ${itemsListText}
                                                                                         ลงรับสัญญายืมเงิน (แบบ กค. ๑๐๑) ของโครงการ <strong>"${item.title}"</strong> เพื่อเตรียมโอนเงินยืม
                                                                                     </p>
                                                                                     <div>
-                                                                                        <label class="font-bold text-slate-700 block mb-1">เลขที่รับการเงิน:</label>
-                                                                                        <input id="swal-fin-num" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${defaultFinDoc}">
+                                                                                        <label class="font-bold text-slate-700 block mb-1">เลขที่รับการเงิน (อิงเลขเดียวกันจากงานแผน):</label>
+                                                                                        <input id="swal-fin-num" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 bg-slate-50" value="${defaultFinDoc}">
+                                                                                        <p class="text-[10px] text-slate-500 mt-0.5">* ใช้เลขทะเบียนเดียวกันกับที่งานแผนงานตัดยอดออกให้</p>
                                                                                     </div>
                                                                                     <div>
                                                                                         <label class="font-bold text-slate-700 block mb-1">วันที่ลงรับเอกสาร:</label>
