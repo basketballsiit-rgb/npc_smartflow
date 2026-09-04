@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react';
 import Swal from 'sweetalert2';
 
 export default function Dashboard({ 
@@ -6216,7 +6216,7 @@ ${itemsListText}
                                     deptSummaryList.map((dept) => {
                                         const isExpanded = expandedDepts[dept.id] !== false; // Default expanded
                                         return (
-                                            <React.Fragment key={dept.id}>
+                                            <Fragment key={dept.id}>
                                                 {/* Department Header Row */}
                                                 <tr className="bg-purple-50/80 hover:bg-purple-100/70 transition-colors border-t-2 border-purple-200">
                                                     <td className="px-5 py-3.5">
@@ -6355,7 +6355,7 @@ ${itemsListText}
                                                         </td>
                                                     </tr>
                                                 ))}
-                                            </React.Fragment>
+                                            </Fragment>
                                         );
                                     })
                                 )}
