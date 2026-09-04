@@ -630,46 +630,56 @@ export default function Dashboard({
                 </span>
             );
         }
+        if (status === 'completed' || status === 'cleared' || project?.loan_status === 'cleared' || project?.finance_disbursed_at) {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-teal-100 text-teal-950 border border-teal-300 text-xs font-black whitespace-nowrap shadow-2xs">
+                    ✅ ปิดจบโครงการ
+                </span>
+            );
+        }
         if (status === 'approved' || step >= 6) {
             const procStatus = project?.procurement?.status || project?.procurement_status;
-            if (procStatus === 'forwarded_to_finance') {
+            const loanStatus = project?.loan_status || project?.procurement?.loan_status;
+            const isAtFinance = procStatus === 'forwarded_to_finance' || loanStatus === 'finance_received' || project?.finance_received_at;
+            
+            if (isAtFinance) {
                 return (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-400 text-xs font-black whitespace-nowrap shadow-2xs">
-                        💰 งานการเงิน (ส่งเบิกจ่ายแล้ว)
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-400 text-xs font-black whitespace-nowrap shadow-2xs">
+                        💰 งานการเงิน
                     </span>
                 );
             }
             if (procStatus === 'received' || procStatus === 'processing') {
                 return (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-100 text-blue-950 border border-blue-400 text-xs font-bold whitespace-nowrap shadow-2xs">
-                        📦 งานพัสดุ (ลงรับแล้ว)
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-100 text-blue-950 border border-blue-300 text-xs font-bold whitespace-nowrap">
+                        📦 งานพัสดุ
+                    </span>
+                );
+            }
+            if (project?.plan_procurement_cut_at || project?.plan_loan_cut_at) {
+                return (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold whitespace-nowrap">
+                        ⏳ รอพัสดุ/การเงิน
                     </span>
                 );
             }
             return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-300 text-xs font-bold whitespace-nowrap">
-                    📦 งานพัสดุ (รอลงรับ)
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-bold whitespace-nowrap">
+                    🏢 แผนงาน
                 </span>
             );
         }
         if (status === 'in_progress' || status === 'evaluating') {
             return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-50 text-purple-900 border border-purple-200 text-xs font-bold whitespace-nowrap">
-                    ⭐ ดำเนินงาน/ประเมิน
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold whitespace-nowrap">
+                    ⭐ ดำเนินงาน
                 </span>
             );
         }
         if (status === 'reporting') {
             return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 text-xs font-bold whitespace-nowrap">
-                    📄 สรุปรายงานผล
-                </span>
-            );
-        }
-        if (status === 'completed' || status === 'cleared') {
-            return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-50 text-teal-900 border border-teal-200 text-xs font-bold whitespace-nowrap">
-                    🎉 ปิดโครงการสมบูรณ์
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 text-xs font-bold whitespace-nowrap">
+                    📄 สรุปรายงาน
                 </span>
             );
         }
@@ -6195,12 +6205,12 @@ ${itemsListText}
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-100 border-b border-slate-200 text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">
-                                    <th className="px-5 py-3.5 w-2/5">ฝ่ายงาน / ชื่อโครงการ</th>
-                                    <th className="px-4 py-3.5 w-1/5">ผู้เสนอโครงการ / ผู้รับผิดชอบ</th>
-                                    <th className="px-4 py-3.5 text-center whitespace-nowrap">ปีการศึกษา</th>
-                                    <th className="px-4 py-3.5 text-right whitespace-nowrap">งบประมาณเสนอขอ</th>
-                                    <th className="px-4 py-3.5 text-right whitespace-nowrap">งบประมาณจัดสรร</th>
-                                    <th className="px-4 py-3.5 text-center whitespace-nowrap">สถานะปัจจุบัน</th>
+                                    <th className="px-5 py-3.5 min-w-[340px]">ฝ่ายงาน / ชื่อโครงการ</th>
+                                    <th className="px-4 py-3.5 min-w-[160px]">ผู้เสนอโครงการ / ฝ่าย</th>
+                                    <th className="px-3 py-3.5 text-center whitespace-nowrap">ปีการศึกษา</th>
+                                    <th className="px-4 py-3.5 text-right whitespace-nowrap">งบเสนอขอ</th>
+                                    <th className="px-4 py-3.5 text-right whitespace-nowrap">งบจัดสรร</th>
+                                    <th className="px-3 py-3.5 text-center whitespace-nowrap">สถานะ</th>
                                     <th className="px-4 py-3.5 text-right whitespace-nowrap">จัดการ</th>
                                 </tr>
                             </thead>
@@ -6224,45 +6234,45 @@ ${itemsListText}
                                                             <button
                                                                 type="button"
                                                                 onClick={() => toggleDeptExpand(dept.id)}
-                                                                className="w-6 h-6 rounded-lg bg-purple-200 text-purple-900 hover:bg-purple-300 font-bold text-xs flex items-center justify-center transition cursor-pointer"
+                                                                className="w-6 h-6 rounded-lg bg-purple-200 text-purple-900 hover:bg-purple-300 font-bold text-xs flex items-center justify-center transition cursor-pointer shrink-0"
                                                                 title={isExpanded ? 'คลิกเพื่อย่อ' : 'คลิกเพื่อขยายดูโครงการ'}
                                                             >
                                                                 {isExpanded ? '▼' : '▶'}
                                                             </button>
-                                                            <div>
+                                                            <div className="flex flex-wrap items-center gap-1.5">
                                                                 <span className="font-black text-sm sm:text-base text-purple-950">
                                                                     🏢 {dept.name}
                                                                 </span>
-                                                                <span className="ml-2 px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-900 text-xs font-extrabold">
+                                                                <span className="px-2.5 py-0.5 rounded-full bg-purple-200 text-purple-900 text-xs font-extrabold whitespace-nowrap">
                                                                     {dept.projectCount} โครงการ
                                                                 </span>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-xs text-slate-600 font-semibold">
-                                                        อนุมัติแล้ว: <strong className="text-emerald-700">{dept.approvedCount}</strong> จาก {dept.projectCount} โครงการ
+                                                    <td className="px-4 py-3.5 text-xs text-slate-600 font-semibold whitespace-nowrap">
+                                                        อนุมัติแล้ว: <strong className="text-emerald-700 font-bold">{dept.approvedCount}</strong>/{dept.projectCount} โครงการ
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-center text-xs font-bold text-slate-500">
+                                                    <td className="px-3 py-3.5 text-center text-xs font-bold text-slate-400">
                                                         -
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-slate-900">
+                                                    <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-slate-900 whitespace-nowrap">
                                                         ฿{new Intl.NumberFormat('th-TH').format(dept.estimatedSum)}
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-purple-900">
+                                                    <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-purple-900 whitespace-nowrap">
                                                         ฿{new Intl.NumberFormat('th-TH').format(dept.allocatedSum || dept.estimatedSum)}
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-center">
-                                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-900 font-black text-xs border border-emerald-300">
+                                                    <td className="px-3 py-3.5 text-center whitespace-nowrap">
+                                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 font-black text-xs border border-emerald-300">
                                                             อนุมัติ {dept.approvedCount}/{dept.projectCount}
                                                         </span>
                                                     </td>
-                                                    <td className="px-4 py-3.5 text-right">
+                                                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
                                                         <button
                                                             type="button"
                                                             onClick={() => toggleDeptExpand(dept.id)}
                                                             className="text-xs font-bold text-purple-700 hover:text-purple-950 underline cursor-pointer"
                                                         >
-                                                            {isExpanded ? 'ย่อรายการโครงการ' : 'ขยายดูโครงการ (' + dept.projectCount + ')'}
+                                                            {isExpanded ? 'ย่อโครงการ' : 'ขยาย (' + dept.projectCount + ')'}
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -6271,48 +6281,53 @@ ${itemsListText}
                                                 {isExpanded && dept.projects.map((p, pIdx) => (
                                                     <tr key={p.id} className="hover:bg-slate-50 transition-colors bg-white">
                                                         {/* Project Title with indentation */}
-                                                        <td className="px-5 py-3 pl-11 align-top">
+                                                        <td className="px-5 py-3.5 pl-10 align-top">
                                                             <div className="flex items-start gap-2">
-                                                                <span className="text-slate-400 font-mono text-xs mt-0.5">└─ #{pIdx + 1}</span>
-                                                                <div className="space-y-1">
+                                                                <span className="text-slate-400 font-mono text-xs mt-0.5 shrink-0">└─ #{pIdx + 1}</span>
+                                                                <div>
                                                                     <Link
                                                                         href={route('projects.show', p.id)}
-                                                                        className="font-black text-xs sm:text-sm text-purple-950 hover:text-purple-700 transition leading-snug line-clamp-2"
+                                                                        className="font-black text-xs sm:text-sm text-purple-950 hover:text-purple-700 transition leading-snug block"
                                                                     >
                                                                         {p.title}
                                                                     </Link>
-                                                                    {p.funding_source_name && (
-                                                                        <div className="text-[11px] text-slate-500 font-medium">
-                                                                            🏷️ แหล่งเงิน: <span className="text-purple-900 font-bold">{p.funding_source_name}</span>
-                                                                        </div>
-                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </td>
 
-                                                        {/* Proposer */}
-                                                        <td className="px-4 py-3 text-xs align-top">
-                                                            <div className="font-bold text-slate-800">👤 {p.proposer_name}</div>
-                                                            <div className="text-[11px] text-slate-500">{p.department_name}</div>
+                                                        {/* Proposer (Name without surname + Department) */}
+                                                        <td className="px-4 py-3.5 text-xs align-top">
+                                                            {(() => {
+                                                                // Extract first name only (cut off surname)
+                                                                const rawName = (p.proposer_name || '').trim();
+                                                                const nameParts = rawName.split(/\s+/);
+                                                                const firstNameOnly = nameParts[0] || rawName;
+                                                                return (
+                                                                    <div className="space-y-0.5">
+                                                                        <div className="font-extrabold text-slate-900">👤 {firstNameOnly}</div>
+                                                                        <div className="text-[11px] text-purple-700 font-semibold">{p.department_name}</div>
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </td>
 
                                                         {/* Academic Year */}
-                                                        <td className="px-4 py-3 text-center text-xs font-bold text-slate-600 align-top">
+                                                        <td className="px-3 py-3.5 text-center text-xs font-bold text-slate-700 align-top whitespace-nowrap">
                                                             {p.academic_year}
                                                         </td>
 
                                                         {/* Estimated Budget */}
-                                                        <td className="px-4 py-3 text-right font-mono font-bold text-xs sm:text-sm text-slate-900 align-top">
+                                                        <td className="px-4 py-3.5 text-right font-mono font-bold text-xs sm:text-sm text-slate-900 align-top whitespace-nowrap">
                                                             ฿{new Intl.NumberFormat('th-TH').format(p.estimated_budget || 0)}
                                                         </td>
 
                                                         {/* Allocated Budget */}
-                                                        <td className="px-4 py-3 text-right font-mono font-black text-xs sm:text-sm text-purple-950 align-top">
+                                                        <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-purple-950 align-top whitespace-nowrap">
                                                             ฿{new Intl.NumberFormat('th-TH').format(p.allocated_budget || p.allocated_amount || p.estimated_budget || 0)}
                                                         </td>
 
                                                         {/* Current Status */}
-                                                        <td className="px-4 py-3 text-center align-top whitespace-nowrap">
+                                                        <td className="px-3 py-3.5 text-center align-top whitespace-nowrap">
                                                             {getStatusBadge(p.status, p.current_approval_step, p)}
                                                         </td>
 
