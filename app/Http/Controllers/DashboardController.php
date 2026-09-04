@@ -9,6 +9,7 @@ use App\Models\FundingSource;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\SystemSetting;
+use App\Services\DocumentNumberService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -23,7 +24,8 @@ class DashboardController extends Controller
         $role = $user->isAdmin() ? 'admin' :
                ($user->isExecutive() ? 'executive' :
                ($user->isPlanHead() ? 'plan_head' :
-               ($user->isProcurementHead() ? 'procurement_head' : 'teacher')));
+               ($user->isProcurementHead() ? 'procurement_head' :
+               ($user->isDepartmentHead() ? 'department_head' : 'teacher'))));
 
         $data = [
             'role' => $role,
@@ -34,6 +36,8 @@ class DashboardController extends Controller
         $data['allRoles'] = Role::all();
         $data['allDepartments'] = Department::all();
         $data['systemSettings'] = SystemSetting::all();
+        $data['docNumberSettings'] = DocumentNumberService::getSettings();
+        $data['nextUnifiedDocNumber'] = DocumentNumberService::previewNext();
         $data['allUsers'] = User::where('is_active', true)->orderBy('name', 'asc')->get();
         $data['allVendors'] = \App\Models\Vendor::orderBy('name', 'asc')->get();
         $data['allFundingSources'] = FundingSource::orderBy('fiscal_year', 'desc')->orderBy('name', 'asc')->get();

@@ -146,6 +146,7 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/procurement/save', [ProcurementController::class, 'saveProcurement'])->name('procurements.save');
     Route::post('projects/{project}/procurement/receive', [ProcurementController::class, 'receive'])->name('procurements.receive');
     Route::post('projects/{project}/procurement/plan-cut-budget', [ProcurementController::class, 'planCutBudget'])->name('procurements.plan_cut_budget');
+    Route::post('procurements/document-numbering-settings', [ProcurementController::class, 'updateDocumentNumberingSettings'])->name('procurements.document_numbering_settings');
     Route::post('projects/{project}/procurement/forward-to-finance', [ProcurementController::class, 'forwardToFinance'])->name('procurements.forward_to_finance');
     Route::post('projects/{project}/procurement/finance-receive', [ProcurementController::class, 'financeReceive'])->name('procurements.finance_receive');
     Route::post('projects/{project}/procurement/finance-disburse', [ProcurementController::class, 'financeDisburse'])->name('procurements.finance_disburse');

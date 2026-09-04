@@ -19,6 +19,8 @@ export default function Dashboard({
     allVendors = [],
     allFundingSources = [],
     centralAllocations = [],
+    docNumberSettings = {},
+    nextUnifiedDocNumber = '',
     currentTab
 }) {
     const { auth, flash } = usePage().props;
@@ -448,6 +450,15 @@ export default function Dashboard({
     const [docTrackingFilter, setDocTrackingFilter] = useState('all');
     const [selectedApprovalProject, setSelectedApprovalProject] = useState(null); // all, at_procurement, at_finance, with_borrower, completed
     const [docTrackingSearch, setDocTrackingSearch] = useState('');
+
+    // Unified Document Number Settings Modal State
+    const [isDocNumberModalOpen, setIsDocNumberModalOpen] = useState(false);
+    const { data: docNumberFormData, setData: setDocNumberFormData, post: postDocNumberSettings, processing: isSavingDocNumber } = useForm({
+        prefix: docNumberSettings.prefix || 'ผง.',
+        format: docNumberSettings.format || '{PREFIX} {NUMBER}/{YEAR}',
+        digits: docNumberSettings.digits || 3,
+        current_no: docNumberSettings.current_no || 1,
+    });
 
     const [projectSearch, setProjectSearch] = useState('');
     const [projectStatusFilter, setProjectStatusFilter] = useState('all');
@@ -6316,6 +6327,9 @@ ${itemsListText}
                 procBadgeClass,
                 procCategory,
                 prNumber: p.procurement_number || proc?.procurement_number || null,
+                planProcDoc: p.plan_procurement_doc_number || proc?.plan_procurement_doc_number || null,
+                planLoanDoc: p.plan_loan_doc_number || proc?.plan_loan_doc_number || null,
+                unifiedDoc: p.plan_procurement_doc_number || proc?.plan_procurement_doc_number || p.plan_loan_doc_number || proc?.plan_loan_doc_number || p.procurement_number || proc?.procurement_number || null,
             };
         });
 
@@ -6338,7 +6352,10 @@ ${itemsListText}
                 const proposer = (p.user?.name || p.proposer_name || '').toLowerCase();
                 const dept = (p.department?.name || '').toLowerCase();
                 const pr = (p.prNumber || '').toLowerCase();
-                return title.includes(q) || proposer.includes(q) || dept.includes(q) || pr.includes(q);
+                const planProc = (p.planProcDoc || '').toLowerCase();
+                const planLoan = (p.planLoanDoc || '').toLowerCase();
+                const uniDoc = (p.unifiedDoc || '').toLowerCase();
+                return title.includes(q) || proposer.includes(q) || dept.includes(q) || pr.includes(q) || planProc.includes(q) || planLoan.includes(q) || uniDoc.includes(q);
             }
             return true;
         });
@@ -6359,6 +6376,17 @@ ${itemsListText}
                                 ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค.๑๐๑) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน
                             </p>
                         </div>
+                        {(isPlanStaff || isAdmin) && (
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDocNumberModalOpen(true)}
+                                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-md hover:scale-105 active:scale-95 transition cursor-pointer"
+                                >
+                                    <span>⚙️</span> ตั้งค่ารูปแบบเลขคุมเอกสาร
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -6519,6 +6547,12 @@ ${itemsListText}
                                                             {item.title}
                                                         </Link>
                                                     </div>
+                                                    {item.unifiedDoc && (
+                                                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 font-mono font-black text-[11px] shadow-2xs">
+                                                            <span>🏷️ เลขคุมเอกสาร:</span>
+                                                            <span className="text-indigo-700 underline">{item.unifiedDoc}</span>
+                                                        </div>
+                                                    )}
                                                     <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500">
                                                         <span>👤 {item.user?.name || item.proposer_name || 'ไม่ระบุ'}</span>
                                                         <span>•</span>
@@ -6572,6 +6606,44 @@ ${itemsListText}
                                                             </span>
                                                         )}
                                                     </div>
+                                                    {/* Quick Print 4 Procurement Documents */}
+                                                    {(item.status === 'approved' || ['in_progress', 'evaluating', 'completed'].includes(item.status)) && (
+                                                        <div className="pt-1 border-t border-purple-100 flex flex-wrap items-center gap-1">
+                                                            <span className="text-[10px] text-purple-900 font-bold mr-0.5">🖨️ พิมพ์ชุดจัดซื้อ:</span>
+                                                            <a
+                                                                href={route('procurements.download_document', [item.id, 'memo'])}
+                                                                target="_blank"
+                                                                className="text-[9.5px] font-bold text-purple-700 hover:text-purple-950 bg-purple-100/70 hover:bg-purple-200 px-1.5 py-0.5 rounded border border-purple-200 transition"
+                                                                title="บันทึกข้อความขออนุมัติจัดซื้อจัดจ้าง"
+                                                            >
+                                                                บันทึกข้อความ
+                                                            </a>
+                                                            <a
+                                                                href={route('procurements.download_document', [item.id, 'request_form'])}
+                                                                target="_blank"
+                                                                className="text-[9.5px] font-bold text-purple-700 hover:text-purple-950 bg-purple-100/70 hover:bg-purple-200 px-1.5 py-0.5 rounded border border-purple-200 transition"
+                                                                title="แบบใบขออนุมัติจัดซื้อจัดจ้าง"
+                                                            >
+                                                                ใบขอซื้อ/จ้าง
+                                                            </a>
+                                                            <a
+                                                                href={route('procurements.download_document', [item.id, 'estimation'])}
+                                                                target="_blank"
+                                                                className="text-[9.5px] font-bold text-purple-700 hover:text-purple-950 bg-purple-100/70 hover:bg-purple-200 px-1.5 py-0.5 rounded border border-purple-200 transition"
+                                                                title="ตารางแสดงวงเงินงบประมาณและการสืบราคา"
+                                                            >
+                                                                ตารางสืบราคา
+                                                            </a>
+                                                            <a
+                                                                href={route('procurements.download_document', [item.id, 'tor'])}
+                                                                target="_blank"
+                                                                className="text-[9.5px] font-bold text-purple-700 hover:text-purple-950 bg-purple-100/70 hover:bg-purple-200 px-1.5 py-0.5 rounded border border-purple-200 transition"
+                                                                title="ขอบเขตของงาน / รายละเอียดคุณลักษณะเฉพาะ (TOR)"
+                                                            >
+                                                                TOR/สเปก
+                                                            </a>
+                                                        </div>
+                                                    )}
                                                     <div className="text-[11px] space-y-0.5 text-slate-700">
                                                         <div><span className="text-slate-500 font-semibold">📍 ตำแหน่ง:</span> <strong className="text-indigo-950">{item.procLocation}</strong></div>
                                                         <div><span className="text-slate-500 font-semibold">👤 ผู้ถือ:</span> <span>{item.procHolder}</span></div>
@@ -6590,7 +6662,7 @@ ${itemsListText}
                                                                     type="button"
                                                                     onClick={() => {
                                                                         const today = new Date().toISOString().split('T')[0];
-                                                                        const defaultDoc = 'ผง. ' + item.id + '/' + (new Date().getFullYear() + 543);
+                                                                        const defaultDoc = item.plan_procurement_doc_number || item.plan_loan_doc_number || nextUnifiedDocNumber || ('ผง. ' + item.id + '/' + (new Date().getFullYear() + 543));
                                                                         Swal.fire({
                                                                             title: '📊 แผนงานตัดยอดงบประมาณ',
                                                                             html: `
@@ -6657,8 +6729,9 @@ ${itemsListText}
                                                                                 <div class="text-left text-xs text-slate-700 space-y-3 font-sans">
                                                                                     <p>ยืนยันว่าได้รับชุดเอกสารจัดซื้อจัดจ้างของโครงการ <strong>"${item.title}"</strong> เรียบร้อยแล้ว</p>
                                                                                     <div>
-                                                                                        <label class="block font-bold mb-1">กำหนดเลขที่พัสดุ (PR Number):</label>
-                                                                                        <input id="swal-pr-num" class="w-full px-3 py-2 border rounded-xl text-xs" value="PR-${String(item.id).padStart(5, '0')}" />
+                                                                                        <label class="block font-bold mb-1">เลขคุมจัดซื้อ / เลขที่พัสดุ (PR Number):</label>
+                                                                                        <input id="swal-pr-num" class="w-full px-3 py-2 border rounded-xl text-xs" value="${item.plan_procurement_doc_number || item.prNumber || ('PR-' + String(item.id).padStart(5, '0'))}" />
+                                                                                        <span class="text-[10px] text-slate-500">ดึงเลขคุมจากงานแผนงานโดยอัตโนมัติ เพื่อให้เป็นเลขเดียวกันตลอดกระบวนการ</span>
                                                                                     </div>
                                                                                     <div>
                                                                                         <label class="block font-bold mb-1">วันที่ลงรับเอกสาร:</label>
@@ -6727,7 +6800,7 @@ ${itemsListText}
                                                                     type="button"
                                                                     onClick={() => {
                                                                         const today = new Date().toISOString().split('T')[0];
-                                                                        const defaultFinDoc = 'กง. ' + item.id + '/' + (new Date().getFullYear() + 543);
+                                                                        const defaultFinDoc = item.plan_loan_doc_number || item.finance_doc_number || ('กง. ' + item.id + '/' + (new Date().getFullYear() + 543));
                                                                         Swal.fire({
                                                                             title: '📥 การเงินลงรับสัญญายืมเงิน',
                                                                             html: `
@@ -6855,6 +6928,150 @@ ${itemsListText}
                     </div>
                 </div>
             
+                {/* Document Numbering Settings Modal */}
+                {isDocNumberModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 font-sans">
+                        <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+                            <div className="p-5 bg-gradient-to-r from-purple-800 via-indigo-900 to-purple-950 text-white flex justify-between items-center">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="p-2 rounded-xl bg-white/10 text-amber-300 text-lg">⚙️</span>
+                                    <div>
+                                        <h3 className="font-extrabold text-base text-white">ตั้งค่ารูปแบบเลขคุมเอกสาร (งานแผนงาน)</h3>
+                                        <p className="text-xs text-purple-200">กำหนดรูปแบบและรันหมายเลขคุมเอกสารจัดซื้อ/สัญญายืมเงินอัตโนมัติ</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDocNumberModalOpen(false)}
+                                    className="text-white/70 hover:text-white text-xl p-1 rounded-lg hover:bg-white/10 transition"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={(e) => {
+                                    e.preventDefault();
+                                    postDocNumberSettings(route('procurements.update_doc_numbering_settings'), {
+                                        preserveScroll: true,
+                                        onSuccess: () => {
+                                            setIsDocNumberModalOpen(false);
+                                            Swal.fire('สำเร็จ', 'บันทึกการตั้งค่ารูปแบบเลขคุมเอกสารเรียบร้อยแล้ว', 'success');
+                                        },
+                                        onError: () => {
+                                            Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกการตั้งค่าได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                                        }
+                                    });
+                                }}
+                                className="p-6 space-y-4"
+                            >
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        ตัวย่อ / คำนำหน้า (Prefix):
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={docNumberFormData.prefix}
+                                        onChange={(e) => setDocNumberFormData('prefix', e.target.value)}
+                                        className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                        placeholder="เช่น ผง. หรือ อว ๐๖๒๕"
+                                        required
+                                    />
+                                    <span className="text-[10px] text-slate-500">เช่น อักษรย่อหน่วยงานงานแผนงานและงบประมาณ</span>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        รูปแบบโครงสร้างเลข (Pattern):
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={docNumberFormData.format}
+                                        onChange={(e) => setDocNumberFormData('format', e.target.value)}
+                                        className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl font-mono text-indigo-700 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                        placeholder="{PREFIX} {NUMBER}/{YEAR}"
+                                        required
+                                    />
+                                    <div className="mt-1 text-[10px] text-slate-500 space-x-2">
+                                        <span>ตัวแปรที่ใช้ได้:</span>
+                                        <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;PREFIX&#125;</code>
+                                        <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;NUMBER&#125;</code>
+                                        <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;YEAR&#125;</code>
+                                        <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;YEAR_SHORT&#125;</code>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                                            จำนวนหลักตัวเลข (เติม 0 ข้างหน้า):
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            max="8"
+                                            value={docNumberFormData.digits}
+                                            onChange={(e) => setDocNumberFormData('digits', parseInt(e.target.value) || 1)}
+                                            className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                            required
+                                        />
+                                        <span className="text-[10px] text-slate-500">เช่น 3 = 001, 4 = 0001</span>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">
+                                            ลำดับเลขปัจจุบัน (Next Number):
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={docNumberFormData.current_no}
+                                            onChange={(e) => setDocNumberFormData('current_no', parseInt(e.target.value) || 1)}
+                                            className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none font-bold text-purple-900"
+                                            required
+                                        />
+                                        <span className="text-[10px] text-slate-500">เลขที่จะถูกออกให้ฉบับถัดไป</span>
+                                    </div>
+                                </div>
+
+                                {/* Live Preview Card */}
+                                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200">
+                                    <div className="text-[11px] font-bold text-amber-900 mb-1 flex items-center gap-1.5">
+                                        <span>👁️</span> ตัวอย่างหมายเลขที่จะได้ (Live Preview):
+                                    </div>
+                                    <div className="text-sm font-mono font-black text-indigo-900 bg-white px-3 py-2 rounded-xl border border-amber-300 inline-block shadow-2xs">
+                                        {docNumberFormData.format
+                                            .replace('{PREFIX}', docNumberFormData.prefix || '')
+                                            .replace('{NUMBER}', String(docNumberFormData.current_no || 1).padStart(parseInt(docNumberFormData.digits) || 1, '0'))
+                                            .replace('{YEAR}', String(new Date().getFullYear() + 543))
+                                            .replace('{YEAR_SHORT}', String((new Date().getFullYear() + 543) % 100).padStart(2, '0'))}
+                                    </div>
+                                    <p className="text-[10px] text-slate-600 mt-1.5">
+                                        หมายเลขนี้จะถูกใช้เป็น <strong>เลขคุมชุดเอกสารเดียวกันตลอดเส้นทาง</strong> ทั้งชุดจัดซื้อจัดจ้าง (๔ ฉบับ) และสัญญายืมเงิน (กค.๑๐๑)
+                                    </p>
+                                </div>
+
+                                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsDocNumberModalOpen(false)}
+                                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingDocNumber}
+                                        className="px-5 py-2 rounded-xl text-xs font-black bg-purple-700 hover:bg-purple-800 text-white shadow-md hover:scale-105 active:scale-95 transition cursor-pointer disabled:opacity-50"
+                                    >
+                                        {isSavingDocNumber ? 'กำลังบันทึก...' : '💾 บันทึกการตั้งค่า'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
                 {/* Approval Timeline & Sign-off History Modal */}
                 {selectedApprovalProject && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">

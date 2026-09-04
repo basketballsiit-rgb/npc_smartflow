@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Procurement;
 use App\Models\ProcurementItem;
 use App\Models\RoutineBudgetPlan;
+use App\Services\DocumentNumberService;
 use Illuminate\Http\Request;
 
 class ProcurementController extends Controller
@@ -253,14 +254,28 @@ class ProcurementController extends Controller
             ]);
         }
 
-        $docNumber = $validated['plan_doc_number'] ?: ('ผง. ' . $project->id . '/' . (date('Y') + 543));
+        // Generate unified document number or use provided one
+        if (!empty($validated['plan_doc_number'])) {
+            $docNumber = trim($validated['plan_doc_number']);
+            // If the entered number matches next preview, increment counter
+            if ($docNumber === DocumentNumberService::previewNext()) {
+                DocumentNumberService::generateAndIncrement();
+            }
+        } else {
+            $docNumber = DocumentNumberService::generateAndIncrement();
+        }
+
         $now = now();
         $target = $validated['target'];
 
+        // Assign the single unified document number to both procurement and loan tracking fields
         if ($target === 'all' || $target === 'procurement') {
             $procurement->plan_procurement_cut_at = $now;
             $procurement->plan_procurement_doc_number = $docNumber;
-            // Advance status from pending to plan_cut so procurement staff can receive
+            // Also assign as default procurement_number if empty so it carries through to e-GP & PR forms
+            if (empty($procurement->procurement_number) || str_starts_with($procurement->procurement_number, 'PR-')) {
+                $procurement->procurement_number = $docNumber;
+            }
             if ($procurement->status === 'pending' || empty($procurement->status)) {
                 $procurement->status = 'plan_cut';
             }
@@ -288,7 +303,29 @@ class ProcurementController extends Controller
         $procurement->save();
 
         $targetText = $target === 'all' ? 'ทั้งชุดจัดซื้อจัดจ้างและสัญญายืมเงิน' : ($target === 'procurement' ? 'ชุดจัดซื้อจัดจ้าง (ส่งต่อไปยังพัสดุ)' : 'สัญญายืมเงิน (ส่งต่อไปยังการเงิน)');
-        return redirect()->back()->with('message', 'งานแผนงานได้ตัดยอดงบประมาณ ' . $targetText . ' เรียบร้อยแล้ว (เลขที่: ' . $docNumber . ')');
+        return redirect()->back()->with('message', 'งานแผนงานได้ออกเลขคุมหลักและตัดยอดงบประมาณ ' . $targetText . ' เรียบร้อยแล้ว (เลขคุมเอกสาร: ' . $docNumber . ')');
+    }
+
+    /**
+     * Update unified document numbering settings.
+     */
+    public function updateDocumentNumberingSettings(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานวางแผนและงบประมาณหรือผู้ดูแลระบบเท่านั้นที่สามารถตั้งค่าเลขที่เอกสารได้');
+        }
+
+        $validated = $request->validate([
+            'prefix' => 'required|string|max:50',
+            'format' => 'required|string|max:100',
+            'digits' => 'required|integer|min:1|max:10',
+            'current_no' => 'required|integer|min:1',
+        ]);
+
+        DocumentNumberService::updateSettings($validated);
+
+        return redirect()->back()->with('message', 'บันทึกการตั้งค่ารูปแบบเลขที่เอกสารเรียบร้อยแล้ว (เลขถัดไป: ' . DocumentNumberService::previewNext() . ')');
     }
 
     public function forwardToFinance(Request $request, Project $project)

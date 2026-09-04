@@ -263,7 +263,10 @@
     $structuredActivities = [];
     $allLoanItems = [];
 
-    $baseContractNum = $project->procurement?->procurement_number ?: ('กค.101/' . ($project->academic_year ?? '2569') . '-' . str_pad($project->id, 4, '0', STR_PAD_LEFT));
+    $baseContractNum = $project->procurement?->plan_loan_doc_number 
+        ?: ($project->procurement?->plan_procurement_doc_number 
+        ?: ($project->procurement?->procurement_number 
+        ?: ('กค.101/' . ($project->academic_year ?? '2569') . '-' . str_pad($project->id, 4, '0', STR_PAD_LEFT))));
 
     if (is_array($activitiesRaw) && count($activitiesRaw) > 0) {
         foreach ($activitiesRaw as $actIdx => $act) {

@@ -340,7 +340,7 @@
         </tr>
         <tr>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 15px;">ที่</td>
-            <td>{{ $procurement->procurement_number ?: '........../2569' }}</td>
+            <td>{{ $procurement->plan_procurement_doc_number ?: ($procurement->procurement_number ?: '........../2569') }}</td>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; text-align: right; padding-right: 15px;">วันที่</td>
             <td>{{ $thaiDateStr }}</td>
         </tr>
