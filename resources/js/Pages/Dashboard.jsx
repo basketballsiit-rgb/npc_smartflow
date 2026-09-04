@@ -4872,7 +4872,7 @@ ${itemsListText}
                                                         )}
 
                                                         {/* Admin / Procurement Rollback Buttons */}
-                                                        {procStatus === 'forwarded_to_finance' && (isAdmin || isProcurementStaff) && (
+                                                        {procStatus === 'forwarded_to_finance' && isAdmin && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRollbackProcurement(p, 'received')}
@@ -4883,7 +4883,7 @@ ${itemsListText}
                                                             </button>
                                                         )}
 
-                                                        {procStatus === 'received' && (isAdmin || isProcurementStaff) && (
+                                                        {procStatus === 'received' && isAdmin && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleRollbackProcurement(p, 'pending')}
@@ -5055,7 +5055,7 @@ ${itemsListText}
                                         )}
 
                                         {/* Admin Rollback Buttons in Modal */}
-                                        {procStatus === 'forwarded_to_finance' && (isAdmin || isProcurementStaff) && (
+                                        {procStatus === 'forwarded_to_finance' && isAdmin && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleRollbackProcurement(p, 'received')}
@@ -5066,7 +5066,7 @@ ${itemsListText}
                                             </button>
                                         )}
 
-                                        {procStatus === 'received' && (isAdmin || isProcurementStaff) && (
+                                        {procStatus === 'received' && isAdmin && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleRollbackProcurement(p, 'pending')}

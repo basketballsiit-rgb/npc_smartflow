@@ -1258,7 +1258,7 @@ ${itemsListText}
                                                 <span>📥</span> พัสดุกดลงรับชุดจัดซื้อจัดจ้าง
                                             </button>
                                         )}
-                                        {project.procurement?.status === 'received' && (
+                                        {isProcStaffOrAdmin && project.procurement?.status === 'received' && (
                                             <button
                                                 type="button"
                                                 onClick={handleForwardToFinance}
@@ -1267,7 +1267,7 @@ ${itemsListText}
                                                 <span>📤</span> ตั้งเบิกส่งงานการเงิน ➔
                                             </button>
                                         )}
-                                        {project.procurement?.status === 'forwarded_to_finance' && (
+                                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.procurement?.status === 'forwarded_to_finance' && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleRollbackProcurement('received')}
@@ -1277,7 +1277,7 @@ ${itemsListText}
                                                 <span>↩️</span> ยกเลิกส่งการเงิน (ดึงกลับให้พัสดุ)
                                             </button>
                                         )}
-                                        {project.procurement?.status === 'received' && (
+                                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.procurement?.status === 'received' && (
                                             <button
                                                 type="button"
                                                 onClick={() => handleRollbackProcurement('pending')}
