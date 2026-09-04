@@ -146,6 +146,9 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/procurement/save', [ProcurementController::class, 'saveProcurement'])->name('procurements.save');
     Route::post('projects/{project}/procurement/receive', [ProcurementController::class, 'receive'])->name('procurements.receive');
     Route::post('projects/{project}/procurement/forward-to-finance', [ProcurementController::class, 'forwardToFinance'])->name('procurements.forward_to_finance');
+    Route::post('projects/{project}/procurement/finance-receive', [ProcurementController::class, 'financeReceive'])->name('procurements.finance_receive');
+    Route::post('projects/{project}/procurement/finance-disburse', [ProcurementController::class, 'financeDisburse'])->name('procurements.finance_disburse');
+    Route::post('projects/{project}/procurement/finance-clear', [ProcurementController::class, 'financeClear'])->name('procurements.finance_clear');
     Route::post('projects/{project}/procurement/rollback', [ProcurementController::class, 'rollbackStatus'])->name('procurements.rollback');
     Route::get('projects/{project}/procurement/document/{type}', [ProcurementController::class, 'downloadDocument'])->name('procurements.download_document');
 

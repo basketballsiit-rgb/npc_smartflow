@@ -254,7 +254,7 @@ class ProcurementController extends Controller
         }
 
         $request->validate([
-            'target_status' => 'required|string|in:pending,received,processing,reset_all',
+            'target_status' => 'required|string|in:pending,received,processing,forwarded_to_finance,finance_received,funds_transferred,cleared,reset_all',
             'reason' => 'nullable|string|max:500'
         ]);
 

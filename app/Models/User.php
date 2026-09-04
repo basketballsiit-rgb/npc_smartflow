@@ -143,6 +143,14 @@ class User extends Authenticatable
             })->exists();
     }
 
+    public function isFinanceStaff(): bool
+    {
+        if ($this->isAdmin()) return true;
+        if ($this->role?->name === 'finance_head' || $this->role?->name === 'finance_staff') return true;
+        if ($this->department && ($this->department->code === 'FIN' || str_contains($this->department->name, 'การเงิน'))) return true;
+        return str_contains($this->position ?? '', 'การเงิน');
+    }
+
     public function isProcurementHead(): bool
     {
         if ($this->role?->name === 'procurement_head') return true;

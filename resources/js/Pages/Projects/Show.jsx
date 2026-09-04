@@ -132,6 +132,7 @@ ${itemsListText}
     const isOverBudget = totalProcurementSum > (allocatedBudget + 0.01);
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
     const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
+    const isFinanceStaff = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'finance_head' || (auth.user.department && (auth.user.department.name?.includes('การเงิน') || auth.user.department.code === 'FIN')) || auth.user.position?.includes('การเงิน'));
     const isProcStaffOrAdmin = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'procurement_head' || auth.user.role === 'procurement_head' || (auth.user.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC')) || auth.user.position?.includes('พัสดุ'));
     const [savingProcurement, setSavingProcurement] = useState(false);
     const [isEditingProcurement, setIsEditingProcurement] = useState(!project.procurement?.id);

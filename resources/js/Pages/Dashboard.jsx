@@ -374,6 +374,7 @@ export default function Dashboard({
     const isProcurementHead = Boolean(role === 'procurement_head' || auth.user?.role?.name === 'procurement_head');
     const isExecutive = Boolean(role === 'executive' || auth.user?.role?.name === 'executive');
     const isPlanStaff = isAdmin || isPlanHead || Boolean(auth.user?.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN'));
+    const isFinanceStaff = Boolean(isAdmin || role === 'finance_head' || auth.user?.role?.name === 'finance_head' || (auth.user?.department && (auth.user.department.code === 'FIN' || auth.user.department.name?.includes('การเงิน'))) || (auth.user?.position && auth.user.position.includes('การเงิน')));
     const isProcurementStaff = isAdmin || isProcurementHead || Boolean(auth.user?.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC'));
 
     const handleRollbackProcurement = (proj, targetStatus) => {
