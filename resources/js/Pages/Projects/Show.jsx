@@ -1185,39 +1185,6 @@ ${itemsListText}
                                     </div>
                                 )}
 
-                                {/* Sleek Quick Link to Dedicated Document Tracking Center */}
-                                {isPlanApproved && (
-                                    <div className="rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-white p-3.5 shadow-2xs font-sans">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div className="flex items-center gap-2.5 min-w-0">
-                                                <span className="text-xl shrink-0">📍</span>
-                                                <div className="min-w-0">
-                                                    <h4 className="text-xs font-black text-indigo-950 truncate">
-                                                        {project.procurement?.status === 'forwarded_to_finance'
-                                                            ? '💰 เอกสารอยู่ที่งานการเงิน (ส่งเบิกจ่ายแล้ว)'
-                                                            : project.procurement?.status === 'received'
-                                                            ? '📦 เอกสารอยู่ที่งานพัสดุ (ลงรับแล้ว)'
-                                                            : ['in_progress', 'evaluating'].includes(project.status)
-                                                            ? '⭐ สัญญายืมเงินอยู่ที่ผู้ยืม (กำลังดำเนินงาน)'
-                                                            : project.status === 'completed'
-                                                            ? '✅ เคลียร์เงินยืมและปิดสัญญาสมบูรณ์'
-                                                            : '🟡 เอกสารอยู่ที่งานพัสดุ (รอลงรับ)'}
-                                                    </h4>
-                                                    <p className="text-[11px] text-slate-500 truncate">
-                                                        ตรวจสอบตำแหน่งสัญญายืมเงิน กค.๑๐๑ และเอกสารจัดซื้อจัดจ้าง
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <Link
-                                                href={route('dashboard', { tab: 'document_tracking' })}
-                                                className="inline-flex items-center gap-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-xs font-bold text-white shadow-2xs transition shrink-0 whitespace-nowrap active:scale-95"
-                                            >
-                                                <span>เปิดศูนย์ติดตาม ➔</span>
-                                            </Link>
-                                        </div>
-                                    </div>
-                                )}
-
                                 {/* Approval Workflow & Sign-off History Card */}
                                 <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
                                     <div className="flex justify-between items-center border-b border-purple-100 pb-3">
