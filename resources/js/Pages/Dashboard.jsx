@@ -6406,8 +6406,8 @@ ${itemsListText}
                                 {countProcurement}
                             </span>
                         </div>
-                        <h4 className="text-xs font-bold mt-2">อยู่ที่งานพัสดุ</h4>
-                        <p className={`text-[11px] mt-0.5 ${docTrackingFilter === 'at_procurement' ? 'text-blue-100' : 'text-slate-500'}`}>
+                        <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">อยู่ที่งานพัสดุ</h4>
+                        <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'at_procurement' ? 'text-blue-100' : 'text-slate-600'}`}>
                             รอลงรับ / กำลังทำเอกสารขอซื้อขอจ้าง
                         </p>
                     </button>
@@ -6426,8 +6426,8 @@ ${itemsListText}
                                 {countFinance}
                             </span>
                         </div>
-                        <h4 className="text-xs font-bold mt-2">อยู่ที่งานการเงิน</h4>
-                        <p className={`text-[11px] mt-0.5 ${docTrackingFilter === 'at_finance' ? 'text-emerald-100' : 'text-slate-500'}`}>
+                        <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">อยู่ที่งานการเงิน</h4>
+                        <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'at_finance' ? 'text-emerald-100' : 'text-slate-600'}`}>
                             ตรวจสัญญา กค.๑๐๑ / รอเบิกจ่าย
                         </p>
                     </button>
@@ -6446,8 +6446,8 @@ ${itemsListText}
                                 {countBorrower}
                             </span>
                         </div>
-                        <h4 className="text-xs font-bold mt-2">อยู่ที่ผู้ยืมเงิน</h4>
-                        <p className={`text-[11px] mt-0.5 ${docTrackingFilter === 'with_borrower' ? 'text-purple-100' : 'text-slate-500'}`}>
+                        <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">อยู่ที่ผู้ยืมเงิน</h4>
+                        <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'with_borrower' ? 'text-purple-100' : 'text-slate-600'}`}>
                             รับเงินแล้ว / กำลังดำเนินกิจกรรม
                         </p>
                     </button>
@@ -6466,8 +6466,8 @@ ${itemsListText}
                                 {countCompleted}
                             </span>
                         </div>
-                        <h4 className="text-xs font-bold mt-2">เคลียร์เงินยืมสมบูรณ์</h4>
-                        <p className={`text-[11px] mt-0.5 ${docTrackingFilter === 'completed' ? 'text-teal-100' : 'text-slate-500'}`}>
+                        <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">เคลียร์เงินยืมสมบูรณ์</h4>
+                        <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'completed' ? 'text-teal-100' : 'text-slate-600'}`}>
                             ส่งใบเสร็จล้างหนี้และปิดสัญญาแล้ว
                         </p>
                     </button>
@@ -6486,9 +6486,9 @@ ${itemsListText}
                             <button
                                 key={tab.id}
                                 onClick={() => setDocTrackingFilter(tab.id)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                                className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all ${
                                     docTrackingFilter === tab.id
-                                        ? 'bg-purple-700 text-white shadow-xs'
+                                        ? 'bg-purple-700 text-white shadow-xs scale-102'
                                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                                 }`}
                             >
@@ -6504,7 +6504,7 @@ ${itemsListText}
                             value={docTrackingSearch}
                             onChange={(e) => setDocTrackingSearch(e.target.value)}
                             placeholder="ค้นหาชื่อโครงการ, ผู้เสนอ, เลขที่ PR..."
-                            className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
+                            className="w-full pl-9 pr-3.5 py-2 text-xs sm:text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
                         />
                     </div>
                 </div>
@@ -6514,11 +6514,11 @@ ${itemsListText}
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-black uppercase text-slate-600 tracking-wider">
+                                <tr className="bg-slate-50 border-b border-slate-200 text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">
                                     <th className="px-4 py-3.5"># & ข้อมูลโครงการ</th>
                                     <th className="px-4 py-3.5 text-right">งบประมาณ</th>
-                                    <th className="px-4 py-3.5 min-w-[260px]">💰 สัญญายืมเงิน (แบบ กค. ๑๐๑)</th>
-                                    <th className="px-4 py-3.5 min-w-[260px]">📦 ชุดเอกสารจัดซื้อจัดจ้าง (๔ ฉบับ)</th>
+                                    <th className="px-4 py-3.5 min-w-[280px]">💰 สัญญายืมเงิน (แบบ กค. ๑๐๑)</th>
+                                    <th className="px-4 py-3.5 min-w-[280px]">📦 ชุดเอกสารจัดซื้อจัดจ้าง (๔ ฉบับ)</th>
                                     <th className="px-4 py-3.5 text-center whitespace-nowrap">จัดการ</th>
                                 </tr>
                             </thead>
@@ -6535,25 +6535,25 @@ ${itemsListText}
                                         <tr key={item.id} className="hover:bg-purple-50/20 transition-colors">
                                             {/* Project Info */}
                                             <td className="px-4 py-3.5 align-top">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-xs font-black px-2 py-0.5 rounded bg-slate-100 text-slate-700 mt-0.5">
                                                             #{idx + 1}
                                                         </span>
                                                         <Link
                                                             href={route('projects.show', item.id)}
-                                                            className="font-extrabold text-purple-950 hover:text-purple-700 transition line-clamp-2 leading-snug"
+                                                            className="text-sm sm:text-base font-black text-purple-950 hover:text-purple-700 transition line-clamp-2 leading-snug"
                                                         >
                                                             {item.title}
                                                         </Link>
                                                     </div>
                                                     {item.unifiedDoc && (
-                                                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-900 font-mono font-black text-[11px] shadow-2xs">
+                                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-950 font-mono font-black text-xs shadow-2xs">
                                                             <span>🏷️ เลขคุมเอกสาร:</span>
                                                             <span className="text-indigo-700 underline">{item.unifiedDoc}</span>
                                                         </div>
                                                     )}
-                                                    <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-500">
+                                                    <div className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-slate-600">
                                                         <span>👤 {item.user?.name || item.proposer_name || 'ไม่ระบุ'}</span>
                                                         <span>•</span>
                                                         <span>🏢 {item.department?.name || '-'}</span>
@@ -6563,57 +6563,57 @@ ${itemsListText}
 
                                             {/* Budget */}
                                             <td className="px-4 py-3.5 text-right align-top whitespace-nowrap">
-                                                <span className="font-black text-slate-900">
+                                                <span className="text-sm sm:text-base font-black text-slate-950">
                                                     {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(item.allocated_budget || item.estimated_budget || 0)}
                                                 </span>
                                             </td>
 
                                             {/* Loan Contract (กค. ๑๐๑) */}
                                             <td className="px-4 py-3.5 align-top">
-                                                <div className="space-y-1.5 p-2.5 rounded-xl bg-amber-50/40 border border-amber-200/70">
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${item.loanBadgeClass}`}>
+                                                <div className="space-y-2 p-3 rounded-2xl bg-amber-50/50 border border-amber-200">
+                                                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                                        <span className={`text-xs px-2.5 py-1 rounded-lg font-extrabold leading-snug ${item.loanBadgeClass}`}>
                                                             {item.loanStatusText}
                                                         </span>
                                                         {item.status === 'approved' || ['in_progress', 'evaluating', 'completed'].includes(item.status) ? (
                                                             <a
                                                                 href={route('procurements.download_document', [item.id, 'loan_contract'])}
                                                                 target="_blank"
-                                                                className="text-[10px] font-bold text-amber-800 hover:text-amber-950 bg-amber-100/80 px-2 py-0.5 rounded border border-amber-300 hover:scale-105 transition"
+                                                                className="text-xs font-black text-amber-900 hover:text-amber-950 bg-amber-200/80 hover:bg-amber-300 px-2.5 py-1 rounded-lg border border-amber-300 hover:scale-105 transition inline-flex items-center gap-1 shadow-2xs"
                                                                 title="พิมพ์สัญญายืมเงิน แบบ กค. ๑๐๑"
                                                             >
-                                                                📄 พิมพ์ กค.๑๐๑
+                                                                <span>📄 พิมพ์ กค.๑๐๑</span>
                                                             </a>
                                                         ) : null}
                                                     </div>
-                                                    <div className="text-[11px] space-y-0.5 text-slate-700">
-                                                        <div><span className="text-slate-500 font-semibold">📍 ตำแหน่ง:</span> <strong className="text-indigo-950">{item.loanLocation}</strong></div>
-                                                        <div><span className="text-slate-500 font-semibold">👤 ผู้ถือ:</span> <span>{item.loanHolder}</span></div>
+                                                    <div className="text-xs space-y-1 text-slate-700 leading-normal">
+                                                        <div><span className="text-slate-500 font-bold">📍 ตำแหน่ง:</span> <strong className="text-indigo-950 font-black">{item.loanLocation}</strong></div>
+                                                        <div><span className="text-slate-500 font-bold">👤 ผู้ถือ:</span> <span className="font-semibold text-slate-800">{item.loanHolder}</span></div>
                                                     </div>
                                                 </div>
                                             </td>
 
                                             {/* Procurement Package */}
                                             <td className="px-4 py-3.5 align-top">
-                                                <div className="space-y-1.5 p-2.5 rounded-xl bg-purple-50/40 border border-purple-200/70">
-                                                    <div className="flex items-center justify-between gap-1">
-                                                        <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${item.procBadgeClass}`}>
+                                                <div className="space-y-2 p-3 rounded-2xl bg-purple-50/50 border border-purple-200">
+                                                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                                        <span className={`text-xs px-2.5 py-1 rounded-lg font-extrabold leading-snug ${item.procBadgeClass}`}>
                                                             {item.procStatusText}
                                                         </span>
                                                         {item.prNumber && (
-                                                            <span className="text-[10px] font-mono font-bold text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                                            <span className="text-xs font-mono font-black text-blue-900 bg-blue-100 px-2 py-0.5 rounded-md border border-blue-300">
                                                                 {item.prNumber}
                                                             </span>
                                                         )}
                                                     </div>
                                                     {/* Quick Print 4 Procurement Documents */}
                                                     {(item.status === 'approved' || ['in_progress', 'evaluating', 'completed'].includes(item.status)) && (
-                                                        <div className="pt-1 border-t border-purple-100 flex flex-wrap items-center gap-1">
-                                                            <span className="text-[10px] text-purple-900 font-bold mr-0.5">🖨️ พิมพ์ชุดจัดซื้อ:</span>
+                                                        <div className="pt-1.5 border-t border-purple-200/80 flex flex-wrap items-center gap-1.5">
+                                                            <span className="text-xs text-purple-950 font-black mr-0.5">🖨️ พิมพ์ชุดจัดซื้อ:</span>
                                                             <a
                                                                 href={route('procurements.download_document', [item.id, 'memo'])}
                                                                 target="_blank"
-                                                                className="text-[9.5px] font-bold text-purple-700 hover:text-purple-950 bg-purple-100/70 hover:bg-purple-200 px-1.5 py-0.5 rounded border border-purple-200 transition"
+                                                                className="text-[11px] font-bold text-purple-800 hover:text-purple-950 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded-md border border-purple-300 transition"
                                                                 title="บันทึกข้อความขออนุมัติจัดซื้อจัดจ้าง"
                                                             >
                                                                 บันทึกข้อความ
@@ -6621,7 +6621,7 @@ ${itemsListText}
                                                             <a
                                                                 href={route('procurements.download_document', [item.id, 'request_form'])}
                                                                 target="_blank"
-                                                                className="text-[9.5px] font-bold text-purple-700 hover:text-purple-950 bg-purple-100/70 hover:bg-purple-200 px-1.5 py-0.5 rounded border border-purple-200 transition"
+                                                                className="text-[11px] font-bold text-purple-800 hover:text-purple-950 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded-md border border-purple-300 transition"
                                                                 title="แบบใบขออนุมัติจัดซื้อจัดจ้าง"
                                                             >
                                                                 ใบขอซื้อ/จ้าง
@@ -6629,7 +6629,7 @@ ${itemsListText}
                                                             <a
                                                                 href={route('procurements.download_document', [item.id, 'estimation'])}
                                                                 target="_blank"
-                                                                className="text-[9.5px] font-bold text-purple-700 hover:text-purple-950 bg-purple-100/70 hover:bg-purple-200 px-1.5 py-0.5 rounded border border-purple-200 transition"
+                                                                className="text-[11px] font-bold text-purple-800 hover:text-purple-950 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded-md border border-purple-300 transition"
                                                                 title="ตารางแสดงวงเงินงบประมาณและการสืบราคา"
                                                             >
                                                                 ตารางสืบราคา
@@ -6637,16 +6637,16 @@ ${itemsListText}
                                                             <a
                                                                 href={route('procurements.download_document', [item.id, 'tor'])}
                                                                 target="_blank"
-                                                                className="text-[9.5px] font-bold text-purple-700 hover:text-purple-950 bg-purple-100/70 hover:bg-purple-200 px-1.5 py-0.5 rounded border border-purple-200 transition"
+                                                                className="text-[11px] font-bold text-purple-800 hover:text-purple-950 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded-md border border-purple-300 transition"
                                                                 title="ขอบเขตของงาน / รายละเอียดคุณลักษณะเฉพาะ (TOR)"
                                                             >
                                                                 TOR/สเปก
                                                             </a>
                                                         </div>
                                                     )}
-                                                    <div className="text-[11px] space-y-0.5 text-slate-700">
-                                                        <div><span className="text-slate-500 font-semibold">📍 ตำแหน่ง:</span> <strong className="text-indigo-950">{item.procLocation}</strong></div>
-                                                        <div><span className="text-slate-500 font-semibold">👤 ผู้ถือ:</span> <span>{item.procHolder}</span></div>
+                                                    <div className="text-xs space-y-1 text-slate-700 leading-normal">
+                                                        <div><span className="text-slate-500 font-bold">📍 ตำแหน่ง:</span> <strong className="text-indigo-950 font-black">{item.procLocation}</strong></div>
+                                                        <div><span className="text-slate-500 font-bold">👤 ผู้ถือ:</span> <span className="font-semibold text-slate-800">{item.procHolder}</span></div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -6706,7 +6706,7 @@ ${itemsListText}
                                                                             }
                                                                         });
                                                                     }}
-                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
                                                                     title="แผนงานตัดยอดและส่งต่อให้พัสดุ/การเงิน"
                                                                 >
                                                                     <span>📊</span> แผนตัดยอดงบ
@@ -6755,7 +6755,7 @@ ${itemsListText}
                                                                             }
                                                                         });
                                                                     }}
-                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-black text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
                                                                     title="บันทึกว่าเอกสารถึงงานพัสดุแล้ว"
                                                                 >
                                                                     <span>📦</span> พัสดุลงรับเรื่อง
@@ -6782,7 +6782,7 @@ ${itemsListText}
                                                                             }
                                                                         });
                                                                     }}
-                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
                                                                     title="ส่งเรื่องต่อให้งานการเงิน"
                                                                 >
                                                                     <span>💰</span> ส่งงานการเงิน
@@ -6834,7 +6834,7 @@ ${itemsListText}
                                                                             }
                                                                         });
                                                                     }}
-                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
                                                                     title="งานการเงินลงรับสัญญายืมเงิน"
                                                                 >
                                                                     <span>📥</span> การเงินลงรับ
@@ -6894,7 +6894,7 @@ ${itemsListText}
                                                                             }
                                                                         });
                                                                     }}
-                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
                                                                     title="บันทึกจ่ายเงินจริงและปิดยอดเคลียร์เงินยืม"
                                                                 >
                                                                     <span>💸</span> โอนเงิน & ปิดยอด
@@ -6905,7 +6905,7 @@ ${itemsListText}
                                                     <button
                                                         type="button"
                                                         onClick={() => setSelectedApprovalProject(item)}
-                                                        className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-[11px] rounded-xl shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
                                                         title="ดูประวัติการพิจารณาและลำดับการลงนาม 6 ขั้นตอน"
                                                     >
                                                         <span>📜</span>
@@ -6913,7 +6913,7 @@ ${itemsListText}
                                                     </button>
                                                     <Link
                                                         href={route('projects.show', item.id)}
-                                                        className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-purple-100 text-purple-900 font-bold text-[11px] rounded-xl shadow-2xs hover:scale-105 transition"
+                                                        className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-purple-100 text-purple-950 font-black text-xs sm:text-sm rounded-xl shadow-2xs hover:scale-105 transition"
                                                     >
                                                         <span>เปิดโครงการ</span>
                                                         <span>➔</span>
