@@ -6116,14 +6116,14 @@ ${itemsListText}
                         </select>
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-700 mb-1">🎓 ปีการศึกษา</label>
+                        <label className="block text-xs font-bold text-slate-700 mb-1">📅 ปีงบประมาณ</label>
                         <select
                             value={projectYearFilter}
                             onChange={(e) => setProjectYearFilter(e.target.value)}
                             className="w-full text-xs rounded-xl border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                         >
-                            <option value="all">ทุกปีการศึกษา</option>
-                            {years.map(y => <option key={y} value={y}>ปีการศึกษา พ.ศ. {y}</option>)}
+                            <option value="all">ทุกปีงบประมาณ</option>
+                            {years.map(y => <option key={y} value={y}>ปีงบประมาณ {y}</option>)}
                         </select>
                     </div>
                     <div>
@@ -6207,7 +6207,7 @@ ${itemsListText}
                                 <tr className="bg-slate-100 border-b border-slate-200 text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">
                                     <th className="px-5 py-3.5 min-w-[340px]">ฝ่ายงาน / ชื่อโครงการ</th>
                                     <th className="px-4 py-3.5 min-w-[160px]">ผู้เสนอโครงการ / ฝ่าย</th>
-                                    <th className="px-3 py-3.5 text-center whitespace-nowrap">ปีการศึกษา</th>
+                                    <th className="px-3 py-3.5 text-center whitespace-nowrap">ปีงบประมาณ</th>
                                     <th className="px-4 py-3.5 text-right whitespace-nowrap">งบเสนอขอ</th>
                                     <th className="px-4 py-3.5 text-right whitespace-nowrap">งบจัดสรร</th>
                                     <th className="px-3 py-3.5 text-center whitespace-nowrap">สถานะ</th>
