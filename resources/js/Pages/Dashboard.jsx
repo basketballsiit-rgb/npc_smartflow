@@ -23,6 +23,7 @@ export default function Dashboard({
     fundingChannelProgress = [],
     advancePayments = [],
     allTravelLoans = [],
+    apiIntegrationStatus = {},
     docNumberSettings = {},
     nextUnifiedDocNumber = '',
     currentTab
@@ -448,6 +449,98 @@ export default function Dashboard({
     };
 
     const [activeTab, setActiveTab] = useState(getDefaultTab());
+
+    // API Connection Status & Mock Trigger
+    const apiStatus = apiIntegrationStatus 
+        || planHeadData?.apiIntegrationStatus 
+        || financeData?.apiIntegrationStatus 
+        || {};
+
+    const [isApiDocsModalOpen, setIsApiDocsModalOpen] = useState(false);
+    const [isGeneratingMockLoan, setIsGeneratingMockLoan] = useState(false);
+
+    const handleGenerateMockLoan = () => {
+        Swal.fire({
+            title: 'ส่งข้อมูลสัญญาจำลองจาก npc_eleve?',
+            html: 'ระบบจะจำลองการส่ง API สัญญายืมเงินไปราชการ (แบบ กค. ๑๐๑) เข้าสู่ SmartFlow เพื่อทดสอบการรับข้อมูลและการเข้าสู่คิวงานแผนงานทันที',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '🚀 ยืนยันส่งข้อมูลทดสอบ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#0284c7',
+        }).then((res) => {
+            if (res.isConfirmed) {
+                setIsGeneratingMockLoan(true);
+                router.post(route('travel_loans.generate_mock'), {}, {
+                    preserveScroll: true,
+                    onFinish: () => setIsGeneratingMockLoan(false),
+                });
+            }
+        });
+    };
+
+    const renderApiConnectionBanner = () => {
+        const endpoint = apiStatus.endpoint || '/api/v1/travel-loans';
+        const totalReceived = apiStatus.total_received ?? travelLoansList.length;
+        const lastReceived = apiStatus.last_received_at || (travelLoansList[0]?.created_at || 'รอรับข้อมูลแรก');
+
+        return (
+            <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-900 via-indigo-950 to-slate-900 p-4 sm:p-5 text-white shadow-md relative overflow-hidden mb-5">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-400/30">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                API เชื่อมโยงระบบ npc_eleve: พร้อมรับข้อมูล (Active & Ready)
+                            </span>
+                            <span className="px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-200 text-[11px] font-mono border border-sky-400/30">
+                                POST /api/v1/travel-loans
+                            </span>
+                        </div>
+                        <div className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                            <span>📡</span> ระบบ SmartFlow พร้อมรับข้อมูลสัญญายืมเงิน (แบบ กค. ๑๐๑) แบบ Real-time
+                        </div>
+                        <div className="flex items-center gap-3 sm:gap-4 text-xs text-slate-300 flex-wrap pt-0.5">
+                            <span className="flex items-center gap-1">
+                                <span>📥</span> รับข้อมูลแล้วสะสม: <strong className="text-emerald-300 font-mono font-bold">{totalReceived}</strong> สัญญา
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                                <span>⏱️</span> ซิงค์ล่าสุด: <strong className="text-sky-200 font-mono">{lastReceived}</strong>
+                            </span>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                                <span>🔒</span> สิทธิ์: <strong className="text-emerald-300 font-mono">Bearer Token</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={handleGenerateMockLoan}
+                            disabled={isGeneratingMockLoan}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-xs font-bold shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                            title="คลิกเพื่อจำลองการส่ง API จาก npc_eleve เข้าสู่ระบบเพื่อทดสอบการทำงาน"
+                        >
+                            <span>🧪</span> {isGeneratingMockLoan ? 'กำลังส่งข้อมูล...' : 'ทดลองส่งข้อมูลจำลอง'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsApiDocsModalOpen(true)}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all cursor-pointer"
+                            title="ดูรายละเอียด Endpoint, Headers, JSON Schema และ cURL"
+                        >
+                            <span>🔌</span> ข้อมูลเชื่อมต่อ API
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     // External Travel Loans (npc_eleve integration)
     const travelLoansList = (planHeadData && planHeadData.externalTravelLoans) 
@@ -4361,7 +4454,9 @@ ${itemsListText}
 
                 {/* 1.5 External Travel Loans Queue (จากระบบ npc_eleve) */}
                 {planHeadData && (
-                    <div className="overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-sm">
+                    <div className="space-y-3">
+                        {renderApiConnectionBanner()}
+                        <div className="overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-sm">
                         <div className="border-b border-sky-200 bg-gradient-to-r from-sky-600/10 via-indigo-50 to-purple-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
                                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold mb-1 border border-sky-200">
@@ -4502,6 +4597,7 @@ ${itemsListText}
                                 </tbody>
                             </table>
                         </div>
+                    </div>
                     </div>
                 )}
 
@@ -9705,6 +9801,114 @@ return (
                     </div>
 
                     {/* Direct Add & Allocate Modal (Admin & Planning Staff Only) */}
+                    {/* Modal 4: API Connection Details & Documentation Modal */}
+                    {isApiDocsModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                            <div className="w-full max-w-2xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-sky-100 my-8">
+                                <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-5">
+                                    <div>
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold border border-emerald-300 mb-1">
+                                            <span>🟢</span> API Status: Active & Ready
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-900">
+                                            คู่มือและข้อมูลเชื่อมต่อ API กับระบบ npc_eleve
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            ใช้สำหรับตั้งค่าในระบบ npc_eleve หรือ npc_hr เพื่อส่งสัญญายืมเงินเข้า SmartFlow
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsApiDocsModalOpen(false)}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4 text-xs">
+                                    {/* 1. Endpoint & Method */}
+                                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                                        <div className="font-bold text-slate-800">1. Endpoint สำหรับส่งสัญญายืมเงิน (แบบ กค. ๑๐๑):</div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-mono font-bold text-xs">
+                                                POST
+                                            </span>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={apiStatus.endpoint || (window.location.origin + '/api/v1/travel-loans')}
+                                                className="flex-1 rounded-xl border-slate-300 bg-white px-3 py-1.5 text-xs font-mono font-bold text-slate-800"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(apiStatus.endpoint || (window.location.origin + '/api/v1/travel-loans'));
+                                                    Swal.fire('คัดลอกสำเร็จ', 'คัดลอก URL เรียบร้อยแล้ว', 'success');
+                                                }}
+                                                className="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs cursor-pointer"
+                                            >
+                                                คัดลอก
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* 2. Authentication Headers */}
+                                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                                        <div className="font-bold text-slate-800">2. HTTP Headers ที่ต้องระบุ:</div>
+                                        <div className="p-3 rounded-xl bg-slate-900 text-slate-100 font-mono text-[11px] space-y-1">
+                                            <div>Content-Type: application/json</div>
+                                            <div>Authorization: Bearer {apiStatus.token || 'npc_smartflow_secret_token_2026'}</div>
+                                            <div className="text-slate-400">// หรือส่งผ่าน Header: X-API-Key: {apiStatus.token || 'npc_smartflow_secret_token_2026'}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* 3. Status Ping Check */}
+                                    <div className="p-4 rounded-2xl bg-sky-50/50 border border-sky-200 space-y-2">
+                                        <div className="font-bold text-sky-950">3. Endpoint ตรวจสอบสถานะการเชื่อมต่อ (Ping Check):</div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-2.5 py-1 rounded-lg bg-sky-600 text-white font-mono font-bold text-xs">
+                                                GET
+                                            </span>
+                                            <input
+                                                type="text"
+                                                readOnly
+                                                value={apiStatus.ping_endpoint || (window.location.origin + '/api/v1/travel-loans/ping')}
+                                                className="flex-1 rounded-xl border-sky-200 bg-white px-3 py-1.5 text-xs font-mono text-slate-800"
+                                            />
+                                            <a
+                                                href={apiStatus.ping_endpoint || '/api/v1/travel-loans/ping'}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="px-3 py-1.5 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-900 font-bold text-xs cursor-pointer"
+                                            >
+                                                ทดสอบ Ping ➔
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    {/* 4. Workflow Flow Summary */}
+                                    <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-1.5 text-[11px] text-amber-950 leading-relaxed">
+                                        <div className="font-bold text-amber-900 text-xs">4. เส้นทางเอกสารใน SmartFlow:</div>
+                                        <div>1. เมื่อ npc_eleve ส่ง API เข้ามา สถานะเริ่มต้นจะเป็น <strong>"รอแผนงานตัดยอด" (pending_plan)</strong></div>
+                                        <div>2. <strong>งานแผนงาน</strong> ตรวจสอบ เลือกหมวดหมู่งบประมาณ และออกเลขคุมเอกสารแผนงาน (ผง.)</div>
+                                        <div>3. <strong>งานการเงิน</strong> ตรวจสอบ ลงรับเอกสาร และบันทึกการโอนเงินยืมพร้อมเลขอ้างอิง</div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-4 border-t border-slate-200 mt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsApiDocsModalOpen(false)}
+                                        className="rounded-xl px-6 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                                    >
+                                        ปิดหน้าต่าง
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Modal 1: Plan Cut Budget for Travel Loan */}
                     {selectedTravelLoanForPlanCut && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">

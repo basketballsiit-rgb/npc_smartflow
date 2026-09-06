@@ -173,6 +173,19 @@ class DashboardController extends Controller
             });
         $data['allTravelLoans'] = $allTravelLoans;
 
+        $lastLoan = TravelLoan::latest('created_at')->first();
+        $apiIntegrationStatus = [
+            'status' => 'ready',
+            'endpoint' => url('/api/v1/travel-loans'),
+            'ping_endpoint' => url('/api/v1/travel-loans/ping'),
+            'token' => env('SMARTFLOW_API_TOKEN', 'npc_smartflow_secret_token_2026'),
+            'total_received' => TravelLoan::count(),
+            'last_received_at' => $lastLoan ? $lastLoan->created_at->format('d/m/Y H:i:s') : null,
+            'last_received_contract' => $lastLoan ? $lastLoan->contract_no : null,
+            'source_system' => 'npc_eleve (สัญญายืมเงิน กค. ๑๐๑)',
+        ];
+        $data['apiIntegrationStatus'] = $apiIntegrationStatus;
+
         // 0. Admin Dashboard Data
         if ($user->isAdmin()) {
             $data['adminData'] = [
@@ -236,6 +249,7 @@ class DashboardController extends Controller
                 'advancePayments' => $advancePayments,
                 'externalTravelLoans' => $allTravelLoans,
                 'nextDocNumberPreview' => DocumentNumberService::previewNext(),
+                'apiIntegrationStatus' => $apiIntegrationStatus,
             ];
         }
 
@@ -246,6 +260,7 @@ class DashboardController extends Controller
                 'centralAllocations' => $data['centralAllocations'],
                 'advancePayments' => $advancePayments,
                 'externalTravelLoans' => $allTravelLoans,
+                'apiIntegrationStatus' => $apiIntegrationStatus,
             ];
         }
 

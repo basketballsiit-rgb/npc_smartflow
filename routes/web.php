@@ -160,6 +160,7 @@ Route::middleware('auth')->group(function () {
     Route::post('travel-loans/{travelLoan}/finance-receive', [TravelLoanWebController::class, 'financeReceive'])->name('travel_loans.finance_receive');
     Route::post('travel-loans/{travelLoan}/finance-disburse', [TravelLoanWebController::class, 'financeDisburse'])->name('travel_loans.finance_disburse');
     Route::post('travel-loans/{travelLoan}/rollback', [TravelLoanWebController::class, 'rollback'])->name('travel_loans.rollback');
+    Route::post('travel-loans/generate-mock', [TravelLoanWebController::class, 'generateMockLoan'])->name('travel_loans.generate_mock');
 
     // Survey stats
     Route::get('projects/{project}/survey/stats', [SurveyController::class, 'stats'])->name('surveys.stats');

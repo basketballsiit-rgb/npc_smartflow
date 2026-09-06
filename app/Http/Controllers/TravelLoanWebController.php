@@ -128,4 +128,57 @@ class TravelLoanWebController extends Controller
 
         return redirect()->back()->with('error', 'ไม่สามารถย้อนสถานะได้ในขั้นตอนนี้');
     }
+
+    /**
+     * Generate a Mock Travel Loan from npc_eleve for demonstration / verification
+     */
+    public function generateMockLoan(Request $request)
+    {
+        $mockId = (string)\Illuminate\Support\Str::uuid();
+        $randomSeq = str_pad((string)rand(1, 999), 3, '0', STR_PAD_LEFT);
+        $contractNo = 'สย.' . $randomSeq . '/' . (date('Y') + 543);
+        
+        TravelLoan::create([
+            'travel_id' => $mockId,
+            'contract_no' => $contractNo,
+            'system_source' => 'npc_eleve',
+            
+            'borrower_user_id' => 1,
+            'borrower_name' => 'นายมาโนชญ์ ชัยศรีหา',
+            'borrower_position' => 'ครูชำนาญการพิเศษ',
+            'borrower_department' => 'แผนกวิชาช่างยนต์',
+            'borrower_staff_type' => 'ข้าราชการครู',
+
+            'subject' => 'ไปราชการเพื่อเข้าร่วมการประชุมเชิงปฏิบัติการการพัฒนาหลักสูตร',
+            'destination' => 'โรงแรมเซ็นทารา แกรนด์ กรุงเทพฯ',
+            'start_date' => now()->addDays(3)->toDateString(),
+            'end_date' => now()->addDays(5)->toDateString(),
+            'total_days' => 3,
+            'doc_date' => now()->toDateString(),
+            'due_date' => now()->addDays(33)->toDateString(),
+            'return_days' => 30,
+            'project_id' => null,
+            'expense_type' => 'allowance_rent_vehicle',
+
+            'allowance_amount' => 2400.00,
+            'allowance_detail' => 'เบี้ยเลี้ยง 3 วัน x 2 คน x 400 บาท',
+            'rent_amount' => 3600.00,
+            'rent_detail' => 'ค่าที่พัก 2 คืน x 1,800 บาท',
+            'vehicle_amount' => 1500.00,
+            'vehicle_detail' => 'ค่าน้ำมันเชื้อเพลิงพาหนะส่วนบุคคล',
+            'other_amount' => 500.00,
+            'other_detail' => 'ค่าผ่านทางพิเศษ',
+
+            'total_loan_amount' => 8000.00,
+            'thai_baht_text' => 'แปดพันบาทถ้วน',
+            'loan_status' => 'pending_plan',
+
+            'approved_at' => now(),
+            'approved_by_director' => 'นายกเชษฐ์ กิ่งชนะ',
+            'approved_by_deputy' => 'นายวิโรจน์ แสงดาว',
+            'finance_checked_by' => 'นางสาวดวงดาว ไชยเขียว',
+        ]);
+
+        return redirect()->back()->with('success', "จำลองการส่งข้อมูลสัญญายืมเงินจากระบบ npc_eleve สำเร็จ! สัญญาเลขที่: {$contractNo} เข้าสู่คิวรอแผนงานตัดยอดแล้ว");
+    }
 }
