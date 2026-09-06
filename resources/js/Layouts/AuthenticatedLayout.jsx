@@ -303,7 +303,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         onScroll={handleSidebarScroll}
                         scroll-region="true"
                         data-inertia-scroll-region="true"
-                        className="p-3 space-y-2 font-prompt overflow-y-auto max-h-[calc(100vh-8rem)]"
+                        className="p-3 space-y-2 font-kanit overflow-y-auto max-h-[calc(100vh-8rem)]"
                     >
                         
                         {/* 0. MAIN DASHBOARD HOME ENTRY */}
