@@ -4844,44 +4844,8 @@ ${itemsListText}
                                                     {/* Accordion Expanded Detail Drawer */}
                                                     {isExpanded && (
                                                         <tr className="bg-slate-50/95 border-y-2 border-emerald-300">
-                                                            <td colSpan="7" className="p-4 sm:p-6 space-y-4">
-                                                                {/* 1. Header Banner of Expanded Drawer */}
-                                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
-                                                                    <div className="flex items-center gap-2.5">
-                                                                        <span className="text-2xl p-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                                                            📋
-                                                                        </span>
-                                                                        <div>
-                                                                            <h4 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
-                                                                                รายละเอียดการใช้จ่าย: {thaiName}
-                                                                                {cat.code && (
-                                                                                    <span className="font-mono text-xs text-slate-500 font-bold bg-white px-2 py-0.5 rounded border border-slate-200">
-                                                                                        {cat.code}
-                                                                                    </span>
-                                                                                )}
-                                                                            </h4>
-                                                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                                                ตรวจสอบรายการโครงการ เอกสารสัญญายืม เอกสารจัดซื้อ และการเบิกจ่ายจริงภายใต้งบนี้
-                                                                            </p>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2 flex-wrap text-xs">
-                                                                        <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">
-                                                                            📥 แจ้งจัดสรร: {fmt(cAlloc)}
-                                                                        </span>
-                                                                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 font-bold">
-                                                                            📝 จัดสรรโครงการ: {fmt(pAlloc)}
-                                                                        </span>
-                                                                        <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-900 border border-rose-200 font-bold">
-                                                                            💸 เบิกจ่ายแล้ว: {fmt(spent)}
-                                                                        </span>
-                                                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-black">
-                                                                            💰 คงเหลือ: {fmt(remaining)}
-                                                                        </span>
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* 2. Projects & Expenditures Sub-Table (6 Columns) */}
+                                                            <td colSpan="7" className="p-3 sm:p-5 space-y-3">
+                                                                {/* Projects & Expenditures Sub-Table (6 Columns) */}
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                                                                         <span className="flex items-center gap-1.5">
