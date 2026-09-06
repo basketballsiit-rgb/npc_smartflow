@@ -3971,27 +3971,37 @@ ${itemsListText}
             }
         });
 
+        const isProjectApprovedForReport = (p) => {
+            if (!p) return false;
+            const approvedStatuses = ['approved', 'budget_approved', 'completed'];
+            if (approvedStatuses.includes(p.status)) return true;
+            if (parseFloat(p.allocated_amount || p.allocated_budget || 0) > 0) return true;
+            return false;
+        };
+
         // 4. Populate Projects (Row 6.1 - 6.4)
         allProjectsMaster.forEach(p => {
-            if (p.status !== 'approved' && p.status !== 'budget_approved') return;
+            if (!isProjectApprovedForReport(p)) return;
 
             // Resolve report category based on explicit report_category or project's department
             let cat = p.report_category;
             if (!cat) {
-                if (p.department_name?.includes('วิชาการ')) cat = '6.1';
-                else if (p.department_name?.includes('พัฒนากิจการ') || p.department_name?.includes('นักเรียน')) cat = '6.2';
-                else if (p.department_name?.includes('บริหาร') || p.department_name?.includes('พัสดุ') || p.department_name?.includes('บริหารทรัพยากร')) cat = '6.3';
-                else if (p.department_name?.includes('วางแผน') || p.department_name?.includes('แผน')) cat = '6.4';
+                const deptName = p.department_name || p.department?.name || '';
+                if (deptName.includes('วิชาการ')) cat = '6.1';
+                else if (deptName.includes('พัฒนากิจการ') || deptName.includes('นักเรียน')) cat = '6.2';
+                else if (deptName.includes('บริหาร') || deptName.includes('พัสดุ') || deptName.includes('บริหารทรัพยากร')) cat = '6.3';
+                else if (deptName.includes('วางแผน') || deptName.includes('แผน')) cat = '6.4';
                 else cat = '6.1'; // fallback
             }
 
-            const alloc = parseFloat(p.allocated_amount || p.allocated_budget || 0);
+            const alloc = parseFloat(p.allocated_amount || p.allocated_budget || p.estimated_budget || p.proposed_budget || 0);
             const spent = parseFloat(p.spent_amount || 0);
 
             if (rowData[cat]) {
                 rowData[cat].planBudget += alloc;
 
-                const colIdx = getColumnIndexBySourceName(p.funding_source_name);
+                const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+                const colIdx = getColumnIndexBySourceName(sourceName);
                 if (colIdx !== -1) {
                     rowData[cat].spentBySource[colIdx] += spent;
                 }
@@ -4041,10 +4051,11 @@ ${itemsListText}
             }
         });
         allProjectsMaster.forEach(p => {
-            if (p.status !== 'approved' && p.status !== 'budget_approved') return;
-            const colIdx = getColumnIndexBySourceName(p.funding_source_name);
+            if (!isProjectApprovedForReport(p)) return;
+            const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+            const colIdx = getColumnIndexBySourceName(sourceName);
             if (colIdx !== -1) {
-                estimateBySource[colIdx] += parseFloat(p.allocated_amount || p.allocated_budget || 0);
+                estimateBySource[colIdx] += parseFloat(p.allocated_amount || p.allocated_budget || p.estimated_budget || p.proposed_budget || 0);
             }
         });
 

@@ -375,7 +375,7 @@ class DashboardController extends Controller
         }
 
         // Master Projects list for Admin, Plan Head, Procurement, Finance & Executives
-        if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isFinanceStaff() || $user->isExecutive() || $request->query('tab') === 'document_tracking' || $request->query('tab') === 'central_budgets') {
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isFinanceStaff() || $user->isExecutive() || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report'])) {
             $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
                 ->latest()
                 ->get()
