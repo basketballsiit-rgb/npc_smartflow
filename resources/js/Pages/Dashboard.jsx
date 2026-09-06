@@ -455,6 +455,7 @@ export default function Dashboard({
     const [selectedCategoryForModal, setSelectedCategoryForModal] = useState(null);
     const [expandedCategoryIds, setExpandedCategoryIds] = useState([]);
     const [selectedDetailItem, setSelectedDetailItem] = useState(null);
+    const [selectedProjectQuickView, setSelectedProjectQuickView] = useState(null);
 
     // All Projects Master Tracking Filter States
     
@@ -4908,14 +4909,15 @@ ${itemsListText}
                                                                                                 {/* 2. ชื่อรายการ/โครงการ/ผู้รับผิดชอบ */}
                                                                                                 <td className="p-3 align-top">
                                                                                                     <div className="space-y-1">
-                                                                                                        <Link
-                                                                                                            href={route('projects.show', proj.id)}
-                                                                                                            className="font-bold text-slate-900 hover:text-emerald-700 text-xs sm:text-sm leading-snug flex items-start gap-1 group"
-                                                                                                            title="คลิกเพื่อดูรายละเอียดโครงการทั้งหมด"
-                                                                                                        >
-                                                                                                            <span className="line-clamp-2 group-hover:underline">{proj.title}</span>
-                                                                                                            <span className="text-emerald-600 opacity-80 group-hover:opacity-100 transition-opacity text-xs whitespace-nowrap">↗</span>
-                                                                                                        </Link>
+                                                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setSelectedProjectQuickView(proj)}
+                                                                            className="font-bold text-slate-900 hover:text-emerald-700 text-xs sm:text-sm leading-snug flex items-start gap-1 group text-left cursor-pointer"
+                                                                            title="คลิกเพื่อดูไฟล์โครงการและยอดการใช้จ่ายเงิน"
+                                                                        >
+                                                                            <span className="line-clamp-2 group-hover:underline">{proj.title}</span>
+                                                                            <span className="text-emerald-600 opacity-80 group-hover:opacity-100 transition-opacity text-xs whitespace-nowrap">🔍</span>
+                                                                        </button>
                                                                                                         <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-2 pt-0.5">
                                                                                                             <span className="font-semibold text-slate-700 flex items-center gap-1">
                                                                                                                 <span>👤</span> {proj.user?.name || proj.proposer_name || 'ไม่ระบุผู้รับผิดชอบ'}
@@ -5236,6 +5238,246 @@ ${itemsListText}
 
                 {/* 7. Category Projects Modal (เมื่อคลิกดูโครงการในหมวดหมู่นั้น) */}
                 
+                
+                {/* Modal สำหรับแสดงไฟล์โครงการ และ ยอดการใช้จ่ายเงินเมื่อคลิกชื่อโครงการ */}
+                {selectedProjectQuickView && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+                        <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+                            {/* Header */}
+                            <div className="flex items-start justify-between border-b border-slate-100 pb-3 gap-3">
+                                <div className="space-y-1">
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+                                        <span>📁</span> ข้อมูลโครงการ & ยอดการใช้จ่ายเงิน
+                                    </div>
+                                    <h3 className="font-black text-slate-900 text-base sm:text-lg leading-snug">
+                                        {selectedProjectQuickView.title}
+                                    </h3>
+                                    <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 pt-0.5">
+                                        <span className="font-semibold text-slate-700">👤 {selectedProjectQuickView.proposer_name}</span>
+                                        <span>•</span>
+                                        <span>🏢 {selectedProjectQuickView.department_name}</span>
+                                        {selectedProjectQuickView.status && (
+                                            <>
+                                                <span>•</span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                    selectedProjectQuickView.status === 'completed' ? 'bg-teal-100 text-teal-900' :
+                                                    selectedProjectQuickView.status === 'approved' ? 'bg-emerald-100 text-emerald-900' :
+                                                    'bg-slate-100 text-slate-700'
+                                                }`}>
+                                                    {selectedProjectQuickView.status === 'completed' ? 'ปิดโครงการแล้ว' :
+                                                     selectedProjectQuickView.status === 'approved' ? 'อนุมัติแล้ว' : selectedProjectQuickView.status}
+                                                </span>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedProjectQuickView(null)}
+                                    className="text-slate-400 hover:text-slate-600 text-lg font-bold p-1 cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div className="space-y-5 overflow-y-auto flex-1 pr-1">
+                                {/* 1. ยอดของการใช้จ่ายเงิน (Expenditure Summary) */}
+                                <div className="space-y-3">
+                                    <h4 className="text-xs font-black text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                                        <span>💰</span> ยอดของการใช้จ่ายเงิน
+                                    </h4>
+                                    
+                                    {/* Stat Badges Grid */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                        <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200 text-center">
+                                            <span className="text-[11px] text-blue-700 font-bold block">งบที่จัดสรร</span>
+                                            <span className="text-sm sm:text-base font-black font-mono text-blue-950">
+                                                {fmt(selectedProjectQuickView.allocated_budget || selectedProjectQuickView.allocated_amount || 0)}
+                                            </span>
+                                        </div>
+                                        <div className="p-3 rounded-2xl bg-rose-50/70 border border-rose-200 text-center">
+                                            <span className="text-[11px] text-rose-700 font-bold block">จ่ายจริง (Spent)</span>
+                                            <span className="text-sm sm:text-base font-black font-mono text-rose-950">
+                                                {fmt(selectedProjectQuickView.spent_amount || 0)}
+                                            </span>
+                                        </div>
+                                        <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-center">
+                                            <span className="text-[11px] text-emerald-700 font-bold block">ยอดคงเหลือ</span>
+                                            <span className="text-sm sm:text-base font-black font-mono text-emerald-950">
+                                                {fmt((selectedProjectQuickView.allocated_budget || selectedProjectQuickView.allocated_amount || 0) - (selectedProjectQuickView.spent_amount || 0))}
+                                            </span>
+                                        </div>
+                                        <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-200 text-center">
+                                            <span className="text-[11px] text-purple-700 font-bold block">เบิกจ่ายแล้ว</span>
+                                            <span className="text-sm sm:text-base font-black font-mono text-purple-950">
+                                                {(selectedProjectQuickView.allocated_budget || selectedProjectQuickView.allocated_amount) > 0
+                                                    ? Math.round(((selectedProjectQuickView.spent_amount || 0) / (selectedProjectQuickView.allocated_budget || selectedProjectQuickView.allocated_amount)) * 100)
+                                                    : 0}%
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* ข้อมูลรหัสชุดเบิกจ่าย & การโอนเงิน */}
+                                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+                                        <div className="font-bold text-slate-800 flex items-center gap-1">
+                                            <span>📑</span> ข้อมูลชุดเอกสารเบิกจ่าย & การชำระเงิน
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                                            <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-100">
+                                                <span className="text-slate-500">รหัสชุดจัดซื้อ:</span>
+                                                <span className="font-mono font-bold text-blue-800">
+                                                    {selectedProjectQuickView.procurement_number || '-'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-100">
+                                                <span className="text-slate-500">รหัสสัญญายืมเงิน:</span>
+                                                <span className="font-mono font-bold text-purple-800">
+                                                    {selectedProjectQuickView.plan_loan_doc_number || '-'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-100">
+                                                <span className="text-slate-500">เลขที่เอกสารการเงิน:</span>
+                                                <span className="font-mono font-bold text-slate-800">
+                                                    {selectedProjectQuickView.finance_doc_number || '-'}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center bg-white p-2 rounded-xl border border-slate-100">
+                                                <span className="text-slate-500">เลขอ้างอิงการโอนจ่าย:</span>
+                                                <span className="font-mono font-bold text-emerald-800">
+                                                    {selectedProjectQuickView.finance_payment_ref || '-'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* รายการพัสดุ / ค่าใช้จ่าย (ถ้ามี) */}
+                                    {Array.isArray(selectedProjectQuickView.procurement_items) && selectedProjectQuickView.procurement_items.length > 0 && (
+                                        <div className="space-y-1.5">
+                                            <span className="text-[11px] font-bold text-slate-600 block">
+                                                รายการค่าใช้จ่ายตามชุดจัดซื้อ ({selectedProjectQuickView.procurement_items.length} รายการ):
+                                            </span>
+                                            <div className="overflow-x-auto rounded-xl border border-slate-200">
+                                                <table className="w-full text-left text-xs border-collapse">
+                                                    <thead className="bg-slate-50 text-[10px] text-slate-600 font-bold border-b border-slate-200">
+                                                        <tr>
+                                                            <th className="p-2 w-8 text-center">#</th>
+                                                            <th className="p-2">รายการ</th>
+                                                            <th className="p-2 text-right">จำนวน</th>
+                                                            <th className="p-2 text-right">ราคา/หน่วย</th>
+                                                            <th className="p-2 text-right">ราคารวม</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100 text-[11px]">
+                                                        {selectedProjectQuickView.procurement_items.map((it, idx) => (
+                                                            <tr key={it.id || idx}>
+                                                                <td className="p-2 text-center text-slate-400 font-mono">{idx + 1}</td>
+                                                                <td className="p-2 font-medium text-slate-800">{it.description}</td>
+                                                                <td className="p-2 text-right font-mono">{it.quantity} {it.unit}</td>
+                                                                <td className="p-2 text-right font-mono">{fmt(it.unit_price)}</td>
+                                                                <td className="p-2 text-right font-mono font-bold text-slate-900">{fmt(it.total_price)}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 2. ไฟล์ของโครงการ (Project Files & Documents) */}
+                                <div className="space-y-3 pt-3 border-t border-slate-200">
+                                    <h4 className="text-xs font-black text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                                        <span>📁</span> ไฟล์เอกสารของโครงการ
+                                    </h4>
+
+                                    {/* Official Project Document (PDF) */}
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl p-2 rounded-xl bg-purple-100 text-purple-800 border border-purple-200">
+                                                📄
+                                            </span>
+                                            <div>
+                                                <span className="font-bold text-purple-950 text-xs sm:text-sm block">
+                                                    เอกสารเสนอขออนุมัติโครงการฉบับสมบูรณ์ (PDF)
+                                                </span>
+                                                <span className="text-[11px] text-purple-700">
+                                                    เอกสารแบบฟอร์มทางการพร้อมขั้นตอนการอนุมัติและรายละเอียดโครงการ
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={selectedProjectQuickView.print_url || route('projects.print', selectedProjectQuickView.id)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs transition hover:scale-102 whitespace-nowrap cursor-pointer"
+                                        >
+                                            <span>เปิดดู / พิมพ์ PDF</span>
+                                            <span>↗</span>
+                                        </a>
+                                    </div>
+
+                                    {/* Appendices / Uploaded Files */}
+                                    <div className="space-y-2">
+                                        <span className="text-[11px] font-bold text-slate-600 block">
+                                            ไฟล์แนบและเอกสารประกอบเพิ่มเติม:
+                                        </span>
+                                        {Array.isArray(selectedProjectQuickView.appendices) && selectedProjectQuickView.appendices.length > 0 ? (
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {selectedProjectQuickView.appendices.map((app, aIdx) => (
+                                                    <div key={app.id || aIdx} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100/80 transition">
+                                                        <div className="flex items-center gap-2.5 overflow-hidden">
+                                                            <span className="text-lg">📎</span>
+                                                            <div className="overflow-hidden">
+                                                                <span className="font-bold text-xs text-slate-800 block truncate" title={app.title}>
+                                                                    {app.title}
+                                                                </span>
+                                                                <span className="text-[10px] text-slate-500 block font-mono">
+                                                                    {app.file_size ? `${Math.round(app.file_size / 1024)} KB` : 'PDF'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <a
+                                                            href={app.file_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs shadow-2xs whitespace-nowrap cursor-pointer transition"
+                                                        >
+                                                            <span>เปิดไฟล์</span>
+                                                            <span>↗</span>
+                                                        </a>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="p-3 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-center text-slate-400 text-xs">
+                                                ไม่มีไฟล์แนบเพิ่มเติมในโครงการนี้
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                                <Link
+                                    href={route('projects.show', selectedProjectQuickView.id)}
+                                    className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 hover:underline"
+                                >
+                                    <span>เปิดดูหน้าโครงการฉบับเต็ม</span>
+                                    <span>↗</span>
+                                </Link>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedProjectQuickView(null)}
+                                    className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+                                >
+                                    ปิดหน้าต่าง
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Modal สำหรับดูรายละเอียดหนังสือแจ้งจัดสรรหรือรายการอื่น ๆ แบบเต็ม */}
                 {selectedDetailItem && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">

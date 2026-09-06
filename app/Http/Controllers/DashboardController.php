@@ -282,7 +282,7 @@ class DashboardController extends Controller
 
         // Master Projects list for Admin, Plan Head, Procurement, Finance & Executives
         if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isFinanceStaff() || $user->isExecutive() || $request->query('tab') === 'document_tracking' || $request->query('tab') === 'central_budgets') {
-            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items'])
+            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
                 ->latest()
                 ->get()
                 ->map(function ($p) {
@@ -322,6 +322,16 @@ class DashboardController extends Controller
                         'funding_source_id' => $fundingId,
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
                         'activities' => $p->activities ?? [],
+                        'appendices' => $p->appendices ? $p->appendices->map(function ($app) {
+                            return [
+                                'id' => $app->id,
+                                'title' => $app->title,
+                                'file_url' => asset('storage/' . $app->file_path),
+                                'file_type' => $app->file_type,
+                                'file_size' => (int)$app->file_size,
+                            ];
+                        }) : [],
+                        'print_url' => route('projects.print', $p->id),
                         'procurement_items' => $p->procurement?->items ? $p->procurement->items->map(function ($it) {
                             return [
                                 'id' => $it->id,
