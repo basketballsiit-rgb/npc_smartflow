@@ -366,7 +366,8 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
                         )}
 
-                        {/* 2. PROPOSAL / TEACHER MENUS */}
+                        {/* 2. PROPOSAL / TEACHER MENUS (Hidden for Finance Staff) */}
+                        {(!isFinanceStaff || isAdmin) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
                                 <button
@@ -435,6 +436,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
                             )}
                         </div>
+                        )}
 
                         {/* 3. PLAN HEAD & BUDGET MENUS */}
                         {isPlanHead && (

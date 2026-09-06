@@ -258,7 +258,7 @@ class DashboardController extends Controller
 
         // Master Projects list for Admin, Plan Head, Procurement, Finance & Executives
         if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isFinanceStaff() || $user->isExecutive() || $request->query('tab') === 'document_tracking') {
-            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement'])
+            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items'])
                 ->latest()
                 ->get()
                 ->map(function ($p) {
@@ -297,6 +297,17 @@ class DashboardController extends Controller
                         'funding_source_name' => $fundingName,
                         'funding_source_id' => $fundingId,
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
+                        'activities' => $p->activities ?? [],
+                        'procurement_items' => $p->procurement?->items ? $p->procurement->items->map(function ($it) {
+                            return [
+                                'id' => $it->id,
+                                'description' => $it->description,
+                                'quantity' => (float)$it->quantity,
+                                'unit' => $it->unit,
+                                'unit_price' => (float)$it->unit_price,
+                                'total_price' => (float)$it->total_price,
+                            ];
+                        }) : [],
                         'approvals' => $p->approvals->map(function ($a) {
                             return [
                                 'id' => $a->id,
