@@ -1,11 +1,25 @@
-@import url('https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,600;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Kanit:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,600;1,700&family=Prompt:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body, input, button, select, textarea, table, th, td, p, span, div, a, label {
-    font-family: 'Kanit', sans-serif;
+/* 
+ * สูตรที่ 1: Modern Enterprise (สบายตาสูงสุด + ทันสมัย)
+ * - เนื้อหา/รายละเอียด/ตาราง/ฟอร์ม: ใช้ 'IBM Plex Sans Thai' (อ่านสบายตา ไม่เมื่อยล้า)
+ * - หัวข้อ/เมนูนำทางหลัก: ใช้ 'Prompt' หรือ 'Kanit' (กระชับ เด่น คมชัด)
+ * - งานพิมพ์เอกสาร (Print Forms): ไม่กระทบ คงฟอนต์ TH Sarabun PSK / Sarabun 100%
+ */
+
+@media screen {
+    body, input, button, select, textarea, table, th, td, p, span, div, a, label {
+        font-family: 'IBM Plex Sans Thai', 'Prompt', 'Kanit', sans-serif;
+    }
+
+    /* Headings & Section Titles ให้ใช้ Prompt หรือ Kanit */
+    h1, h2, h3, h4, h5, h6, .font-heading, .font-prompt {
+        font-family: 'Prompt', 'Kanit', sans-serif;
+    }
 }
 
 /* Global Base Font Size — Tailwind ใช้ rem ดังนั้นทุกขนาดในระบบจะขยายตามสัดส่วน (ใหญ่และอ่านง่ายขึ้นชัดเจน) */

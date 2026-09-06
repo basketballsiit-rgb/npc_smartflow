@@ -13,7 +13,11 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Kanit', 'sans-serif', ...defaultTheme.fontFamily.sans],
+                sans: ['"IBM Plex Sans Thai"', 'Prompt', 'Kanit', 'sans-serif', ...defaultTheme.fontFamily.sans],
+                body: ['"IBM Plex Sans Thai"', 'sans-serif', ...defaultTheme.fontFamily.sans],
+                heading: ['Prompt', 'Kanit', 'sans-serif'],
+                prompt: ['Prompt', 'sans-serif'],
+                kanit: ['Kanit', 'sans-serif'],
             },
         },
     },
