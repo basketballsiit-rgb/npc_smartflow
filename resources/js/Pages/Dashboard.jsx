@@ -480,6 +480,7 @@ export default function Dashboard({
     };
 
     const renderApiConnectionBanner = () => {
+        if (role !== 'admin' && !auth?.user?.is_admin) return null;
         const endpoint = apiStatus.endpoint || '/api/v1/travel-loans';
         const totalReceived = apiStatus.total_received ?? travelLoansList.length;
         const lastReceived = apiStatus.last_received_at || (travelLoansList[0]?.created_at || 'รอรับข้อมูลแรก');
@@ -1462,6 +1463,9 @@ export default function Dashboard({
         if (!adminData) return null;
         return (
             <div className="space-y-6">
+                {/* External API Integration Status (npc_eleve) */}
+                {renderApiConnectionBanner()}
+
                 {/* Admin Stat Overview */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
                     <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
@@ -4454,9 +4458,7 @@ ${itemsListText}
 
                 {/* 1.5 External Travel Loans Queue (จากระบบ npc_eleve) */}
                 {planHeadData && (
-                    <div className="space-y-3">
-                        {renderApiConnectionBanner()}
-                        <div className="overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-sm">
                         <div className="border-b border-sky-200 bg-gradient-to-r from-sky-600/10 via-indigo-50 to-purple-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
                                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold mb-1 border border-sky-200">
@@ -4597,7 +4599,6 @@ ${itemsListText}
                                 </tbody>
                             </table>
                         </div>
-                    </div>
                     </div>
                 )}
 
