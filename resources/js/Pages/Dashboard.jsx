@@ -6990,20 +6990,20 @@ ${itemsListText}
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-slate-50 border-b border-slate-200 text-xs sm:text-sm font-black uppercase text-slate-700 tracking-wider">
-                                    <th className="px-4 py-3.5 whitespace-nowrap">
-                                        📄 เลขที่เอกสารจากแผน
+                                <tr className="bg-slate-50/90 border-b border-slate-200 text-xs font-bold text-slate-700 tracking-wide">
+                                    <th className="px-3 py-2.5 whitespace-nowrap w-[110px]">
+                                        เลขที่เอกสาร
                                     </th>
-                                    <th className="px-4 py-3.5 min-w-[260px]">
-                                        📁 ชื่อโครงการ & ผู้รับผิดชอบ
+                                    <th className="px-3 py-2.5 min-w-[320px] lg:min-w-[420px]">
+                                        ชื่อโครงการ & ผู้รับผิดชอบ
                                     </th>
-                                    <th className="px-4 py-3.5 text-right whitespace-nowrap min-w-[180px]">
-                                        💰 สัญญายืมเงิน (แบบ กค. ๑๐๑)
+                                    <th className="px-3 py-2.5 text-right whitespace-nowrap w-[120px]">
+                                        สัญญายืม
                                     </th>
-                                    <th className="px-4 py-3.5 text-right whitespace-nowrap min-w-[180px]">
-                                        📦 ชุดจัดซื้อจัดจ้าง (๔ ฉบับ)
+                                    <th className="px-3 py-2.5 text-right whitespace-nowrap w-[130px]">
+                                        ชุดจัดซื้อ
                                     </th>
-                                    <th className="px-4 py-3.5 text-center whitespace-nowrap">จัดการ</th>
+                                    <th className="px-3 py-2.5 text-center whitespace-nowrap w-[90px]">จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-xs">
@@ -7017,40 +7017,45 @@ ${itemsListText}
                                 ) : (
                                     filtered.map((item, idx) => (
                                         <tr key={item.id} className="hover:bg-purple-50/20 transition-colors">
-                                            {/* คอลัมน์ที่ 1: ระบุเลขเอกสารที่ได้รับจากงานแผน */}
-                                            <td className="px-4 py-3.5 align-top whitespace-nowrap">
-                                                <div className="space-y-1">
-                                                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-950 font-mono font-black text-xs shadow-2xs">
-                                                        <span className="text-indigo-700 underline font-bold">
+                                            {/* คอลัมน์ที่ 1: เลขที่เอกสารจากแผน */}
+                                            <td className="px-3 py-2.5 align-top whitespace-nowrap">
+                                                <div className="space-y-0.5">
+                                                    <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-950 font-mono font-bold text-xs shadow-2xs">
+                                                        <span className="text-indigo-700 underline">
                                                             {item.plan_loan_doc_number || item.plan_procurement_doc_number || item.unifiedDoc || 'รอตัดยอดจากแผน'}
                                                         </span>
                                                     </div>
-                                                    <div className="text-[11px] text-slate-400 font-bold">
+                                                    <div className="text-[10px] text-slate-400 font-medium">
                                                         ลำดับ #{idx + 1}
                                                     </div>
                                                 </div>
                                             </td>
 
-                                            {/* คอลัมน์ที่ 2: ระบุชื่อโครงการ (ให้มีผู้รับผิดชอบด้วย) */}
-                                            <td className="px-4 py-3.5 align-top">
-                                                <div className="space-y-1.5">
+                                            {/* คอลัมน์ที่ 2: ชื่อโครงการ (แสดงเต็มไม่เกิน 3 บรรทัด ขยายคอลัมน์ออกไป) & ผู้รับผิดชอบ */}
+                                            <td className="px-3 py-2.5 align-top">
+                                                <div className="space-y-1">
                                                     <Link
                                                         href={route('projects.show', item.id)}
-                                                        className="text-sm sm:text-base font-black text-purple-950 hover:text-purple-700 transition line-clamp-2 leading-snug"
+                                                        className="text-xs sm:text-sm font-bold text-purple-950 hover:text-purple-700 transition line-clamp-3 leading-snug break-words"
+                                                        title={item.title}
                                                     >
                                                         {item.title}
                                                     </Link>
 
-                                                    <div className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-slate-600">
-                                                        <span className="font-bold text-slate-700">👤 ผู้รับผิดชอบ: {item.user?.name || item.proposer_name || 'ไม่ระบุ'}</span>
-                                                        <span>•</span>
-                                                        <span>🏢 {item.department?.name || '-'}</span>
+                                                    <div className="flex flex-wrap items-center gap-x-1.5 text-[11px] text-slate-600 font-normal">
+                                                        <span className="text-slate-700">👤 ผู้รับผิดชอบ: <b className="font-semibold">{item.user?.name || item.proposer_name || 'ไม่ระบุ'}</b></span>
+                                                        {item.department?.name && (
+                                                            <>
+                                                                <span className="text-slate-300">•</span>
+                                                                <span>🏢 {item.department.name}</span>
+                                                            </>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>
 
-                                            {/* คอลัมน์ที่ 3: ระบุสัญญายืมเงิน (โชว์แค่ตัวเลข หากกดตัวเลขจะเห็นเอกสารสัญญายืมเงิน) */}
-                                            <td className="px-4 py-3.5 align-top text-right whitespace-nowrap">
+                                            {/* คอลัมน์ที่ 3: สัญญายืม (โชว์แค่ตัวเลข ขนาดเล็กลง พออ่านได้ กดเพื่อเปิดดูเอกสาร) */}
+                                            <td className="px-3 py-2.5 align-top text-right whitespace-nowrap">
                                                 {(() => {
                                                     let loanAmount = 0;
                                                     let hasLoanItems = false;
@@ -7080,26 +7085,26 @@ ${itemsListText}
                                                         <a
                                                             href={route('procurements.download_document', [item.id, 'loan_contract'])}
                                                             target="_blank"
-                                                            className="inline-flex flex-col items-end p-2 px-3 rounded-xl bg-amber-50/80 hover:bg-amber-100 border border-amber-300 text-amber-950 transition-all hover:scale-105 shadow-2xs group cursor-pointer"
+                                                            className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-amber-50/90 hover:bg-amber-100 border border-amber-300 text-amber-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
                                                             title="คลิกที่ตัวเลขเพื่อเปิดดูสัญญายืมเงิน แบบ กค. ๑๐๑"
                                                         >
-                                                            <span className="text-sm sm:text-base font-black text-amber-950 font-mono underline decoration-amber-400 group-hover:text-amber-700">
+                                                            <span className="text-xs sm:text-sm font-bold text-amber-950 font-mono underline decoration-amber-400 group-hover:text-amber-700">
                                                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(loanAmount)}
                                                             </span>
-                                                            <span className="text-[10px] text-amber-700 font-semibold group-hover:underline flex items-center gap-0.5">
-                                                                📄 เปิดดูสัญญายืม ➔
+                                                            <span className="text-[10px] text-amber-700 font-medium group-hover:underline">
+                                                                📄 สัญญายืม ➔
                                                             </span>
                                                         </a>
                                                     ) : (
-                                                        <span className="text-slate-400 font-mono font-bold text-sm">
+                                                        <span className="text-slate-400 font-mono text-xs">
                                                             -
                                                         </span>
                                                     );
                                                 })()}
                                             </td>
 
-                                            {/* คอลัมน์ที่ 4: ระบุชุดจัดซื้อจัดจ้าง (โชว์แค่ตัวเลขยอดรวม หากมีหลายชุดแสดงตัวเลขแยกชุด กดยอดเงินจะเห็นเอกสารและรายการจัดซื้อ) */}
-                                            <td className="px-4 py-3.5 align-top text-right whitespace-nowrap">
+                                            {/* คอลัมน์ที่ 4: ชุดจัดซื้อ (โชว์แค่ตัวเลขยอดรวม/แยกชุด ขนาดเล็กลง พออ่านได้ กดเพื่อเปิดดูเอกสารและรายการ) */}
+                                            <td className="px-3 py-2.5 align-top text-right whitespace-nowrap">
                                                 {(() => {
                                                     const procSets = [];
                                                     if (Array.isArray(item.procurement_items) && item.procurement_items.length > 1) {
@@ -7138,17 +7143,17 @@ ${itemsListText}
 
                                                     if (procSets.length > 1) {
                                                         return (
-                                                            <div className="flex flex-col items-end gap-1.5">
+                                                            <div className="flex flex-col items-end gap-1">
                                                                 {procSets.map((set, sIdx) => (
                                                                     <button
                                                                         key={sIdx}
                                                                         type="button"
                                                                         onClick={() => setSelectedFinanceDocDetails({ ...item, focusedProcSet: set })}
-                                                                        className="inline-flex items-center gap-1.5 p-1.5 px-2.5 rounded-xl bg-purple-50/90 hover:bg-purple-100 border border-purple-300 text-purple-950 transition-all hover:scale-105 shadow-2xs group cursor-pointer"
+                                                                        className="inline-flex items-center gap-1 py-0.5 px-2 rounded-md bg-purple-50/90 hover:bg-purple-100 border border-purple-300 text-purple-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
                                                                         title={`คลิกยอดเงิน ${set.label} เพื่อดูเอกสารและรายการ`}
                                                                     >
-                                                                        <span className="text-[11px] font-bold text-purple-800">{set.shortLabel}:</span>
-                                                                        <span className="text-xs sm:text-sm font-black text-purple-950 font-mono underline decoration-purple-400 group-hover:text-purple-700">
+                                                                        <span className="text-[10px] text-purple-800 font-bold">{set.shortLabel}:</span>
+                                                                        <span className="text-xs font-bold text-purple-950 font-mono underline decoration-purple-400 group-hover:text-purple-700">
                                                                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(set.amount)}
                                                                         </span>
                                                                     </button>
@@ -7157,7 +7162,7 @@ ${itemsListText}
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setSelectedFinanceDocDetails(item)}
-                                                                        className="text-[11px] font-mono font-bold text-slate-500 hover:text-purple-800 underline decoration-dotted mt-0.5 cursor-pointer"
+                                                                        className="text-[10px] font-mono font-bold text-slate-500 hover:text-purple-800 underline decoration-dotted cursor-pointer"
                                                                         title="คลิกเพื่อดูภาพรวมชุดจัดซื้อทั้งหมด"
                                                                     >
                                                                         (รวม: {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalProcAmount)})
@@ -7171,18 +7176,18 @@ ${itemsListText}
                                                         <button
                                                             type="button"
                                                             onClick={() => setSelectedFinanceDocDetails(item)}
-                                                            className="inline-flex flex-col items-end p-2 px-3 rounded-xl bg-purple-50/80 hover:bg-purple-100 border border-purple-300 text-purple-950 transition-all hover:scale-105 shadow-2xs group cursor-pointer"
+                                                            className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-purple-50/90 hover:bg-purple-100 border border-purple-300 text-purple-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
                                                             title="คลิกที่ตัวเลขเพื่อดูรายละเอียดเอกสารและรายการชุดจัดซื้อ"
                                                         >
-                                                            <span className="text-sm sm:text-base font-black text-purple-950 font-mono underline decoration-purple-400 group-hover:text-purple-700">
+                                                            <span className="text-xs sm:text-sm font-bold text-purple-950 font-mono underline decoration-purple-400 group-hover:text-purple-700">
                                                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalProcAmount)}
                                                             </span>
-                                                            <span className="text-[10px] text-purple-700 font-semibold group-hover:underline flex items-center gap-0.5">
-                                                                📦 ดูเอกสารชุดจัดซื้อ ➔
+                                                            <span className="text-[10px] text-purple-700 font-medium group-hover:underline">
+                                                                📦 ชุดจัดซื้อ ➔
                                                             </span>
                                                         </button>
                                                     ) : (
-                                                        <span className="text-slate-400 font-mono font-bold text-sm">
+                                                        <span className="text-slate-400 font-mono text-xs">
                                                             -
                                                         </span>
                                                     );

@@ -7,7 +7,18 @@ export default function AuthenticatedLayout({ header, children }) {
     const { auth, asset_url } = usePage().props;
     const user = auth.user;
     const url = usePage().url || '';
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+        const saved = localStorage.getItem('sidebar-open');
+        return saved !== null ? saved === 'true' : true;
+    });
+
+    const toggleSidebar = () => {
+        setIsSidebarOpen(prev => {
+            const next = !prev;
+            localStorage.setItem('sidebar-open', String(next));
+            return next;
+        });
+    };
     const [showingMobileMenu, setShowingMobileMenu] = useState(false);
 
     const sidebarScrollRef = useRef(null);
@@ -177,9 +188,14 @@ export default function AuthenticatedLayout({ header, children }) {
                         <div className="flex items-center gap-x-3 sm:gap-x-4">
                             {/* Desktop Sidebar Toggle Button */}
                             <button
-                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                                className="hidden sm:inline-flex items-center justify-center p-2 rounded-xl text-purple-900 hover:bg-purple-100/60 transition-all focus:outline-none shadow-2xs border border-purple-100"
-                                title="สลับการแสดงผลเมนูซ้าย"
+                                type="button"
+                                onClick={toggleSidebar}
+                                className={`hidden sm:inline-flex items-center justify-center p-2 rounded-xl transition-all focus:outline-none shadow-2xs border cursor-pointer ${
+                                    !isSidebarOpen 
+                                        ? 'bg-amber-100 border-amber-300 text-amber-950 ring-2 ring-amber-400 hover:bg-amber-200' 
+                                        : 'text-purple-900 hover:bg-purple-100/60 border-purple-100'
+                                }`}
+                                title={isSidebarOpen ? "คลิกเพื่อซ่อนแถบเมนูซ้าย" : "คลิกเพื่อแสดงแถบเมนูซ้าย"}
                             >
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -278,7 +294,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 {/* 2. LEFT SIDEBAR (Sticky Fixed Position) */}
                 <aside
                     className={`bg-gradient-to-b from-purple-950 via-purple-900 to-amber-700 text-white shadow-xl transition-all duration-300 z-40 flex flex-col justify-between sticky top-16 h-[calc(100vh-4rem)] shrink-0 ${
-                        isSidebarOpen ? 'w-64' : 'w-0 sm:w-20 overflow-hidden'
+                        isSidebarOpen ? 'w-64 opacity-100' : 'w-0 overflow-hidden opacity-0 pointer-events-none p-0 m-0 border-0'
                     } hidden sm:flex`}
                 >
                     {/* Upper Navigation Menu List */}
@@ -716,14 +732,36 @@ export default function AuthenticatedLayout({ header, children }) {
 
                     {/* Bottom Sidebar Footer */}
                     {isSidebarOpen && (
-                        <div className="p-4 border-t border-white/15 bg-black/10">
-                            <div className="flex items-center gap-x-2 text-xs font-normal text-white/90">
+                        <div className="p-3 border-t border-white/15 bg-black/10 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-x-2 text-xs font-normal text-white/90 truncate">
                                 <span>🏫</span>
-                                <span>วิทยาลัยสารพัดช่างน่าน</span>
+                                <span className="truncate">วิทยาลัยสารพัดช่างน่าน</span>
                             </div>
+                            <button
+                                type="button"
+                                onClick={toggleSidebar}
+                                className="p-1 px-2 rounded-lg bg-white/10 hover:bg-white/20 text-purple-200 hover:text-white transition text-[11px] font-bold shrink-0 flex items-center gap-1 cursor-pointer"
+                                title="คลิกเพื่อซ่อนแถบเมนูซ้าย"
+                            >
+                                <span>◀</span>
+                                <span>ซ่อนเมนู</span>
+                            </button>
                         </div>
                     )}
                 </aside>
+
+                {/* Floating button to restore sidebar if hidden */}
+                {!isSidebarOpen && (
+                    <button
+                        type="button"
+                        onClick={toggleSidebar}
+                        className="hidden sm:flex fixed left-3 top-20 z-30 items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-950/90 hover:bg-purple-900 text-amber-300 hover:text-amber-200 border border-purple-400/40 shadow-xl text-xs font-bold transition-all hover:scale-105 backdrop-blur-md cursor-pointer animate-in fade-in"
+                        title="คลิกเพื่อแสดงแถบเมนูด้านซ้าย"
+                    >
+                        <span>▶</span>
+                        <span>แสดงเมนู</span>
+                    </button>
+                )}
 
                 {/* Mobile Drawer Navigation */}
                 {showingMobileMenu && (
