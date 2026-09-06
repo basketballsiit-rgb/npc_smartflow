@@ -4560,13 +4560,13 @@ ${itemsListText}
 
                 {/* 1.5 External Travel Loans Queue (จากระบบ npc_eleve) */}
                 {planHeadData && (
-                    <div className="overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-sm">
-                        <div className="border-b border-sky-200 bg-gradient-to-r from-sky-600/10 via-indigo-50 to-purple-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div className="overflow-hidden rounded-3xl border border-purple-200 bg-white shadow-sm">
+                        <div className="border-b border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold mb-1 border border-sky-200">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mb-1 border border-purple-200">
                                     <span>✈️</span> ระบบเชื่อมต่อภายนอก (npc_eleve / กค. ๑๐๑)
                                 </div>
-                                <h3 className="text-lg font-black text-sky-950 flex items-center gap-2">
+                                <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
                                     <span>📝</span> สัญญายืมเงินไปราชการ รอแผนงานตัดยอดงบประมาณ
                                 </h3>
                                 <p className="text-xs text-slate-600 mt-0.5">
@@ -4577,7 +4577,7 @@ ${itemsListText}
                                 <span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-xl text-xs font-bold border border-amber-300">
                                     รอตัดยอด: {travelLoansList.filter(tl => tl.loan_status === 'pending_plan' || tl.loan_status === 'pending').length} รายการ
                                 </span>
-                                <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-xl text-xs font-bold border border-sky-200">
+                                <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
                                     ทั้งหมด: {travelLoansList.length} รายการ
                                 </span>
                             </div>
@@ -4586,7 +4586,7 @@ ${itemsListText}
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
-                                    <tr className="border-b border-sky-100 bg-sky-50/40 text-xs font-bold uppercase text-sky-950 whitespace-nowrap">
+                                    <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-950 whitespace-nowrap">
                                         <th className="px-5 py-3.5">เลขที่สัญญา / วันที่</th>
                                         <th className="px-5 py-3.5">ผู้ขอยืม / ตำแหน่ง / ฝ่ายงาน</th>
                                         <th className="px-5 py-3.5">เรื่อง / ปลายทาง / วันที่เดินทาง</th>
@@ -4595,7 +4595,7 @@ ${itemsListText}
                                         <th className="px-5 py-3.5 text-right">การดำเนินการ</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-sky-100 text-sm">
+                                <tbody className="divide-y divide-purple-100 text-sm">
                                     {travelLoansList.length === 0 ? (
                                         <tr>
                                             <td colSpan="6" className="px-6 py-10 text-center text-sm text-slate-500">
@@ -4607,9 +4607,9 @@ ${itemsListText}
                                         travelLoansList.map((tl) => {
                                             const isPendingCut = tl.loan_status === 'pending_plan' || tl.loan_status === 'pending';
                                             return (
-                                                <tr key={tl.id} className="hover:bg-sky-50/20 transition-all">
+                                                <tr key={tl.id} className="hover:bg-purple-50/30 transition-all">
                                                     <td className="px-5 py-4 align-top whitespace-nowrap">
-                                                        <div className="font-mono font-bold text-sky-900 text-xs">
+                                                        <div className="font-mono font-bold text-purple-900 text-xs">
                                                             📄 {tl.contract_no || `ID: #${tl.id}`}
                                                         </div>
                                                         <div className="text-[11px] text-slate-500">
@@ -4628,7 +4628,7 @@ ${itemsListText}
                                                         <div className="text-[11px] text-slate-600">
                                                             {tl.borrower_position || 'บุคลากร'}
                                                         </div>
-                                                        <div className="text-[11px] text-sky-700 font-medium">
+                                                        <div className="text-[11px] text-purple-700 font-medium">
                                                             🏢 {tl.borrower_department || '-'}
                                                         </div>
                                                     </td>
@@ -4643,7 +4643,7 @@ ${itemsListText}
                                                             📅 {tl.start_date_formatted || tl.start_date} - {tl.end_date_formatted || tl.end_date} ({tl.total_days} วัน)
                                                         </div>
                                                     </td>
-                                                    <td className="px-5 py-4 align-top text-right whitespace-nowrap font-mono font-black text-xs sm:text-sm text-sky-950">
+                                                    <td className="px-5 py-4 align-top text-right whitespace-nowrap font-mono font-black text-xs sm:text-sm text-purple-950">
                                                         <div>{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(tl.total_loan_amount)}</div>
                                                         <div className="text-[10px] font-normal text-slate-500 mt-0.5">
                                                             เบี้ยเลี้ยง: {new Intl.NumberFormat('th-TH').format(tl.allowance_amount || 0)} | ที่พัก: {new Intl.NumberFormat('th-TH').format(tl.rent_amount || 0)}
@@ -4678,7 +4678,7 @@ ${itemsListText}
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleOpenPlanCutModal(tl)}
-                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 px-3.5 py-1.5 text-xs font-black text-white shadow-md shadow-sky-600/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 px-3.5 py-1.5 text-xs font-black text-white shadow-md shadow-purple-600/25 hover:scale-105 active:scale-95 transition-all cursor-pointer"
                                                                 >
                                                                     <span>📊</span> แผนงานตัดยอดงบ
                                                                 </button>
@@ -10037,17 +10037,17 @@ return (
                     {/* Modal 1: Plan Cut Budget for Travel Loan */}
                     {selectedTravelLoanForPlanCut && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-                            <div className="w-full max-w-xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-sky-100 my-8">
-                                <div className="flex justify-between items-center border-b border-sky-100 pb-4 mb-5">
+                            <div className="w-full max-w-xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8">
+                                <div className="flex justify-between items-center border-b border-purple-100 pb-4 mb-5">
                                     <div>
-                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold mb-1 border border-sky-200">
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mb-1 border border-purple-200">
                                             <span>✈️</span> แผนงานตัดยอดงบประมาณ
                                         </div>
-                                        <h3 className="text-lg font-black text-sky-950">
+                                        <h3 className="text-lg font-black text-purple-950">
                                             ตัดยอดงบประมาณสัญญายืมเงินไปราชการ
                                         </h3>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            สัญญาเลขที่: <span className="font-mono font-bold text-sky-800">{selectedTravelLoanForPlanCut.contract_no || 'ไม่ระบุ'}</span> • ผู้ยืม: <span className="font-bold text-slate-800">{selectedTravelLoanForPlanCut.borrower_name}</span>
+                                            สัญญาเลขที่: <span className="font-mono font-bold text-purple-900">{selectedTravelLoanForPlanCut.contract_no || 'ไม่ระบุ'}</span> • ผู้ยืม: <span className="font-bold text-slate-800">{selectedTravelLoanForPlanCut.borrower_name}</span>
                                         </p>
                                     </div>
                                     <button
@@ -10060,17 +10060,17 @@ return (
                                 </div>
 
                                 {/* Loan Summary Box */}
-                                <div className="p-4 rounded-2xl bg-sky-50/70 border border-sky-200 space-y-2 mb-5 text-xs">
-                                    <div className="font-bold text-sky-950 text-sm">{selectedTravelLoanForPlanCut.subject}</div>
+                                <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-200 space-y-2 mb-5 text-xs">
+                                    <div className="font-bold text-purple-950 text-sm">{selectedTravelLoanForPlanCut.subject}</div>
                                     <div className="text-slate-600 flex items-center gap-1">
                                         <span>📍</span> ปลายทาง: <span className="font-semibold text-slate-800">{selectedTravelLoanForPlanCut.destination}</span>
                                     </div>
                                     <div className="text-slate-600 flex items-center gap-1">
                                         <span>📅</span> วันที่: <span className="font-semibold text-slate-800">{selectedTravelLoanForPlanCut.start_date_formatted || selectedTravelLoanForPlanCut.start_date} - {selectedTravelLoanForPlanCut.end_date_formatted || selectedTravelLoanForPlanCut.end_date} ({selectedTravelLoanForPlanCut.total_days} วัน)</span>
                                     </div>
-                                    <div className="pt-2 border-t border-sky-200/70 flex justify-between items-center font-mono">
-                                        <span className="text-sky-900 font-bold">ยอดเงินขอยืมรวม:</span>
-                                        <span className="text-base font-black text-sky-950">
+                                    <div className="pt-2 border-t border-purple-200/70 flex justify-between items-center font-mono">
+                                        <span className="text-purple-900 font-bold">ยอดเงินขอยืมรวม:</span>
+                                        <span className="text-base font-black text-purple-950">
                                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedTravelLoanForPlanCut.total_loan_amount)}
                                         </span>
                                     </div>
@@ -10085,7 +10085,7 @@ return (
                                             required
                                             value={planCutData.funding_source_id}
                                             onChange={(e) => setPlanCutData('funding_source_id', e.target.value)}
-                                            className="w-full rounded-xl border-sky-200 px-3.5 py-2.5 text-sm font-bold text-sky-950 focus:border-sky-500 focus:ring-sky-500"
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-sm font-bold text-purple-950 focus:border-purple-500 focus:ring-purple-500 bg-white"
                                         >
                                             <option value="">-- เลือกหมวดหมู่งบประมาณ --</option>
                                             {(planHeadData?.fundingSources || allFundingSources || []).map((src) => (
@@ -10098,7 +10098,7 @@ return (
 
                                     <div>
                                         <label className="block mb-1 text-slate-800 font-bold">
-                                            เลขที่คุมเอกสารแผนงาน (Unified Document No.) *
+                                            เลขที่คุมเอกสารแผนงาน *
                                         </label>
                                         <div className="relative">
                                             <input
@@ -10106,7 +10106,7 @@ return (
                                                 required
                                                 value={planCutData.plan_doc_number}
                                                 onChange={(e) => setPlanCutData('plan_doc_number', e.target.value)}
-                                                className="w-full rounded-xl border-sky-200 px-3.5 py-2.5 text-sm font-mono font-bold text-sky-950 focus:border-sky-500 focus:ring-sky-500 pl-8"
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-sm font-mono font-bold text-purple-950 focus:border-purple-500 focus:ring-purple-500 pl-8 bg-white"
                                                 placeholder="เช่น ผง. 001/2569"
                                             />
                                             <span className="absolute left-3 top-2.5 text-slate-400">📄</span>
@@ -10124,12 +10124,12 @@ return (
                                             rows={2}
                                             value={planCutData.plan_notes}
                                             onChange={(e) => setPlanCutData('plan_notes', e.target.value)}
-                                            className="w-full rounded-xl border-sky-200 px-3.5 py-2 text-xs text-slate-800 focus:border-sky-500 focus:ring-sky-500"
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs text-slate-800 focus:border-purple-500 focus:ring-purple-500 bg-white"
                                             placeholder="บันทึกหมายเหตุเพิ่มเติม เช่น อนุมัติยืมตามระเบียบ กค. ๑๐๑"
                                         />
                                     </div>
 
-                                    <div className="flex justify-end gap-x-3 pt-4 border-t border-sky-100">
+                                    <div className="flex justify-end gap-x-3 pt-4 border-t border-purple-100">
                                         <button
                                             type="button"
                                             onClick={() => setSelectedTravelLoanForPlanCut(null)}
@@ -10140,7 +10140,7 @@ return (
                                         <button
                                             type="submit"
                                             disabled={isCuttingPlanBudget}
-                                            className="rounded-xl px-6 py-2.5 text-xs font-black text-white bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                                            className="rounded-xl px-6 py-2.5 text-xs font-black text-white bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 shadow-md shadow-purple-600/25 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                                         >
                                             <span>💾</span> {isCuttingPlanBudget ? 'กำลังบันทึก...' : 'บันทึกตัดยอดงบประมาณ'}
                                         </button>
