@@ -181,4 +181,78 @@ class TravelLoanWebController extends Controller
 
         return redirect()->back()->with('success', "จำลองการส่งข้อมูลสัญญายืมเงินจากระบบ npc_eleve สำเร็จ! สัญญาเลขที่: {$contractNo} เข้าสู่คิวรอแผนงานตัดยอดแล้ว");
     }
+
+    /**
+     * Authorize Admin only
+     */
+    protected function authorizeAdmin()
+    {
+        $user = Auth::user();
+        if (!$user || (!$user->isAdmin() && !$user->is_admin && $user->role?->name !== 'admin')) {
+            abort(403, 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่มีสิทธิ์ดำเนินการนี้');
+        }
+    }
+
+    /**
+     * Admin: Update Travel Loan
+     */
+    public function update(Request $request, TravelLoan $travelLoan)
+    {
+        $this->authorizeAdmin();
+
+        $validated = $request->validate([
+            'contract_no' => 'nullable|string|max:100',
+            'doc_date' => 'nullable|date',
+            'due_date' => 'nullable|date',
+            'return_days' => 'nullable|numeric|min:0',
+            
+            'borrower_name' => 'required|string|max:255',
+            'borrower_position' => 'nullable|string|max:255',
+            'borrower_department' => 'nullable|string|max:255',
+            
+            'subject' => 'required|string|max:1000',
+            'destination' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'total_days' => 'nullable|numeric|min:0',
+            
+            'allowance_amount' => 'nullable|numeric|min:0',
+            'rent_amount' => 'nullable|numeric|min:0',
+            'vehicle_amount' => 'nullable|numeric|min:0',
+            'other_amount' => 'nullable|numeric|min:0',
+            'total_loan_amount' => 'required|numeric|min:0',
+            
+            'loan_status' => 'required|in:pending_plan,pending,plan_cut,finance_received,disbursed,cleared',
+            'funding_source_id' => 'nullable|exists:funding_sources,id',
+            'plan_doc_number' => 'nullable|string|max:100',
+            'plan_notes' => 'nullable|string|max:500',
+            'finance_doc_number' => 'nullable|string|max:100',
+            'finance_disbursed_amount' => 'nullable|numeric|min:0',
+            'finance_payment_ref' => 'nullable|string|max:255',
+        ]);
+
+        if (!isset($validated['total_loan_amount']) || $validated['total_loan_amount'] <= 0) {
+            $validated['total_loan_amount'] = (float)($validated['allowance_amount'] ?? 0)
+                + (float)($validated['rent_amount'] ?? 0)
+                + (float)($validated['vehicle_amount'] ?? 0)
+                + (float)($validated['other_amount'] ?? 0);
+        }
+
+        $travelLoan->update($validated);
+
+        return redirect()->back()->with('success', "บันทึกการแก้ไขสัญญายืมเงินเลขที่ " . ($travelLoan->contract_no ?? $travelLoan->id) . " เรียบร้อยแล้ว");
+    }
+
+    /**
+     * Admin: Delete Travel Loan
+     */
+    public function destroy(TravelLoan $travelLoan)
+    {
+        $this->authorizeAdmin();
+
+        $contractNo = $travelLoan->contract_no ?? ("ID: #" . $travelLoan->id);
+        $travelLoan->delete();
+
+        return redirect()->back()->with('success', "ลบสัญญายืมเงินไปราชการเลขที่ {$contractNo} เรียบร้อยแล้ว");
+    }
 }
