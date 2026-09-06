@@ -453,6 +453,7 @@ export default function Dashboard({
     const [centralBudgetSearch, setCentralBudgetSearch] = useState('');
     const [centralBudgetSubTab, setCentralBudgetSubTab] = useState('categories'); // 'categories', 'allocations', 'projects'
     const [selectedCategoryForModal, setSelectedCategoryForModal] = useState(null);
+    const [expandedCategoryIds, setExpandedCategoryIds] = useState([]);
 
     // All Projects Master Tracking Filter States
     
@@ -4436,6 +4437,23 @@ ${itemsListText}
 
     // 2.2 Finance Central Budgets & Categories Component Rendering
     const renderCentralBudgetsTab = () => {
+        const toggleCategoryExpand = (catId) => {
+            setExpandedCategoryIds(prev =>
+                prev.includes(catId) ? prev.filter(id => id !== catId) : [...prev, catId]
+            );
+        };
+
+        const formatBudgetCategoryName = (name) => {
+            if (!name) return '';
+            const parenMatch = name.match(/\(([^)]*[\u0E00-\u0E7F]+[^)]*)\)/);
+            if (parenMatch && parenMatch[1]) return parenMatch[1].trim();
+            if (/[\u0E00-\u0E7F]/.test(name) && /[a-zA-Z]/.test(name)) {
+                const cleaned = name.replace(/[a-zA-Z\/\(\)\-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+                if (cleaned) return cleaned;
+            }
+            return name.trim();
+        };
+
         const categories = (financeData && financeData.fundingChannelProgress) || fundingChannelProgress || [];
         const allocs = (financeData && financeData.centralAllocations) || centralAllocations || [];
         const allProjects = Array.isArray(allProjectsMaster) && allProjectsMaster.length > 0
@@ -4679,13 +4697,13 @@ ${itemsListText}
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                                        <th className="px-4 py-3 min-w-[180px]">หมวดหมู่งบประมาณ / แหล่งเงิน</th>
+                                        <th className="px-4 py-3 min-w-[220px]">หมวดหมู่งบประมาณ / แหล่งเงิน</th>
                                         <th className="px-4 py-3 text-right whitespace-nowrap min-w-[130px]">แจ้งจัดสรรส่วนกลาง</th>
                                         <th className="px-4 py-3 text-right whitespace-nowrap min-w-[130px]">จัดสรรลงโครงการ</th>
                                         <th className="px-4 py-3 text-right whitespace-nowrap min-w-[130px]">เบิกจ่ายจริง (Spent)</th>
                                         <th className="px-4 py-3 text-right whitespace-nowrap min-w-[130px]">ยอดคงเหลือ</th>
                                         <th className="px-4 py-3 text-center min-w-[140px]">ความคืบหน้าการจ่าย</th>
-                                        <th className="px-4 py-3 text-center whitespace-nowrap w-[100px]">โครงการ</th>
+                                        <th className="px-4 py-3 text-center whitespace-nowrap w-[130px]">รายละเอียดการใช้จ่าย</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-xs">
@@ -4703,87 +4721,308 @@ ${itemsListText}
                                             const spent = parseFloat(cat.spent || 0);
                                             const remaining = pAlloc - spent;
                                             const percentSpent = pAlloc > 0 ? Math.min(100, Math.round((spent / pAlloc) * 100)) : 0;
+                                            const catKey = cat.id || ('cat-' + idx);
+                                            const isExpanded = expandedCategoryIds.includes(catKey);
+
+                                            // Filter expenditures under this specific category
+                                            const catProjects = allProjects.filter(p => {
+                                                if (p.funding_source_id && String(p.funding_source_id) === String(cat.id)) return true;
+                                                if (p.funding_source_name && (p.funding_source_name === cat.name || (cat.code && p.funding_source_name.includes(cat.code)))) return true;
+                                                if (p.fundingSource && (String(p.fundingSource.id) === String(cat.id) || p.fundingSource.name === cat.name)) return true;
+                                                return false;
+                                            });
+
+                                            const catAllocs = allocs.filter(a => {
+                                                if (a.funding_source_id && String(a.funding_source_id) === String(cat.id)) return true;
+                                                if (a.funding_source && (String(a.funding_source.id) === String(cat.id) || a.funding_source.name === cat.name)) return true;
+                                                if (cat.code && (a.budget_code === cat.code || (a.title && a.title.includes(cat.code)))) return true;
+                                                return false;
+                                            });
+
+                                            const thaiName = formatBudgetCategoryName(cat.name);
 
                                             return (
-                                                <tr key={cat.id || idx} className="hover:bg-emerald-50/20 transition-colors">
-                                                    {/* หมวดหมู่งบประมาณ */}
-                                                    <td className="px-4 py-3.5 align-top">
-                                                        <div className="space-y-1">
-                                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                                                <span className="font-black text-slate-900 text-sm">{cat.name}</span>
-                                                                {cat.code && (
-                                                                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-[10px] font-bold border border-slate-200">
-                                                                        {cat.code}
+                                                <React.Fragment key={catKey}>
+                                                    <tr
+                                                        onClick={() => toggleCategoryExpand(catKey)}
+                                                        className={`transition-colors cursor-pointer ${
+                                                            isExpanded
+                                                                ? 'bg-emerald-50/50 border-l-4 border-l-emerald-600'
+                                                                : 'hover:bg-slate-50/80'
+                                                        }`}
+                                                    >
+                                                        {/* หมวดหมู่งบประมาณ */}
+                                                        <td className="px-4 py-3.5 align-top">
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`text-[10px] text-emerald-600 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+                                                                        ▶
                                                                     </span>
-                                                                )}
-                                                                {cat.fiscal_year && (
-                                                                    <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
-                                                                        ปี {cat.fiscal_year}
+                                                                    <span className="font-extrabold text-slate-900 text-sm tracking-tight hover:text-emerald-700">
+                                                                        {thaiName}
                                                                     </span>
-                                                                )}
+                                                                </div>
+                                                                {/* แสดงรหัสงบ และปีงบประมาณไว้ข้างใต้ */}
+                                                                <div className="flex items-center gap-2 flex-wrap pl-4">
+                                                                    {cat.code && (
+                                                                        <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono text-[11px] font-bold border border-slate-200 shadow-2xs">
+                                                                            รหัสงบ: {cat.code}
+                                                                        </span>
+                                                                    )}
+                                                                    {cat.fiscal_year && (
+                                                                        <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[11px] font-bold border border-purple-200 shadow-2xs">
+                                                                            ปีงบประมาณ {cat.fiscal_year}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            {cat.description && (
-                                                                <p className="text-[11px] text-slate-500 line-clamp-1">{cat.description}</p>
+                                                        </td>
+
+                                                        {/* แจ้งจัดสรรส่วนกลาง */}
+                                                        <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-amber-900">
+                                                            {cAlloc > 0 ? (
+                                                                <span>{fmt(cAlloc)}</span>
+                                                            ) : (
+                                                                <span className="text-slate-400 font-normal">-</span>
                                                             )}
-                                                        </div>
-                                                    </td>
+                                                        </td>
 
-                                                    {/* แจ้งจัดสรรส่วนกลาง */}
-                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-amber-900">
-                                                        {cAlloc > 0 ? (
-                                                            <span>{fmt(cAlloc)}</span>
-                                                        ) : (
-                                                            <span className="text-slate-400 font-normal">-</span>
-                                                        )}
-                                                    </td>
+                                                        {/* จัดสรรลงโครงการ */}
+                                                        <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-blue-900">
+                                                            {fmt(pAlloc)}
+                                                        </td>
 
-                                                    {/* จัดสรรลงโครงการ */}
-                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-blue-900">
-                                                        {fmt(pAlloc)}
-                                                    </td>
+                                                        {/* เบิกจ่ายจริง */}
+                                                        <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-rose-700">
+                                                            {fmt(spent)}
+                                                        </td>
 
-                                                    {/* เบิกจ่ายจริง */}
-                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-rose-700">
-                                                        {fmt(spent)}
-                                                    </td>
+                                                        {/* ยอดคงเหลือ */}
+                                                        <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-black text-emerald-700">
+                                                            {fmt(remaining)}
+                                                        </td>
 
-                                                    {/* ยอดคงเหลือ */}
-                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-black text-emerald-700">
-                                                        {fmt(remaining)}
-                                                    </td>
-
-                                                    {/* ความคืบหน้า */}
-                                                    <td className="px-4 py-3.5 align-middle">
-                                                        <div className="space-y-1 w-full max-w-[140px] mx-auto">
-                                                            <div className="flex justify-between text-[10px] text-slate-500 font-bold">
-                                                                <span>จ่ายแล้ว</span>
-                                                                <span>{percentSpent}%</span>
+                                                        {/* ความคืบหน้า */}
+                                                        <td className="px-4 py-3.5 align-middle">
+                                                            <div className="space-y-1 w-full max-w-[140px] mx-auto">
+                                                                <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                                                                    <span>จ่ายแล้ว</span>
+                                                                    <span>{percentSpent}%</span>
+                                                                </div>
+                                                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                                    <div
+                                                                        className={`h-full rounded-full transition-all duration-300 ${
+                                                                            percentSpent >= 90 ? 'bg-rose-500' :
+                                                                            percentSpent >= 70 ? 'bg-amber-500' :
+                                                                            'bg-emerald-500'
+                                                                        }`}
+                                                                        style={{ width: `${percentSpent}%` }}
+                                                                    />
+                                                                </div>
                                                             </div>
-                                                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                                                <div
-                                                                    className={`h-full rounded-full transition-all duration-300 ${
-                                                                        percentSpent >= 90 ? 'bg-rose-500' :
-                                                                        percentSpent >= 70 ? 'bg-amber-500' :
-                                                                        'bg-emerald-500'
-                                                                    }`}
-                                                                    style={{ width: `${percentSpent}%` }}
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    </td>
+                                                        </td>
 
-                                                    {/* โครงการ */}
-                                                    <td className="px-4 py-3.5 align-top text-center whitespace-nowrap">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setSelectedCategoryForModal(cat)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 transition cursor-pointer hover:scale-105"
-                                                            title="คลิกเพื่อดูรายชื่อโครงการที่ใช้เงินหมวดหมู่นี้"
-                                                        >
-                                                            <span>📁</span> {cat.projects_count || 0} โครงการ
-                                                        </button>
-                                                    </td>
-                                                </tr>
+                                                        {/* ปุ่มขยาย / ซ่อน รายละเอียดการใช้จ่าย */}
+                                                        <td className="px-4 py-3.5 align-middle text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleCategoryExpand(catKey)}
+                                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                                                                    isExpanded
+                                                                        ? 'bg-emerald-800 text-white shadow-emerald-800/20 ring-2 ring-emerald-600/30'
+                                                                        : 'bg-white hover:bg-emerald-50 text-emerald-900 border border-emerald-300 hover:border-emerald-400'
+                                                                }`}
+                                                                title={isExpanded ? 'คลิกเพื่อซ่อนรายละเอียด' : 'คลิกเพื่อขยายดูการใช้จ่าย'}
+                                                            >
+                                                                <span>{isExpanded ? '▲ ซ่อน' : '▼ ขยาย'}</span>
+                                                                <span>{catProjects.length > 0 ? `${catProjects.length} โครงการ` : 'รายละเอียด'}</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+
+                                                    {/* Accordion Expanded Detail Drawer */}
+                                                    {isExpanded && (
+                                                        <tr className="bg-slate-50/95 border-y-2 border-emerald-300">
+                                                            <td colSpan="7" className="p-4 sm:p-6 space-y-4">
+                                                                {/* 1. Header Banner of Expanded Drawer */}
+                                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                                                                    <div className="flex items-center gap-2.5">
+                                                                        <span className="text-2xl p-1.5 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                                            📋
+                                                                        </span>
+                                                                        <div>
+                                                                            <h4 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+                                                                                รายละเอียดการใช้จ่าย: {thaiName}
+                                                                                {cat.code && (
+                                                                                    <span className="font-mono text-xs text-slate-500 font-bold bg-white px-2 py-0.5 rounded border border-slate-200">
+                                                                                        {cat.code}
+                                                                                    </span>
+                                                                                )}
+                                                                            </h4>
+                                                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                                                ตรวจสอบรายการโครงการ เอกสารสัญญายืม เอกสารจัดซื้อ และการเบิกจ่ายจริงภายใต้งบนี้
+                                                                            </p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2 flex-wrap text-xs">
+                                                                        <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 font-bold">
+                                                                            📥 แจ้งจัดสรร: {fmt(cAlloc)}
+                                                                        </span>
+                                                                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 font-bold">
+                                                                            📝 จัดสรรโครงการ: {fmt(pAlloc)}
+                                                                        </span>
+                                                                        <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-900 border border-rose-200 font-bold">
+                                                                            💸 เบิกจ่ายแล้ว: {fmt(spent)}
+                                                                        </span>
+                                                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-black">
+                                                                            💰 คงเหลือ: {fmt(remaining)}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* 2. Projects & Expenditures Sub-Table */}
+                                                                <div className="space-y-2">
+                                                                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                                                                        <span className="flex items-center gap-1.5">
+                                                                            <span>📁</span> โครงการและการเบิกจ่ายภายใต้งบนี้ ({catProjects.length} โครงการ)
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {catProjects.length === 0 ? (
+                                                                        <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-slate-400 bg-white">
+                                                                            <span className="text-2xl">📭</span>
+                                                                            <p className="text-xs font-bold mt-1 text-slate-500">
+                                                                                ยังไม่มีรายการโครงการหรือการใช้จ่ายที่บันทึกภายใต้หมวดงบประมาณนี้
+                                                                            </p>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
+                                                                            <table className="w-full text-left text-xs border-collapse">
+                                                                                <thead>
+                                                                                    <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-bold text-slate-600">
+                                                                                        <th className="p-2.5 w-10 text-center">#</th>
+                                                                                        <th className="p-2.5 min-w-[230px]">ชื่อโครงการ / ผู้รับผิดชอบ</th>
+                                                                                        <th className="p-2.5 min-w-[150px]">ชุดจัดซื้อ / สัญญายืม</th>
+                                                                                        <th className="p-2.5 text-right whitespace-nowrap min-w-[110px]">งบจัดสรร</th>
+                                                                                        <th className="p-2.5 text-right whitespace-nowrap min-w-[110px]">จ่ายจริง (Spent)</th>
+                                                                                        <th className="p-2.5 text-right whitespace-nowrap min-w-[110px]">คงเหลือ</th>
+                                                                                        <th className="p-2.5 text-center whitespace-nowrap w-[110px]">สถานะ</th>
+                                                                                        <th className="p-2.5 text-center w-20">ดูโครงการ</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody className="divide-y divide-slate-100">
+                                                                                    {catProjects.map((proj, pIdx) => {
+                                                                                        const projAlloc = parseFloat(proj.allocated_budget || proj.allocated_amount || proj.estimated_budget || 0);
+                                                                                        const projSpent = parseFloat(proj.spent_amount || 0);
+                                                                                        const projRem = projAlloc - projSpent;
+
+                                                                                        return (
+                                                                                            <tr key={proj.id || pIdx} className="hover:bg-slate-50/70 transition-colors">
+                                                                                                <td className="p-2.5 text-center text-slate-400 font-mono text-[11px]">{pIdx + 1}</td>
+                                                                                                <td className="p-2.5">
+                                                                                                    <div className="font-bold text-slate-900 line-clamp-2">
+                                                                                                        {proj.title}
+                                                                                                    </div>
+                                                                                                    <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-1.5">
+                                                                                                        <span>👤 {proj.user?.name || proj.proposer_name || '-'}</span>
+                                                                                                        <span>•</span>
+                                                                                                        <span>🏢 {proj.department?.name || proj.department_name || '-'}</span>
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                                <td className="p-2.5 text-[11px]">
+                                                                                                    <div className="space-y-1">
+                                                                                                        {proj.procurement_number ? (
+                                                                                                            <div className="font-mono text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-flex items-center gap-1 text-[10px] font-bold">
+                                                                                                                <span>📦 ชุดจัดซื้อ:</span> {proj.procurement_number}
+                                                                                                            </div>
+                                                                                                        ) : null}
+                                                                                                        {proj.plan_loan_doc_number ? (
+                                                                                                            <div className="font-mono text-purple-800 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 inline-flex items-center gap-1 text-[10px] font-bold">
+                                                                                                                <span>💳 สัญญายืม:</span> {proj.plan_loan_doc_number}
+                                                                                                            </div>
+                                                                                                        ) : null}
+                                                                                                        {!proj.procurement_number && !proj.plan_loan_doc_number && (
+                                                                                                            <span className="text-slate-400">-</span>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                </td>
+                                                                                                <td className="p-2.5 text-right font-mono font-bold text-slate-800 whitespace-nowrap">
+                                                                                                    {fmt(projAlloc)}
+                                                                                                </td>
+                                                                                                <td className="p-2.5 text-right font-mono font-bold text-rose-700 whitespace-nowrap">
+                                                                                                    {fmt(projSpent)}
+                                                                                                </td>
+                                                                                                <td className="p-2.5 text-right font-mono font-black text-emerald-700 whitespace-nowrap">
+                                                                                                    {fmt(projRem)}
+                                                                                                </td>
+                                                                                                <td className="p-2.5 text-center whitespace-nowrap">
+                                                                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                                                        proj.status === 'completed' ? 'bg-teal-100 text-teal-900 border border-teal-200' :
+                                                                                                        proj.status === 'approved' ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' :
+                                                                                                        'bg-slate-100 text-slate-700'
+                                                                                                    }`}>
+                                                                                                        {proj.status === 'completed' ? 'ปิดโครงการ' :
+                                                                                                         proj.status === 'approved' ? 'อนุมัติแล้ว' : proj.status}
+                                                                                                    </span>
+                                                                                                </td>
+                                                                                                <td className="p-2.5 text-center">
+                                                                                                    <Link
+                                                                                                        href={route('projects.show', proj.id)}
+                                                                                                        className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold transition hover:scale-105"
+                                                                                                        title="คลิกเพื่อเปิดดูรายละเอียดโครงการ"
+                                                                                                    >
+                                                                                                        เปิดดู ↗
+                                                                                                    </Link>
+                                                                                                </td>
+                                                                                            </tr>
+                                                                                        );
+                                                                                    })}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* 3. Central Allocations Linked Sub-Table */}
+                                                                {catAllocs.length > 0 && (
+                                                                    <div className="space-y-2 pt-2 border-t border-slate-200">
+                                                                        <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                                                                            <span className="flex items-center gap-1.5">
+                                                                                <span>📥</span> หนังสือแจ้งจัดสรรจากต้นสังกัด/ส่วนกลาง ({catAllocs.length} ฉบับ)
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
+                                                                            <table className="w-full text-left text-xs border-collapse">
+                                                                                <thead>
+                                                                                    <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-bold text-slate-600">
+                                                                                        <th className="p-2.5 whitespace-nowrap">เลขที่หนังสือ</th>
+                                                                                        <th className="p-2.5 min-w-[200px]">วัตถุประสงค์ / ชื่องบประมาณ</th>
+                                                                                        <th className="p-2.5 text-right whitespace-nowrap min-w-[120px]">จำนวนเงินจัดสรร</th>
+                                                                                        <th className="p-2.5 min-w-[180px]">รายละเอียดเพิ่มเติม</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody className="divide-y divide-slate-100">
+                                                                                    {catAllocs.map((alloc, aIdx) => (
+                                                                                        <tr key={alloc.id || aIdx} className="hover:bg-slate-50/70">
+                                                                                            <td className="p-2.5 font-mono font-bold text-slate-800 whitespace-nowrap">
+                                                                                                {alloc.document_number || '-'}
+                                                                                            </td>
+                                                                                            <td className="p-2.5 font-bold text-slate-900">{alloc.title}</td>
+                                                                                            <td className="p-2.5 text-right font-mono font-bold text-amber-900 whitespace-nowrap">
+                                                                                                {fmt(alloc.amount)}
+                                                                                            </td>
+                                                                                            <td className="p-2.5 text-slate-600 text-[11px]">{alloc.description || '-'}</td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                </React.Fragment>
                                             );
                                         })
                                     )}
@@ -4940,7 +5179,7 @@ ${itemsListText}
 
                                                     <td className="px-4 py-3.5 align-top whitespace-nowrap">
                                                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-purple-50 text-purple-900 border border-purple-200 text-xs font-bold">
-                                                            💰 {proj.funding_source_name || proj.fundingSource?.name || 'ยังไม่จัดสรร'}
+                                                            💰 {formatBudgetCategoryName(proj.funding_source_name || proj.fundingSource?.name) || 'ยังไม่จัดสรร'}
                                                         </span>
                                                     </td>
 
@@ -4984,7 +5223,7 @@ ${itemsListText}
                             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                                 <div>
                                     <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                                        <span>📁</span> โครงการภายใต้หมวดหมู่งบประมาณ: {selectedCategoryForModal.name}
+                                        <span>📁</span> โครงการภายใต้หมวดหมู่งบประมาณ: {formatBudgetCategoryName(selectedCategoryForModal.name)}
                                     </h3>
                                     <p className="text-xs text-slate-500">
                                         ยอดจัดสรรรวม: <strong>{fmt(selectedCategoryForModal.allocated)}</strong> | จ่ายแล้ว: <strong className="text-rose-600">{fmt(selectedCategoryForModal.spent)}</strong> | คงเหลือ: <strong className="text-emerald-600">{fmt(selectedCategoryForModal.remaining)}</strong>
