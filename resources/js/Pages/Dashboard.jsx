@@ -448,6 +448,17 @@ export default function Dashboard({
         return 'proposals';
     };
 
+    const cleanThaiFundingName = (name) => {
+        if (!name) return '';
+        const parenMatch = name.match(/\(([^)]*[\u0E00-\u0E7F]+[^)]*)\)/);
+        if (parenMatch && parenMatch[1]) return parenMatch[1].trim();
+        if (/[\u0E00-\u0E7F]/.test(name) && /[a-zA-Z]/.test(name)) {
+            const cleaned = name.replace(/[a-zA-Z\/\(\)\-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+            if (cleaned) return cleaned;
+        }
+        return name.trim();
+    };
+
     const [activeTab, setActiveTab] = useState(getDefaultTab());
 
     // API Connection Status & Mock Trigger
@@ -4564,7 +4575,7 @@ ${itemsListText}
                         <div className="border-b border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
                                 <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mb-1 border border-purple-200">
-                                    <span>✈️</span> ระบบเชื่อมต่อภายนอก (npc_eleve / กค. ๑๐๑)
+                                    <span>✈️</span> สัญญายืมเงินไปราชการ (กค. ๑๐๑)
                                 </div>
                                 <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
                                     <span>📝</span> สัญญายืมเงินไปราชการ รอแผนงานตัดยอดงบประมาณ
@@ -10090,7 +10101,7 @@ return (
                                             <option value="">-- เลือกหมวดหมู่งบประมาณ --</option>
                                             {(planHeadData?.fundingSources || allFundingSources || []).map((src) => (
                                                 <option key={src.id} value={src.id}>
-                                                    {src.code ? `[${src.code}] ` : ''}{src.name} (ปี {src.fiscal_year})
+                                                    {cleanThaiFundingName(src.name)} (ปี {src.fiscal_year})
                                                 </option>
                                             ))}
                                         </select>
@@ -10437,20 +10448,20 @@ return (
                         </div>
                     )}
 
-                    {/* Modal 5: Admin Edit Travel Loan Modal */}
+                    {/* Modal 5: Admin Edit Travel Loan Modal (Purple & White Theme, Thai Only) */}
                     {selectedTravelLoanForEdit && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-                            <div className="w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-amber-200 my-8 max-h-[92vh] flex flex-col">
-                                <div className="flex justify-between items-start border-b border-amber-100 pb-4 mb-5 shrink-0">
+                            <div className="w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-200 my-8 max-h-[92vh] flex flex-col">
+                                <div className="flex justify-between items-start border-b border-purple-100 pb-4 mb-5 shrink-0">
                                     <div>
-                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black mb-1 border border-amber-300">
-                                            <span>👑</span> สิทธิ์ผู้ดูแลระบบ (Admin)
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-black mb-1 border border-purple-200">
+                                            <span>👑</span> สิทธิ์ผู้ดูแลระบบ
                                         </div>
-                                        <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                        <h3 className="text-xl font-black text-purple-950 flex items-center gap-2">
                                             <span>✏️</span> แก้ไขข้อมูลสัญญายืมเงินไปราชการ
                                         </h3>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            แก้ไขรายละเอียดสัญญา ผู้ยืม วงเงิน สถานะ และการคุมงบประมาณ | ID: #{selectedTravelLoanForEdit.id}
+                                            แก้ไขรายละเอียดสัญญา ผู้ยืม วงเงิน สถานะ และการคุมงบประมาณ | สัญญาเลขที่: {selectedTravelLoanForEdit.contract_no || ('#' + selectedTravelLoanForEdit.id)}
                                         </p>
                                     </div>
                                     <button
@@ -10464,8 +10475,8 @@ return (
 
                                 <form onSubmit={handleEditTravelLoanSubmit} className="space-y-6 overflow-y-auto pr-2 flex-1">
                                     {/* 1. ข้อมูลสัญญาและผู้ยืม */}
-                                    <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200/70 space-y-4">
-                                        <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                                    <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200/80 space-y-4">
+                                        <h4 className="text-xs font-black text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
                                             <span>📄</span> 1. ข้อมูลสัญญาและผู้ขอยืมเงิน
                                         </h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -10475,7 +10486,7 @@ return (
                                                     type="text"
                                                     value={editTravelLoanData.contract_no}
                                                     onChange={(e) => setEditTravelLoanData('contract_no', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-mono font-bold text-purple-950 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                     placeholder="เช่น สย.001/2569"
                                                 />
                                             </div>
@@ -10485,7 +10496,7 @@ return (
                                                     type="date"
                                                     value={editTravelLoanData.doc_date}
                                                     onChange={(e) => setEditTravelLoanData('doc_date', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 />
                                             </div>
                                             <div>
@@ -10496,14 +10507,14 @@ return (
                                                         min="1"
                                                         value={editTravelLoanData.return_days}
                                                         onChange={(e) => setEditTravelLoanData('return_days', e.target.value)}
-                                                        className="w-20 rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-slate-900 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                        className="w-20 rounded-xl border border-purple-200 px-3 py-2 text-xs font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                         title="จำนวนวันกำหนดคืน"
                                                     />
                                                     <input
                                                         type="date"
                                                         value={editTravelLoanData.due_date}
                                                         onChange={(e) => setEditTravelLoanData('due_date', e.target.value)}
-                                                        className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                        className="flex-1 rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                         title="วันที่ครบกำหนดคืน"
                                                     />
                                                 </div>
@@ -10518,7 +10529,7 @@ return (
                                                     required
                                                     value={editTravelLoanData.borrower_name}
                                                     onChange={(e) => setEditTravelLoanData('borrower_name', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-slate-900 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 />
                                             </div>
                                             <div>
@@ -10527,7 +10538,7 @@ return (
                                                     type="text"
                                                     value={editTravelLoanData.borrower_position}
                                                     onChange={(e) => setEditTravelLoanData('borrower_position', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 />
                                             </div>
                                             <div>
@@ -10536,15 +10547,15 @@ return (
                                                     type="text"
                                                     value={editTravelLoanData.borrower_department}
                                                     onChange={(e) => setEditTravelLoanData('borrower_department', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* 2. รายละเอียดการเดินทาง */}
-                                    <div className="p-4 rounded-2xl bg-sky-50/50 border border-sky-200/70 space-y-4">
-                                        <h4 className="text-xs font-black text-sky-950 uppercase tracking-wider flex items-center gap-1.5">
+                                    <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200/80 space-y-4">
+                                        <h4 className="text-xs font-black text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
                                             <span>✈️</span> 2. รายละเอียดการเดินทางไปราชการ
                                         </h4>
                                         <div>
@@ -10554,7 +10565,7 @@ return (
                                                 required
                                                 value={editTravelLoanData.subject}
                                                 onChange={(e) => setEditTravelLoanData('subject', e.target.value)}
-                                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-sky-500 focus:border-sky-500 bg-white"
+                                                className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                             />
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -10564,7 +10575,7 @@ return (
                                                     type="text"
                                                     value={editTravelLoanData.destination}
                                                     onChange={(e) => setEditTravelLoanData('destination', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-sky-500 focus:border-sky-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 />
                                             </div>
                                             <div>
@@ -10573,7 +10584,7 @@ return (
                                                     type="date"
                                                     value={editTravelLoanData.start_date}
                                                     onChange={(e) => setEditTravelLoanData('start_date', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-sky-500 focus:border-sky-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 />
                                             </div>
                                             <div>
@@ -10582,14 +10593,14 @@ return (
                                                     type="date"
                                                     value={editTravelLoanData.end_date}
                                                     onChange={(e) => setEditTravelLoanData('end_date', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-sky-500 focus:border-sky-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 />
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* 3. รายการยอดเงินยืม */}
-                                    <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-200/70 space-y-4">
+                                    <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200/80 space-y-4">
                                         <div className="flex justify-between items-center">
                                             <h4 className="text-xs font-black text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
                                                 <span>💰</span> 3. วงเงินยืมตามประเภทค่าใช้จ่าย
@@ -10617,7 +10628,7 @@ return (
                                                     min="0"
                                                     value={editTravelLoanData.allowance_amount}
                                                     onChange={(e) => setEditTravelLoanData('allowance_amount', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
                                                 />
                                             </div>
                                             <div>
@@ -10628,7 +10639,7 @@ return (
                                                     min="0"
                                                     value={editTravelLoanData.rent_amount}
                                                     onChange={(e) => setEditTravelLoanData('rent_amount', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
                                                 />
                                             </div>
                                             <div>
@@ -10639,7 +10650,7 @@ return (
                                                     min="0"
                                                     value={editTravelLoanData.vehicle_amount}
                                                     onChange={(e) => setEditTravelLoanData('vehicle_amount', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
                                                 />
                                             </div>
                                             <div>
@@ -10650,12 +10661,12 @@ return (
                                                     min="0"
                                                     value={editTravelLoanData.other_amount}
                                                     onChange={(e) => setEditTravelLoanData('other_amount', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
                                                 />
                                             </div>
                                         </div>
                                         <div className="p-3 bg-white rounded-xl border border-purple-200 flex justify-between items-center">
-                                            <span className="text-xs font-bold text-purple-950">ยอดเงินยืมรวมทั้งสิ้น (Total Loan Amount) *</span>
+                                            <span className="text-xs font-bold text-purple-950">ยอดเงินยืมรวมทั้งสิ้น *</span>
                                             <div className="flex items-center gap-2">
                                                 <input
                                                     type="number"
@@ -10672,23 +10683,23 @@ return (
                                     </div>
 
                                     {/* 4. สถานะและการคุมงบประมาณ */}
-                                    <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/70 space-y-4">
-                                        <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                                    <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200/80 space-y-4">
+                                        <h4 className="text-xs font-black text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
                                             <span>⚙️</span> 4. สถานะสัญญาและการคุมงบประมาณ
                                         </h4>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-700 mb-1">สถานะสัญญา (Loan Status) *</label>
+                                                <label className="block text-xs font-bold text-slate-700 mb-1">สถานะสัญญา *</label>
                                                 <select
                                                     value={editTravelLoanData.loan_status}
                                                     onChange={(e) => setEditTravelLoanData('loan_status', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-slate-900 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-bold text-purple-950 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 >
-                                                    <option value="pending_plan">⏳ รอแผนงานตัดยอด (pending_plan)</option>
-                                                    <option value="plan_cut">📋 แผนงานตัดยอดแล้ว (plan_cut)</option>
-                                                    <option value="finance_received">📥 การเงินลงรับแล้ว (finance_received)</option>
-                                                    <option value="disbursed">💳 โอนเงินยืมแล้ว (disbursed)</option>
-                                                    <option value="cleared">✅ เคลียร์เงินแล้ว (cleared)</option>
+                                                    <option value="pending_plan">⏳ รอแผนงานตัดยอด</option>
+                                                    <option value="plan_cut">📋 แผนงานตัดยอดแล้ว</option>
+                                                    <option value="finance_received">📥 การเงินลงรับแล้ว</option>
+                                                    <option value="disbursed">💳 โอนเงินยืมแล้ว</option>
+                                                    <option value="cleared">✅ เคลียร์เงินแล้ว</option>
                                                 </select>
                                             </div>
                                             <div>
@@ -10696,12 +10707,12 @@ return (
                                                 <select
                                                     value={editTravelLoanData.funding_source_id}
                                                     onChange={(e) => setEditTravelLoanData('funding_source_id', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-bold text-slate-900 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-bold text-purple-950 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 >
                                                     <option value="">-- ยังไม่ได้กำหนดหมวดงบ --</option>
                                                     {(planHeadData?.fundingSources || allFundingSources || []).map((src) => (
                                                         <option key={src.id} value={src.id}>
-                                                            {src.code ? `[${src.code}] ` : ''}{src.name} (ปี {src.fiscal_year || '2569'})
+                                                            {cleanThaiFundingName(src.name)} (ปี {src.fiscal_year || '2569'})
                                                         </option>
                                                     ))}
                                                 </select>
@@ -10715,7 +10726,7 @@ return (
                                                     type="text"
                                                     value={editTravelLoanData.plan_doc_number}
                                                     onChange={(e) => setEditTravelLoanData('plan_doc_number', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-mono font-bold text-purple-950 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                     placeholder="เช่น 001/2569"
                                                 />
                                             </div>
@@ -10725,8 +10736,8 @@ return (
                                                     type="text"
                                                     value={editTravelLoanData.finance_doc_number}
                                                     onChange={(e) => setEditTravelLoanData('finance_doc_number', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-                                                    placeholder="เช่น REC-TL-..."
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-mono font-bold text-purple-950 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                                                    placeholder="เช่น 001/2569"
                                                 />
                                             </div>
                                             <div>
@@ -10737,7 +10748,7 @@ return (
                                                     min="0"
                                                     value={editTravelLoanData.finance_disbursed_amount}
                                                     onChange={(e) => setEditTravelLoanData('finance_disbursed_amount', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:ring-emerald-500 focus:border-emerald-500 bg-white text-right"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-mono font-bold text-purple-950 focus:ring-purple-500 focus:border-purple-500 bg-white text-right"
                                                     placeholder="0.00"
                                                 />
                                             </div>
@@ -10750,8 +10761,8 @@ return (
                                                     type="text"
                                                     value={editTravelLoanData.finance_payment_ref}
                                                     onChange={(e) => setEditTravelLoanData('finance_payment_ref', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
-                                                    placeholder="เช่น KTB-TR-1234567"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                                                    placeholder="เช่น เลขที่สลิปโอนเงิน / เลขอ้างอิง"
                                                 />
                                             </div>
                                             <div>
@@ -10760,7 +10771,7 @@ return (
                                                     type="text"
                                                     value={editTravelLoanData.plan_notes}
                                                     onChange={(e) => setEditTravelLoanData('plan_notes', e.target.value)}
-                                                    className="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-emerald-500 focus:border-emerald-500 bg-white"
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-semibold text-slate-900 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                     placeholder="บันทึกช่วยจำแผนงาน..."
                                                 />
                                             </div>
@@ -10768,20 +10779,20 @@ return (
                                     </div>
 
                                     {/* Footer Buttons */}
-                                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 shrink-0">
+                                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-purple-100 shrink-0">
                                         <button
                                             type="button"
                                             onClick={() => setSelectedTravelLoanForEdit(null)}
-                                            className="rounded-xl px-5 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer"
+                                            className="rounded-xl px-5 py-2.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer"
                                         >
                                             ยกเลิก
                                         </button>
                                         <button
                                             type="submit"
                                             disabled={isEditingTravelLoan}
-                                            className="rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 px-6 py-2.5 text-xs font-black text-white shadow-md shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                                            className="rounded-xl bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 hover:from-purple-700 hover:to-indigo-800 px-6 py-2.5 text-xs font-black text-white shadow-md shadow-purple-600/25 transition-all cursor-pointer disabled:opacity-50"
                                         >
-                                            {isEditingTravelLoan ? '⏳ กำลังบันทึก...' : '💾 บันทึกการแก้ไข (Admin Save)'}
+                                            {isEditingTravelLoan ? '⏳ กำลังบันทึก...' : '💾 บันทึกการแก้ไข'}
                                         </button>
                                     </div>
                                 </form>
