@@ -169,7 +169,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const getSubLinkClass = (isActive) =>
         `flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs transition-all ${
             isActive
-                ? 'bg-white text-purple-950 font-black shadow-md ring-2 ring-purple-300'
+                ? 'bg-gradient-to-r from-white via-purple-50 to-white text-purple-950 font-black shadow-lg shadow-purple-950/20 ring-2 ring-purple-300 scale-[1.02]'
                 : 'text-purple-100 hover:bg-white/10 hover:text-white font-normal'
         }`;
 
@@ -177,10 +177,10 @@ export default function AuthenticatedLayout({ header, children }) {
         `${isActive ? 'text-purple-950 font-bold' : defaultColor} font-mono text-[10px]`;
 
     return (
-        <div className="min-h-screen bg-slate-100/70 font-sans text-slate-800 flex flex-col">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-white font-sans text-slate-800 flex flex-col">
             
             {/* 1. TOP NAVIGATION BAR WITH RICH LIGHTING, SHADOW, AND GLASSMORPHISM DIMENSION */}
-            <nav className="bg-gradient-to-r from-white via-purple-50/60 to-white border-b border-purple-200/60 shadow-[0_4px_20px_-4px_rgba(126,34,206,0.15)] sticky top-0 z-50 backdrop-blur-md">
+            <nav className="bg-gradient-to-r from-white via-purple-50/70 to-white border-b border-purple-200/70 shadow-[0_4px_25px_-5px_rgba(147,51,234,0.12)] sticky top-0 z-50 backdrop-blur-md">
                 <div className="mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between items-center">
                         
@@ -192,7 +192,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 onClick={toggleSidebar}
                                 className={`hidden sm:inline-flex items-center justify-center p-2 rounded-xl transition-all focus:outline-none shadow-2xs border cursor-pointer ${
                                     !isSidebarOpen 
-                                        ? 'bg-purple-100 border-purple-300 text-purple-950 ring-2 ring-purple-400 hover:bg-purple-200' 
+                                        ? 'bg-gradient-to-r from-purple-100 to-purple-200 border-purple-300 text-purple-950 ring-2 ring-purple-400 hover:from-purple-200 hover:to-purple-300' 
                                         : 'text-purple-900 hover:bg-purple-100/60 border-purple-100'
                                 }`}
                                 title={isSidebarOpen ? "คลิกเพื่อซ่อนแถบเมนูซ้าย" : "คลิกเพื่อแสดงแถบเมนูซ้าย"}
@@ -311,7 +311,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             href={route('dashboard')}
                             className={`flex items-center gap-x-3 px-3.5 py-2.5 rounded-xl transition-all text-sm ${
                                 route().current('dashboard') && (!url.includes('tab=') || url.includes('tab=admin_users'))
-                                    ? 'bg-white text-purple-950 shadow-md font-black ring-2 ring-purple-300'
+                                    ? 'bg-gradient-to-r from-white via-purple-50 to-white text-purple-950 shadow-lg shadow-purple-950/20 font-black ring-2 ring-purple-300 scale-[1.02]'
                                     : 'text-white bg-white/10 hover:bg-white/20 font-medium'
                             }`}
                             title="ศูนย์ควบคุมหลัก"
@@ -327,7 +327,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <button
                                         type="button"
                                         onClick={() => toggleSection('admin')}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-purple-900/60 text-purple-200 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider shadow-2xs hover:bg-purple-900/90 transition cursor-pointer"
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/80 via-purple-800/60 to-purple-900/40 text-purple-200 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider shadow-2xs hover:from-purple-850 hover:to-purple-800 transition cursor-pointer"
                                     >
                                         <div className="flex items-center gap-x-2">
                                             <span>⚙️</span>
@@ -389,7 +389,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('proposal')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-transparent text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/70 hover:to-purple-900/30 transition cursor-pointer"
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📝</span>
@@ -461,7 +461,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <button
                                         type="button"
                                         onClick={() => toggleSection('plan')}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-transparent text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/70 hover:to-purple-900/30 transition cursor-pointer"
                                     >
                                         <div className="flex items-center gap-x-2">
                                             <span>💰</span>
@@ -541,7 +541,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <button
                                         type="button"
                                         onClick={() => toggleSection('procurement')}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-transparent text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/70 hover:to-purple-900/30 transition cursor-pointer"
                                     >
                                         <div className="flex items-center gap-x-2">
                                             <span>📦</span>
@@ -596,7 +596,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <button
                                         type="button"
                                         onClick={() => toggleSection('finance')}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-transparent text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/70 hover:to-purple-900/30 transition cursor-pointer"
                                     >
                                         <div className="flex items-center gap-x-2">
                                             <span>💳</span>
@@ -671,7 +671,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <button
                                         type="button"
                                         onClick={() => toggleSection('executive')}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-transparent text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/70 hover:to-purple-900/30 transition cursor-pointer"
                                     >
                                         <div className="flex items-center gap-x-2">
                                             <span>📈</span>
@@ -719,7 +719,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 href={route('profile.edit')}
                                 className={`flex items-center gap-x-3 px-3.5 py-2 rounded-xl transition-all text-xs ${
                                     route().current('profile.edit')
-                                        ? 'bg-white text-purple-950 font-black shadow-md ring-2 ring-purple-300'
+                                        ? 'bg-gradient-to-r from-white via-purple-50 to-white text-purple-950 font-black shadow-lg shadow-purple-950/20 ring-2 ring-purple-300 scale-[1.02]'
                                         : 'text-purple-100 hover:bg-white/10 hover:text-white font-normal'
                                 }`}
                                 title="ผู้ใช้งานระบบ"

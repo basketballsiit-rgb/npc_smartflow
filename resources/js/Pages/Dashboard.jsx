@@ -2385,24 +2385,24 @@ export default function Dashboard({
         return (
             <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600">จำนวนโครงการที่เสนอ</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">{teacherData.proposalsCount} โครงการ</p>
+                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">จำนวนโครงการที่เสนอ</span>
+                        <p className="mt-2 text-3xl font-black text-purple-950">{teacherData.proposalsCount} โครงการ</p>
                     </div>
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">โครงการที่ผ่านอนุมัติงบ</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">{teacherData.approvedCount} โครงการ</p>
+                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">โครงการที่ผ่านอนุมัติงบ</span>
+                        <p className="mt-2 text-3xl font-black text-purple-950">{teacherData.approvedCount} โครงการ</p>
                     </div>
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">วงเงินงบประมาณรวม</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">
+                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">วงเงินงบประมาณรวม</span>
+                        <p className="mt-2 text-3xl font-black text-purple-950">
                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(teacherData.totalBudget)}
                         </p>
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
-                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-sm">
+                    <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/70 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
                             <h3 className="text-lg font-bold text-slate-900">รายการเสนอโครงการของฉัน</h3>
                             <p className="text-xs text-slate-600">ติดตามสถานะการพิจารณาจัดสรรงบประมาณ และกระบวนการอนุมัติ 6 ขั้นตอน</p>
@@ -7695,28 +7695,28 @@ ${itemsListText}
         return (
             <div className="space-y-6">
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600">งบประมาณได้รับจัดสรรรวม</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">
+                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">งบประมาณได้รับจัดสรรรวม</span>
+                        <p className="mt-2 text-3xl font-black text-purple-950">
                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(executiveData.budgetSummary.total_allocated)}
                         </p>
                     </div>
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-amber-600">ผูกพันงบประมาณแล้ว</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">
+                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">ผูกพันงบประมาณแล้ว</span>
+                        <p className="mt-2 text-3xl font-black text-purple-950">
                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(executiveData.budgetSummary.total_encumbered)}
                         </p>
                     </div>
-                    <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">เบิกจ่ายจริงแล้ว</span>
-                        <p className="mt-2 text-3xl font-black text-slate-900">
+                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">เบิกจ่ายจริงแล้ว</span>
+                        <p className="mt-2 text-3xl font-black text-purple-950">
                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(executiveData.budgetSummary.total_spent)}
                         </p>
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
-                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4">
+                <div className="overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-sm">
+                    <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/70 px-6 py-4">
                         <h3 className="text-lg font-bold text-slate-900">สรุปสถิติและงบประมาณจำแนกตาม ๔ ฝ่ายหลัก และงานย่อยในสังกัด</h3>
                         <p className="text-xs text-slate-600">บริหารจัดการครอบคลุม ฝ่ายบริหารทรัพยากร, ฝ่ายยุทธศาสตร์และแผนงาน, ฝ่ายวิชาการ และ ฝ่ายพัฒนากิจการนักเรียนนักศึกษา</p>
                     </div>
