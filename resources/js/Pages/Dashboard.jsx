@@ -6577,6 +6577,104 @@ ${itemsListText}
             const status = p.status;
             const allocBudget = (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0);
 
+            // Compute procurement sets and total procurement amount
+            const procSets = [];
+            if (Array.isArray(p.procurement_items) && p.procurement_items.length > 1) {
+                p.procurement_items.forEach((it, itIdx) => {
+                    procSets.push({
+                        id: it.id || itIdx,
+                        label: it.description ? `ชุดที่ ${itIdx + 1}: ${it.description}` : `ชุดที่ ${itIdx + 1}`,
+                        shortLabel: `ชุดที่ ${itIdx + 1}`,
+                        amount: parseFloat(it.total_price) || (parseFloat(it.quantity) * parseFloat(it.unit_price)) || 0,
+                        items: [it]
+                    });
+                });
+            } else if (Array.isArray(p.activities) && p.activities.length > 0) {
+                p.activities.forEach((act, actIdx) => {
+                    if (Array.isArray(act.procurement_items) && act.procurement_items.length > 0) {
+                        const actProcSum = act.procurement_items.reduce((s, pi) => s + (parseFloat(pi.total_price) || 0), 0);
+                        if (actProcSum > 0) {
+                            procSets.push({
+                                id: act.id || actIdx,
+                                label: `ชุดที่ ${procSets.length + 1}: ${act.name || `กิจกรรมที่ ${actIdx + 1}`}`,
+                                shortLabel: `ชุดที่ ${procSets.length + 1}`,
+                                amount: actProcSum,
+                                items: act.procurement_items
+                            });
+                        }
+                    }
+                });
+            }
+
+            let totalProcAmount = 0;
+            if (Array.isArray(p.procurement_items) && p.procurement_items.length > 0) {
+                totalProcAmount = p.procurement_items.reduce((sum, it) => sum + (parseFloat(it.total_price) || (parseFloat(it.quantity) * parseFloat(it.unit_price)) || 0), 0);
+            } else if (procSets.length > 0) {
+                totalProcAmount = procSets.reduce((sum, s) => sum + s.amount, 0);
+            }
+
+            // Compute loan amount
+            let loanAmount = 0;
+            let hasExplicitLoanItems = false;
+            if (Array.isArray(p.activities) && p.activities.length > 0) {
+                p.activities.forEach(act => {
+                    if (Array.isArray(act.loan_items)) {
+                        act.loan_items.forEach(li => {
+                            loanAmount += (parseFloat(li.total_price) || (parseFloat(li.quantity) * parseFloat(li.unit_price)) || 0);
+                            hasExplicitLoanItems = true;
+                        });
+                    }
+                });
+            }
+
+            if (!hasExplicitLoanItems) {
+                if (p.plan_loan_doc_number || proc?.plan_loan_doc_number || loanStatus === 'plan_cut' || loanStatus === 'finance_received' || loanStatus === 'cleared') {
+                    loanAmount = totalProcAmount > 0 ? Math.max(0, allocBudget - totalProcAmount) : allocBudget;
+                } else {
+                    loanAmount = 0;
+                }
+            }
+
+            // Lifecycle Flags
+            const isLoanCleared = loanStatus === 'cleared' || p.budget?.advance_cleared_at;
+            const isLoanFinReceived = loanStatus === 'finance_received' || p.finance_received_at || proc?.finance_received_at;
+            const isLoanPlanCut = loanStatus === 'plan_cut' || p.plan_loan_cut_at || proc?.plan_loan_cut_at || (p.encumbered_amount && p.encumbered_amount > 0);
+
+            const isProcPlanCut = procStatus === 'plan_cut' || p.plan_procurement_cut_at || proc?.plan_procurement_cut_at;
+            const isProcReceived = procStatus === 'received' || p.procurement_number || proc?.procurement_number;
+            const isProcForwardedToFin = procStatus === 'forwarded_to_finance' || proc?.status === 'forwarded_to_finance';
+            const isProcDisbursed = procStatus === 'completed' || proc?.status === 'completed' || procStatus === 'disbursed';
+
+            // Component Existence
+            const hasLoanComponent = Boolean(
+                hasExplicitLoanItems || 
+                loanAmount > 0 || 
+                p.plan_loan_doc_number || 
+                proc?.plan_loan_doc_number || 
+                isLoanPlanCut || 
+                isLoanFinReceived || 
+                isLoanCleared ||
+                (loanStatus && loanStatus !== 'pending')
+            );
+
+            const hasProcComponent = Boolean(
+                totalProcAmount > 0 || 
+                (Array.isArray(p.procurement_items) && p.procurement_items.length > 0) || 
+                p.plan_procurement_doc_number || 
+                proc?.plan_procurement_doc_number || 
+                isProcPlanCut || 
+                isProcReceived || 
+                isProcForwardedToFin || 
+                isProcDisbursed
+            );
+
+            const hasLoanAtFinance = Boolean(isLoanPlanCut || isLoanFinReceived || isLoanCleared);
+            const hasProcAtFinance = Boolean(isProcForwardedToFin || isProcDisbursed);
+
+            const isAllFinCompleted = (hasLoanComponent && hasProcComponent)
+                ? (isLoanCleared && isProcDisbursed)
+                : (hasLoanComponent ? isLoanCleared : isProcDisbursed);
+
             // ==========================================
             // 1. Compute Loan Contract (สัญญายืมเงิน กค. ๑๐๑) Status & Location
             // ==========================================
@@ -6585,10 +6683,6 @@ ${itemsListText}
             let loanStatusText = '🏢 รอแผนงานตัดยอดสัญญายืมเงิน';
             let loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
             let loanCategory = 'pending';
-
-            const isLoanCleared = loanStatus === 'cleared' || p.finance_disbursed_at || proc?.finance_disbursed_at || p.budget?.advance_cleared_at || status === 'cleared' || status === 'completed';
-            const isLoanFinReceived = loanStatus === 'finance_received' || p.finance_received_at || proc?.finance_received_at;
-            const isLoanPlanCut = loanStatus === 'plan_cut' || p.plan_loan_cut_at || proc?.plan_loan_cut_at || (p.encumbered_amount && p.encumbered_amount > 0);
 
             if (isLoanCleared) {
                 const spent = (parseFloat(p.finance_disbursed_amount) || parseFloat(proc?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0);
@@ -6627,11 +6721,13 @@ ${itemsListText}
             let procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
             let procCategory = 'pending';
 
-            const isProcPlanCut = procStatus === 'plan_cut' || p.plan_procurement_cut_at || proc?.plan_procurement_cut_at;
-            const isProcReceived = procStatus === 'received' || p.procurement_number || proc?.procurement_number;
-            const isProcForwardedToFin = procStatus === 'forwarded_to_finance' || proc?.status === 'forwarded_to_finance';
-
-            if (isProcForwardedToFin) {
+            if (isProcDisbursed) {
+                procLocation = 'งานการเงิน / เบิกจ่ายแล้ว';
+                procHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'เบิกจ่ายจัดซื้อเรียบร้อย';
+                procStatusText = '🎉 เบิกจ่ายจัดซื้อแล้ว';
+                procBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
+                procCategory = 'completed';
+            } else if (isProcForwardedToFin) {
                 procLocation = 'อยู่ที่งานการเงิน';
                 procHolder = 'เจ้าหน้าที่งานการเงิน (รอเบิกจ่าย)';
                 procStatusText = '💰 ส่งงานการเงินเบิกจ่ายแล้ว';
@@ -6672,9 +6768,18 @@ ${itemsListText}
                 isLoanPlanCut,
                 isLoanFinReceived,
                 isLoanCleared,
+                isProcPlanCut,
+                isProcReceived,
                 isProcForwardedToFin,
-                hasLoanAtFinance: Boolean(isLoanPlanCut || isLoanFinReceived || isLoanCleared),
-                hasProcAtFinance: Boolean(isProcForwardedToFin),
+                isProcDisbursed,
+                hasLoanComponent,
+                hasProcComponent,
+                hasLoanAtFinance,
+                hasProcAtFinance,
+                isAllFinCompleted,
+                procSets,
+                totalProcAmount,
+                loanAmount,
                 prNumber: p.procurement_number || proc?.procurement_number || null,
                 planProcDoc: p.plan_procurement_doc_number || proc?.plan_procurement_doc_number || null,
                 planLoanDoc: p.plan_loan_doc_number || proc?.plan_loan_doc_number || null,
@@ -6690,8 +6795,8 @@ ${itemsListText}
         // Finance Specific Metrics
         const countFinPendingReceive = trackingList.filter(p => p.hasLoanAtFinance && !p.isLoanFinReceived && !p.isLoanCleared).length;
         const countFinPendingLoanDisburse = trackingList.filter(p => p.isLoanFinReceived && !p.isLoanCleared).length;
-        const countFinProcToPay = trackingList.filter(p => p.hasProcAtFinance && !p.isLoanCleared).length;
-        const countFinCompleted = trackingList.filter(p => p.isLoanCleared).length;
+        const countFinProcToPay = trackingList.filter(p => p.hasProcAtFinance && !p.isProcDisbursed).length;
+        const countFinCompleted = trackingList.filter(p => p.isAllFinCompleted).length;
 
         // General Metrics count
         const countProcurement = trackingList.filter(p => p.loanCategory === 'at_procurement' || p.procCategory === 'at_procurement').length;
@@ -6704,8 +6809,8 @@ ${itemsListText}
             if (isStrictFinanceUser) {
                 if (docTrackingFilter === 'fin_pending_receive' && !(p.hasLoanAtFinance && !p.isLoanFinReceived && !p.isLoanCleared)) return false;
                 if (docTrackingFilter === 'fin_pending_loan' && !(p.isLoanFinReceived && !p.isLoanCleared)) return false;
-                if (docTrackingFilter === 'fin_proc_pay' && !(p.hasProcAtFinance && !p.isLoanCleared)) return false;
-                if (docTrackingFilter === 'fin_completed' && !p.isLoanCleared) return false;
+                if (docTrackingFilter === 'fin_proc_pay' && !(p.hasProcAtFinance && !p.isProcDisbursed)) return false;
+                if (docTrackingFilter === 'fin_completed' && !p.isAllFinCompleted) return false;
             } else {
                 if (docTrackingFilter === 'at_procurement' && !(p.loanCategory === 'at_procurement' || p.procCategory === 'at_procurement')) return false;
                 if (docTrackingFilter === 'at_finance' && !(p.loanCategory === 'at_finance' || p.procCategory === 'at_finance')) return false;
@@ -6728,7 +6833,145 @@ ${itemsListText}
             return true;
         });
 
-        return (
+        // Helper function for Finance Disburse Modal with dynamic target and amount auto-fill
+        const openDisburseModal = (item, preselectedTarget = null) => {
+            const today = new Date().toISOString().split('T')[0];
+            const loanPending = item.isLoanFinReceived && !item.isLoanCleared;
+            const procPending = item.hasProcAtFinance && !item.isProcDisbursed;
+            const loanAmt = item.loanAmount || 0;
+            const procAmt = item.totalProcAmount || (item.allocated_budget || item.estimated_budget || 0);
+            const procSets = item.procSets || [];
+
+            const fmt = (n) => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+
+            let optionsHtml = '';
+            let defaultAmount = 0;
+            let defaultRef = 'โอนเงิน KTB';
+
+            if (loanPending) {
+                optionsHtml += `<option value="loan" data-amount="${loanAmt}" data-ref="โอนเงินยืม KTB" ${loanPending && !procPending ? 'selected' : ''}>สัญญายืมเงิน (แบบ กค. ๑๐๑) ➔ ฿${fmt(loanAmt)}</option>`;
+            }
+
+            if (procPending) {
+                if (procSets.length > 1) {
+                    optionsHtml += `<option value="procurement" data-amount="${procAmt}" data-ref="เบิกจ่ายจัดซื้อ KTB" ${!loanPending ? 'selected' : ''}>ชุดจัดซื้อจัดจ้าง รวมทุกชุด ➔ ฿${fmt(procAmt)}</option>`;
+                    procSets.forEach((s, sIdx) => {
+                        optionsHtml += `<option value="proc_set_${sIdx}" data-amount="${s.amount}" data-ref="เบิกจ่ายจัดซื้อ ${s.shortLabel} KTB">↳ ${s.label} ➔ ฿${fmt(s.amount)}</option>`;
+                    });
+                } else {
+                    optionsHtml += `<option value="procurement" data-amount="${procAmt}" data-ref="เบิกจ่ายจัดซื้อ KTB" ${!loanPending ? 'selected' : ''}>ชุดจัดซื้อจัดจ้าง (๔ ฉบับ / PR) ➔ ฿${fmt(procAmt)}</option>`;
+                }
+            }
+
+            if (loanPending && procPending) {
+                const remainingTotal = loanAmt + procAmt;
+                optionsHtml += `<option value="all" data-amount="${remainingTotal}" data-ref="โอนเงินยืมและจัดซื้อ KTB">เบิกจ่ายทั้งหมดที่เหลือ ➔ ฿${fmt(remainingTotal)}</option>`;
+            }
+
+            if (preselectedTarget === 'procurement' || (!loanPending && procPending)) {
+                defaultAmount = procAmt;
+                defaultRef = 'เบิกจ่ายจัดซื้อ KTB';
+            } else if (loanPending) {
+                defaultAmount = loanAmt;
+                defaultRef = 'โอนเงินยืม KTB';
+            } else {
+                defaultAmount = item.allocated_budget || item.estimated_budget || 0;
+            }
+
+            Swal.fire({
+                title: '💸 โอนเงิน & ปิดยอดเบิกจ่าย',
+                html: `
+                    <div class="text-left text-xs space-y-3 font-sans">
+                        <div class="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 leading-relaxed">
+                            <p class="font-bold">โครงการ: ${item.title}</p>
+                            <p class="text-[11px] text-blue-700">วงเงินงบประมาณโครงการ: <strong>฿${fmt(item.allocated_budget || item.estimated_budget || 0)}</strong></p>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-800 block mb-1">เลือกรายการที่ทำการเบิกจ่าย/โอนเงิน:</label>
+                            <select id="swal-pay-target" class="w-full px-3 py-2 border-2 border-indigo-300 rounded-xl text-xs bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                ${optionsHtml}
+                            </select>
+                            <p class="text-[10px] text-indigo-700 font-medium mt-1">💡 เมื่อเปลี่ยนรายการ ยอดเงินและข้อความอ้างอิงจะเปลี่ยนให้โดยอัตโนมัติ</p>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-800 block mb-1">ยอดเงินที่โอนหรือจ่ายจริง (บาท) *:</label>
+                            <input id="swal-pay-amount" type="number" step="0.01" class="w-full px-3 py-2 border-2 border-emerald-400 rounded-xl text-sm font-black text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" value="${defaultAmount}">
+                            <span class="text-[10px] text-slate-500">ระบบจะนำยอดจ่ายจริงไปหักลบกับงบประมาณ เพื่อสรุปยอดเงินคงเหลือคืนคลัง</span>
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">เลขอ้างอิงการโอน / เลขที่เช็ค:</label>
+                            <input id="swal-pay-ref" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" placeholder="เช่น โอนเงินผ่าน KTB / เช็คเลขที่..." value="${defaultRef}">
+                        </div>
+                        <div>
+                            <label class="font-bold text-slate-700 block mb-1">วันที่โอนเงิน/จ่ายเงิน:</label>
+                            <input id="swal-pay-date" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${today}">
+                        </div>
+                    </div>
+                `,
+                didOpen: () => {
+                    const targetSelect = document.getElementById('swal-pay-target');
+                    const amountInput = document.getElementById('swal-pay-amount');
+                    const refInput = document.getElementById('swal-pay-ref');
+
+                    if (targetSelect && amountInput) {
+                        if (preselectedTarget) {
+                            for (let i = 0; i < targetSelect.options.length; i++) {
+                                if (targetSelect.options[i].value === preselectedTarget) {
+                                    targetSelect.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                        const updateFields = () => {
+                            const opt = targetSelect.options[targetSelect.selectedIndex];
+                            if (opt && opt.dataset.amount) {
+                                amountInput.value = parseFloat(opt.dataset.amount).toFixed(2);
+                            }
+                            if (opt && opt.dataset.ref && refInput) {
+                                refInput.value = opt.dataset.ref;
+                            }
+                        };
+                        targetSelect.addEventListener('change', updateFields);
+                        updateFields();
+                    }
+                },
+                showCancelButton: true,
+                confirmButtonText: '✓ ยืนยันโอนเงิน & ปิดยอด',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#059669',
+                preConfirm: () => {
+                    const amt = document.getElementById('swal-pay-amount').value;
+                    if (!amt || isNaN(amt) || parseFloat(amt) <= 0) {
+                        Swal.showValidationMessage('กรุณาระบุยอดเงินที่จ่ายจริงให้ถูกต้อง (มากกว่า 0 บาท)');
+                        return false;
+                    }
+                    const targetVal = document.getElementById('swal-pay-target')?.value || 'all';
+                    const refVal = document.getElementById('swal-pay-ref')?.value || '';
+                    const targetSelect = document.getElementById('swal-pay-target');
+                    const targetOpt = targetSelect?.options[targetSelect.selectedIndex];
+                    const targetLabel = targetOpt ? targetOpt.text.split('➔')[0].trim() : targetVal;
+
+                    return {
+                        target: targetVal,
+                        actual_spent_amount: amt,
+                        payment_ref: `[${targetLabel}] ${refVal}`,
+                        disburse_date: document.getElementById('swal-pay-date').value
+                    };
+                }
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    router.post(route('procurements.finance_disburse', item.id), res.value, {
+                        onSuccess: () => {
+                            Swal.fire('สำเร็จ!', 'บันทึกการโอนเงินเรียบร้อยแล้ว', 'success');
+                            if (selectedFinanceDocDetails) {
+                                setSelectedFinanceDocDetails(null);
+                            }
+                        }
+                    });
+                }
+            });
+        };
+return (
             <div className="space-y-6 font-sans">
                 {/* Header Banner */}
                 <div className="rounded-3xl border border-indigo-200 bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
@@ -7385,75 +7628,21 @@ ${itemsListText}
                                                                 </button>
                                                              )}
 
-                                                            {((item.finance_received_at || item.loan_status === 'finance_received') || item.hasProcAtFinance) && item.loan_status !== 'cleared' && (
+                                                            {!item.isAllFinCompleted && ((item.isLoanFinReceived && !item.isLoanCleared) || (item.hasProcAtFinance && !item.isProcDisbursed)) && (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => {
-                                                                        const today = new Date().toISOString().split('T')[0];
-                                                                        const defaultAmount = item.allocated_budget || item.estimated_budget || 0;
-                                                                        Swal.fire({
-                                                                            title: '💸 โอนเงิน & ปิดยอดเบิกจ่าย',
-                                                                            html: `
-                                                                                <div class="text-left text-xs space-y-3 font-sans">
-                                                                                    <div class="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 leading-relaxed">
-                                                                                        <p class="font-bold">โครงการ: ${item.title}</p>
-                                                                                        <p>วงเงินงบประมาณที่ได้รับอนุมัติ: <strong>฿${new Intl.NumberFormat('th-TH').format(defaultAmount)}</strong></p>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <label class="font-bold text-slate-800 block mb-1">ชุดเอกสารที่ทำการเบิกจ่าย/โอนเงิน:</label>
-                                                                                        <select id="swal-pay-target" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold">
-                                                                                            <option value="loan" ${item.isLoanFinReceived ? 'selected' : ''}>สัญญายืมเงิน (แบบ กค. ๑๐๑)</option>
-                                                                                            <option value="procurement" ${item.hasProcAtFinance ? 'selected' : ''}>ชุดจัดซื้อจัดจ้าง (๔ ฉบับ / PR)</option>
-                                                                                            <option value="all">เบิกจ่ายรวมทั้งสองส่วน / ปิดโครงการ</option>
-                                                                                        </select>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <label class="font-bold text-slate-800 block mb-1">ยอดเงินที่โอนหรือจ่ายจริง (บาท) *:</label>
-                                                                                        <input id="swal-pay-amount" type="number" step="0.01" class="w-full px-3 py-2 border-2 border-emerald-400 rounded-xl text-sm font-black text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500" value="${defaultAmount}">
-                                                                                        <span class="text-[10px] text-slate-500">ระบบจะนำยอดจ่ายจริงไปหักลบกับงบประมาณ เพื่อสรุปยอดเงินคงเหลือคืนคลัง</span>
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <label class="font-bold text-slate-700 block mb-1">เลขอ้างอิงการโอน / เลขที่เช็ค:</label>
-                                                                                        <input id="swal-pay-ref" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" placeholder="เช่น โอนเงินผ่าน KTB / เช็คเลขที่..." value="โอนเงิน KTB">
-                                                                                    </div>
-                                                                                    <div>
-                                                                                        <label class="font-bold text-slate-700 block mb-1">วันที่โอนเงิน/จ่ายเงิน:</label>
-                                                                                        <input id="swal-pay-date" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${today}">
-                                                                                    </div>
-                                                                                </div>
-                                                                            `,
-                                                                            showCancelButton: true,
-                                                                            confirmButtonText: '✓ ยืนยันโอนเงิน & ปิดยอดสมบูรณ์',
-                                                                            cancelButtonText: 'ยกเลิก',
-                                                                            confirmButtonColor: '#059669',
-                                                                            preConfirm: () => {
-                                                                                const amt = document.getElementById('swal-pay-amount').value;
-                                                                                if (!amt || isNaN(amt) || parseFloat(amt) < 0) {
-                                                                                    Swal.showValidationMessage('กรุณาระบุยอดเงินที่จ่ายจริงให้ถูกต้อง');
-                                                                                    return false;
-                                                                                }
-                                                                                const targetVal = document.getElementById('swal-pay-target').value;
-                                                                                const refVal = document.getElementById('swal-pay-ref').value;
-                                                                                const targetLabel = targetVal === 'procurement' ? 'ชุดจัดซื้อจัดจ้าง' : (targetVal === 'loan' ? 'สัญญายืมเงิน' : 'เบิกจ่ายทั้งหมด');
-                                                                                return {
-                                                                                    actual_spent_amount: amt,
-                                                                                    payment_ref: `[${targetLabel}] ${refVal}`,
-                                                                                    disburse_date: document.getElementById('swal-pay-date').value
-                                                                                };
-                                                                            }
-                                                                        }).then((res) => {
-                                                                            if (res.isConfirmed) {
-                                                                                router.post(route('procurements.finance_disburse', item.id), res.value, {
-                                                                                    onSuccess: () => Swal.fire('สำเร็จ!', 'บันทึกการโอนเงินและปิดยอดเรียบร้อยแล้ว', 'success')
-                                                                                });
-                                                                            }
-                                                                        });
-                                                                    }}
+                                                                    onClick={() => openDisburseModal(item)}
                                                                     className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
                                                                     title="บันทึกจ่ายเงินจริงและปิดยอดเคลียร์เงินยืม/จัดซื้อ"
                                                                 >
                                                                     <span>💸</span> โอนเงิน & ปิดยอด
                                                                 </button>
+                                                             )}
+
+                                                            {item.isAllFinCompleted && (
+                                                                <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold w-full">
+                                                                    <span>✅</span> โอนครบแล้ว
+                                                                </span>
                                                              )}
                                                         </>
                                                     )}
@@ -7938,7 +8127,25 @@ ${itemsListText}
                             </div>
 
                             {/* Modal Footer */}
-                            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                            <div className="flex justify-between items-center gap-2 pt-4 border-t border-slate-100">
+                                <div>
+                                    {isFinanceStaff && !selectedFinanceDocDetails.isProcDisbursed && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const focused = selectedFinanceDocDetails.focusedProcSet;
+                                                const preTarget = focused && selectedFinanceDocDetails.procSets?.length > 1
+                                                    ? `proc_set_${selectedFinanceDocDetails.procSets.findIndex(s => s.id === focused.id)}`
+                                                    : 'procurement';
+                                                openDisburseModal(selectedFinanceDocDetails, preTarget);
+                                            }}
+                                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md hover:scale-105 active:scale-95 transition cursor-pointer"
+                                        >
+                                            <span>💸</span> บันทึกโอนเงินชุดจัดซื้อนี้
+                                        </button>
+                                    )}
+                                </div>
+                                
                                 <button
                                     type="button"
                                     onClick={() => setSelectedFinanceDocDetails(null)}

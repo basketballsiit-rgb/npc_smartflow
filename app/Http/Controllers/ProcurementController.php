@@ -395,11 +395,12 @@ class ProcurementController extends Controller
             'payment_ref' => 'nullable|string|max:100',
             'disburse_date' => 'nullable|date',
             'notes' => 'nullable|string|max:500',
+            'target' => 'nullable|string', // 'loan', 'procurement', 'all'
         ]);
 
+        $target = $request->input('target', 'all');
         $actualSpent = (float)$validated['actual_spent_amount'];
         $allocAmount = (float)($project->allocated_budget ?: $project->estimated_budget);
-        $diff = $allocAmount - $actualSpent;
 
         $procurement = $project->procurement;
         if (!$procurement) {
@@ -410,10 +411,30 @@ class ProcurementController extends Controller
             ]);
         }
 
-        $procurement->loan_status = 'cleared';
-        $procurement->finance_disbursed_at = now();
-        $procurement->finance_disbursed_amount = $actualSpent;
-        $procurement->finance_payment_ref = $validated['payment_ref'] ?? 'โอนเงินยืม KTB';
+        $now = now();
+        $ref = $validated['payment_ref'] ?? 'โอนเงิน KTB';
+
+        if ($target === 'loan') {
+            $procurement->loan_status = 'cleared';
+            $procurement->finance_disbursed_at = $now;
+            $procurement->finance_disbursed_amount = (float)($procurement->finance_disbursed_amount ?: 0) + $actualSpent;
+            $procurement->finance_payment_ref = $procurement->finance_payment_ref 
+                ? ($procurement->finance_payment_ref . ' | ' . $ref)
+                : $ref;
+        } elseif ($target === 'procurement') {
+            $procurement->status = 'completed';
+            $procurement->finance_disbursed_at = $now;
+            $procurement->finance_disbursed_amount = (float)($procurement->finance_disbursed_amount ?: 0) + $actualSpent;
+            $procurement->finance_payment_ref = $procurement->finance_payment_ref 
+                ? ($procurement->finance_payment_ref . ' | ' . $ref)
+                : $ref;
+        } else {
+            $procurement->loan_status = 'cleared';
+            $procurement->status = 'completed';
+            $procurement->finance_disbursed_at = $now;
+            $procurement->finance_disbursed_amount = $actualSpent;
+            $procurement->finance_payment_ref = $ref;
+        }
         $procurement->save();
 
         // Update budget table
@@ -424,20 +445,48 @@ class ProcurementController extends Controller
             $budget->funding_source_id = $project->funding_source_id;
             $budget->allocated_amount = $allocAmount;
         }
-        $budget->spent_amount = $actualSpent;
-        $budget->advance_cleared_at = now();
+        if ($target === 'all') {
+            $budget->spent_amount = $actualSpent;
+        } else {
+            $budget->spent_amount = (float)($budget->spent_amount ?: 0) + $actualSpent;
+        }
+        if ($procurement->loan_status === 'cleared') {
+            $budget->advance_cleared_at = $now;
+        }
         $budget->save();
 
-        if ($project->status === 'approved') {
-            $project->status = 'in_progress';
-            $project->save();
+        $isLoanDone = ($procurement->loan_status === 'cleared');
+        $isProcDone = ($procurement->status === 'completed');
+
+        // Check components that this project actually has
+        $hasLoan = !empty($procurement->plan_loan_cut_at) || !empty($procurement->finance_received_at) || ($procurement->loan_status !== 'pending');
+        $hasProc = !empty($procurement->plan_procurement_cut_at) || !empty($procurement->procurement_number) || ($procurement->status === 'forwarded_to_finance') || ($procurement->items()->count() > 0);
+
+        if (!$hasLoan && !$hasProc) {
+            $isAllDone = true;
+        } elseif ($hasLoan && $hasProc) {
+            $isAllDone = $isLoanDone && $isProcDone;
+        } elseif ($hasLoan) {
+            $isAllDone = $isLoanDone;
+        } else {
+            $isAllDone = $isProcDone;
         }
 
+        if ($target === 'all' || $isAllDone) {
+            $project->status = 'completed';
+        } else {
+            $project->status = 'in_progress';
+        }
+        $project->save();
+
+        $totalSpent = (float)$budget->spent_amount;
+        $diff = $allocAmount - $totalSpent;
         $diffMsg = $diff > 0 
-            ? (' (มียอดเงินคงเหลือคืนงบประมาณโครงการ: ฿' . number_format($diff, 2) . ')')
+            ? (' (ยอดเงินคงเหลือคืนงบประมาณโครงการ: ฿' . number_format($diff, 2) . ')')
             : ($diff < 0 ? (' (ใช้จ่ายเกินวงเงินที่ตั้งไว้: ฿' . number_format(abs($diff), 2) . ')') : ' (ใช้จ่ายพอดีตามวงเงิน)');
 
-        return redirect()->back()->with('message', 'งานการเงินได้โอนเงิน/จ่ายจริง ฿' . number_format($actualSpent, 2) . ' และปิดยอดการเคลียร์เงินยืมสมบูรณ์แล้ว' . $diffMsg);
+        $partName = $target === 'loan' ? 'สัญญายืมเงิน' : ($target === 'procurement' ? 'ชุดจัดซื้อจัดจ้าง' : (str_starts_with($target, 'proc_set_') ? 'ชุดจัดซื้อจัดจ้าง' : 'ทั้งหมด'));
+        return redirect()->back()->with('message', "งานการเงินได้บันทึกโอนเงิน/จ่ายจริง [{$partName}] ฿" . number_format($actualSpent, 2) . " เรียบร้อยแล้ว{$diffMsg}");
     }
 
     /**
