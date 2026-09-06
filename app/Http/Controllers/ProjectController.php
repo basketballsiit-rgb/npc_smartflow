@@ -481,9 +481,9 @@ class ProjectController extends Controller
             abort(403, 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถจัดทำรายละเอียดต่อได้');
         }
 
-        // Only editable statuses
-        if (!in_array($project->status, ['draft', 'rejected', 'budget_approved', 'preliminary'])) {
-            abort(403, 'โครงการที่ได้รับการอนุมัติขั้นสุดท้ายหรืออยู่ในกระบวนการตรวจสอบไม่สามารถแก้ไขได้');
+        // Allowed statuses to view/edit
+        if (!in_array($project->status, ['draft', 'rejected', 'budget_approved', 'preliminary', 'approved', 'completed', 'submitted', 'pending_approval'])) {
+            abort(403, 'โครงการนี้ไม่สามารถเข้าถึงได้');
         }
 
         $user = auth()->user();
@@ -507,6 +507,7 @@ class ProjectController extends Controller
             'provincialStrategies' => \App\Models\ProvincialStrategy::all(),
             'departments' => Department::all(),
             'fundingSources' => \App\Models\FundingSource::all(),
+            'isApprovedLocked' => in_array($project->status, ['approved', 'completed']),
         ]);
     }
 
@@ -515,6 +516,10 @@ class ProjectController extends Controller
      */
     public function update(Request $request, Project $project)
     {
+        if (in_array($project->status, ['approved', 'completed'])) {
+            abort(403, 'โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ไม่สามารถดำเนินการแก้ไขใด ๆ ได้อีกต่อไป');
+        }
+
         if ($project->status === 'budget_rejected') {
             abort(403, 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถจัดทำรายละเอียดต่อได้');
         }

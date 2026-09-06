@@ -809,14 +809,24 @@ ${itemsListText}
                                 🚀 ยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2)
                             </button>
                         )}
-                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft' || project.status === 'budget_approved' || project.status === 'rejected') && (
+                        {(project.status === 'approved' || project.status === 'completed') ? (
                             <Link
                                 href={route('projects.edit', project.id)}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                title="แก้ไขรายละเอียดโครงการฉบับเต็ม"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-700 transition-all whitespace-nowrap shrink-0"
+                                title="ดูแบบเสนอโครงการฉบับเต็ม (อ่านอย่างเดียว - ล็อคการแก้ไข)"
                             >
-                                ✏️ จัดทำ/แก้ไขโครงการ
+                                📄 ดูโครงการฉบับเต็ม (ล็อค)
                             </Link>
+                        ) : (
+                            (auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft' || project.status === 'budget_approved' || project.status === 'rejected') && (
+                                <Link
+                                    href={route('projects.edit', project.id)}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                    title="แก้ไขรายละเอียดโครงการฉบับเต็ม"
+                                >
+                                    ✏️ จัดทำ/แก้ไขโครงการ
+                                </Link>
+                            )
                         )}
                         {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft' || project.status === 'preliminary') && (
                             <button

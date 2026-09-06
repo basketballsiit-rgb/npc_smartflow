@@ -4337,7 +4337,7 @@ ${itemsListText}
                                                             👑 อนุมัติรวดเดียว
                                                         </button>
                                                     )}
-                                                    {(role === 'admin' || auth.user.is_admin) && (
+                                                    {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && p.status !== 'completed' && (
                                                         <Link
                                                             href={route('projects.edit', p.id)}
                                                             className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
@@ -7722,13 +7722,15 @@ ${itemsListText}
                                                                 >
                                                                     🖨️ PDF
                                                                 </Link>
-                                                                <Link
-                                                                    href={route('projects.edit', p.id)}
-                                                                    className="px-2 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition"
-                                                                    title="แก้ไขโครงการ"
-                                                                >
-                                                                    ✏️
-                                                                </Link>
+                                                                {p.status !== 'approved' && p.status !== 'completed' && (
+                                                                    <Link
+                                                                        href={route('projects.edit', p.id)}
+                                                                        className="px-2 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition"
+                                                                        title="แก้ไขโครงการ"
+                                                                    >
+                                                                        ✏️
+                                                                    </Link>
+                                                                )}
                                                                 {(role === 'admin' || auth.user.is_admin) && (
                                                                     <button
                                                                         type="button"

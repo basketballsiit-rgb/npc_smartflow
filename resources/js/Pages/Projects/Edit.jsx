@@ -16,8 +16,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                           user?.department?.code === 'PLAN' || 
                           (user?.department?.name && user.department.name.includes('แผน'));
 
+    const isApprovedOrCompleted = project.status === 'approved' || project.status === 'completed';
     const isBudgetApproved = project.status === 'budget_approved' || project.status === 'approved' || (project.allocated_budget && project.allocated_budget > 0);
-    const isTitleLocked = isBudgetApproved && !isPlanOrAdmin;
+    const isTitleLocked = isApprovedOrCompleted || (isBudgetApproved && !isPlanOrAdmin);
 
     const [generatingAi, setGeneratingAi] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -426,6 +427,10 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const handleSaveDraft = (e) => {
         if (e) e.preventDefault();
+        if (isApprovedOrCompleted) {
+            Swal.fire('ล็อคการแก้ไข', 'โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ไม่สามารถดำเนินการแก้ไขใด ๆ ได้อีกต่อไป', 'warning');
+            return;
+        }
         router.patch(route('projects.update', project.id), prepareSubmitData(false), {
             preserveScroll: true,
             onSuccess: () => {
@@ -442,6 +447,10 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const handleSaveAndSubmit = (e) => {
         if (e) e.preventDefault();
+        if (isApprovedOrCompleted) {
+            Swal.fire('ล็อคการแก้ไข', 'โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ไม่สามารถดำเนินการแก้ไขใด ๆ ได้อีกต่อไป', 'warning');
+            return;
+        }
         Swal.fire({
             title: '🚀 ยื่นขออนุมัติโครงการ?',
             text: 'ระบบจะส่งเรื่องไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" พร้อมแยกรายละเอียดสัญญายืมเงินและจัดซื้อจัดจ้างรายกิจกรรมให้อัตโนมัติ (และจะล็อคการแก้ไข)',
@@ -503,6 +512,37 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                     <ProjectWorkflowStepper currentStep={project.current_approval_step || 1} status={project.status} />
 
                     <div className="rounded-3xl border border-purple-100 bg-white p-6 md:p-8 shadow-sm">
+                        {isApprovedOrCompleted && (
+                            <div className="mb-6 p-5 rounded-3xl bg-emerald-50/95 border-2 border-emerald-400 text-xs text-emerald-950 font-bold flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+                                <div className="flex items-center gap-3.5">
+                                    <span className="text-4xl p-2 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-200">🔒</span>
+                                    <div>
+                                        <p className="font-black text-base text-emerald-950 flex items-center gap-2">
+                                            <span>✅</span> โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ({project.status === 'completed' ? 'ปิดโครงการแล้ว' : 'อนุมัติสมบูรณ์'})
+                                        </p>
+                                        <p className="font-normal text-xs text-emerald-800 mt-1 leading-relaxed">
+                                            แบบเสนอโครงการฉบับเต็ม (๑๔ หัวข้อ) ผ่านการพิจารณาอนุมัติเรียบร้อยแล้ว ข้อมูลถูกล็อคตามระเบียบราชการ <strong className="font-bold underline">ไม่สามารถดำเนินการแก้ไข ปรับปรุง หรือเปลี่ยนแปลงข้อมูลใด ๆ ได้อีกต่อไป</strong>
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <a
+                                        href={route('projects.print', project.id)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-4 py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-bold shadow-xs transition hover:scale-102 flex items-center gap-1.5 whitespace-nowrap"
+                                    >
+                                        <span>🖨️ พิมพ์เอกสาร PDF</span>
+                                    </a>
+                                    <Link
+                                        href={route('projects.show', project.id)}
+                                        className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold shadow-xs transition hover:scale-102 flex items-center gap-1.5 whitespace-nowrap"
+                                    >
+                                        <span>ดูรายละเอียดโครงการ ➔</span>
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
                         {project.status === 'pending_approval' && !isPlanOrAdmin && (
                             <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-300 text-xs text-amber-950 font-bold flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
                                 <div className="flex items-center gap-3">
@@ -518,6 +558,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             </div>
                         )}
                         <form onSubmit={handleSubmit} className="space-y-8">
+                            <fieldset disabled={isApprovedOrCompleted} className="space-y-8 border-0 p-0 m-0 disabled:opacity-90">
 
                             {/* Section 1: ข้อมูลพื้นฐาน & ผู้รับผิดชอบโครงการ */}
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
@@ -1852,46 +1893,52 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             {/* Submit Action Buttons */}
                             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-purple-100 pt-6">
                                 <Link
-                                    href={route('dashboard')}
+                                    href={route('projects.show', project.id)}
                                     className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors w-full sm:w-auto text-center"
                                 >
-                                    ← ยกเลิก / ย้อนกลับ
+                                    ← กลับหน้ารายละเอียดโครงการ
                                 </Link>
-                                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={handleSaveDraft}
-                                        disabled={processing || isSubmitting}
-                                        className="rounded-xl border border-purple-300 bg-purple-50 px-5 py-2.5 text-sm font-bold text-purple-900 shadow-2xs hover:bg-purple-100 transition-all disabled:opacity-50"
-                                    >
-                                        💾 บันทึกแบบร่าง
-                                    </button>
-                                    {project.status === 'pending_approval' ? (
+                                {isApprovedOrCompleted ? (
+                                    <div className="p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-2xl text-emerald-950 text-xs font-black flex items-center gap-2 shadow-2xs">
+                                        <span className="text-xl">🔒</span> โครงการได้รับการอนุมัติแล้ว ข้อมูลถูกล็อคสำหรับการตรวจสอบเท่านั้น (ไม่สามารถแก้ไขได้)
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
                                         <button
                                             type="button"
-                                            disabled={true}
-                                            className="rounded-xl bg-slate-200 border border-slate-300 px-6 py-2.5 text-sm font-bold text-slate-500 cursor-not-allowed flex items-center gap-2 shadow-inner"
-                                        >
-                                            <span>✅</span> ยื่นขออนุมัติแล้ว (อยู่ระหว่างขั้นตอนที่ 2: รอตรวจสอบ)
-                                        </button>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={handleSaveAndSubmit}
+                                            onClick={handleSaveDraft}
                                             disabled={processing || isSubmitting}
-                                            className={`rounded-xl px-6 py-2.5 text-sm font-extrabold transition-all flex items-center gap-2 shadow-md ${
-                                                isSubmitting || processing
-                                                    ? 'bg-slate-300 text-slate-500 border border-slate-400 cursor-not-allowed shadow-none'
-                                                    : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-emerald-600/25 hover:scale-[1.02] active:scale-95'
-                                            }`}
+                                            className="rounded-xl border border-purple-300 bg-purple-50 px-5 py-2.5 text-sm font-bold text-purple-900 shadow-2xs hover:bg-purple-100 transition-all disabled:opacity-50 cursor-pointer"
                                         >
-                                            <span>{isSubmitting ? '⏳' : '🚀'}</span>
-                                            {isSubmitting ? 'กำลังบันทึกและส่งเรื่องอนุมัติ...' : 'บันทึกและยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2) ➔'}
+                                            💾 บันทึกแบบร่าง
                                         </button>
-                                    )}
-                                </div>
+                                        {project.status === 'pending_approval' ? (
+                                            <button
+                                                type="button"
+                                                disabled={true}
+                                                className="rounded-xl bg-slate-200 border border-slate-300 px-6 py-2.5 text-sm font-bold text-slate-500 cursor-not-allowed flex items-center gap-2 shadow-inner"
+                                            >
+                                                <span>✅</span> ยื่นขออนุมัติแล้ว (อยู่ระหว่างขั้นตอนที่ 2: รอตรวจสอบ)
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveAndSubmit}
+                                                disabled={processing || isSubmitting}
+                                                className={`rounded-xl px-6 py-2.5 text-sm font-extrabold transition-all flex items-center gap-2 shadow-md cursor-pointer ${
+                                                    isSubmitting || processing
+                                                        ? 'bg-slate-300 text-slate-500 border border-slate-400 cursor-not-allowed shadow-none'
+                                                        : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-emerald-600/25 hover:scale-[1.02] active:scale-95'
+                                                }`}
+                                            >
+                                                <span>{isSubmitting ? '⏳' : '🚀'}</span>
+                                                {isSubmitting ? 'กำลังบันทึกและส่งเรื่องอนุมัติ...' : 'บันทึกและยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2) ➔'}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-
+                            </fieldset>
                         </form>
                     </div>
                 </div>
