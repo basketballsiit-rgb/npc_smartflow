@@ -29,6 +29,7 @@ class TravelLoan extends Model
         'due_date',
         'return_days',
         'project_id',
+        'funding_source_id',
         'expense_type',
         'allowance_amount',
         'allowance_detail',
@@ -41,6 +42,15 @@ class TravelLoan extends Model
         'total_loan_amount',
         'thai_baht_text',
         'loan_status',
+        'plan_doc_number',
+        'plan_cut_at',
+        'plan_cut_by',
+        'finance_doc_number',
+        'finance_received_at',
+        'finance_disbursed_at',
+        'finance_disbursed_amount',
+        'finance_payment_ref',
+        'plan_notes',
         'cleared_amount',
         'refund_amount',
         'cleared_at',
@@ -63,8 +73,12 @@ class TravelLoan extends Model
         'vehicle_amount' => 'float',
         'other_amount' => 'float',
         'total_loan_amount' => 'float',
+        'finance_disbursed_amount' => 'float',
         'cleared_amount' => 'float',
         'refund_amount' => 'float',
+        'plan_cut_at' => 'datetime',
+        'finance_received_at' => 'datetime',
+        'finance_disbursed_at' => 'datetime',
         'cleared_at' => 'datetime',
         'approved_at' => 'datetime',
     ];
@@ -72,5 +86,15 @@ class TravelLoan extends Model
     public function project()
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function fundingSource()
+    {
+        return $this->belongsTo(FundingSource::class);
+    }
+
+    public function planCutByUser()
+    {
+        return $this->belongsTo(User::class, 'plan_cut_by');
     }
 }

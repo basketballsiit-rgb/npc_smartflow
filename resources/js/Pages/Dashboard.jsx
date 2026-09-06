@@ -22,6 +22,7 @@ export default function Dashboard({
     centralAllocations = [],
     fundingChannelProgress = [],
     advancePayments = [],
+    allTravelLoans = [],
     docNumberSettings = {},
     nextUnifiedDocNumber = '',
     currentTab
@@ -447,6 +448,108 @@ export default function Dashboard({
     };
 
     const [activeTab, setActiveTab] = useState(getDefaultTab());
+
+    // External Travel Loans (npc_eleve integration)
+    const travelLoansList = (planHeadData && planHeadData.externalTravelLoans) 
+        || (financeData && financeData.externalTravelLoans) 
+        || allTravelLoans 
+        || [];
+
+    const [selectedTravelLoanForPlanCut, setSelectedTravelLoanForPlanCut] = useState(null);
+    const [selectedTravelLoanForDisburse, setSelectedTravelLoanForDisburse] = useState(null);
+    const [selectedTravelLoanDetail, setSelectedTravelLoanDetail] = useState(null);
+    const [travelLoanStatusFilter, setTravelLoanStatusFilter] = useState('all');
+    const [travelLoanSearch, setTravelLoanSearch] = useState('');
+
+    const { data: planCutData, setData: setPlanCutData, post: postPlanCut, processing: isCuttingPlanBudget, reset: resetPlanCut } = useForm({
+        funding_source_id: '',
+        plan_doc_number: '',
+        plan_notes: '',
+    });
+
+    const { data: disburseData, setData: setDisburseData, post: postDisburse, processing: isDisbursingLoan, reset: resetDisburse } = useForm({
+        finance_disbursed_amount: '',
+        finance_payment_ref: '',
+        disburse_date: new Date().toISOString().split('T')[0],
+    });
+
+    const handleOpenPlanCutModal = (loan) => {
+        const defaultSourceId = loan.funding_source_id 
+            || (planHeadData?.fundingSources?.[0]?.id || (allFundingSources?.[0]?.id || (fundingChannelProgress?.[0]?.id || '1')));
+        const nextDocNo = planHeadData?.nextDocNumberPreview || nextUnifiedDocNumber || '';
+        
+        setPlanCutData({
+            funding_source_id: String(defaultSourceId),
+            plan_doc_number: loan.plan_doc_number || nextDocNo,
+            plan_notes: loan.plan_notes || '',
+        });
+        setSelectedTravelLoanForPlanCut(loan);
+    };
+
+    const handlePlanCutSubmit = (e) => {
+        e.preventDefault();
+        if (!selectedTravelLoanForPlanCut) return;
+        postPlanCut(route('travel_loans.plan_cut', selectedTravelLoanForPlanCut.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedTravelLoanForPlanCut(null);
+                resetPlanCut();
+            }
+        });
+    };
+
+    const handleFinanceReceiveLoan = (loan) => {
+        Swal.fire({
+            title: 'ยืนยันการลงรับสัญญายืมเงิน?',
+            html: `ต้องการลงรับสัญญายืมเงินเลขที่ <b>${loan.contract_no || loan.id}</b><br/>ผู้ยืม: <b>${loan.borrower_name}</b><br/>ยอดเงินยืม: <b>${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(loan.total_loan_amount)}</b>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันลงรับ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#059669',
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.post(route('travel_loans.finance_receive', loan.id), {}, { preserveScroll: true });
+            }
+        });
+    };
+
+    const handleOpenDisburseModal = (loan) => {
+        setDisburseData({
+            finance_disbursed_amount: loan.finance_disbursed_amount || loan.total_loan_amount,
+            finance_payment_ref: loan.finance_payment_ref || '',
+            disburse_date: new Date().toISOString().split('T')[0],
+        });
+        setSelectedTravelLoanForDisburse(loan);
+    };
+
+    const handleDisburseSubmit = (e) => {
+        e.preventDefault();
+        if (!selectedTravelLoanForDisburse) return;
+        postDisburse(route('travel_loans.finance_disburse', selectedTravelLoanForDisburse.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedTravelLoanForDisburse(null);
+                resetDisburse();
+            }
+        });
+    };
+
+    const handleRollbackTravelLoan = (loan) => {
+        Swal.fire({
+            title: 'ยืนยันการย้อนสถานะ?',
+            text: `ต้องการย้อนสถานะสัญญายืมเงินเลขที่ ${loan.contract_no || loan.id} หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ย้อนสถานะ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#d97706',
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.post(route('travel_loans.rollback', loan.id), {}, { preserveScroll: true });
+            }
+        });
+    };
 
     // Central Budgets & Categories States for Finance / Plan
     const [centralBudgetYearFilter, setCentralBudgetYearFilter] = useState('all');
@@ -4256,6 +4359,152 @@ ${itemsListText}
                     </div>
                 </div>
 
+                {/* 1.5 External Travel Loans Queue (จากระบบ npc_eleve) */}
+                {planHeadData && (
+                    <div className="overflow-hidden rounded-3xl border border-sky-200 bg-white shadow-sm">
+                        <div className="border-b border-sky-200 bg-gradient-to-r from-sky-600/10 via-indigo-50 to-purple-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <div>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold mb-1 border border-sky-200">
+                                    <span>✈️</span> ระบบเชื่อมต่อภายนอก (npc_eleve / กค. ๑๐๑)
+                                </div>
+                                <h3 className="text-lg font-black text-sky-950 flex items-center gap-2">
+                                    <span>📝</span> สัญญายืมเงินไปราชการ รอแผนงานตัดยอดงบประมาณ
+                                </h3>
+                                <p className="text-xs text-slate-600 mt-0.5">
+                                    สัญญายืมเงินไปราชการที่ส่งผ่าน API จากระบบภายนอก ต้องผ่านงานแผนงานเพื่อเลือกหมวดหมู่งบประมาณและออกเลขคุมเอกสาร ก่อนส่งต่องานการเงิน
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-xl text-xs font-bold border border-amber-300">
+                                    รอตัดยอด: {travelLoansList.filter(tl => tl.loan_status === 'pending_plan' || tl.loan_status === 'pending').length} รายการ
+                                </span>
+                                <span className="bg-sky-100 text-sky-900 px-3 py-1 rounded-xl text-xs font-bold border border-sky-200">
+                                    ทั้งหมด: {travelLoansList.length} รายการ
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-sky-100 bg-sky-50/40 text-xs font-bold uppercase text-sky-950 whitespace-nowrap">
+                                        <th className="px-5 py-3.5">เลขที่สัญญา / วันที่</th>
+                                        <th className="px-5 py-3.5">ผู้ขอยืม / ตำแหน่ง / ฝ่ายงาน</th>
+                                        <th className="px-5 py-3.5">เรื่อง / ปลายทาง / วันที่เดินทาง</th>
+                                        <th className="px-5 py-3.5 text-right">ยอดเงินยืมรวม</th>
+                                        <th className="px-5 py-3.5 text-center">สถานะ</th>
+                                        <th className="px-5 py-3.5 text-right">การดำเนินการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-sky-100 text-sm">
+                                    {travelLoansList.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="px-6 py-10 text-center text-sm text-slate-500">
+                                                <span className="text-2xl block mb-1">📭</span>
+                                                ยังไม่มีรายการสัญญายืมเงินไปราชการจากระบบ npc_eleve ในขณะนี้
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        travelLoansList.map((tl) => {
+                                            const isPendingCut = tl.loan_status === 'pending_plan' || tl.loan_status === 'pending';
+                                            return (
+                                                <tr key={tl.id} className="hover:bg-sky-50/20 transition-all">
+                                                    <td className="px-5 py-4 align-top whitespace-nowrap">
+                                                        <div className="font-mono font-bold text-sky-900 text-xs">
+                                                            📄 {tl.contract_no || `ID: #${tl.id}`}
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-500">
+                                                            {tl.doc_date ? `วันที่: ${tl.doc_date}` : ''}
+                                                        </div>
+                                                        {tl.plan_doc_number && (
+                                                            <div className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                                <span>ผง.</span> {tl.plan_doc_number}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top">
+                                                        <div className="font-bold text-slate-900 text-xs sm:text-sm">
+                                                            👤 {tl.borrower_name}
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-600">
+                                                            {tl.borrower_position || 'บุคลากร'}
+                                                        </div>
+                                                        <div className="text-[11px] text-sky-700 font-medium">
+                                                            🏢 {tl.borrower_department || '-'}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top max-w-xs">
+                                                        <div className="font-semibold text-slate-800 text-xs line-clamp-2" title={tl.subject}>
+                                                            {tl.subject}
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                                                            <span>📍</span> {tl.destination}
+                                                        </div>
+                                                        <div className="text-[10px] text-purple-700 font-bold mt-0.5">
+                                                            📅 {tl.start_date_formatted || tl.start_date} - {tl.end_date_formatted || tl.end_date} ({tl.total_days} วัน)
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top text-right whitespace-nowrap font-mono font-black text-xs sm:text-sm text-sky-950">
+                                                        <div>{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(tl.total_loan_amount)}</div>
+                                                        <div className="text-[10px] font-normal text-slate-500 mt-0.5">
+                                                            เบี้ยเลี้ยง: {new Intl.NumberFormat('th-TH').format(tl.allowance_amount || 0)} | ที่พัก: {new Intl.NumberFormat('th-TH').format(tl.rent_amount || 0)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top text-center whitespace-nowrap">
+                                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                                                            isPendingCut ? 'bg-amber-50 text-amber-900 border-amber-300 animate-pulse' :
+                                                            tl.loan_status === 'plan_cut' ? 'bg-blue-50 text-blue-900 border-blue-300' :
+                                                            tl.loan_status === 'finance_received' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' :
+                                                            tl.loan_status === 'disbursed' ? 'bg-emerald-50 text-emerald-900 border-emerald-300' :
+                                                            'bg-slate-100 text-slate-700 border-slate-200'
+                                                        }`}>
+                                                            {isPendingCut && '⏳ รอแผนงานตัดยอด'}
+                                                            {tl.loan_status === 'plan_cut' && '📋 แผนงานตัดยอดแล้ว'}
+                                                            {tl.loan_status === 'finance_received' && '📥 การเงินลงรับแล้ว'}
+                                                            {tl.loan_status === 'disbursed' && '💳 โอนเงินยืมแล้ว'}
+                                                            {tl.loan_status === 'cleared' && '✅ เคลียร์เงินแล้ว'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-5 py-4 align-top text-right whitespace-nowrap">
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSelectedTravelLoanDetail(tl)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer"
+                                                                title="ดูสัญญายืมเงินฉบับเต็ม"
+                                                            >
+                                                                🔍 รายละเอียด
+                                                            </button>
+                                                            {isPendingCut ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenPlanCutModal(tl)}
+                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 px-3.5 py-1.5 text-xs font-black text-white shadow-md shadow-sky-600/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                                >
+                                                                    <span>📊</span> แผนงานตัดยอดงบ
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRollbackTravelLoan(tl)}
+                                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
+                                                                    title="ยกเลิกการตัดยอดและย้อนสถานะ"
+                                                                >
+                                                                    ↺ ย้อนสถานะ
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
                 {/* 2. Full 6-Step Workflow Approval Queue */}
                 <div className="overflow-hidden rounded-3xl border border-purple-100 bg-white shadow-sm">
                     <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -4640,6 +4889,17 @@ ${itemsListText}
                         </button>
                         <button
                             type="button"
+                            onClick={() => setCentralBudgetSubTab('travel_loans')}
+                            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                                centralBudgetSubTab === 'travel_loans'
+                                    ? 'bg-emerald-700 text-white shadow-xs scale-102'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                        >
+                            ✈️ สัญญายืมเงินไปราชการ (npc_eleve) ({travelLoansList.length})
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => setCentralBudgetSubTab('projects')}
                             className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
                                 centralBudgetSubTab === 'projects'
@@ -4733,6 +4993,14 @@ ${itemsListText}
                                                 if (p.fundingSource && (String(p.fundingSource.id) === String(cat.id) || p.fundingSource.name === cat.name)) return true;
                                                 return false;
                                             });
+
+                                            const catTravelLoans = travelLoansList.filter(tl => {
+                                                if (tl.funding_source_id && String(tl.funding_source_id) === String(cat.id)) return true;
+                                                if (tl.funding_source_name && (tl.funding_source_name === cat.name || (cat.code && tl.funding_source_name.includes(cat.code)))) return true;
+                                                return false;
+                                            });
+
+                                            const totalCatItems = catProjects.length + catTravelLoans.length;
 
                                             const catAllocs = allocs.filter(a => {
                                                 if (a.funding_source_id && String(a.funding_source_id) === String(cat.id)) return true;
@@ -4837,7 +5105,7 @@ ${itemsListText}
                                                                 title={isExpanded ? 'คลิกเพื่อซ่อนรายละเอียด' : 'คลิกเพื่อขยายดูการใช้จ่าย'}
                                                             >
                                                                 <span>{isExpanded ? '▲ ซ่อน' : '▼ ขยาย'}</span>
-                                                                <span>{catProjects.length > 0 ? `${catProjects.length} โครงการ` : 'รายละเอียด'}</span>
+                                                                <span>{totalCatItems > 0 ? `${totalCatItems} รายการ` : 'รายละเอียด'}</span>
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -9437,6 +9705,380 @@ return (
                     </div>
 
                     {/* Direct Add & Allocate Modal (Admin & Planning Staff Only) */}
+                    {/* Modal 1: Plan Cut Budget for Travel Loan */}
+                    {selectedTravelLoanForPlanCut && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                            <div className="w-full max-w-xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-sky-100 my-8">
+                                <div className="flex justify-between items-center border-b border-sky-100 pb-4 mb-5">
+                                    <div>
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 text-xs font-bold mb-1 border border-sky-200">
+                                            <span>✈️</span> แผนงานตัดยอดงบประมาณ
+                                        </div>
+                                        <h3 className="text-lg font-black text-sky-950">
+                                            ตัดยอดงบประมาณสัญญายืมเงินไปราชการ
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            สัญญาเลขที่: <span className="font-mono font-bold text-sky-800">{selectedTravelLoanForPlanCut.contract_no || 'ไม่ระบุ'}</span> • ผู้ยืม: <span className="font-bold text-slate-800">{selectedTravelLoanForPlanCut.borrower_name}</span>
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTravelLoanForPlanCut(null)}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {/* Loan Summary Box */}
+                                <div className="p-4 rounded-2xl bg-sky-50/70 border border-sky-200 space-y-2 mb-5 text-xs">
+                                    <div className="font-bold text-sky-950 text-sm">{selectedTravelLoanForPlanCut.subject}</div>
+                                    <div className="text-slate-600 flex items-center gap-1">
+                                        <span>📍</span> ปลายทาง: <span className="font-semibold text-slate-800">{selectedTravelLoanForPlanCut.destination}</span>
+                                    </div>
+                                    <div className="text-slate-600 flex items-center gap-1">
+                                        <span>📅</span> วันที่: <span className="font-semibold text-slate-800">{selectedTravelLoanForPlanCut.start_date_formatted || selectedTravelLoanForPlanCut.start_date} - {selectedTravelLoanForPlanCut.end_date_formatted || selectedTravelLoanForPlanCut.end_date} ({selectedTravelLoanForPlanCut.total_days} วัน)</span>
+                                    </div>
+                                    <div className="pt-2 border-t border-sky-200/70 flex justify-between items-center font-mono">
+                                        <span className="text-sky-900 font-bold">ยอดเงินขอยืมรวม:</span>
+                                        <span className="text-base font-black text-sky-950">
+                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedTravelLoanForPlanCut.total_loan_amount)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handlePlanCutSubmit} className="space-y-4 text-xs font-semibold text-slate-700">
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">
+                                            เลือกหมวดหมู่งบประมาณ / แหล่งเงินที่ใช้ตัดยอด *
+                                        </label>
+                                        <select
+                                            required
+                                            value={planCutData.funding_source_id}
+                                            onChange={(e) => setPlanCutData('funding_source_id', e.target.value)}
+                                            className="w-full rounded-xl border-sky-200 px-3.5 py-2.5 text-sm font-bold text-sky-950 focus:border-sky-500 focus:ring-sky-500"
+                                        >
+                                            <option value="">-- เลือกหมวดหมู่งบประมาณ --</option>
+                                            {(planHeadData?.fundingSources || allFundingSources || []).map((src) => (
+                                                <option key={src.id} value={src.id}>
+                                                    {src.code ? `[${src.code}] ` : ''}{src.name} (ปี {src.fiscal_year})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">
+                                            เลขที่คุมเอกสารแผนงาน (Unified Document No.) *
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                required
+                                                value={planCutData.plan_doc_number}
+                                                onChange={(e) => setPlanCutData('plan_doc_number', e.target.value)}
+                                                className="w-full rounded-xl border-sky-200 px-3.5 py-2.5 text-sm font-mono font-bold text-sky-950 focus:border-sky-500 focus:ring-sky-500 pl-8"
+                                                placeholder="เช่น ผง. 001/2569"
+                                            />
+                                            <span className="absolute left-3 top-2.5 text-slate-400">📄</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 mt-1">
+                                            ระบบจะนำเลขคุมเอกสารแผนงานลำดับถัดไปมาให้อัตโนมัติ สามารถแก้ไขตามจริงได้
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">
+                                            หมายเหตุแผนงาน (ถ้ามี)
+                                        </label>
+                                        <textarea
+                                            rows={2}
+                                            value={planCutData.plan_notes}
+                                            onChange={(e) => setPlanCutData('plan_notes', e.target.value)}
+                                            className="w-full rounded-xl border-sky-200 px-3.5 py-2 text-xs text-slate-800 focus:border-sky-500 focus:ring-sky-500"
+                                            placeholder="บันทึกหมายเหตุเพิ่มเติม เช่น อนุมัติยืมตามระเบียบ กค. ๑๐๑"
+                                        />
+                                    </div>
+
+                                    <div className="flex justify-end gap-x-3 pt-4 border-t border-sky-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedTravelLoanForPlanCut(null)}
+                                            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isCuttingPlanBudget}
+                                            className="rounded-xl px-6 py-2.5 text-xs font-black text-white bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                                        >
+                                            <span>💾</span> {isCuttingPlanBudget ? 'กำลังบันทึก...' : 'บันทึกตัดยอดงบประมาณ'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal 2: Finance Disburse Travel Loan */}
+                    {selectedTravelLoanForDisburse && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                            <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-emerald-100 my-8">
+                                <div className="flex justify-between items-center border-b border-emerald-100 pb-4 mb-5">
+                                    <div>
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold mb-1 border border-emerald-200">
+                                            <span>💳</span> งานการเงิน
+                                        </div>
+                                        <h3 className="text-lg font-black text-emerald-950">
+                                            บันทึกการโอนเงินยืม / จ่ายเงิน
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            สัญญา: <span className="font-mono font-bold text-emerald-800">{selectedTravelLoanForDisburse.contract_no || 'ไม่ระบุ'}</span> • ผู้ยืม: <span className="font-bold text-slate-800">{selectedTravelLoanForDisburse.borrower_name}</span>
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTravelLoanForDisburse(null)}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <form onSubmit={handleDisburseSubmit} className="space-y-4 text-xs font-semibold text-slate-700">
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">
+                                            ยอดเงินที่โอนจ่ายจริง (บาท) *
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                required
+                                                value={disburseData.finance_disbursed_amount}
+                                                onChange={(e) => setDisburseData('finance_disbursed_amount', e.target.value)}
+                                                className="w-full rounded-xl border-emerald-200 px-3.5 py-2.5 text-base font-mono font-black text-emerald-950 focus:border-emerald-500 focus:ring-emerald-500 pl-8"
+                                            />
+                                            <span className="absolute left-3 top-2.5 text-slate-400">฿</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 mt-1">
+                                            ยอดตามสัญญา: {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedTravelLoanForDisburse.total_loan_amount)}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">
+                                            เลขที่อ้างอิงการโอน / เลขที่เช็ค / KTB Corporate Ref
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={disburseData.finance_payment_ref}
+                                            onChange={(e) => setDisburseData('finance_payment_ref', e.target.value)}
+                                            className="w-full rounded-xl border-emerald-200 px-3.5 py-2.5 text-sm font-mono text-slate-800 focus:border-emerald-500 focus:ring-emerald-500"
+                                            placeholder="เช่น KTB-TR-2569082001 หรือ เช็คเลขที่ 1234567"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">
+                                            วันที่โอนจ่ายเงิน
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={disburseData.disburse_date}
+                                            onChange={(e) => setDisburseData('disburse_date', e.target.value)}
+                                            className="w-full rounded-xl border-emerald-200 px-3.5 py-2.5 text-sm text-slate-800 focus:border-emerald-500 focus:ring-emerald-500"
+                                        />
+                                    </div>
+
+                                    <div className="flex justify-end gap-x-3 pt-4 border-t border-emerald-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedTravelLoanForDisburse(null)}
+                                            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            disabled={isDisbursingLoan}
+                                            className="rounded-xl px-6 py-2.5 text-xs font-black text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                                        >
+                                            <span>💳</span> {isDisbursingLoan ? 'กำลังบันทึก...' : 'ยืนยันการโอนเงินยืม'}
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal 3: Full Travel Loan Detail View (กค. ๑๐๑) */}
+                    {selectedTravelLoanDetail && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
+                            <div className="w-full max-w-3xl rounded-3xl bg-white p-5 sm:p-8 shadow-2xl border border-slate-200 my-auto max-h-[92vh] flex flex-col">
+                                <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4">
+                                    <div>
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200 mb-1.5">
+                                            <span>🏛️</span> แบบ กค. ๑๐๑ • สัญญายืมเงินไปราชการ (ภายนอก: npc_eleve)
+                                        </div>
+                                        <h3 className="text-base sm:text-xl font-black text-slate-900">
+                                            {selectedTravelLoanDetail.subject}
+                                        </h3>
+                                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 pt-1">
+                                            <span>สัญญาเลขที่: <strong className="text-purple-900 font-mono">{selectedTravelLoanDetail.contract_no || '-'}</strong></span>
+                                            <span>•</span>
+                                            <span>ลงวันที่: <strong>{selectedTravelLoanDetail.doc_date || '-'}</strong></span>
+                                            <span>•</span>
+                                            <span>กำหนดส่งใช้คืนภายใน: <strong>{selectedTravelLoanDetail.return_days || 30} วัน</strong> ({selectedTravelLoanDetail.due_date || '-'})</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTravelLoanDetail(null)}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4 overflow-y-auto flex-1 pr-1 text-xs">
+                                    {/* 1. ข้อมูลผู้ยืมเงิน */}
+                                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                                        <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                            <span>👤</span> ข้อมูลผู้ยืมเงิน
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
+                                            <div>ชื่อ-นามสกุล: <strong className="text-slate-900">{selectedTravelLoanDetail.borrower_name}</strong></div>
+                                            <div>ตำแหน่ง: <strong className="text-slate-900">{selectedTravelLoanDetail.borrower_position || '-'}</strong></div>
+                                            <div>ฝ่าย/แผนกวิชา: <strong className="text-slate-900">{selectedTravelLoanDetail.borrower_department || '-'}</strong></div>
+                                            <div>ประเภทบุคลากร: <strong className="text-slate-900">{selectedTravelLoanDetail.borrower_staff_type || '-'}</strong></div>
+                                        </div>
+                                    </div>
+
+                                    {/* 2. รายละเอียดการเดินทาง */}
+                                    <div className="p-4 rounded-2xl bg-sky-50/50 border border-sky-200 space-y-2">
+                                        <div className="font-bold text-sky-950 text-sm flex items-center gap-1.5">
+                                            <span>📍</span> รายละเอียดการเดินทางไปราชการ
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
+                                            <div className="sm:col-span-2">สถานที่ไปราชการ: <strong className="text-slate-900">{selectedTravelLoanDetail.destination}</strong></div>
+                                            <div>วันที่ออกเดินทาง: <strong className="text-slate-900">{selectedTravelLoanDetail.start_date_formatted || selectedTravelLoanDetail.start_date}</strong></div>
+                                            <div>วันที่เดินทางกลับ: <strong className="text-slate-900">{selectedTravelLoanDetail.end_date_formatted || selectedTravelLoanDetail.end_date}</strong></div>
+                                            <div>รวมระยะเวลา: <strong className="text-sky-900 font-bold">{selectedTravelLoanDetail.total_days} วัน</strong></div>
+                                            <div>ประเภทการเบิกจ่าย: <strong className="text-slate-900">{selectedTravelLoanDetail.expense_type || 'ขอรับเงินยืม'}</strong></div>
+                                        </div>
+                                    </div>
+
+                                    {/* 3. รายการเงินยืม (Loan Breakdown) */}
+                                    <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-200 space-y-3">
+                                        <div className="font-bold text-purple-950 text-sm flex items-center gap-1.5">
+                                            <span>💰</span> รายการเงินยืม (Loan Breakdown)
+                                        </div>
+                                        <div className="divide-y divide-purple-100 rounded-xl bg-white border border-purple-200 overflow-hidden font-mono">
+                                            <div className="p-3 flex justify-between items-center">
+                                                <div>
+                                                    <span className="font-bold text-slate-800">1. ค่าเบี้ยเลี้ยง</span>
+                                                    {selectedTravelLoanDetail.allowance_detail && (
+                                                        <div className="text-[11px] text-slate-500 font-sans">{selectedTravelLoanDetail.allowance_detail}</div>
+                                                    )}
+                                                </div>
+                                                <span className="font-bold text-slate-900">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedTravelLoanDetail.allowance_amount || 0)}
+                                                </span>
+                                            </div>
+                                            <div className="p-3 flex justify-between items-center">
+                                                <div>
+                                                    <span className="font-bold text-slate-800">2. ค่าที่พัก</span>
+                                                    {selectedTravelLoanDetail.rent_detail && (
+                                                        <div className="text-[11px] text-slate-500 font-sans">{selectedTravelLoanDetail.rent_detail}</div>
+                                                    )}
+                                                </div>
+                                                <span className="font-bold text-slate-900">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedTravelLoanDetail.rent_amount || 0)}
+                                                </span>
+                                            </div>
+                                            <div className="p-3 flex justify-between items-center">
+                                                <div>
+                                                    <span className="font-bold text-slate-800">3. ค่ายานพาหนะ / น้ำมันเชื้อเพลิง</span>
+                                                    {selectedTravelLoanDetail.vehicle_detail && (
+                                                        <div className="text-[11px] text-slate-500 font-sans">{selectedTravelLoanDetail.vehicle_detail}</div>
+                                                    )}
+                                                </div>
+                                                <span className="font-bold text-slate-900">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedTravelLoanDetail.vehicle_amount || 0)}
+                                                </span>
+                                            </div>
+                                            <div className="p-3 flex justify-between items-center">
+                                                <div>
+                                                    <span className="font-bold text-slate-800">4. ค่าใช้จ่ายอื่นๆ</span>
+                                                    {selectedTravelLoanDetail.other_detail && (
+                                                        <div className="text-[11px] text-slate-500 font-sans">{selectedTravelLoanDetail.other_detail}</div>
+                                                    )}
+                                                </div>
+                                                <span className="font-bold text-slate-900">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedTravelLoanDetail.other_amount || 0)}
+                                                </span>
+                                            </div>
+                                            <div className="p-3.5 bg-purple-100/60 flex justify-between items-center">
+                                                <div>
+                                                    <span className="font-black text-purple-950 text-sm font-sans">รวมเป็นเงินทั้งสิ้น</span>
+                                                    {selectedTravelLoanDetail.thai_baht_text && (
+                                                        <div className="text-xs text-purple-800 font-sans font-bold">({selectedTravelLoanDetail.thai_baht_text})</div>
+                                                    )}
+                                                </div>
+                                                <span className="font-black text-base text-purple-950">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedTravelLoanDetail.total_loan_amount || 0)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 4. ข้อมูลการอนุมัติและผู้ตรวจจากระบบต้นทาง */}
+                                    <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-2">
+                                        <div className="font-bold text-amber-950 text-sm flex items-center gap-1.5">
+                                            <span>✍️</span> ข้อมูลการอนุมัติสัญญา (ระบบ npc_eleve)
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
+                                            <div>ผู้อนุมัติ (ผอ.): <strong className="text-slate-900">{selectedTravelLoanDetail.approved_by_director || '-'}</strong></div>
+                                            <div>รองผู้อำนวยการ: <strong className="text-slate-900">{selectedTravelLoanDetail.approved_by_deputy || '-'}</strong></div>
+                                            <div>หัวหน้างานการเงินผู้ตรวจ: <strong className="text-slate-900">{selectedTravelLoanDetail.finance_checked_by || '-'}</strong></div>
+                                            <div>วันที่อนุมัติในระบบ: <strong className="text-slate-900">{selectedTravelLoanDetail.approved_at || '-'}</strong></div>
+                                        </div>
+                                    </div>
+
+                                    {/* 5. สถานะและความคืบหน้าใน SmartFlow */}
+                                    <div className="p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200 space-y-2">
+                                        <div className="font-bold text-emerald-950 text-sm flex items-center gap-1.5">
+                                            <span>🔄</span> สถานะการประมวลผลใน SmartFlow
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
+                                            <div>หมวดหมู่งบประมาณ: <strong className="text-emerald-900">{selectedTravelLoanDetail.funding_source_name || '(ยังไม่ได้ตัดงบ)'}</strong></div>
+                                            <div>เลขที่คุมแผนงาน: <strong className="font-mono text-purple-900">{selectedTravelLoanDetail.plan_doc_number || '-'}</strong></div>
+                                            <div>วันที่แผนงานตัดยอด: <strong className="text-slate-900">{selectedTravelLoanDetail.plan_cut_at || '-'}</strong></div>
+                                            <div>ผู้ตัดยอด: <strong className="text-slate-900">{selectedTravelLoanDetail.plan_cut_by_name || '-'}</strong></div>
+                                            <div>เลขที่ลงรับการเงิน: <strong className="font-mono text-indigo-900">{selectedTravelLoanDetail.finance_doc_number || '-'}</strong></div>
+                                            <div>วันที่การเงินลงรับ: <strong className="text-slate-900">{selectedTravelLoanDetail.finance_received_at || '-'}</strong></div>
+                                            <div>วันที่การเงินโอนจ่าย: <strong className="text-slate-900">{selectedTravelLoanDetail.finance_disbursed_at || '-'}</strong></div>
+                                            <div>เลขที่อ้างอิงการโอนจ่าย: <strong className="font-mono text-emerald-900">{selectedTravelLoanDetail.finance_payment_ref || '-'}</strong></div>
+                                            <div>ยอดเงินโอนจ่ายจริง: <strong className="font-mono text-emerald-950 font-bold">{fmt(selectedTravelLoanDetail.finance_disbursed_amount || 0)}</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-end pt-4 border-t border-slate-200 mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedTravelLoanDetail(null)}
+                                        className="rounded-xl px-6 py-2.5 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                                    >
+                                        ปิดหน้าต่าง
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {isDirectAllocateModalOpen && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
                             <div className="w-full max-w-2xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8">

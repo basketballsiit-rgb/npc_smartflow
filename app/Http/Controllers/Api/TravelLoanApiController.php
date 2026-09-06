@@ -77,6 +77,16 @@ class TravelLoanApiController extends Controller
                 $projectId = null;
             }
 
+            $existingLoan = TravelLoan::where('travel_id', $travelId)->first();
+            $loanStatus = ($existingLoan && !in_array($existingLoan->loan_status, ['pending', 'pending_plan'])) 
+                ? $existingLoan->loan_status 
+                : 'pending_plan';
+
+            $fundingSourceId = $data['fundingSourceId'] ?? ($travelDetails['fundingSourceId'] ?? null);
+            if ($existingLoan && $existingLoan->funding_source_id && !$fundingSourceId) {
+                $fundingSourceId = $existingLoan->funding_source_id;
+            }
+
             // Create or update TravelLoan record
             $loan = TravelLoan::updateOrCreate(
                 ['travel_id' => $travelId],
@@ -99,6 +109,7 @@ class TravelLoanApiController extends Controller
                     'due_date' => $data['dueDate'] ?? null,
                     'return_days' => intval($data['returnDays'] ?? 30),
                     'project_id' => $projectId,
+                    'funding_source_id' => $fundingSourceId,
                     'expense_type' => $travelDetails['expenseType'] ?? 'claim',
 
                     'allowance_amount' => floatval($loanBreakdown['allowance']['amount'] ?? 0),
@@ -112,7 +123,7 @@ class TravelLoanApiController extends Controller
 
                     'total_loan_amount' => floatval($loanBreakdown['totalLoanAmount'] ?? ($data['totalAmount'] ?? 0)),
                     'thai_baht_text' => $loanBreakdown['thaiBahtText'] ?? null,
-                    'loan_status' => 'borrowed',
+                    'loan_status' => $loanStatus,
 
                     'approved_at' => $approvalInfo['approvedAt'] ?? now(),
                     'approved_by_director' => $approvalInfo['directorName'] ?? 'นายกเชษฐ์ กิ่งชนะ',

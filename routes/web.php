@@ -15,6 +15,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\RoutineBudgetController;
 use App\Http\Controllers\CentralAllocationController;
 use App\Http\Controllers\VendorController;
+use App\Http\Controllers\TravelLoanWebController;
 use App\Http\Controllers\Auth\KeycloakController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -153,6 +154,12 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/procurement/finance-clear', [ProcurementController::class, 'financeClear'])->name('procurements.finance_clear');
     Route::post('projects/{project}/procurement/rollback', [ProcurementController::class, 'rollbackStatus'])->name('procurements.rollback');
     Route::get('projects/{project}/procurement/document/{type}', [ProcurementController::class, 'downloadDocument'])->name('procurements.download_document');
+
+    // External Travel Loans (npc_eleve / npc_hr integration)
+    Route::post('travel-loans/{travelLoan}/plan-cut', [TravelLoanWebController::class, 'planCut'])->name('travel_loans.plan_cut');
+    Route::post('travel-loans/{travelLoan}/finance-receive', [TravelLoanWebController::class, 'financeReceive'])->name('travel_loans.finance_receive');
+    Route::post('travel-loans/{travelLoan}/finance-disburse', [TravelLoanWebController::class, 'financeDisburse'])->name('travel_loans.finance_disburse');
+    Route::post('travel-loans/{travelLoan}/rollback', [TravelLoanWebController::class, 'rollback'])->name('travel_loans.rollback');
 
     // Survey stats
     Route::get('projects/{project}/survey/stats', [SurveyController::class, 'stats'])->name('surveys.stats');

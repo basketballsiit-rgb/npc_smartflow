@@ -9,6 +9,7 @@ use App\Models\FundingSource;
 use App\Models\User;
 use App\Models\Role;
 use App\Models\SystemSetting;
+use App\Models\TravelLoan;
 use App\Services\DocumentNumberService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -69,6 +70,18 @@ class DashboardController extends Controller
             $allocated = (float)Budget::where('funding_source_id', $source->id)->sum('allocated_amount');
             $encumbered = (float)Budget::where('funding_source_id', $source->id)->sum('encumbered_amount');
             $spent = (float)Budget::where('funding_source_id', $source->id)->sum('spent_amount');
+
+            // Also account for travel loan amounts cut or spent from this funding source
+            $tlEncumbered = (float)TravelLoan::where('funding_source_id', $source->id)
+                ->whereIn('loan_status', ['plan_cut', 'finance_received'])
+                ->sum('total_loan_amount');
+            $tlSpent = (float)TravelLoan::where('funding_source_id', $source->id)
+                ->whereIn('loan_status', ['disbursed', 'cleared'])
+                ->sum('finance_disbursed_amount');
+
+            $encumbered += $tlEncumbered;
+            $spent += $tlSpent;
+
             $projectsCount = Project::where('funding_source_id', $source->id)
                 ->orWhereHas('budget', function($q) use ($source) { $q->where('funding_source_id', $source->id); })
                 ->count();
@@ -89,6 +102,7 @@ class DashboardController extends Controller
             ];
         }
         $data['fundingChannelProgress'] = $fundingChannelProgress;
+        $data['fundingSources'] = $fundingSources;
 
         $advancePayments = Budget::where('is_advance_payment', true)
             ->whereNull('advance_cleared_at')
@@ -96,6 +110,68 @@ class DashboardController extends Controller
             ->latest()
             ->get();
         $data['advancePayments'] = $advancePayments;
+
+        // Load External Travel Loans (from npc_eleve / npc_hr)
+        $allTravelLoans = TravelLoan::with(['fundingSource', 'planCutByUser', 'project'])
+            ->latest()
+            ->get()
+            ->map(function ($tl) {
+                return [
+                    'id' => $tl->id,
+                    'travel_id' => $tl->travel_id,
+                    'contract_no' => $tl->contract_no,
+                    'system_source' => $tl->system_source,
+                    'borrower_user_id' => $tl->borrower_user_id,
+                    'borrower_name' => $tl->borrower_name,
+                    'borrower_position' => $tl->borrower_position,
+                    'borrower_department' => $tl->borrower_department,
+                    'borrower_staff_type' => $tl->borrower_staff_type,
+                    'subject' => $tl->subject,
+                    'destination' => $tl->destination,
+                    'start_date' => $tl->start_date ? $tl->start_date->format('Y-m-d') : null,
+                    'end_date' => $tl->end_date ? $tl->end_date->format('Y-m-d') : null,
+                    'start_date_formatted' => $tl->start_date ? $tl->start_date->format('d/m/Y') : null,
+                    'end_date_formatted' => $tl->end_date ? $tl->end_date->format('d/m/Y') : null,
+                    'total_days' => (float)$tl->total_days,
+                    'doc_date' => $tl->doc_date ? $tl->doc_date->format('d/m/Y') : null,
+                    'due_date' => $tl->due_date ? $tl->due_date->format('d/m/Y') : null,
+                    'return_days' => (int)$tl->return_days,
+                    'project_id' => $tl->project_id,
+                    'funding_source_id' => $tl->funding_source_id,
+                    'funding_source_name' => $tl->fundingSource?->name,
+                    'funding_source_code' => $tl->fundingSource?->code,
+                    'expense_type' => $tl->expense_type,
+                    'allowance_amount' => (float)$tl->allowance_amount,
+                    'allowance_detail' => $tl->allowance_detail,
+                    'rent_amount' => (float)$tl->rent_amount,
+                    'rent_detail' => $tl->rent_detail,
+                    'vehicle_amount' => (float)$tl->vehicle_amount,
+                    'vehicle_detail' => $tl->vehicle_detail,
+                    'other_amount' => (float)$tl->other_amount,
+                    'other_detail' => $tl->other_detail,
+                    'total_loan_amount' => (float)$tl->total_loan_amount,
+                    'thai_baht_text' => $tl->thai_baht_text,
+                    'loan_status' => $tl->loan_status,
+                    'plan_doc_number' => $tl->plan_doc_number,
+                    'plan_cut_at' => $tl->plan_cut_at ? $tl->plan_cut_at->format('d/m/Y H:i') : null,
+                    'plan_cut_by' => $tl->plan_cut_by,
+                    'plan_cut_by_name' => $tl->planCutByUser?->name,
+                    'finance_doc_number' => $tl->finance_doc_number,
+                    'finance_received_at' => $tl->finance_received_at ? $tl->finance_received_at->format('d/m/Y H:i') : null,
+                    'finance_disbursed_at' => $tl->finance_disbursed_at ? $tl->finance_disbursed_at->format('d/m/Y H:i') : null,
+                    'finance_disbursed_amount' => (float)($tl->finance_disbursed_amount ?? 0),
+                    'finance_payment_ref' => $tl->finance_payment_ref,
+                    'plan_notes' => $tl->plan_notes,
+                    'cleared_amount' => (float)($tl->cleared_amount ?? 0),
+                    'refund_amount' => (float)($tl->refund_amount ?? 0),
+                    'cleared_at' => $tl->cleared_at ? $tl->cleared_at->format('d/m/Y H:i') : null,
+                    'approved_by_director' => $tl->approved_by_director,
+                    'approved_by_deputy' => $tl->approved_by_deputy,
+                    'finance_checked_by' => $tl->finance_checked_by,
+                    'created_at' => $tl->created_at ? $tl->created_at->format('d/m/Y H:i') : '',
+                ];
+            });
+        $data['allTravelLoans'] = $allTravelLoans;
 
         // 0. Admin Dashboard Data
         if ($user->isAdmin()) {
@@ -158,6 +234,8 @@ class DashboardController extends Controller
                     ->latest()
                     ->get(),
                 'advancePayments' => $advancePayments,
+                'externalTravelLoans' => $allTravelLoans,
+                'nextDocNumberPreview' => DocumentNumberService::previewNext(),
             ];
         }
 
@@ -167,6 +245,7 @@ class DashboardController extends Controller
                 'fundingChannelProgress' => $fundingChannelProgress,
                 'centralAllocations' => $data['centralAllocations'],
                 'advancePayments' => $advancePayments,
+                'externalTravelLoans' => $allTravelLoans,
             ];
         }
 
