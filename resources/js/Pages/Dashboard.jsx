@@ -7780,8 +7780,8 @@ ${itemsListText}
                             {/* Modal Header */}
                             <div className="flex items-start justify-between border-b border-indigo-50 pb-4">
                                 <div className="space-y-1">
-                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-800 text-xs font-bold">
-                                        <span>🔍</span> รายละเอียดเอกสาร & รายการงบประมาณ
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-50 text-purple-900 border border-purple-200 text-xs font-bold">
+                                        <span>📦</span> รายละเอียดชุดจัดซื้อจัดจ้าง & รายการพัสดุ
                                     </div>
                                     <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
                                         {selectedFinanceDocDetails.title}
@@ -7809,48 +7809,32 @@ ${itemsListText}
 
                             {/* Modal Body - Scrollable */}
                             <div className="overflow-y-auto space-y-5 flex-1 pr-1">
-                                {/* Budget Summary Cards */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200">
-                                        <div className="flex items-center justify-between text-xs text-amber-800 font-bold mb-1">
-                                            <span>💰 สัญญายืมเงิน (แบบ กค. ๑๐๑)</span>
-                                            <span className={`px-2 py-0.5 rounded text-[11px] ${selectedFinanceDocDetails.loanBadgeClass}`}>
-                                                {selectedFinanceDocDetails.loanStatusText}
-                                            </span>
-                                        </div>
-                                        <div className="mt-2 pt-2 border-t border-amber-200/60 flex items-center justify-between">
-                                            <span className="text-xs text-amber-900 font-medium">สัญญายืมเงิน:</span>
-                                            <a
-                                                href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'loan_contract'])}
-                                                target="_blank"
-                                                className="text-xs font-bold text-amber-900 hover:text-amber-950 underline bg-amber-200/70 px-2 py-0.5 rounded"
-                                            >
-                                                📄 เปิดดูสัญญา กค.๑๐๑
-                                            </a>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200">
-                                        <div className="flex items-center justify-between text-xs text-purple-800 font-bold mb-1">
-                                            <span>📦 ชุดจัดซื้อจัดจ้าง (๔ ฉบับ)</span>
-                                            <span className={`px-2 py-0.5 rounded text-[11px] ${selectedFinanceDocDetails.procBadgeClass}`}>
+                                {/* Procurement Package Summary Card */}
+                                <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-2.5">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-extrabold text-purple-950 text-sm">📦 ชุดจัดซื้อจัดจ้าง (๔ ฉบับ)</span>
+                                            <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold ${selectedFinanceDocDetails.procBadgeClass}`}>
                                                 {selectedFinanceDocDetails.procStatusText}
                                             </span>
                                         </div>
                                         {selectedFinanceDocDetails.focusedProcSet && (
-                                            <div className="mt-2 pt-2 border-t border-purple-200/60 flex items-center justify-between text-xs">
-                                                <span className="font-bold text-purple-900">กำลังดูชุด:</span>
+                                            <div className="flex items-center gap-1.5 text-xs bg-white/90 px-3 py-1 rounded-lg border border-purple-200 shadow-2xs">
+                                                <span className="font-bold text-purple-800">กำลังดู:</span>
+                                                <span className="font-bold text-purple-900">{selectedFinanceDocDetails.focusedProcSet.label}</span>
                                                 <span className="font-black text-purple-950 font-mono">
-                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedFinanceDocDetails.focusedProcSet.amount)}
+                                                    ({new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedFinanceDocDetails.focusedProcSet.amount)})
                                                 </span>
                                             </div>
                                         )}
-                                        <div className="mt-2 pt-2 border-t border-purple-200/60 flex flex-wrap items-center gap-1.5">
-                                            <span className="text-[11px] text-purple-950 font-black">🖨️ พิมพ์เอกสารชุดจัดซื้อ (๔ ฉบับ):</span>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'memo'])} target="_blank" className="text-[11px] font-bold text-purple-900 hover:text-purple-950 underline bg-purple-200/70 hover:bg-purple-200 px-2 py-0.5 rounded border border-purple-300">๑. บันทึกข้อความ</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'request_form'])} target="_blank" className="text-[11px] font-bold text-purple-900 hover:text-purple-950 underline bg-purple-200/70 hover:bg-purple-200 px-2 py-0.5 rounded border border-purple-300">๒. ใบขอซื้อ/จ้าง</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'estimation'])} target="_blank" className="text-[11px] font-bold text-purple-900 hover:text-purple-950 underline bg-purple-200/70 hover:bg-purple-200 px-2 py-0.5 rounded border border-purple-300">๓. ตารางสืบราคา</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'tor'])} target="_blank" className="text-[11px] font-bold text-purple-900 hover:text-purple-950 underline bg-purple-200/70 hover:bg-purple-200 px-2 py-0.5 rounded border border-purple-300">๔. TOR / รายละเอียด</a>
+                                    </div>
+                                    <div className="pt-2 border-t border-purple-200/70 flex flex-wrap items-center gap-2">
+                                        <span className="text-xs text-purple-950 font-black">🖨️ พิมพ์เอกสารชุดจัดซื้อ (๔ ฉบับ):</span>
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'memo'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">๑. บันทึกข้อความ</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'request_form'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">๒. ใบขอซื้อ/จ้าง</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'estimation'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">๓. ตารางสืบราคา</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'tor'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">๔. TOR / รายละเอียด</a>
                                         </div>
                                     </div>
                                 </div>
