@@ -459,6 +459,20 @@ export default function Dashboard({
         return name.trim();
     };
 
+    const getFundingRemaining = (srcId) => {
+        const list = (fundingChannelProgress && fundingChannelProgress.length > 0)
+            ? fundingChannelProgress
+            : (planHeadData?.fundingChannelProgress || financeData?.fundingChannelProgress || []);
+        const match = list.find(f => String(f.id) === String(srcId));
+        if (match) {
+            const val = match.remaining !== undefined 
+                ? match.remaining 
+                : ((match.allocated || 0) - (match.spent || 0));
+            return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+        }
+        return '0.00';
+    };
+
     const [activeTab, setActiveTab] = useState(getDefaultTab());
 
     // API Connection Status & Mock Trigger
@@ -10112,7 +10126,7 @@ return (
                                             <option value="">-- เลือกหมวดหมู่งบประมาณ --</option>
                                             {(planHeadData?.fundingSources || allFundingSources || []).map((src) => (
                                                 <option key={src.id} value={src.id}>
-                                                    {cleanThaiFundingName(src.name)} (ปี {src.fiscal_year})
+                                                    {cleanThaiFundingName(src.name)} (คงเหลือ ฿{getFundingRemaining(src.id)})
                                                 </option>
                                             ))}
                                         </select>
@@ -10723,7 +10737,7 @@ return (
                                                     <option value="">-- ยังไม่ได้กำหนดหมวดงบ --</option>
                                                     {(planHeadData?.fundingSources || allFundingSources || []).map((src) => (
                                                         <option key={src.id} value={src.id}>
-                                                            {cleanThaiFundingName(src.name)} (ปี {src.fiscal_year || '2569'})
+                                                            {cleanThaiFundingName(src.name)} (คงเหลือ ฿{getFundingRemaining(src.id)})
                                                         </option>
                                                     ))}
                                                 </select>
