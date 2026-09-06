@@ -4,13 +4,13 @@
 @tailwind components;
 @tailwind utilities;
 
-body, input, button, select, textarea {
+body, input, button, select, textarea, table, th, td, p, span, div, a, label {
     font-family: 'Kanit', sans-serif;
 }
 
-/* Global Base Font Size — Tailwind ใช้ rem ดังนั้นทุกขนาดในระบบจะขยายตามสัดส่วน */
+/* Global Base Font Size — Tailwind ใช้ rem ดังนั้นทุกขนาดในระบบจะขยายตามสัดส่วน (ใหญ่และอ่านง่ายขึ้นชัดเจน) */
 html {
-    font-size: 17px; /* default คือ 16px, ปรับเป็น 17px เพื่อขยายทั้งระบบ ~6% */
+    font-size: 18px; /* ขยายตัวอักษรทั้งระบบให้อ่านง่าย ชัดเจน */
 }
 
 

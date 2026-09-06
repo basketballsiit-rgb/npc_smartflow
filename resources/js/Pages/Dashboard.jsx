@@ -2419,7 +2419,7 @@ export default function Dashboard({
                             )}
                             <Link
                                 href={route('projects.quick_create')}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-amber-600 hover:scale-105 active:scale-95 transition-all"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 border border-purple-300 px-4 py-2 text-xs font-bold text-purple-950 shadow-sm hover:bg-purple-200 hover:scale-105 active:scale-95 transition-all"
                             >
                                 <span>💡</span> เสนอโครงการเบื้องต้น (ขอตั้งงบ)
                             </Link>
@@ -4323,8 +4323,8 @@ ${itemsListText}
         return (
             <div className="space-y-8 font-sans">
                 {/* 1. Preliminary Budget Allocation Section */}
-                <div className="overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
-                    <div className="border-b border-amber-200 bg-gradient-to-r from-amber-500/15 via-purple-50 to-indigo-50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="overflow-hidden rounded-3xl border border-purple-200 bg-white shadow-sm">
+                    <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/60 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="text-xl">⚖️</span>
@@ -4402,13 +4402,13 @@ ${itemsListText}
                                         return (
                                             <Fragment key={dept.id}>
                                                 {/* Department Group Header */}
-                                                <tr className="bg-gradient-to-r from-amber-100/90 via-amber-50/80 to-purple-50/50 border-t-2 border-b border-amber-300 font-bold text-xs">
+                                                <tr className="bg-purple-50/80 border-t-2 border-b border-purple-200 font-bold text-xs">
                                                     <td colSpan={2} className="px-3.5 py-2.5">
                                                         <div className="flex items-center gap-2">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => togglePrelimDeptExpand(dept.id)}
-                                                                className="w-5 h-5 rounded-md bg-amber-200 hover:bg-amber-300 text-amber-950 font-black text-[10px] flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs"
+                                                                className="w-5 h-5 rounded-md bg-purple-200 hover:bg-purple-300 text-purple-950 font-black text-[10px] flex items-center justify-center transition cursor-pointer shrink-0 shadow-2xs"
                                                                 title={isExpanded ? 'คลิกเพื่อย่อ' : 'คลิกเพื่อขยายดูโครงการ'}
                                                             >
                                                                 {isExpanded ? '▼' : '▶'}
@@ -4710,7 +4710,7 @@ ${itemsListText}
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleOpenEditTravelLoanModal(tl)}
-                                                                        className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-2.5 py-1.5 text-xs font-black text-purple-950 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                                        className="inline-flex items-center gap-1 rounded-xl bg-purple-100 hover:bg-purple-200 border border-purple-300 px-2.5 py-1.5 text-xs font-black text-purple-950 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
                                                                         title="แก้ไขสัญญายืมเงิน (ผู้ดูแลระบบเท่านั้น)"
                                                                     >
                                                                         ✏️ แก้ไข
@@ -5025,15 +5025,15 @@ ${itemsListText}
                 {/* 2. Primary KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Card 1: Central Received */}
-                    <div className="p-5 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-xs">
+                    <div className="p-5 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-white shadow-xs">
                         <div className="flex items-center justify-between">
                             <span className="text-2xl">📥</span>
-                            <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                            <span className="text-xs font-black px-2.5 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
                                 ส่วนกลางแจ้งจัดสรร
                             </span>
                         </div>
                         <h4 className="text-xs font-extrabold text-slate-600 mt-2">งบแจ้งจัดสรรจากส่วนกลางรวม</h4>
-                        <div className="text-xl font-black text-amber-950 font-mono mt-1">
+                        <div className="text-xl font-black text-purple-950 font-mono mt-1">
                             {fmt(totalCentralReceived)}
                         </div>
                         <p className="text-[11px] text-slate-500 mt-1">
@@ -10375,8 +10375,8 @@ return (
                                     </div>
 
                                     {/* 4. ข้อมูลการอนุมัติและผู้ตรวจจากระบบต้นทาง */}
-                                    <div className="p-4 rounded-2xl bg-amber-50/50 border border-amber-200 space-y-2">
-                                        <div className="font-bold text-amber-950 text-sm flex items-center gap-1.5">
+                                    <div className="p-4 rounded-2xl bg-purple-50/40 border border-purple-200 space-y-2">
+                                        <div className="font-bold text-purple-950 text-sm flex items-center gap-1.5">
                                             <span>✍️</span> ข้อมูลการอนุมัติสัญญา (ระบบ npc_eleve)
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-700">
@@ -10416,7 +10416,7 @@ return (
                                                     setSelectedTravelLoanDetail(null);
                                                     handleOpenEditTravelLoanModal(tl);
                                                 }}
-                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-black text-purple-950 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 border border-purple-300 px-3.5 py-2 text-xs font-black text-purple-950 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
                                                 title="แก้ไขสัญญายืมเงินนี้"
                                             >
                                                 ✏️ แก้ไขสัญญานี้ (Admin)

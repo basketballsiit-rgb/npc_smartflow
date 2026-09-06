@@ -169,7 +169,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const getSubLinkClass = (isActive) =>
         `flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs transition-all ${
             isActive
-                ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-purple-950 font-bold shadow-md ring-1 ring-amber-300'
+                ? 'bg-white text-purple-950 font-black shadow-md ring-2 ring-purple-300'
                 : 'text-purple-100 hover:bg-white/10 hover:text-white font-normal'
         }`;
 
@@ -192,7 +192,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 onClick={toggleSidebar}
                                 className={`hidden sm:inline-flex items-center justify-center p-2 rounded-xl transition-all focus:outline-none shadow-2xs border cursor-pointer ${
                                     !isSidebarOpen 
-                                        ? 'bg-amber-100 border-amber-300 text-amber-950 ring-2 ring-amber-400 hover:bg-amber-200' 
+                                        ? 'bg-purple-100 border-purple-300 text-purple-950 ring-2 ring-purple-400 hover:bg-purple-200' 
                                         : 'text-purple-900 hover:bg-purple-100/60 border-purple-100'
                                 }`}
                                 title={isSidebarOpen ? "คลิกเพื่อซ่อนแถบเมนูซ้าย" : "คลิกเพื่อแสดงแถบเมนูซ้าย"}
@@ -293,7 +293,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 
                 {/* 2. LEFT SIDEBAR (Sticky Fixed Position) */}
                 <aside
-                    className={`bg-gradient-to-b from-purple-950 via-purple-900 to-amber-700 text-white shadow-xl transition-all duration-300 z-40 flex flex-col justify-between sticky top-16 h-[calc(100vh-4rem)] shrink-0 ${
+                    className={`bg-gradient-to-b from-purple-950 via-purple-900 to-purple-950 border-r border-purple-800/50 text-white shadow-xl transition-all duration-300 z-40 flex flex-col justify-between sticky top-16 h-[calc(100vh-4rem)] shrink-0 ${
                         isSidebarOpen ? 'w-64 opacity-100' : 'w-0 overflow-hidden opacity-0 pointer-events-none p-0 m-0 border-0'
                     } hidden sm:flex`}
                 >
@@ -311,7 +311,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             href={route('dashboard')}
                             className={`flex items-center gap-x-3 px-3.5 py-2.5 rounded-xl transition-all text-sm ${
                                 route().current('dashboard') && (!url.includes('tab=') || url.includes('tab=admin_users'))
-                                    ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-purple-950 shadow-md font-bold'
+                                    ? 'bg-white text-purple-950 shadow-md font-black ring-2 ring-purple-300'
                                     : 'text-white bg-white/10 hover:bg-white/20 font-medium'
                             }`}
                             title="ศูนย์ควบคุมหลัก"
@@ -327,26 +327,26 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <button
                                         type="button"
                                         onClick={() => toggleSection('admin')}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/30 text-amber-300 border-l-4 border-amber-400 text-xs font-black uppercase tracking-wider shadow-2xs hover:bg-black/40 transition cursor-pointer"
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-purple-900/60 text-purple-200 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider shadow-2xs hover:bg-purple-900/90 transition cursor-pointer"
                                     >
                                         <div className="flex items-center gap-x-2">
                                             <span>⚙️</span>
                                             <span>ผู้ดูแลระบบ (ADMIN)</span>
                                         </div>
-                                        <span className="text-[11px] text-amber-300/80">{openSections.admin ? '▼' : '▶'}</span>
+                                        <span className="text-[11px] text-purple-300">{openSections.admin ? '▼' : '▶'}</span>
                                     </button>
                                 ) : (
                                     <div className="h-px bg-white/20 my-1.5" />
                                 )}
 
                                 {(!isSidebarOpen || openSections.admin) && (
-                                <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
+                                <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'admin_users' })}
                                         className={getSubLinkClass(url.includes('tab=admin_users') || (!url.includes('tab=') && route().current('dashboard') && isAdmin))}
                                         title="จัดการผู้ใช้งานและสิทธิ์"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=admin_users') || (!url.includes('tab=') && route().current('dashboard') && isAdmin), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=admin_users') || (!url.includes('tab=') && route().current('dashboard') && isAdmin), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">👤</span>
                                         {isSidebarOpen && <span>จัดการผู้ใช้ & สิทธิ์</span>}
                                     </Link>
@@ -355,7 +355,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=admin_strategies'))}
                                         title="จัดการยุทธศาสตร์ & IQA"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=admin_strategies'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=admin_strategies'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">🎯</span>
                                         {isSidebarOpen && <span>จัดการยุทธศาสตร์</span>}
                                     </Link>
@@ -364,7 +364,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=admin_settings'))}
                                         title="ตั้งค่าระบบ & ปีงบประมาณ/ปีการศึกษา"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=admin_settings'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=admin_settings'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">🛠️</span>
                                         {isSidebarOpen && <span>ตั้งค่าระบบ & ปีงบประมาณ</span>}
                                     </Link>
@@ -373,7 +373,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=all_projects'))}
                                         title="สรุปโครงการทั้งหมดของวิทยาลัยและยอดงบแยกตามฝ่าย"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">🏛️</span>
                                         {isSidebarOpen && <span className="font-bold">สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                     </Link>
@@ -461,26 +461,26 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <button
                                         type="button"
                                         onClick={() => toggleSection('plan')}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-amber-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
                                     >
                                         <div className="flex items-center gap-x-2">
                                             <span>💰</span>
                                             <span>งานวางแผน & อนุมัติ</span>
                                         </div>
-                                        <span className="text-[11px] text-amber-300">{openSections.plan ? '▼' : '▶'}</span>
+                                        <span className="text-[11px] text-purple-300">{openSections.plan ? '▼' : '▶'}</span>
                                     </button>
                                 ) : (
                                     <div className="h-px bg-white/20 my-1.5" />
                                 )}
 
                                 {(!isSidebarOpen || openSections.plan) && (
-                                <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
+                                <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'budgets' })}
                                         className={getSubLinkClass(url.includes('tab=budgets'))}
                                         title="งบประมาณสถานศึกษา"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=budgets'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=budgets'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">💰</span>
                                         {isSidebarOpen && <span>งบประมาณสถานศึกษา</span>}
                                     </Link>
@@ -489,7 +489,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('routine-budgets'))}
                                         title="แผนงบดำเนินงานประจำปี & แดชบอร์ด"
                                     >
-                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">📅</span>
                                         {isSidebarOpen && <span>งบประจำปี & แดชบอร์ด</span>}
                                     </Link>
@@ -498,7 +498,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=action_plan_report'))}
                                         title="รายงานงบรายจ่ายแผนปฏิบัติราชการ"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=action_plan_report'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=action_plan_report'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">📊</span>
                                         {isSidebarOpen && <span>รายงานแผนปฏิบัติราชการ</span>}
                                     </Link>
@@ -507,7 +507,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=reviews'))}
                                         title="ตรวจสอบ & อนุมัติโครงการ"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=reviews'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=reviews'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">🔍</span>
                                         {isSidebarOpen && <span>ตรวจสอบ & อนุมัติ</span>}
                                     </Link>
@@ -516,7 +516,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=clearings'))}
                                         title="เคลียร์เงินยืมทดรอง"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=clearings'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=clearings'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">🧾</span>
                                         {isSidebarOpen && <span>เคลียร์เงินยืมทดรอง</span>}
                                     </Link>
@@ -525,7 +525,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=all_projects'))}
                                         title="ติดตามโครงการทั้งหมดในระบบ"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-amber-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">📁</span>
                                         {isSidebarOpen && <span>สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                     </Link>
@@ -596,26 +596,26 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <button
                                         type="button"
                                         onClick={() => toggleSection('finance')}
-                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-emerald-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
+                                        className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-black/20 text-purple-100 border-l-4 border-purple-400 text-xs font-black uppercase tracking-wider hover:bg-black/30 transition cursor-pointer"
                                     >
                                         <div className="flex items-center gap-x-2">
                                             <span>💳</span>
                                             <span>งานการเงิน</span>
                                         </div>
-                                        <span className="text-[11px] text-emerald-300">{openSections.finance ? '▼' : '▶'}</span>
+                                        <span className="text-[11px] text-purple-300">{openSections.finance ? '▼' : '▶'}</span>
                                     </button>
                                 ) : (
                                     <div className="h-px bg-white/20 my-1.5" />
                                 )}
 
                                 {(!isSidebarOpen || openSections.finance) && (
-                                <div className="pl-2.5 border-l-2 border-emerald-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
+                                <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
                                         href={route('dashboard', { tab: 'central_budgets' })}
                                         className={getSubLinkClass(url.includes('tab=central_budgets'))}
                                         title="หมวดหมู่งบประมาณ & ยอดแจ้งจัดสรรจากส่วนกลาง"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=central_budgets'), 'text-emerald-300/80')}>●</span>
+                                        <span className={getPrefixClass(url.includes('tab=central_budgets'), 'text-purple-300')}>●</span>
                                         <span className="text-sm">🏛️</span>
                                         {isSidebarOpen && <span>หมวดหมู่งบ & จัดสรรส่วนกลาง</span>}
                                     </Link>
@@ -625,7 +625,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=document_tracking'))}
                                         title="ติดตามเอกสารจัดซื้อจัดจ้างและสัญญายืมเงิน"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=document_tracking'), 'text-emerald-300/80')}>●</span>
+                                        <span className={getPrefixClass(url.includes('tab=document_tracking'), 'text-purple-300')}>●</span>
                                         <span className="text-sm">📍</span>
                                         {isSidebarOpen && <span>ติดตามเอกสาร & สัญญายืมเงิน</span>}
                                     </Link>
@@ -635,7 +635,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('routine-budgets'))}
                                         title="งบประจำปี & ลงรับ/โอนเงินยืมจัดซื้อตรง"
                                     >
-                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-emerald-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">💵</span>
                                         {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
                                     </Link>
@@ -645,7 +645,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=clearings'))}
                                         title="คิวเคลียร์เงินยืมทดรองจ่าย"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=clearings'), 'text-emerald-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=clearings'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">🧾</span>
                                         {isSidebarOpen && <span>เคลียร์เงินยืมทดรอง</span>}
                                     </Link>
@@ -655,7 +655,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         className={getSubLinkClass(url.includes('tab=all_projects'))}
                                         title="สรุปโครงการทั้งหมดของวิทยาลัย"
                                     >
-                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-emerald-300/80')}>└─</span>
+                                        <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-purple-300')}>└─</span>
                                         <span className="text-sm">📁</span>
                                         {isSidebarOpen && <span>สรุปโครงการทั้งหมด</span>}
                                     </Link>
@@ -719,7 +719,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 href={route('profile.edit')}
                                 className={`flex items-center gap-x-3 px-3.5 py-2 rounded-xl transition-all text-xs ${
                                     route().current('profile.edit')
-                                        ? 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-purple-950 font-bold shadow-md ring-1 ring-amber-300'
+                                        ? 'bg-white text-purple-950 font-black shadow-md ring-2 ring-purple-300'
                                         : 'text-purple-100 hover:bg-white/10 hover:text-white font-normal'
                                 }`}
                                 title="ผู้ใช้งานระบบ"
@@ -765,7 +765,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <button
                         type="button"
                         onClick={toggleSidebar}
-                        className="hidden sm:flex fixed left-3 top-20 z-30 items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-950/90 hover:bg-purple-900 text-amber-300 hover:text-amber-200 border border-purple-400/40 shadow-xl text-xs font-bold transition-all hover:scale-105 backdrop-blur-md cursor-pointer animate-in fade-in"
+                        className="hidden sm:flex fixed left-3 top-20 z-30 items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-950/90 hover:bg-purple-900 text-purple-300 hover:text-white border border-purple-400/40 shadow-xl text-xs font-bold transition-all hover:scale-105 backdrop-blur-md cursor-pointer animate-in fade-in"
                         title="คลิกเพื่อแสดงแถบเมนูด้านซ้าย"
                     >
                         <span>▶</span>
@@ -776,7 +776,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 {/* Mobile Drawer Navigation */}
                 {showingMobileMenu && (
                     <div className="sm:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex">
-                        <div className="w-64 bg-gradient-to-b from-purple-950 via-purple-900 to-amber-700 text-white p-5 space-y-4 flex flex-col justify-between">
+                        <div className="w-64 bg-gradient-to-b from-purple-950 via-purple-900 to-purple-950 text-white p-5 space-y-4 flex flex-col justify-between border-r border-purple-800/50">
                             <div className="space-y-3 font-normal text-sm">
                                 <div className="flex justify-between items-center border-b border-white/20 pb-3">
                                     <span className="font-medium text-sm">เมนูการใช้งาน</span>
