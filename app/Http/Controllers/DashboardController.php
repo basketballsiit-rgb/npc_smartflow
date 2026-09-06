@@ -54,12 +54,48 @@ class DashboardController extends Controller
                 ->get();
         }
 
-        // Fetch central allocations based on permissions
-        if ($user->isAdmin() || $user->isPlanHead()) {
+        // Fetch central allocations based on permissions (Admin, Plan Head, Finance Staff)
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isFinanceStaff()) {
             $data['centralAllocations'] = \App\Models\CentralAllocation::with(['fundingSource'])->latest()->get();
         } else {
             $data['centralAllocations'] = [];
         }
+
+        // Global Funding Sources & Channel Progress for Plan Head & Finance
+        $fundingSources = FundingSource::orderBy('fiscal_year', 'desc')->orderBy('name', 'asc')->get();
+        $fundingChannelProgress = [];
+        foreach ($fundingSources as $source) {
+            $centralSum = (float)\App\Models\CentralAllocation::where('funding_source_id', $source->id)->sum('amount');
+            $allocated = (float)Budget::where('funding_source_id', $source->id)->sum('allocated_amount');
+            $encumbered = (float)Budget::where('funding_source_id', $source->id)->sum('encumbered_amount');
+            $spent = (float)Budget::where('funding_source_id', $source->id)->sum('spent_amount');
+            $projectsCount = Project::where('funding_source_id', $source->id)
+                ->orWhereHas('budget', function($q) use ($source) { $q->where('funding_source_id', $source->id); })
+                ->count();
+
+            $fundingChannelProgress[] = [
+                'id' => $source->id,
+                'name' => $source->name,
+                'code' => $source->code,
+                'fiscal_year' => $source->fiscal_year,
+                'description' => $source->description,
+                'central_allocated' => $centralSum,
+                'allocated' => $allocated,
+                'encumbered' => $encumbered,
+                'spent' => $spent,
+                'remaining' => $allocated - $spent,
+                'central_remaining' => $centralSum - $spent,
+                'projects_count' => $projectsCount,
+            ];
+        }
+        $data['fundingChannelProgress'] = $fundingChannelProgress;
+
+        $advancePayments = Budget::where('is_advance_payment', true)
+            ->whereNull('advance_cleared_at')
+            ->with(['project.user', 'project.department'])
+            ->latest()
+            ->get();
+        $data['advancePayments'] = $advancePayments;
 
         // 0. Admin Dashboard Data
         if ($user->isAdmin()) {
@@ -106,23 +142,6 @@ class DashboardController extends Controller
 
         // 2. Plan Head Dashboard Data
         if ($user->isPlanHead() || $user->isAdmin()) {
-            $fundingSources = FundingSource::all();
-            $fundingChannelProgress = [];
-
-            foreach ($fundingSources as $source) {
-                $allocated = Budget::where('funding_source_id', $source->id)->sum('allocated_amount');
-                $encumbered = Budget::where('funding_source_id', $source->id)->sum('encumbered_amount');
-                $spent = Budget::where('funding_source_id', $source->id)->sum('spent_amount');
-
-                $fundingChannelProgress[] = [
-                    'id' => $source->id,
-                    'name' => $source->name,
-                    'allocated' => $allocated,
-                    'encumbered' => $encumbered,
-                    'spent' => $spent,
-                ];
-            }
-
             $data['planHeadData'] = [
                 'fundingSources' => $fundingSources,
                 'globalAllocated' => Budget::sum('allocated_amount'),
@@ -138,11 +157,16 @@ class DashboardController extends Controller
                     ->orderByRaw("CASE WHEN status = 'pending_approval' AND current_approval_step = 3 THEN 0 WHEN status = 'pending_approval' THEN 1 ELSE 2 END")
                     ->latest()
                     ->get(),
-                'advancePayments' => Budget::where('is_advance_payment', true)
-                    ->whereNull('advance_cleared_at')
-                    ->with(['project.user', 'project.department'])
-                    ->latest()
-                    ->get(),
+                'advancePayments' => $advancePayments,
+            ];
+        }
+
+        // 2.1 Finance Staff Dashboard Data
+        if ($user->isFinanceStaff() || $user->isAdmin()) {
+            $data['financeData'] = [
+                'fundingChannelProgress' => $fundingChannelProgress,
+                'centralAllocations' => $data['centralAllocations'],
+                'advancePayments' => $advancePayments,
             ];
         }
 
@@ -257,7 +281,7 @@ class DashboardController extends Controller
         }
 
         // Master Projects list for Admin, Plan Head, Procurement, Finance & Executives
-        if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isFinanceStaff() || $user->isExecutive() || $request->query('tab') === 'document_tracking') {
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isFinanceStaff() || $user->isExecutive() || $request->query('tab') === 'document_tracking' || $request->query('tab') === 'central_budgets') {
             $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items'])
                 ->latest()
                 ->get()

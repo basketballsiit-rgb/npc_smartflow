@@ -611,13 +611,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {(!isSidebarOpen || openSections.finance) && (
                                 <div className="pl-2.5 border-l-2 border-emerald-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                     <Link
-                                        href={route('admin.routine_budgets.index')}
-                                        className={getSubLinkClass(url.includes('routine-budgets'))}
-                                        title="งบประจำปี & ลงรับ/โอนเงินยืมจัดซื้อตรง"
+                                        href={route('dashboard', { tab: 'central_budgets' })}
+                                        className={getSubLinkClass(url.includes('tab=central_budgets'))}
+                                        title="หมวดหมู่งบประมาณ & ยอดแจ้งจัดสรรจากส่วนกลาง"
                                     >
-                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-emerald-300/80')}>└─</span>
-                                        <span className="text-sm">💵</span>
-                                        {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
+                                        <span className={getPrefixClass(url.includes('tab=central_budgets'), 'text-emerald-300/80')}>●</span>
+                                        <span className="text-sm">🏛️</span>
+                                        {isSidebarOpen && <span>หมวดหมู่งบ & จัดสรรส่วนกลาง</span>}
                                     </Link>
 
                                     <Link
@@ -628,6 +628,16 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <span className={getPrefixClass(url.includes('tab=document_tracking'), 'text-emerald-300/80')}>●</span>
                                         <span className="text-sm">📍</span>
                                         {isSidebarOpen && <span>ติดตามเอกสาร & สัญญายืมเงิน</span>}
+                                    </Link>
+
+                                    <Link
+                                        href={route('admin.routine_budgets.index')}
+                                        className={getSubLinkClass(url.includes('routine-budgets'))}
+                                        title="งบประจำปี & ลงรับ/โอนเงินยืมจัดซื้อตรง"
+                                    >
+                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-emerald-300/80')}>└─</span>
+                                        <span className="text-sm">💵</span>
+                                        {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
                                     </Link>
 
                                     <Link

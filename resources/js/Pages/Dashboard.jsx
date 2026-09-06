@@ -10,6 +10,7 @@ export default function Dashboard({
     procurementData, 
     executiveData,
     adminData,
+    financeData,
     allProjectsMaster = [],
     allRoles = [],
     allDepartments = [],
@@ -19,6 +20,8 @@ export default function Dashboard({
     allVendors = [],
     allFundingSources = [],
     centralAllocations = [],
+    fundingChannelProgress = [],
+    advancePayments = [],
     docNumberSettings = {},
     nextUnifiedDocNumber = '',
     currentTab
@@ -438,11 +441,18 @@ export default function Dashboard({
         if (role === 'teacher') return 'proposals';
         if (role === 'plan_head') return 'budgets';
         if (role === 'procurement_head') return 'procurement';
+        if (role === 'finance_head' || isFinanceStaff) return 'central_budgets';
         if (role === 'executive') return 'executive_overview';
         return 'proposals';
     };
 
     const [activeTab, setActiveTab] = useState(getDefaultTab());
+
+    // Central Budgets & Categories States for Finance / Plan
+    const [centralBudgetYearFilter, setCentralBudgetYearFilter] = useState('all');
+    const [centralBudgetSearch, setCentralBudgetSearch] = useState('');
+    const [centralBudgetSubTab, setCentralBudgetSubTab] = useState('categories'); // 'categories', 'allocations', 'projects'
+    const [selectedCategoryForModal, setSelectedCategoryForModal] = useState(null);
 
     // All Projects Master Tracking Filter States
     
@@ -4356,49 +4366,61 @@ ${itemsListText}
     };
 
     const renderClearingsTab = () => {
-        if (!planHeadData) {
-            return (
-                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm font-sans">
-                    <p className="text-purple-900 font-bold text-base">กำลังโหลดรายการเงินยืม...</p>
-                </div>
-            );
-        }
+        const paymentsList = (planHeadData && planHeadData.advancePayments) || (financeData && financeData.advancePayments) || advancePayments || [];
         return (
-            <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
-                <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4">
-                    <h3 className="text-lg font-bold text-slate-900">รายการค้างเคลียร์เงินยืมทดรองราชการ</h3>
+            <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm font-sans">
+                <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex items-center justify-between">
+                    <div>
+                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span>🧾</span> รายการค้างเคลียร์เงินยืมทดรองราชการ
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                            แสดงโครงการที่มีการเบิกเงินยืมทดรองราชการและยังไม่ได้ส่งใบเสร็จล้างหนี้สมบูรณ์
+                        </p>
+                    </div>
+                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                        ค้างเคลียร์ {paymentsList.length} รายการ
+                    </span>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900">
                                 <th className="px-6 py-3.5">โครงการ</th>
-                                <th className="px-6 py-3.5">ผู้ยืมเงิน</th>
-                                <th className="px-6 py-3.5">จำนวนเงินยืม</th>
-                                <th className="px-6 py-3.5">การดำเนินการ</th>
+                                <th className="px-6 py-3.5">ผู้ยืมเงิน / แผนก</th>
+                                <th className="px-6 py-3.5 text-right">จำนวนเงินยืม</th>
+                                <th className="px-6 py-3.5 text-center">การดำเนินการ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-purple-100 text-sm">
-                            {(!planHeadData.advancePayments || planHeadData.advancePayments.length === 0) ? (
+                            {(!paymentsList || paymentsList.length === 0) ? (
                                 <tr>
-                                    <td colSpan="4" className="px-6 py-10 text-center text-sm text-slate-500">
-                                        ไม่มีรายการค้างเคลียร์เงินยืมทดรองในระบบ
+                                    <td colSpan="4" className="px-6 py-12 text-center text-sm text-slate-400">
+                                        <div className="text-3xl mb-2">🎉</div>
+                                        <p className="font-bold">ไม่มีรายการค้างเคลียร์เงินยืมทดรองในระบบ</p>
                                     </td>
                                 </tr>
                             ) : (
-                                planHeadData.advancePayments.map((b) => (
-                                    <tr key={b.id}>
-                                        <td className="px-6 py-4 font-bold text-slate-900">{b.project?.title}</td>
-                                        <td className="px-6 py-4 text-slate-600">{b.project?.user?.name}</td>
-                                        <td className="px-6 py-4 font-bold text-amber-700">
-                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(b.advance_amount)}
+                                paymentsList.map((b) => (
+                                    <tr key={b.id} className="hover:bg-purple-50/20 transition">
+                                        <td className="px-6 py-4 font-bold text-slate-900">
+                                            <Link href={route('projects.show', b.project_id)} className="hover:text-purple-700">
+                                                {b.project?.title || ('โครงการ #' + b.project_id)}
+                                            </Link>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 text-xs text-slate-600">
+                                            <p className="font-bold text-slate-800">{b.project?.user?.name || '-'}</p>
+                                            <p className="text-slate-400">{b.project?.department?.name || '-'}</p>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-bold text-amber-700 font-mono">
+                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(b.advance_amount || b.allocated_amount || 0)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
                                             <Link
                                                 href={route('projects.show', b.project_id)}
-                                                className="inline-flex items-center rounded-lg bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200"
+                                                className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 px-3.5 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-2xs hover:scale-105 transition"
                                             >
-                                                🧾 บันทึกใบเสร็จเคลียร์เงิน
+                                                <span>🧾</span> ตรวจสอบ & เคลียร์ยอด
                                             </Link>
                                         </td>
                                     </tr>
@@ -4407,6 +4429,641 @@ ${itemsListText}
                         </tbody>
                     </table>
                 </div>
+            </div>
+        );
+    };
+
+
+    // 2.2 Finance Central Budgets & Categories Component Rendering
+    const renderCentralBudgetsTab = () => {
+        const categories = (financeData && financeData.fundingChannelProgress) || fundingChannelProgress || [];
+        const allocs = (financeData && financeData.centralAllocations) || centralAllocations || [];
+        const allProjects = Array.isArray(allProjectsMaster) && allProjectsMaster.length > 0
+            ? allProjectsMaster
+            : (Array.isArray(teacherData?.projects) ? teacherData.projects : []);
+
+        // Compute Global Totals
+        const totalCentralReceived = allocs.reduce((sum, a) => sum + (parseFloat(a.amount) || 0), 0);
+        const totalAllocated = categories.reduce((sum, c) => sum + (parseFloat(c.allocated) || 0), 0);
+        const totalSpent = categories.reduce((sum, c) => sum + (parseFloat(c.spent) || 0), 0);
+        const totalRemaining = totalAllocated - totalSpent;
+        const totalCentralRemaining = totalCentralReceived - totalSpent;
+        const spentRate = totalAllocated > 0 ? ((totalSpent / totalAllocated) * 100).toFixed(1) : '0';
+
+        // Extract available fiscal years
+        const fiscalYears = Array.from(new Set([
+            ...categories.map(c => String(c.fiscal_year || '')),
+            ...allocs.map(a => String(a.fiscal_year || ''))
+        ])).filter(Boolean).sort().reverse();
+
+        // Filter Categories
+        const filteredCategories = categories.filter(c => {
+            if (centralBudgetYearFilter !== 'all' && String(c.fiscal_year) !== String(centralBudgetYearFilter)) {
+                return false;
+            }
+            if (centralBudgetSearch.trim()) {
+                const q = centralBudgetSearch.toLowerCase();
+                const name = (c.name || '').toLowerCase();
+                const code = (c.code || '').toLowerCase();
+                const desc = (c.description || '').toLowerCase();
+                return name.includes(q) || code.includes(q) || desc.includes(q);
+            }
+            return true;
+        });
+
+        // Filter Central Allocations
+        const filteredAllocations = allocs.filter(a => {
+            if (centralBudgetYearFilter !== 'all' && String(a.fiscal_year) !== String(centralBudgetYearFilter)) {
+                return false;
+            }
+            if (centralBudgetSearch.trim()) {
+                const q = centralBudgetSearch.toLowerCase();
+                const title = (a.title || '').toLowerCase();
+                const doc = (a.document_number || '').toLowerCase();
+                const sourceName = (a.funding_source?.name || '').toLowerCase();
+                const desc = (a.description || '').toLowerCase();
+                return title.includes(q) || doc.includes(q) || sourceName.includes(q) || desc.includes(q);
+            }
+            return true;
+        });
+
+        // Filter Projects by Category
+        const filteredProjects = allProjects.filter(p => {
+            const fundingName = (p.funding_source_name || p.fundingSource?.name || '').toLowerCase();
+            const title = (p.title || '').toLowerCase();
+            const proposer = (p.proposer_name || p.user?.name || '').toLowerCase();
+            const dept = (p.department_name || p.department?.name || '').toLowerCase();
+            if (centralBudgetSearch.trim()) {
+                const q = centralBudgetSearch.toLowerCase();
+                return fundingName.includes(q) || title.includes(q) || proposer.includes(q) || dept.includes(q);
+            }
+            return true;
+        });
+
+        const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
+
+        return (
+            <div className="space-y-6 font-sans">
+                {/* 1. Header Banner */}
+                <div className="rounded-3xl border border-emerald-200 bg-gradient-to-r from-emerald-900 via-teal-900 to-indigo-950 p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-300 text-xs font-bold border border-white/15">
+                                <span>🏛️</span> ข้อมูลหมวดหมู่งบประมาณ & ยอดแจ้งจัดสรรจากส่วนกลาง
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                                <span>💰</span> ศูนย์ตรวจสอบหมวดเงิน & จัดสรรงบประมาณจริง
+                            </h2>
+                            <p className="text-xs sm:text-sm text-emerald-100 max-w-3xl leading-relaxed">
+                                แสดงข้อมูลยอดเงินที่ได้รับแจ้งจัดสรรจากต้นสังกัด/ส่วนกลางที่บันทึกโดยงานแผนงาน เปรียบเทียบกับยอดจัดสรรลงโครงการ ยอดเบิกจ่ายจริงสะสมของงานการเงิน และยอดคงเหลือแต่ละหมวดหมู่
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Primary KPI Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Card 1: Central Received */}
+                    <div className="p-5 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">📥</span>
+                            <span className="text-xs font-black px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                                ส่วนกลางแจ้งจัดสรร
+                            </span>
+                        </div>
+                        <h4 className="text-xs font-extrabold text-slate-600 mt-2">งบแจ้งจัดสรรจากส่วนกลางรวม</h4>
+                        <div className="text-xl font-black text-amber-950 font-mono mt-1">
+                            {fmt(totalCentralReceived)}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                            รวมทั้งหมด {allocs.length} รายการหนังสือแจ้งจัดสรร
+                        </p>
+                    </div>
+
+                    {/* Card 2: Allocated */}
+                    <div className="p-5 rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">📋</span>
+                            <span className="text-xs font-black px-2.5 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-300">
+                                จัดสรรลงแผนงาน
+                            </span>
+                        </div>
+                        <h4 className="text-xs font-extrabold text-slate-600 mt-2">ยอดจัดสรรลงโครงการแล้ว</h4>
+                        <div className="text-xl font-black text-blue-950 font-mono mt-1">
+                            {fmt(totalAllocated)}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                            กระจายลง {categories.length} หมวดหมู่งบประมาณ
+                        </p>
+                    </div>
+
+                    {/* Card 3: Spent */}
+                    <div className="p-5 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">💸</span>
+                            <span className="text-xs font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                การเงินจ่ายจริง
+                            </span>
+                        </div>
+                        <h4 className="text-xs font-extrabold text-slate-600 mt-2">ยอดเบิกจ่ายสะสมรวม (Spent)</h4>
+                        <div className="text-xl font-black text-emerald-950 font-mono mt-1">
+                            {fmt(totalSpent)}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                            อัตราการเบิกจ่ายจริง {spentRate}% ของงบที่จัดสรร
+                        </p>
+                    </div>
+
+                    {/* Card 4: Remaining */}
+                    <div className="p-5 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-white shadow-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">💰</span>
+                            <span className="text-xs font-black px-2.5 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-300">
+                                ยอดเงินคงเหลือ
+                            </span>
+                        </div>
+                        <h4 className="text-xs font-extrabold text-slate-600 mt-2">ยอดงบประมาณคงเหลือสุทธิ</h4>
+                        <div className="text-xl font-black text-purple-950 font-mono mt-1">
+                            {fmt(totalRemaining)}
+                        </div>
+                        <p className="text-[11px] text-slate-500 mt-1">
+                            คงเหลือจากงบจัดสรร {100 - parseFloat(spentRate)}%
+                        </p>
+                    </div>
+                </div>
+
+                {/* 3. Search and Navigation Bar */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                    {/* View Switcher Tabs */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setCentralBudgetSubTab('categories')}
+                            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                                centralBudgetSubTab === 'categories'
+                                    ? 'bg-emerald-700 text-white shadow-xs scale-102'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                        >
+                            📊 หมวดหมู่งบประมาณ & ยอดคงเหลือ ({categories.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCentralBudgetSubTab('allocations')}
+                            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                                centralBudgetSubTab === 'allocations'
+                                    ? 'bg-emerald-700 text-white shadow-xs scale-102'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                        >
+                            📥 ประวัติหนังสือแจ้งจัดสรรจากส่วนกลาง ({allocs.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setCentralBudgetSubTab('projects')}
+                            className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                                centralBudgetSubTab === 'projects'
+                                    ? 'bg-emerald-700 text-white shadow-xs scale-102'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                        >
+                            📁 รายการโครงการตามหมวดเงิน ({filteredProjects.length})
+                        </button>
+                    </div>
+
+                    {/* Filter controls */}
+                    <div className="flex items-center gap-2">
+                        {/* Year Selector */}
+                        {fiscalYears.length > 0 && (
+                            <select
+                                value={centralBudgetYearFilter}
+                                onChange={(e) => setCentralBudgetYearFilter(e.target.value)}
+                                className="text-xs font-bold py-2 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-emerald-500 focus:border-emerald-500"
+                            >
+                                <option value="all">ทุกปีงบประมาณ</option>
+                                {fiscalYears.map(yr => (
+                                    <option key={yr} value={yr}>ปีงบประมาณ {yr}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        {/* Search Box */}
+                        <div className="relative min-w-[200px]">
+                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
+                            <input
+                                type="text"
+                                value={centralBudgetSearch}
+                                onChange={(e) => setCentralBudgetSearch(e.target.value)}
+                                placeholder="ค้นหาหมวดเงิน, หนังสือ, วัตถุประสงค์..."
+                                className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-emerald-500 focus:border-emerald-500"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. Sub-View 1: Categories & Balances Table */}
+                {centralBudgetSubTab === 'categories' && (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+                        <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+                            <div>
+                                <h3 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                                    <span>📊</span> สรุปยอดจัดสรร ยอดจ่าย และยอดคงเหลือ จำแนกตามหมวดหมู่งบประมาณ
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    เทียบยอดเงินที่ส่วนกลางแจ้งจัดสรร กับยอดที่งานแผนจัดสรรลงโครงการ และยอดที่งานการเงินเบิกจ่ายจริง
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                                        <th className="px-4 py-3 min-w-[180px]">หมวดหมู่งบประมาณ / แหล่งเงิน</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[130px]">แจ้งจัดสรรส่วนกลาง</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[130px]">จัดสรรลงโครงการ</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[130px]">เบิกจ่ายจริง (Spent)</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[130px]">ยอดคงเหลือ</th>
+                                        <th className="px-4 py-3 text-center min-w-[140px]">ความคืบหน้าการจ่าย</th>
+                                        <th className="px-4 py-3 text-center whitespace-nowrap w-[100px]">โครงการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-xs">
+                                    {filteredCategories.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
+                                                <div className="text-3xl mb-2">📭</div>
+                                                <p className="font-bold">ไม่พบข้อมูลหมวดหมู่งบประมาณตามเงื่อนไขที่เลือก</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredCategories.map((cat, idx) => {
+                                            const cAlloc = parseFloat(cat.central_allocated || 0);
+                                            const pAlloc = parseFloat(cat.allocated || 0);
+                                            const spent = parseFloat(cat.spent || 0);
+                                            const remaining = pAlloc - spent;
+                                            const percentSpent = pAlloc > 0 ? Math.min(100, Math.round((spent / pAlloc) * 100)) : 0;
+
+                                            return (
+                                                <tr key={cat.id || idx} className="hover:bg-emerald-50/20 transition-colors">
+                                                    {/* หมวดหมู่งบประมาณ */}
+                                                    <td className="px-4 py-3.5 align-top">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className="font-black text-slate-900 text-sm">{cat.name}</span>
+                                                                {cat.code && (
+                                                                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono text-[10px] font-bold border border-slate-200">
+                                                                        {cat.code}
+                                                                    </span>
+                                                                )}
+                                                                {cat.fiscal_year && (
+                                                                    <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-bold border border-purple-200">
+                                                                        ปี {cat.fiscal_year}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {cat.description && (
+                                                                <p className="text-[11px] text-slate-500 line-clamp-1">{cat.description}</p>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* แจ้งจัดสรรส่วนกลาง */}
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-amber-900">
+                                                        {cAlloc > 0 ? (
+                                                            <span>{fmt(cAlloc)}</span>
+                                                        ) : (
+                                                            <span className="text-slate-400 font-normal">-</span>
+                                                        )}
+                                                    </td>
+
+                                                    {/* จัดสรรลงโครงการ */}
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-blue-900">
+                                                        {fmt(pAlloc)}
+                                                    </td>
+
+                                                    {/* เบิกจ่ายจริง */}
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-rose-700">
+                                                        {fmt(spent)}
+                                                    </td>
+
+                                                    {/* ยอดคงเหลือ */}
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-black text-emerald-700">
+                                                        {fmt(remaining)}
+                                                    </td>
+
+                                                    {/* ความคืบหน้า */}
+                                                    <td className="px-4 py-3.5 align-middle">
+                                                        <div className="space-y-1 w-full max-w-[140px] mx-auto">
+                                                            <div className="flex justify-between text-[10px] text-slate-500 font-bold">
+                                                                <span>จ่ายแล้ว</span>
+                                                                <span>{percentSpent}%</span>
+                                                            </div>
+                                                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                                <div
+                                                                    className={`h-full rounded-full transition-all duration-300 ${
+                                                                        percentSpent >= 90 ? 'bg-rose-500' :
+                                                                        percentSpent >= 70 ? 'bg-amber-500' :
+                                                                        'bg-emerald-500'
+                                                                    }`}
+                                                                    style={{ width: `${percentSpent}%` }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* โครงการ */}
+                                                    <td className="px-4 py-3.5 align-top text-center whitespace-nowrap">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedCategoryForModal(cat)}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 transition cursor-pointer hover:scale-105"
+                                                            title="คลิกเพื่อดูรายชื่อโครงการที่ใช้เงินหมวดหมู่นี้"
+                                                        >
+                                                            <span>📁</span> {cat.projects_count || 0} โครงการ
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* 5. Sub-View 2: Central Allocations History Table */}
+                {centralBudgetSubTab === 'allocations' && (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+                        <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+                            <div>
+                                <h3 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                                    <span>📥</span> รายการประวัติหนังสือแจ้งจัดสรรงบประมาณจากต้นสังกัด/ส่วนกลาง
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    บันทึกโดยงานวางแผนและงบประมาณ เพื่อเป็นฐานข้อมูลอ้างอิงยอดจัดสรรจริงสำหรับงานการเงิน
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                                        <th className="px-4 py-3 whitespace-nowrap min-w-[130px]">ปี / เลขที่หนังสือแจ้ง</th>
+                                        <th className="px-4 py-3 min-w-[250px]">วัตถุประสงค์ / ชื่องบประมาณจัดสรร</th>
+                                        <th className="px-4 py-3 whitespace-nowrap min-w-[160px]">หมวดหมู่งบประมาณ</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[140px]">จำนวนเงินรับจัดสรร</th>
+                                        <th className="px-4 py-3 min-w-[200px]">รายละเอียดเพิ่มเติม</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-xs">
+                                    {filteredAllocations.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                                                <div className="text-3xl mb-2">📭</div>
+                                                <p className="font-bold">ยังไม่มีข้อมูลหนังสือแจ้งจัดสรรงบประมาณจากส่วนกลาง</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredAllocations.map((alloc) => (
+                                            <tr key={alloc.id} className="hover:bg-amber-50/20 transition-colors">
+                                                {/* ปี / เลขที่หนังสือ */}
+                                                <td className="px-4 py-3.5 align-top whitespace-nowrap">
+                                                    <div className="space-y-1">
+                                                        <span className="inline-block px-2 py-0.5 rounded-md bg-purple-100 text-purple-900 font-bold text-xs border border-purple-200">
+                                                            ปี {alloc.fiscal_year}
+                                                        </span>
+                                                        <div className="text-slate-700 font-mono font-bold text-[11px]">
+                                                            📄 {alloc.document_number || 'ไม่มีเลขที่หนังสือ'}
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* วัตถุประสงค์ / ชื่องบประมาณ */}
+                                                <td className="px-4 py-3.5 align-top">
+                                                    <div className="font-bold text-slate-900 text-sm leading-snug">
+                                                        {alloc.title}
+                                                    </div>
+                                                    {alloc.budget_code && (
+                                                        <span className="text-[10px] text-slate-500 font-mono">
+                                                            รหัสงบ: {alloc.budget_code}
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {/* หมวดหมู่งบประมาณ */}
+                                                <td className="px-4 py-3.5 align-top whitespace-nowrap">
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-bold text-xs">
+                                                        <span>💰</span> {alloc.funding_source?.name || 'ไม่ระบุหมวด'}
+                                                    </span>
+                                                </td>
+
+                                                {/* จำนวนเงินรับจัดสรร */}
+                                                <td className="px-4 py-3.5 align-top text-right whitespace-nowrap">
+                                                    <span className="text-sm font-black text-emerald-800 font-mono bg-emerald-50/50 px-2 py-1 rounded-lg border border-emerald-200">
+                                                        {fmt(alloc.amount)}
+                                                    </span>
+                                                </td>
+
+                                                {/* รายละเอียดเพิ่มเติม */}
+                                                <td className="px-4 py-3.5 align-top text-slate-600 text-[11px] leading-relaxed">
+                                                    {alloc.description || '-'}
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* 6. Sub-View 3: Projects by Category Table */}
+                {centralBudgetSubTab === 'projects' && (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+                        <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+                            <div>
+                                <h3 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                                    <span>📁</span> รายการโครงการและการใช้จ่ายงบประมาณจำแนกตามหมวดเงิน
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    ตรวจสอบยอดเงินจัดสรรและยอดจ่ายจริงในแต่ละโครงการ เพื่อเปรียบเทียบกับวงเงินของหมวดงบประมาณ
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                                        <th className="px-4 py-3 min-w-[240px]">ชื่อโครงการ & ผู้รับผิดชอบ</th>
+                                        <th className="px-4 py-3 whitespace-nowrap min-w-[140px]">หมวดหมู่งบประมาณ</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[120px]">งบที่ได้รับจัดสรร</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[120px]">เบิกจ่ายจริง (Spent)</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[120px]">คงเหลือ</th>
+                                        <th className="px-4 py-3 text-center whitespace-nowrap w-[110px]">สถานะโครงการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-xs">
+                                    {filteredProjects.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                                                <div className="text-3xl mb-2">📭</div>
+                                                <p className="font-bold">ไม่พบโครงการตามเงื่อนไขที่เลือก</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredProjects.map((proj) => {
+                                            const alloc = parseFloat(proj.allocated_budget || proj.allocated_amount || proj.estimated_budget || 0);
+                                            const spent = parseFloat(proj.spent_amount || 0);
+                                            const rem = alloc - spent;
+
+                                            return (
+                                                <tr key={proj.id} className="hover:bg-purple-50/20 transition-colors">
+                                                    <td className="px-4 py-3.5 align-top">
+                                                        <div className="space-y-1">
+                                                            <Link
+                                                                href={route('projects.show', proj.id)}
+                                                                className="font-bold text-purple-950 hover:text-purple-700 text-xs sm:text-sm line-clamp-2"
+                                                            >
+                                                                {proj.title}
+                                                            </Link>
+                                                            <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
+                                                                <span>👤 {proj.user?.name || proj.proposer_name || '-'}</span>
+                                                                <span>•</span>
+                                                                <span>🏢 {proj.department?.name || proj.department_name || '-'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5 align-top whitespace-nowrap">
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-purple-50 text-purple-900 border border-purple-200 text-xs font-bold">
+                                                            💰 {proj.funding_source_name || proj.fundingSource?.name || 'ยังไม่จัดสรร'}
+                                                        </span>
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-slate-800">
+                                                        {fmt(alloc)}
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-rose-700">
+                                                        {fmt(spent)}
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-emerald-700">
+                                                        {fmt(rem)}
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5 align-top text-center whitespace-nowrap">
+                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                            proj.status === 'completed' ? 'bg-teal-100 text-teal-900 border border-teal-200' :
+                                                            proj.status === 'approved' ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' :
+                                                            'bg-slate-100 text-slate-700'
+                                                        }`}>
+                                                            {proj.status === 'completed' ? 'ปิดโครงการแล้ว' :
+                                                             proj.status === 'approved' ? 'อนุมัติแล้ว' : proj.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* 7. Category Projects Modal (เมื่อคลิกดูโครงการในหมวดหมู่นั้น) */}
+                {selectedCategoryForModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+                        <div className="bg-white rounded-3xl max-w-3xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+                            {/* Modal Header */}
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                                <div>
+                                    <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                                        <span>📁</span> โครงการภายใต้หมวดหมู่งบประมาณ: {selectedCategoryForModal.name}
+                                    </h3>
+                                    <p className="text-xs text-slate-500">
+                                        ยอดจัดสรรรวม: <strong>{fmt(selectedCategoryForModal.allocated)}</strong> | จ่ายแล้ว: <strong className="text-rose-600">{fmt(selectedCategoryForModal.spent)}</strong> | คงเหลือ: <strong className="text-emerald-600">{fmt(selectedCategoryForModal.remaining)}</strong>
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedCategoryForModal(null)}
+                                    className="text-slate-400 hover:text-slate-600 text-lg font-bold p-1"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="overflow-y-auto flex-1 divide-y divide-slate-100 pr-1">
+                                {(() => {
+                                    const modalProjects = allProjects.filter(p => {
+                                        return (p.funding_source_id && p.funding_source_id === selectedCategoryForModal.id) ||
+                                               (p.funding_source_name && p.funding_source_name === selectedCategoryForModal.name) ||
+                                               (p.fundingSource && p.fundingSource.name === selectedCategoryForModal.name);
+                                    });
+
+                                    if (modalProjects.length === 0) {
+                                        return (
+                                            <div className="py-10 text-center text-slate-400">
+                                                <p className="font-bold">ยังไม่มีโครงการที่ผูกกับหมวดหมู่งบประมาณนี้</p>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <table className="w-full text-left text-xs border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-50 text-[11px] font-bold text-slate-600">
+                                                    <th className="p-2.5">โครงการ</th>
+                                                    <th className="p-2.5">ผู้เสนอ</th>
+                                                    <th className="p-2.5 text-right">งบจัดสรร</th>
+                                                    <th className="p-2.5 text-right">จ่ายจริง</th>
+                                                    <th className="p-2.5 text-right">คงเหลือ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {modalProjects.map(proj => {
+                                                    const alloc = parseFloat(proj.allocated_budget || proj.allocated_amount || proj.estimated_budget || 0);
+                                                    const spent = parseFloat(proj.spent_amount || 0);
+                                                    return (
+                                                        <tr key={proj.id} className="hover:bg-slate-50/50">
+                                                            <td className="p-2.5 font-bold text-slate-900">
+                                                                <Link href={route('projects.show', proj.id)} className="hover:text-purple-700">
+                                                                    {proj.title}
+                                                                </Link>
+                                                            </td>
+                                                            <td className="p-2.5 text-slate-600">{proj.user?.name || proj.proposer_name || '-'}</td>
+                                                            <td className="p-2.5 text-right font-mono font-bold text-slate-800">{fmt(alloc)}</td>
+                                                            <td className="p-2.5 text-right font-mono font-bold text-rose-700">{fmt(spent)}</td>
+                                                            <td className="p-2.5 text-right font-mono font-bold text-emerald-700">{fmt(alloc - spent)}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="pt-3 border-t border-slate-100 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedCategoryForModal(null)}
+                                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+                                >
+                                    ปิดหน้าต่าง
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };
@@ -8181,6 +8838,7 @@ return (
                         {activeTab === 'admin_strategies' && renderAdminStrategiesTab()}
                         {activeTab === 'admin_settings' && renderAdminSettingsTab()}
                         {activeTab === 'all_projects' && renderAllProjectsTab()}
+                        {activeTab === 'central_budgets' && renderCentralBudgetsTab()}
                         {activeTab === 'document_tracking' && renderDocumentTrackingTab()}
                         {activeTab === 'proposals' && renderProposalsTab()}
                         {activeTab === 'budgets' && renderBudgetsTab()}
