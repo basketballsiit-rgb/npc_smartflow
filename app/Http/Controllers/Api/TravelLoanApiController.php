@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\TravelLoan;
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -96,6 +97,7 @@ class TravelLoanApiController extends Controller
                     
                     'borrower_user_id' => $borrower['userId'] ?? null,
                     'borrower_name' => $borrower['fullName'] ?? '',
+                    'borrower_line_user_id' => $borrower['lineUserId'] ?? null,
                     'borrower_position' => $borrower['position'] ?? null,
                     'borrower_department' => $borrower['department'] ?? null,
                     'borrower_staff_type' => $borrower['staffType'] ?? null,
@@ -133,6 +135,16 @@ class TravelLoanApiController extends Controller
                     'raw_payload' => json_encode($data, JSON_UNESCAPED_UNICODE),
                 ]
             );
+
+            // Auto-link Line User ID to user in SmartFlow if provided
+            if (!empty($borrower['lineUserId']) && !empty($borrower['fullName'])) {
+                $matchedUser = self::findUserByNormalizedName($borrower['fullName']);
+                if ($matchedUser) {
+                    $matchedUser->line_user_id = $borrower['lineUserId'];
+                    $matchedUser->save();
+                    Log::info("SmartFlow: Auto-linked LINE User ID for {$matchedUser->name} from travel loan {$travelId}");
+                }
+            }
 
             Log::info("SmartFlow: Received Travel Loan from npc_hr for travelId: {$travelId}, Total: {$loan->total_loan_amount}");
 
@@ -267,6 +279,197 @@ class TravelLoanApiController extends Controller
             'service' => 'npc_smartflow',
             'endpoint' => 'travel-loans',
             'time' => now()->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * Normalize Thai Name by stripping prefixes and whitespace
+     */
+    public static function normalizeThaiName(string $name): string
+    {
+        // Strip zero-width characters and spaces
+        $clean = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}]/u', '', $name);
+        $clean = trim(preg_replace('/\s+/u', ' ', $clean));
+        $noSpaces = preg_replace('/\s+/u', '', $clean);
+
+        // Common Thai prefixes (ordered longest first to prevent partial cut)
+        $prefixes = [
+            'ว่าที่ร้อยตรีหญิง', 'ว่าที่ ร้อยตรี หญิง', 'ว่าที่ ร.ต. หญิง', 'ว่าที่ ร.ต.หญิง', 'ว่าที่ร.ต.หญิง',
+            'ว่าที่ร้อยตรี', 'ว่าที่ ร้อยตรี', 'ว่าที่ ร.ต.', 'ว่าที่ร.ต.',
+            'ศาสตราจารย์ ดร.', 'ศ.ดร.', 'รองศาสตราจารย์ ดร.', 'รศ.ดร.', 'ผู้ช่วยศาสตราจารย์ ดร.', 'ผศ.ดร.',
+            'ศาสตราจารย์', 'ศ.', 'รองศาสตราจารย์', 'รศ.', 'ผู้ช่วยศาสตราจารย์', 'ผศ.',
+            'นางสาว', 'น.ส.', 'นาง', 'นาย',
+            'ดร.', 'อาจารย์', 'อ.'
+        ];
+
+        foreach ($prefixes as $prefix) {
+            $prefixNoSpaces = preg_replace('/\s+/u', '', $prefix);
+            if (mb_strpos($noSpaces, $prefixNoSpaces) === 0) {
+                $noSpaces = mb_substr($noSpaces, mb_strlen($prefixNoSpaces));
+                break;
+            }
+        }
+
+        return trim($noSpaces);
+    }
+
+    /**
+     * Find user in smartflow matching normalized name
+     */
+    public static function findUserByNormalizedName(string $fullName): ?User
+    {
+        if (empty(trim($fullName))) {
+            return null;
+        }
+
+        $cleanTarget = preg_replace('/\s+/u', '', $fullName);
+        $normTarget = self::normalizeThaiName($fullName);
+
+        $users = User::all();
+
+        // 1. Exact match
+        foreach ($users as $user) {
+            if ($user->name === $fullName) {
+                return $user;
+            }
+        }
+
+        // 2. Exact match without whitespace
+        foreach ($users as $user) {
+            $userNoSpace = preg_replace('/\s+/u', '', $user->name);
+            if ($userNoSpace === $cleanTarget) {
+                return $user;
+            }
+        }
+
+        // 3. Normalized match (stripping prefixes like นาย, นาง, นางสาว, etc.)
+        foreach ($users as $user) {
+            $userNorm = self::normalizeThaiName($user->name);
+            if (!empty($userNorm) && !empty($normTarget) && $userNorm === $normTarget) {
+                return $user;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Sync single user Line User ID from npc_eleve on login or bind
+     * POST /api/v1/users/sync-line-user
+     */
+    public function syncLineUser(Request $request)
+    {
+        if (!$this->verifyToken($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: Invalid API Token',
+            ], 401);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'fullName' => 'required|string',
+            'lineUserId' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ข้อมูลไม่ครบถ้วน',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $fullName = $request->input('fullName');
+        $lineUserId = $request->input('lineUserId');
+
+        $matchedUser = self::findUserByNormalizedName($fullName);
+
+        if (!$matchedUser) {
+            Log::warning("SmartFlow: User not found for LINE ID sync: {$fullName}");
+            return response()->json([
+                'success' => false,
+                'message' => "ไม่พบผู้ใช้ที่ชื่อ '{$fullName}' ในระบบ SmartFlow (เปรียบเทียบทั้งแบบมี/ไม่มีคำนำหน้า)",
+                'searchedName' => $fullName,
+                'normalizedName' => self::normalizeThaiName($fullName),
+            ], 404);
+        }
+
+        $matchedUser->line_user_id = $lineUserId;
+        $matchedUser->save();
+
+        Log::info("SmartFlow: Successfully updated line_user_id for {$matchedUser->name} ({$matchedUser->email}) -> {$lineUserId}");
+
+        return response()->json([
+            'success' => true,
+            'message' => "บันทึก LineUserID ให้กับผู้ใช้ '{$matchedUser->name}' เรียบร้อยแล้ว",
+            'data' => [
+                'userId' => $matchedUser->id,
+                'name' => $matchedUser->name,
+                'email' => $matchedUser->email,
+                'lineUserId' => $matchedUser->line_user_id,
+                'updatedAt' => now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * Bulk Sync all Line User IDs from npc_eleve
+     * POST /api/v1/users/bulk-sync-line-users
+     */
+    public function bulkSyncLineUsers(Request $request)
+    {
+        if (!$this->verifyToken($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: Invalid API Token',
+            ], 401);
+        }
+
+        $usersList = $request->input('users', []);
+        if (!is_array($usersList) || empty($usersList)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบรายการผู้ใช้ที่ต้องการซิงค์',
+            ], 422);
+        }
+
+        $matched = 0;
+        $unmatched = 0;
+        $details = [];
+
+        foreach ($usersList as $item) {
+            $name = $item['fullName'] ?? $item['name'] ?? null;
+            $lineId = $item['lineUserId'] ?? null;
+
+            if (!$name || !$lineId) {
+                continue;
+            }
+
+            $user = self::findUserByNormalizedName($name);
+            if ($user) {
+                $user->line_user_id = $lineId;
+                $user->save();
+                $matched++;
+                $details[] = [
+                    'sourceName' => $name,
+                    'matchedName' => $user->name,
+                    'status' => 'synced',
+                ];
+            } else {
+                $unmatched++;
+                $details[] = [
+                    'sourceName' => $name,
+                    'status' => 'not_found',
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "ซิงค์ข้อมูล LineUserID เรียบร้อยแล้ว (ตรงกัน: {$matched}, ไม่พบ: {$unmatched})",
+            'matchedCount' => $matched,
+            'unmatchedCount' => $unmatched,
+            'details' => $details,
         ]);
     }
 }

@@ -17,6 +17,7 @@ class TravelLoan extends Model
         'system_source',
         'borrower_user_id',
         'borrower_name',
+        'borrower_line_user_id',
         'borrower_position',
         'borrower_department',
         'borrower_staff_type',

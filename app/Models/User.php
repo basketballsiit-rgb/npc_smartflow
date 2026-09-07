@@ -27,6 +27,7 @@ class User extends Authenticatable
         'citizen_id',
         'position',
         'is_active',
+        'line_user_id',
     ];
 
     /**
