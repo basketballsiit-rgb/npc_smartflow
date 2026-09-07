@@ -23,6 +23,8 @@ export default function Dashboard({
     fundingChannelProgress = [],
     advancePayments = [],
     allTravelLoans = [],
+    expenseClearings = [],
+    availableProjectsForClearing = [],
     apiIntegrationStatus = {},
     docNumberSettings = {},
     nextUnifiedDocNumber = '',
@@ -423,6 +425,264 @@ export default function Dashboard({
                         setViewingProcurementProject(null);
                         Swal.fire('สำเร็จ', isToPending ? 'ส่งคืนให้ผู้เสนอโครงการแก้ไขเรียบร้อยแล้ว' : 'ดึงเรื่องกลับมาให้งานพัสดุแก้ไขเรียบร้อยแล้ว', 'success');
                     }
+                });
+            }
+        });
+    };
+
+    // Expense Clearings & Reimbursements States
+    const [clearingSubTab, setClearingSubTab] = useState('pending_loans'); // 'pending_loans' | 'direct_reimburse' | 'all_clearings'
+    const [clearingSearch, setClearingSearch] = useState('');
+    const [clearingFilterResult, setClearingFilterResult] = useState('all'); // 'all' | 'refund' | 'exact' | 'reimburse'
+    const [clearingModalOpen, setClearingModalOpen] = useState(false);
+    const [clearingModalType, setClearingModalType] = useState('with_loan'); // 'with_loan' | 'direct_reimburse'
+    const [clearingTargetLoan, setClearingTargetLoan] = useState(null);
+    const [isSubmittingClearing, setIsSubmittingClearing] = useState(false);
+
+    const [clearingFormData, setClearingFormData] = useState({
+        clearing_type: 'with_loan',
+        travel_loan_id: '',
+        project_id: '',
+        routine_budget_plan_id: '',
+        funding_source_id: '',
+        budget_target_type: 'project', // 'project' | 'routine'
+        claimant_name: auth.user?.name || '',
+        claimant_position: auth.user?.position || '',
+        claimant_department: auth.user?.department?.name || '',
+        title: '',
+        expense_date: new Date().toISOString().slice(0, 10),
+        loan_amount: 0,
+        actual_spent_amount: 0,
+        receipt_count: 1,
+        receipt_reference: '',
+        items: [
+            { description: 'ค่าใช้จ่ายตามใบเสร็จ', amount: '' }
+        ],
+        notes: '',
+    });
+
+    // Plan Approval Modal State
+    const [planApproveModalOpen, setPlanApproveModalOpen] = useState(false);
+    const [clearingForPlanApproval, setClearingForPlanApproval] = useState(null);
+    const [planDocNumberInput, setPlanDocNumberInput] = useState('');
+    const [planNotesInput, setPlanNotesInput] = useState('');
+    const [isSubmittingPlanApproval, setIsSubmittingPlanApproval] = useState(false);
+
+    // Finance Complete Modal State
+    const [financeModalOpen, setFinanceModalOpen] = useState(false);
+    const [clearingForFinance, setClearingForFinance] = useState(null);
+    const [financeDocNumberInput, setFinanceDocNumberInput] = useState('');
+    const [financePaymentRefInput, setFinancePaymentRefInput] = useState('');
+    const [financeNotesInput, setFinanceNotesInput] = useState('');
+    const [isSubmittingFinance, setIsSubmittingFinance] = useState(false);
+
+    const openClearingFromLoan = (loan) => {
+        const isTravelLoan = Boolean(loan.contract_no !== undefined || loan.travel_id !== undefined);
+        const loanAmt = isTravelLoan ? (parseFloat(loan.total_loan_amount) || 0) : (parseFloat(loan.advance_amount || loan.allocated_amount) || 0);
+        const borrowerName = isTravelLoan ? (loan.borrower_name || auth.user?.name || '') : (loan.project?.user?.name || auth.user?.name || '');
+        const borrowerPos = isTravelLoan ? (loan.borrower_position || auth.user?.position || '') : (loan.project?.user?.position || auth.user?.position || '');
+        const borrowerDept = isTravelLoan ? (loan.borrower_department || auth.user?.department?.name || '') : (loan.project?.department?.name || auth.user?.department?.name || '');
+        const loanTitle = isTravelLoan 
+            ? (`เคลียร์เงินยืมสัญญาเลขที่ ${loan.contract_no || '-'}: ${loan.subject || ''}`)
+            : (`เคลียร์เงินยืมทดรองโครงการ: ${loan.project?.title || ''}`);
+
+        setClearingModalType('with_loan');
+        setClearingTargetLoan(loan);
+        setClearingFormData({
+            clearing_type: 'with_loan',
+            travel_loan_id: isTravelLoan ? loan.id : '',
+            project_id: loan.project_id || (loan.project?.id || ''),
+            routine_budget_plan_id: '',
+            funding_source_id: loan.funding_source_id || '',
+            budget_target_type: 'project',
+            claimant_name: borrowerName,
+            claimant_position: borrowerPos,
+            claimant_department: borrowerDept,
+            title: loanTitle,
+            expense_date: new Date().toISOString().slice(0, 10),
+            loan_amount: loanAmt,
+            actual_spent_amount: loanAmt,
+            receipt_count: 1,
+            receipt_reference: '',
+            items: [
+                { description: isTravelLoan ? 'ค่าใช้จ่ายตามใบเสร็จการไปราชการ' : 'ค่าใช้จ่ายตามใบเสร็จการดำเนินงาน', amount: loanAmt }
+            ],
+            notes: '',
+        });
+        setClearingModalOpen(true);
+    };
+
+    const openDirectReimburseModal = () => {
+        setClearingModalType('direct_reimburse');
+        setClearingTargetLoan(null);
+        setClearingFormData({
+            clearing_type: 'direct_reimburse',
+            travel_loan_id: '',
+            project_id: availableProjectsForClearing[0]?.id || '',
+            routine_budget_plan_id: routinePlans[0]?.id || '',
+            funding_source_id: allFundingSources[0]?.id || '',
+            budget_target_type: 'project',
+            claimant_name: auth.user?.name || '',
+            claimant_position: auth.user?.position || '',
+            claimant_department: auth.user?.department?.name || '',
+            title: '',
+            expense_date: new Date().toISOString().slice(0, 10),
+            loan_amount: 0,
+            actual_spent_amount: 0,
+            receipt_count: 1,
+            receipt_reference: '',
+            items: [
+                { description: 'ค่าใช้จ่ายสำรองจ่ายส่วนตัวตามใบเสร็จ', amount: '' }
+            ],
+            notes: '',
+        });
+        setClearingModalOpen(true);
+    };
+
+    const handleClearingItemChange = (idx, field, val) => {
+        setClearingFormData(prev => {
+            const nextItems = [...prev.items];
+            nextItems[idx] = { ...nextItems[idx], [field]: val };
+            const total = nextItems.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+            return {
+                ...prev,
+                items: nextItems,
+                actual_spent_amount: total
+            };
+        });
+    };
+
+    const handleAddClearingItem = () => {
+        setClearingFormData(prev => ({
+            ...prev,
+            items: [...prev.items, { description: '', amount: '' }]
+        }));
+    };
+
+    const handleRemoveClearingItem = (idx) => {
+        setClearingFormData(prev => {
+            const nextItems = prev.items.filter((_, i) => i !== idx);
+            const total = nextItems.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+            return {
+                ...prev,
+                items: nextItems.length > 0 ? nextItems : [{ description: '', amount: '' }],
+                actual_spent_amount: total
+            };
+        });
+    };
+
+    const handleSubmitClearing = (e) => {
+        e.preventDefault();
+        const totalSpent = clearingFormData.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+        if (totalSpent <= 0) {
+            Swal.fire('กรุณาระบุจำนวนเงิน', 'ยอดค่าใช้จ่ายจ่ายจริงรวมต้องมากกว่า 0 บาท', 'warning');
+            return;
+        }
+
+        setIsSubmittingClearing(true);
+        router.post(route('clearings.store'), {
+            ...clearingFormData,
+            actual_spent_amount: totalSpent,
+            expense_items: clearingFormData.items
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setClearingModalOpen(false);
+                setIsSubmittingClearing(false);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกสำเร็จ',
+                    text: 'บันทึกข้อมูลการเคลียร์เงิน/ขอเบิกจ่ายเรียบร้อยแล้ว ส่งเรื่องไปยังงานแผนงานเพื่อตรวจสอบและตัดยอดงบประมาณ',
+                    confirmButtonColor: '#7c3aed'
+                });
+            },
+            onError: (err) => {
+                setIsSubmittingClearing(false);
+                const msg = Object.values(err)[0] || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+                Swal.fire('ไม่สามารถบันทึกได้', String(msg), 'error');
+            }
+        });
+    };
+
+    const handleOpenPlanApproveModal = (clearing) => {
+        setClearingForPlanApproval(clearing);
+        const yr = (new Date().getFullYear() + 543);
+        const rnd = String(clearing.id).padStart(2, '0');
+        setPlanDocNumberInput(`ผง.เคลียร์ ${rnd}/${yr}`);
+        setPlanNotesInput(clearing.plan_notes || '');
+        setPlanApproveModalOpen(true);
+    };
+
+    const handleSubmitPlanApprove = (e) => {
+        e.preventDefault();
+        if (!planDocNumberInput.trim()) {
+            Swal.fire('กรุณาระบุเลขที่ตัดยอด', 'กรุณาระบุเลขที่ตัดยอดงานแผนงาน เช่น ผง. 15/2569', 'warning');
+            return;
+        }
+        setIsSubmittingPlanApproval(true);
+        router.post(route('clearings.plan_approve', clearingForPlanApproval.id), {
+            plan_doc_number: planDocNumberInput,
+            plan_notes: planNotesInput,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setPlanApproveModalOpen(false);
+                setIsSubmittingPlanApproval(false);
+                Swal.fire('อนุมัติตัดยอดสำเร็จ', 'งานแผนงานได้อนุมัติตัดยอดงบประมาณและบันทึกลงระบบเรียบร้อยแล้ว ส่งเรื่องต่อไปยังงานการเงิน', 'success');
+            },
+            onError: (err) => {
+                setIsSubmittingPlanApproval(false);
+                Swal.fire('เกิดข้อผิดพลาด', Object.values(err)[0] || 'ไม่สามารถอนุมัติตัดยอดได้', 'error');
+            }
+        });
+    };
+
+    const handleOpenFinanceModal = (clearing) => {
+        setClearingForFinance(clearing);
+        const yr = (new Date().getFullYear() + 543);
+        const rnd = String(clearing.id).padStart(2, '0');
+        setFinanceDocNumberInput(`กง.เคลียร์ ${rnd}/${yr}`);
+        setFinancePaymentRefInput('');
+        setFinanceNotesInput(clearing.finance_notes || '');
+        setFinanceModalOpen(true);
+    };
+
+    const handleSubmitFinance = (e) => {
+        e.preventDefault();
+        setIsSubmittingFinance(true);
+        router.post(route('clearings.finance_complete', clearingForFinance.id), {
+            finance_doc_number: financeDocNumberInput,
+            finance_payment_ref: financePaymentRefInput,
+            finance_notes: financeNotesInput,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setFinanceModalOpen(false);
+                setIsSubmittingFinance(false);
+                Swal.fire('ปิดยอดการเงินสำเร็จ', 'บันทึกการจ่ายเงินชดเชย / รับเงินคืนคลัง และปิดยอดการเคลียร์เรียบร้อยแล้ว', 'success');
+            },
+            onError: (err) => {
+                setIsSubmittingFinance(false);
+                Swal.fire('เกิดข้อผิดพลาด', Object.values(err)[0] || 'ไม่สามารถบันทึกปิดยอดได้', 'error');
+            }
+        });
+    };
+
+    const handleDeleteClearing = (clearing) => {
+        Swal.fire({
+            title: 'ยืนยันการลบรายการเคลียร์เงิน?',
+            text: `ต้องการลบรายการ "${clearing.clearing_number} - ${clearing.title}" ใช่หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'ใช่, ลบรายการ',
+            cancelButtonText: 'ยกเลิก',
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.delete(route('clearings.destroy', clearing.id), {
+                    preserveScroll: true,
+                    onSuccess: () => Swal.fire('ลบสำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success'),
+                    onError: (err) => Swal.fire('เกิดข้อผิดพลาด', Object.values(err)[0] || 'ไม่สามารถลบได้', 'error')
                 });
             }
         });
@@ -4942,69 +5202,1136 @@ ${itemsListText}
     };
 
     const renderClearingsTab = () => {
-        const paymentsList = (planHeadData && planHeadData.advancePayments) || (financeData && financeData.advancePayments) || advancePayments || [];
+        const formatMoney = (val) => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(val) || 0);
+
+        // 1. Pending Loans List (allTravelLoans + advancePayments not yet cleared)
+        const rawTravelLoans = (planHeadData && planHeadData.externalTravelLoans) || (financeData && financeData.externalTravelLoans) || allTravelLoans || [];
+        const pendingTravelLoans = rawTravelLoans.filter(l => l.loan_status !== 'cleared' && !l.cleared_at);
+
+        const rawAdvancePayments = (planHeadData && planHeadData.advancePayments) || (financeData && financeData.advancePayments) || advancePayments || [];
+        const pendingAdvancePayments = rawAdvancePayments.filter(b => !b.advance_cleared_at);
+
+        const combinedPendingLoans = [
+            ...pendingTravelLoans.map(tl => ({
+                id: tl.id,
+                source_type: 'travel_loan',
+                contract_no: tl.contract_no || ('TL-' + tl.id),
+                title: tl.subject || 'สัญญาการยืมเงินไปราชการ',
+                borrower_name: tl.borrower_name || '-',
+                borrower_department: tl.borrower_department || '-',
+                borrower_position: tl.borrower_position || '',
+                amount: parseFloat(tl.total_loan_amount) || 0,
+                doc_date: tl.doc_date || tl.created_at?.slice(0, 10),
+                due_date: tl.due_date,
+                project_id: tl.project_id,
+                funding_source_id: tl.funding_source_id,
+                raw: tl,
+            })),
+            ...pendingAdvancePayments.map(ap => ({
+                id: ap.id,
+                source_type: 'advance_payment',
+                contract_no: ap.project?.title ? ('ยืมทดรอง: ' + ap.project.title) : ('ยืมทดรอง #' + ap.id),
+                title: ap.project?.title || 'เงินยืมทดรองจ่ายโครงการ',
+                borrower_name: ap.project?.user?.name || '-',
+                borrower_department: ap.project?.department?.name || '-',
+                borrower_position: ap.project?.user?.position || '',
+                amount: parseFloat(ap.advance_amount || ap.allocated_amount) || 0,
+                doc_date: ap.created_at?.slice(0, 10),
+                due_date: null,
+                project_id: ap.project_id,
+                funding_source_id: ap.funding_source_id,
+                raw: ap,
+            }))
+        ];
+
+        // 2. Clearings List from props
+        const clearingsList = expenseClearings || [];
+        const directReimburseList = clearingsList.filter(c => c.clearing_type === 'direct_reimburse');
+
+        // Stats counts
+        const countPendingLoans = combinedPendingLoans.length;
+        const countPendingPlan = clearingsList.filter(c => c.status === 'pending_plan').length;
+        const countPendingFinance = clearingsList.filter(c => c.status === 'plan_approved').length;
+        const countCompleted = clearingsList.filter(c => c.status === 'finance_completed').length;
+
+        // Filtered Lists for views
+        const filteredPendingLoans = combinedPendingLoans.filter(l => {
+            if (!clearingSearch) return true;
+            const q = clearingSearch.toLowerCase();
+            return (l.contract_no && l.contract_no.toLowerCase().includes(q)) ||
+                   (l.title && l.title.toLowerCase().includes(q)) ||
+                   (l.borrower_name && l.borrower_name.toLowerCase().includes(q)) ||
+                   (l.borrower_department && l.borrower_department.toLowerCase().includes(q));
+        });
+
+        const filteredDirectReimburse = directReimburseList.filter(c => {
+            if (!clearingSearch) return true;
+            const q = clearingSearch.toLowerCase();
+            return (c.clearing_number && c.clearing_number.toLowerCase().includes(q)) ||
+                   (c.title && c.title.toLowerCase().includes(q)) ||
+                   (c.claimant_name && c.claimant_name.toLowerCase().includes(q)) ||
+                   (c.claimant_department && c.claimant_department.toLowerCase().includes(q));
+        });
+
+        const filteredAllClearings = clearingsList.filter(c => {
+            if (clearingFilterResult !== 'all' && c.clearing_result !== clearingFilterResult) return false;
+            if (!clearingSearch) return true;
+            const q = clearingSearch.toLowerCase();
+            return (c.clearing_number && c.clearing_number.toLowerCase().includes(q)) ||
+                   (c.title && c.title.toLowerCase().includes(q)) ||
+                   (c.claimant_name && c.claimant_name.toLowerCase().includes(q)) ||
+                   (c.claimant_department && c.claimant_department.toLowerCase().includes(q));
+        });
+
+        // Realtime calculation for Clearing Modal
+        const currentLoanAmt = parseFloat(clearingFormData.loan_amount) || 0;
+        const currentSpentAmt = clearingFormData.items.reduce((s, it) => s + (parseFloat(it.amount) || 0), 0);
+        const currentDiff = currentSpentAmt - currentLoanAmt;
+
         return (
-            <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm font-sans">
-                <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex items-center justify-between">
-                    <div>
-                        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span>🧾</span> รายการค้างเคลียร์เงินยืมทดรองราชการ
-                        </h3>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                            แสดงโครงการที่มีการเบิกเงินยืมทดรองราชการและยังไม่ได้ส่งใบเสร็จล้างหนี้สมบูรณ์
+            <div className="space-y-6 font-sans">
+                {/* 1. Header & Hero Bar */}
+                <div className="rounded-3xl border border-purple-100 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 p-6 text-white shadow-xl relative overflow-hidden">
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 relative z-10">
+                        <div className="space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/30 text-purple-200 text-xs font-bold border border-purple-400/30">
+                                    <span>🧾</span> ระบบการเงินและงบประมาณ (Financial & Budget Control)
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold border border-amber-400/30">
+                                    <span>⚖️</span> เคลียร์เงินยืม & เบิกจ่ายตรง
+                                </span>
+                            </div>
+                            <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                                ศูนย์ควบคุมการเคลียร์เงินยืมทดรองราชการ & ขอเบิกจ่ายตรง
+                            </h2>
+                            <p className="text-xs text-purple-200 max-w-3xl leading-relaxed">
+                                บันทึกและตรวจสอบการล้างหนี้สัญญายืมเงิน (เงินเหลือส่งคืนคลัง / ขอเบิกชดเชยเพิ่ม) และบันทึกขอเบิกจ่ายตรงกรณีไม่มีสัญญายืมเงินล่วงหน้า (สำรองจ่ายส่วนตัว) เพื่อส่งเรื่องให้งานแผนงานตัดยอดงบประมาณและงานการเงินเบิกจ่าย/รับเงินคืนอย่างถูกต้อง
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={openDirectReimburseModal}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-black shadow-lg shadow-emerald-500/20 hover:scale-102 transition cursor-pointer"
+                            >
+                                <span>⚡</span> บันทึกขอเบิกจ่ายตรง (ไม่มีสัญญายืม)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Stat Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div 
+                        onClick={() => setClearingSubTab('pending_loans')}
+                        className={`rounded-2xl p-5 border cursor-pointer transition-all ${clearingSubTab === 'pending_loans' ? 'bg-amber-50 border-amber-300 shadow-md scale-102 ring-2 ring-amber-400/30' : 'bg-white border-slate-200 hover:border-amber-200 hover:bg-slate-50'}`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-amber-800">1. สัญญายืมรอเคลียร์</span>
+                            <span className="text-xl">📋</span>
+                        </div>
+                        <div className="mt-2 flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-amber-900">{countPendingLoans}</span>
+                            <span className="text-xs text-amber-700">สัญญา</span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                            สัญญายืมเงินที่ยังไม่ได้ส่งหลักฐานใบเสร็จล้างหนี้
                         </p>
                     </div>
-                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">
-                        ค้างเคลียร์ {paymentsList.length} รายการ
-                    </span>
+
+                    <div 
+                        onClick={() => setClearingSubTab('direct_reimburse')}
+                        className={`rounded-2xl p-5 border cursor-pointer transition-all ${clearingSubTab === 'direct_reimburse' ? 'bg-teal-50 border-teal-300 shadow-md scale-102 ring-2 ring-teal-400/30' : 'bg-white border-slate-200 hover:border-teal-200 hover:bg-slate-50'}`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-teal-800">2. ขอเบิกจ่ายตรง (ไม่มีสัญญายืม)</span>
+                            <span className="text-xl">⚡</span>
+                        </div>
+                        <div className="mt-2 flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-teal-900">{directReimburseList.length}</span>
+                            <span className="text-xs text-teal-700">รายการ</span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                            สำรองจ่ายส่วนตัว นำใบเสร็จมาขอเบิกคืน
+                        </p>
+                    </div>
+
+                    <div 
+                        onClick={() => setClearingSubTab('all_clearings')}
+                        className={`rounded-2xl p-5 border cursor-pointer transition-all ${clearingSubTab === 'all_clearings' ? 'bg-indigo-50 border-indigo-300 shadow-md scale-102 ring-2 ring-indigo-400/30' : 'bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50'}`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-indigo-800">3. รอแผนงานตัดยอด / รอการเงิน</span>
+                            <span className="text-xl">📊</span>
+                        </div>
+                        <div className="mt-2 flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-indigo-900">{countPendingPlan + countPendingFinance}</span>
+                            <span className="text-xs text-indigo-700">รายการ</span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                            แผนงานรอตัด {countPendingPlan} | การเงินรอปิด {countPendingFinance}
+                        </p>
+                    </div>
+
+                    <div 
+                        onClick={() => setClearingSubTab('all_clearings')}
+                        className="rounded-2xl p-5 border bg-white border-slate-200 hover:border-emerald-200 hover:bg-slate-50 cursor-pointer transition-all"
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-emerald-800">4. ปิดยอดเคลียร์สมบูรณ์แล้ว</span>
+                            <span className="text-xl">✅</span>
+                        </div>
+                        <div className="mt-2 flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-emerald-900">{countCompleted}</span>
+                            <span className="text-xs text-emerald-700">รายการ</span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                            ตัดยอดงบและบันทึกปิดบัญชีการเงินครบถ้วน
+                        </p>
+                    </div>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900">
-                                <th className="px-6 py-3.5">โครงการ</th>
-                                <th className="px-6 py-3.5">ผู้ยืมเงิน / แผนก</th>
-                                <th className="px-6 py-3.5 text-right">จำนวนเงินยืม</th>
-                                <th className="px-6 py-3.5 text-center">การดำเนินการ</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-purple-100 text-sm">
-                            {(!paymentsList || paymentsList.length === 0) ? (
-                                <tr>
-                                    <td colSpan="4" className="px-6 py-12 text-center text-sm text-slate-400">
-                                        <div className="text-3xl mb-2">🎉</div>
-                                        <p className="font-bold">ไม่มีรายการค้างเคลียร์เงินยืมทดรองในระบบ</p>
-                                    </td>
-                                </tr>
-                            ) : (
-                                paymentsList.map((b) => (
-                                    <tr key={b.id} className="hover:bg-purple-50/20 transition">
-                                        <td className="px-6 py-4 font-bold text-slate-900">
-                                            <Link href={route('projects.show', b.project_id)} className="hover:text-purple-700">
-                                                {b.project?.title || ('โครงการ #' + b.project_id)}
-                                            </Link>
-                                        </td>
-                                        <td className="px-6 py-4 text-xs text-slate-600">
-                                            <p className="font-bold text-slate-800">{b.project?.user?.name || '-'}</p>
-                                            <p className="text-slate-400">{b.project?.department?.name || '-'}</p>
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-bold text-amber-700 font-mono">
-                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(b.advance_amount || b.allocated_amount || 0)}
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <Link
-                                                href={route('projects.show', b.project_id)}
-                                                className="inline-flex items-center gap-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 px-3.5 py-1.5 text-xs font-bold text-emerald-700 border border-emerald-200 shadow-2xs hover:scale-105 transition"
-                                            >
-                                                <span>🧾</span> ตรวจสอบ & เคลียร์ยอด
-                                            </Link>
-                                        </td>
+
+                {/* 3. Sub-Tab Navigation Bar & Search */}
+                <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                        <button
+                            type="button"
+                            onClick={() => setClearingSubTab('pending_loans')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                                clearingSubTab === 'pending_loans'
+                                    ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/20'
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
+                        >
+                            <span>📋</span> สัญญายืมเงินรอเคลียร์ ({countPendingLoans})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setClearingSubTab('direct_reimburse')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                                clearingSubTab === 'direct_reimburse'
+                                    ? 'bg-teal-600 text-white shadow-sm shadow-teal-600/20'
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
+                        >
+                            <span>⚡</span> ขอเบิกจ่ายตรง (ไม่มีสัญญายืม) ({directReimburseList.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setClearingSubTab('all_clearings')}
+                            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                                clearingSubTab === 'all_clearings'
+                                    ? 'bg-purple-700 text-white shadow-sm shadow-purple-700/20'
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                            }`}
+                        >
+                            <span>📑</span> ทะเบียนการเคลียร์และตัดยอดทั้งหมด ({clearingsList.length})
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        {clearingSubTab === 'all_clearings' && (
+                            <select
+                                value={clearingFilterResult}
+                                onChange={(e) => setClearingFilterResult(e.target.value)}
+                                className="rounded-xl border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 focus:border-purple-500 focus:ring-purple-500"
+                            >
+                                <option value="all">ผลการเคลียร์ทั้งหมด</option>
+                                <option value="refund">🟢 มีเงินเหลือส่งคืนคลัง (Refund)</option>
+                                <option value="exact">🔵 พอดี (Exact)</option>
+                                <option value="reimburse">🟠 เบิกชดเชยเพิ่ม (Reimburse)</option>
+                            </select>
+                        )}
+                        <div className="relative flex-1 sm:w-64">
+                            <input
+                                type="text"
+                                placeholder="ค้นหาเลขที่, ผู้ยืม, เรื่อง..."
+                                value={clearingSearch}
+                                onChange={(e) => setClearingSearch(e.target.value)}
+                                className="w-full rounded-xl border-slate-200 bg-slate-50 pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:border-purple-500 focus:bg-white focus:ring-purple-500"
+                            />
+                            <span className="absolute left-2.5 top-2 text-xs text-slate-400">🔍</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. Sub-Tab 1: Pending Loans Table */}
+                {clearingSubTab === 'pending_loans' && (
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+                        <div className="border-b border-slate-100 bg-amber-50/50 px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                    <span>📋</span> รายการสัญญายืมเงินทดรองราชการที่ยังไม่ได้เคลียร์ล้างหนี้
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    คลิก "🧾 บันทึกเคลียร์เงินยืม" เพื่อนำหลักฐานใบเสร็จค่าใช้จ่ายจริงมาคำนวณเงินเหลือคืนคลัง หรือขอเบิกชดเชยเพิ่ม
+                                </p>
+                            </div>
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                                ค้างเคลียร์ {filteredPendingLoans.length} สัญญา
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-bold uppercase text-slate-600">
+                                        <th className="px-5 py-3.5">เลขที่สัญญา / เรื่อง</th>
+                                        <th className="px-5 py-3.5">ผู้ยืมเงิน / สังกัด</th>
+                                        <th className="px-5 py-3.5 text-right">จำนวนเงินยืม</th>
+                                        <th className="px-5 py-3.5 text-center">วันที่ยืม / กำหนดส่ง</th>
+                                        <th className="px-5 py-3.5 text-center">การดำเนินการ</th>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-sm">
+                                    {filteredPendingLoans.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-12 text-center text-sm text-slate-400">
+                                                <div className="text-4xl mb-2">🎉</div>
+                                                <p className="font-bold text-slate-600">ไม่มีรายการสัญญายืมเงินค้างเคลียร์ในระบบ</p>
+                                                <p className="text-xs text-slate-400 mt-1">สัญญายืมเงินทั้งหมดได้รับการเคลียร์ล้างหนี้เรียบร้อยแล้ว</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredPendingLoans.map((loan) => (
+                                            <tr key={loan.source_type + '-' + loan.id} className="hover:bg-amber-50/20 transition">
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-purple-100 text-purple-800 border border-purple-200">
+                                                            {loan.contract_no}
+                                                        </span>
+                                                        {loan.source_type === 'travel_loan' && (
+                                                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-100 text-sky-800">ไปราชการ</span>
+                                                        )}
+                                                    </div>
+                                                    <p className="font-bold text-slate-800 text-xs mt-1 line-clamp-2">{loan.title}</p>
+                                                </td>
+                                                <td className="px-5 py-4 text-xs">
+                                                    <p className="font-bold text-slate-900">{loan.borrower_name}</p>
+                                                    <p className="text-slate-500">{loan.borrower_position} {loan.borrower_department ? `(${loan.borrower_department})` : ''}</p>
+                                                </td>
+                                                <td className="px-5 py-4 text-right font-mono font-black text-amber-800 text-sm">
+                                                    {formatMoney(loan.amount)}
+                                                    <span className="text-[10px] font-normal text-slate-400 ml-1">บาท</span>
+                                                </td>
+                                                <td className="px-5 py-4 text-center text-xs">
+                                                    <p className="text-slate-700 font-medium">ยืม: {loan.doc_date || '-'}</p>
+                                                    {loan.due_date ? (
+                                                        <p className="text-rose-600 font-bold mt-0.5">ครบกำหนด: {loan.due_date}</p>
+                                                    ) : (
+                                                        <p className="text-slate-400">ภายใน 30 วัน</p>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-4 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openClearingFromLoan(loan)}
+                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:scale-105 transition cursor-pointer"
+                                                    >
+                                                        <span>🧾</span> บันทึกเคลียร์เงินยืม
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* 5. Sub-Tab 2: Direct Reimbursement Table (No Prior Loan) */}
+                {clearingSubTab === 'direct_reimburse' && (
+                    <div className="space-y-4">
+                        <div className="rounded-2xl border border-teal-200 bg-teal-50/70 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div className="space-y-0.5">
+                                <h4 className="text-sm font-black text-teal-950 flex items-center gap-1.5">
+                                    <span>⚡</span> รายการขอเบิกจ่ายตรง (กรณีไม่มีสัญญายืมเงิน / สำรองจ่ายเงินสด)
+                                </h4>
+                                <p className="text-xs text-teal-800">
+                                    ใช้สำหรับกรณีไปราชการด่วน หรือสำรองจ่ายเงินสดส่วนตัวในการดำเนินกิจกรรมโครงการโดยไม่ได้ทำสัญญายืมเงินล่วงหน้า นำหลักฐานใบเสร็จมาขออนุมัติเบิกจ่ายและส่งให้งานแผนงานตัดยอดงบประมาณ
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={openDirectReimburseModal}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-black shadow-sm transition cursor-pointer whitespace-nowrap"
+                            >
+                                <span>➕</span> บันทึกขอเบิกจ่ายตรง
+                            </button>
+                        </div>
+
+                        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-bold uppercase text-slate-600">
+                                            <th className="px-5 py-3.5">เลขที่ขอเบิก / วันที่</th>
+                                            <th className="px-5 py-3.5">ผู้ขอเบิก / สังกัด</th>
+                                            <th className="px-5 py-3.5">เรื่อง / วัตถุประสงค์</th>
+                                            <th className="px-5 py-3.5">งบประมาณที่ขอตัดยอด</th>
+                                            <th className="px-5 py-3.5 text-right">ยอดขอเบิก</th>
+                                            <th className="px-5 py-3.5 text-center">สถานะตัดยอด & การเงิน</th>
+                                            <th className="px-5 py-3.5 text-center">การดำเนินการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 text-sm">
+                                        {filteredDirectReimburse.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="7" className="px-6 py-12 text-center text-sm text-slate-400">
+                                                    <div className="text-4xl mb-2">⚡</div>
+                                                    <p className="font-bold text-slate-600">ไม่มีรายการขอเบิกจ่ายตรงในระบบ</p>
+                                                    <p className="text-xs text-slate-400 mt-1">คลิกปุ่ม "บันทึกขอเบิกจ่ายตรง" เพื่อเริ่มบันทึกรายการขอเบิก</p>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredDirectReimburse.map((c) => (
+                                                <tr key={c.id} className="hover:bg-slate-50/60 transition">
+                                                    <td className="px-5 py-4">
+                                                        <span className="font-mono font-bold text-xs text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
+                                                            {c.clearing_number}
+                                                        </span>
+                                                        <p className="text-[11px] text-slate-400 mt-1">{c.expense_date || c.created_at?.slice(0, 10)}</p>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-xs">
+                                                        <p className="font-bold text-slate-900">{c.claimant_name}</p>
+                                                        <p className="text-slate-500">{c.claimant_department || '-'}</p>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-xs font-bold text-slate-800 max-w-xs">
+                                                        <p className="line-clamp-2">{c.title}</p>
+                                                        {c.receipt_count > 0 && (
+                                                            <span className="inline-block text-[10px] text-slate-500 mt-0.5">
+                                                                🧾 แนบ {c.receipt_count} ใบเสร็จ ({c.receipt_reference || 'มีหลักฐานครบ'})
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-xs">
+                                                        {c.project ? (
+                                                            <div>
+                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">โครงการ</span>
+                                                                <p className="font-medium text-slate-800 mt-0.5 line-clamp-1">{c.project.title}</p>
+                                                            </div>
+                                                        ) : c.routine_budget_plan ? (
+                                                            <div>
+                                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">งบประจำ</span>
+                                                                <p className="font-medium text-slate-800 mt-0.5 line-clamp-1">{c.routine_budget_plan.title}</p>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-slate-400">-</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right font-mono font-black text-teal-800 text-sm">
+                                                        {formatMoney(c.actual_spent_amount)}
+                                                        <span className="text-[10px] font-normal text-slate-400 ml-1">บาท</span>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center text-xs">
+                                                        {c.status === 'pending_plan' && (
+                                                            <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                                รอแผนงานตัดยอด
+                                                            </span>
+                                                        )}
+                                                        {c.status === 'plan_approved' && (
+                                                            <div className="space-y-0.5">
+                                                                <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                                                                    ตัดยอดแล้ว ({c.plan_doc_number || '-'})
+                                                                </span>
+                                                                <p className="text-[10px] text-amber-600 font-bold">รอการเงินจ่ายเงินชดเชย</p>
+                                                            </div>
+                                                        )}
+                                                        {c.status === 'finance_completed' && (
+                                                            <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                                การเงินจ่ายเงินชดเชยแล้ว
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center">
+                                                        <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                                            <a
+                                                                href={route('clearings.print', c.id)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition cursor-pointer"
+                                                                title="พิมพ์แบบฟอร์ม A4"
+                                                            >
+                                                                <span>🖨️</span> พิมพ์
+                                                            </a>
+
+                                                            {c.status === 'pending_plan' && isPlanStaff && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenPlanApproveModal(c)}
+                                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer"
+                                                                >
+                                                                    <span>📊</span> ตัดยอด
+                                                                </button>
+                                                            )}
+
+                                                            {c.status === 'plan_approved' && isFinanceStaff && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenFinanceModal(c)}
+                                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer"
+                                                                >
+                                                                    <span>💳</span> จ่ายเงิน
+                                                                </button>
+                                                            )}
+
+                                                            {c.status === 'pending_plan' && (auth.user?.id === c.user_id || isAdmin) && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDeleteClearing(c)}
+                                                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                                                    title="ลบรายการ"
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 6. Sub-Tab 3: All Clearings Log */}
+                {clearingSubTab === 'all_clearings' && (
+                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+                        <div className="border-b border-slate-100 bg-purple-50/40 px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                    <span>📑</span> ทะเบียนประวัติการเคลียร์เงินยืมและการตัดยอดงบประมาณทั้งหมด
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    แสดงประวัติการเคลียร์สัญญายืมเงินและขอเบิกจ่ายตรง พร้อมสถานะการตัดยอดของงานแผนงานและการปิดบัญชีของงานการเงิน
+                                </p>
+                            </div>
+                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-900 border border-purple-200">
+                                ทั้งหมด {filteredAllClearings.length} รายการ
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-slate-200 bg-slate-50/70 text-xs font-bold uppercase text-slate-600">
+                                        <th className="px-5 py-3.5">เลขที่เคลียร์ / วันที่</th>
+                                        <th className="px-5 py-3.5">ประเภท</th>
+                                        <th className="px-5 py-3.5">ผู้ขอเบิก / สังกัด</th>
+                                        <th className="px-5 py-3.5">เรื่อง / โครงการ</th>
+                                        <th className="px-5 py-3.5 text-right">เงินยืม</th>
+                                        <th className="px-5 py-3.5 text-right">จ่ายจริง</th>
+                                        <th className="px-5 py-3.5 text-center">ผลการเคลียร์</th>
+                                        <th className="px-5 py-3.5 text-center">สถานะ</th>
+                                        <th className="px-5 py-3.5 text-center">การดำเนินการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-sm">
+                                    {filteredAllClearings.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="9" className="px-6 py-12 text-center text-sm text-slate-400">
+                                                <div className="text-4xl mb-2">📄</div>
+                                                <p className="font-bold text-slate-600">ไม่พบข้อมูลประวัติการเคลียร์เงินตามเงื่อนไขที่ค้นหา</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredAllClearings.map((c) => (
+                                            <tr key={c.id} className="hover:bg-slate-50/60 transition">
+                                                <td className="px-5 py-4">
+                                                    <span className="font-mono font-bold text-xs text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md">
+                                                        {c.clearing_number}
+                                                    </span>
+                                                    <p className="text-[11px] text-slate-400 mt-1">{c.expense_date || c.created_at?.slice(0, 10)}</p>
+                                                </td>
+                                                <td className="px-5 py-4 text-xs">
+                                                    {c.clearing_type === 'with_loan' ? (
+                                                        <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                            เคลียร์สัญญายืม
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-teal-100 text-teal-800 border border-teal-200">
+                                                            ขอเบิกจ่ายตรง
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-4 text-xs">
+                                                    <p className="font-bold text-slate-900">{c.claimant_name}</p>
+                                                    <p className="text-slate-500">{c.claimant_department || '-'}</p>
+                                                </td>
+                                                <td className="px-5 py-4 text-xs max-w-xs">
+                                                    <p className="font-bold text-slate-800 line-clamp-1">{c.title}</p>
+                                                    <p className="text-slate-400 text-[11px] line-clamp-1">
+                                                        {c.project?.title || c.routine_budget_plan?.title || (c.travel_loan ? `สัญญา ${c.travel_loan.contract_no}` : '-')}
+                                                    </p>
+                                                </td>
+                                                <td className="px-5 py-4 text-right font-mono text-xs text-slate-600">
+                                                    {c.loan_amount > 0 ? formatMoney(c.loan_amount) : '-'}
+                                                </td>
+                                                <td className="px-5 py-4 text-right font-mono font-bold text-xs text-slate-900">
+                                                    {formatMoney(c.actual_spent_amount)}
+                                                </td>
+                                                <td className="px-5 py-4 text-center text-xs">
+                                                    {c.clearing_result === 'refund' && (
+                                                        <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                            🟢 คืนคลัง {formatMoney(c.difference_amount)}
+                                                        </span>
+                                                    )}
+                                                    {c.clearing_result === 'exact' && (
+                                                        <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                                                            🔵 ครบพอดี (0.00)
+                                                        </span>
+                                                    )}
+                                                    {c.clearing_result === 'reimburse' && (
+                                                        <span className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                                                            🟠 เบิกชดเชย {formatMoney(c.difference_amount)}
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-4 text-center text-xs">
+                                                    {c.status === 'pending_plan' && (
+                                                        <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                            รอแผนงานตัดยอด
+                                                        </span>
+                                                    )}
+                                                    {c.status === 'plan_approved' && (
+                                                        <div className="space-y-0.5">
+                                                            <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-100 text-sky-800 border border-sky-200">
+                                                                ตัดยอดแล้ว ({c.plan_doc_number || '-'})
+                                                            </span>
+                                                            <p className="text-[10px] text-amber-600 font-bold">รอการเงินปิดยอด</p>
+                                                        </div>
+                                                    )}
+                                                    {c.status === 'finance_completed' && (
+                                                        <span className="inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                            ปิดยอดสมบูรณ์ ({c.finance_doc_number || 'กง.'})
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                                                        <a
+                                                            href={route('clearings.print', c.id)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition cursor-pointer"
+                                                            title="พิมพ์แบบฟอร์มทางการ A4"
+                                                        >
+                                                            <span>🖨️</span> A4
+                                                        </a>
+
+                                                        {c.status === 'pending_plan' && isPlanStaff && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenPlanApproveModal(c)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer"
+                                                            >
+                                                                <span>📊</span> ตัดยอด
+                                                            </button>
+                                                        )}
+
+                                                        {c.status === 'plan_approved' && isFinanceStaff && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenFinanceModal(c)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition cursor-pointer"
+                                                            >
+                                                                <span>💳</span> ปิดยอด
+                                                            </button>
+                                                        )}
+
+                                                        {c.status === 'pending_plan' && (auth.user?.id === c.user_id || isAdmin) && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteClearing(c)}
+                                                                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                                                title="ลบรายการ"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* 7. Modal: บันทึกการเคลียร์เงินยืม / บันทึกขอเบิกจ่ายตรง */}
+                {clearingModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+                        <div className="w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8">
+                            <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-5">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold mb-1 bg-purple-100 text-purple-900 border border-purple-200">
+                                        {clearingModalType === 'with_loan' ? '🧾 แบบฟอร์มเคลียร์สัญญายืมเงิน' : '⚡ แบบฟอร์มขอเบิกจ่ายตรง (ไม่มีสัญญายืม)'}
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-900">
+                                        {clearingModalType === 'with_loan'
+                                            ? 'บันทึกรายงานการเคลียร์เงินยืมทดรองราชการ (ล้างหนี้สัญญา)'
+                                            : 'บันทึกขออนุมัติเบิกจ่ายชดเชยค่าใช้จ่าย (สำรองจ่ายเงินสดส่วนตัว)'}
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        กรอกข้อมูลและแจกแจงรายการค่าใช้จ่ายจริงตามใบเสร็จ เพื่อส่งเรื่องให้งานแผนงานดำเนินการตัดยอดงบประมาณ
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setClearingModalOpen(false)}
+                                    className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSubmitClearing} className="space-y-4 text-xs">
+                                {/* Row 1: Claimant Info */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                                    <div>
+                                        <label className="block font-bold text-slate-700 mb-1">ชื่อ-สกุล ผู้ขอเบิก/ผู้ยืม *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={clearingFormData.claimant_name}
+                                            onChange={(e) => setClearingFormData({ ...clearingFormData, claimant_name: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 font-bold focus:border-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block font-bold text-slate-700 mb-1">ตำแหน่ง</label>
+                                        <input
+                                            type="text"
+                                            value={clearingFormData.claimant_position}
+                                            onChange={(e) => setClearingFormData({ ...clearingFormData, claimant_position: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block font-bold text-slate-700 mb-1">สังกัดแผนก / งาน</label>
+                                        <input
+                                            type="text"
+                                            value={clearingFormData.claimant_department}
+                                            onChange={(e) => setClearingFormData({ ...clearingFormData, claimant_department: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Row 2: Title & Date */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="sm:col-span-2">
+                                        <label className="block font-bold text-slate-700 mb-1">เรื่อง / วัตถุประสงค์การใช้จ่าย *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="เช่น เคลียร์เงินยืมไปราชการอบรม..., ขอเบิกเงินชดเชยค่าวัสดุจัดกิจกรรม..."
+                                            value={clearingFormData.title}
+                                            onChange={(e) => setClearingFormData({ ...clearingFormData, title: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3 py-2 text-xs font-bold text-slate-900 focus:border-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block font-bold text-slate-700 mb-1">วันที่เกิดค่าใช้จ่าย / สิ้นสุดภารกิจ</label>
+                                        <input
+                                            type="date"
+                                            value={clearingFormData.expense_date}
+                                            onChange={(e) => setClearingFormData({ ...clearingFormData, expense_date: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3 py-2 text-xs font-bold text-slate-800 focus:border-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Budget Source selection for Direct Reimbursement */}
+                                {clearingModalType === 'direct_reimburse' && (
+                                    <div className="p-3.5 rounded-2xl bg-teal-50/70 border border-teal-200 space-y-3">
+                                        <div className="font-bold text-teal-950 flex items-center gap-1.5">
+                                            <span>🎯</span> เลือกแหล่งงบประมาณที่ต้องการขอตัดยอด (งานแผนงานจะทำการตัดยอดงบนี้เมื่ออนุมัติ)
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block font-bold text-slate-700 mb-1">โครงการที่รับผิดชอบค่าใช้จ่าย</label>
+                                                <select
+                                                    value={clearingFormData.project_id || ''}
+                                                    onChange={(e) => setClearingFormData({ ...clearingFormData, project_id: e.target.value, routine_budget_plan_id: '' })}
+                                                    className="w-full rounded-xl border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-teal-500 focus:ring-teal-500 font-bold"
+                                                >
+                                                    <option value="">-- ไม่ระบุโครงการ / ตัดจากงบดำเนินงานประจำ --</option>
+                                                    {availableProjectsForClearing.map((p) => (
+                                                        <option key={p.id} value={p.id}>
+                                                            [{p.academic_year || '2569'}] {p.title} ({p.department?.name || '-'})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block font-bold text-slate-700 mb-1">หรือ งบดำเนินงานประจำสาขา/ฝ่าย</label>
+                                                <select
+                                                    value={clearingFormData.routine_budget_plan_id || ''}
+                                                    onChange={(e) => setClearingFormData({ ...clearingFormData, routine_budget_plan_id: e.target.value, project_id: '' })}
+                                                    className="w-full rounded-xl border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-teal-500 focus:ring-teal-500"
+                                                >
+                                                    <option value="">-- ไม่ระบุงบประจำ / เลือกจากโครงการ --</option>
+                                                    {routinePlans.map((r) => (
+                                                        <option key={r.id} value={r.id}>
+                                                            {r.title} ({r.department?.name || '-'}) [จัดสรร: {formatMoney(r.allocated_amount)} บ.]
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Loan Amount for With Loan */}
+                                {clearingModalType === 'with_loan' && (
+                                    <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                        <div>
+                                            <span className="font-bold text-amber-900">จำนวนเงินที่ยืมทดรองราชการไปตามสัญญา:</span>
+                                            <p className="text-[11px] text-amber-700">ยอดเงินที่ได้รับไปล่วงหน้าจากงานการเงิน</p>
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                required
+                                                value={clearingFormData.loan_amount}
+                                                onChange={(e) => setClearingFormData({ ...clearingFormData, loan_amount: e.target.value })}
+                                                className="w-36 rounded-xl border-amber-300 bg-white px-3 py-1.5 text-right font-mono font-black text-amber-900 text-sm focus:border-amber-500 focus:ring-amber-500"
+                                            />
+                                            <span className="font-bold text-amber-900">บาท</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Breakdown of Actual Expenses (Dynamic Items) */}
+                                <div className="space-y-2 border border-slate-200 rounded-2xl p-4 bg-slate-50/50">
+                                    <div className="flex justify-between items-center">
+                                        <label className="font-black text-slate-900 flex items-center gap-1.5">
+                                            <span>🧾</span> รายการค่าใช้จ่ายจริงตามใบเสร็จ / หลักฐานจ่าย
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={handleAddClearingItem}
+                                            className="px-2.5 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 text-[11px] font-bold cursor-pointer transition"
+                                        >
+                                            + เพิ่มรายการ
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {clearingFormData.items.map((item, idx) => (
+                                            <div key={idx} className="flex items-center gap-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder={`รายการที่ ${idx + 1} (เช่น ค่าพาหนะ, ค่าที่พัก, ค่าวัสดุ...)`}
+                                                    value={item.description}
+                                                    onChange={(e) => handleClearingItemChange(idx, 'description', e.target.value)}
+                                                    className="flex-1 rounded-xl border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-800 focus:border-purple-500 focus:ring-purple-500"
+                                                />
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    placeholder="จำนวนเงิน (บาท)"
+                                                    value={item.amount}
+                                                    onChange={(e) => handleClearingItemChange(idx, 'amount', e.target.value)}
+                                                    className="w-32 rounded-xl border-slate-300 bg-white px-3 py-1.5 text-right font-mono font-bold text-xs text-slate-900 focus:border-purple-500 focus:ring-purple-500"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveClearingItem(idx)}
+                                                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                                                    title="ลบรายการนี้"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Real-time Calculation Result Box */}
+                                <div className="p-4 rounded-2xl border bg-slate-900 text-white space-y-2">
+                                    <div className="flex justify-between items-center text-slate-300">
+                                        <span>ยอดเงินยืมทดรองตามสัญญา:</span>
+                                        <span className="font-mono font-bold text-sm text-slate-100">{formatMoney(currentLoanAmt)} บาท</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-slate-300">
+                                        <span>ยอดค่าใช้จ่ายจริงตามใบเสร็จรวม:</span>
+                                        <span className="font-mono font-bold text-sm text-emerald-400">{formatMoney(currentSpentAmt)} บาท</span>
+                                    </div>
+                                    <div className="border-t border-slate-800 pt-2 flex justify-between items-center font-bold">
+                                        <span>ผลการคำนวณการเคลียร์เงิน:</span>
+                                        <div>
+                                            {clearingModalType === 'with_loan' ? (
+                                                currentDiff < -0.01 ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs">
+                                                        <span>🟢</span> มีเงินเหลือส่งคืนคลัง (Refund): {formatMoney(Math.abs(currentDiff))} บาท
+                                                    </span>
+                                                ) : currentDiff > 0.01 ? (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-400/30 text-xs">
+                                                        <span>🟠</span> เงินไม่พอ ขอเบิกเงินชดเชยเพิ่ม: {formatMoney(currentDiff)} บาท
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-sky-500/20 text-sky-300 border border-sky-400/30 text-xs">
+                                                        <span>🔵</span> จ่ายครบถ้วนพอดี (Exact): 0.00 บาท
+                                                    </span>
+                                                )
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-teal-500/20 text-teal-300 border border-teal-400/30 text-xs">
+                                                    <span>⚡</span> ยอดขอเบิกชดเชยทั้งสิ้น: {formatMoney(currentSpentAmt)} บาท
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Receipts & References */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block font-bold text-slate-700 mb-1">จำนวนใบเสร็จ / ใบสำคัญรับเงิน (ฉบับ)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={clearingFormData.receipt_count}
+                                            onChange={(e) => setClearingFormData({ ...clearingFormData, receipt_count: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:border-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block font-bold text-slate-700 mb-1">เลขอ้างอิงใบเสร็จ / หมายเหตุเอกสาร</label>
+                                        <input
+                                            type="text"
+                                            placeholder="เช่น ใบเสร็จเล่มที่ 12 เลขที่ 45-50"
+                                            value={clearingFormData.receipt_reference}
+                                            onChange={(e) => setClearingFormData({ ...clearingFormData, receipt_reference: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3 py-1.5 text-xs text-slate-800 focus:border-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex justify-end gap-2.5 pt-4 border-t border-slate-200">
+                                    <button
+                                        type="button"
+                                        onClick={() => setClearingModalOpen(false)}
+                                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmittingClearing}
+                                        className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-black text-xs shadow-md transition cursor-pointer disabled:opacity-50"
+                                    >
+                                        {isSubmittingClearing ? (
+                                            <span>กำลังบันทึก...</span>
+                                        ) : (
+                                            <>
+                                                <span>💾</span> บันทึกและส่งให้งานแผนงานตรวจสอบ
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* 8. Modal: งานแผนงานอนุมัติตัดยอดงบประมาณ */}
+                {planApproveModalOpen && clearingForPlanApproval && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+                        <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-indigo-100 my-8">
+                            <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-4">
+                                <div>
+                                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-100 text-indigo-900 border border-indigo-200">
+                                        📊 งานแผนงาน (Planning Approval)
+                                    </span>
+                                    <h3 className="text-base font-black text-slate-900 mt-1">
+                                        อนุมัติตัดยอดงบประมาณการเคลียร์เงิน
+                                    </h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setPlanApproveModalOpen(false)}
+                                    className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSubmitPlanApprove} className="space-y-3.5 text-xs">
+                                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">เลขที่เอกสารเคลียร์:</span>
+                                        <span className="font-mono font-bold text-slate-800">{clearingForPlanApproval.clearing_number}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">ผู้ขอเบิก / แผนก:</span>
+                                        <span className="font-bold text-slate-800">{clearingForPlanApproval.claimant_name} ({clearingForPlanApproval.claimant_department || '-'})</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">ยอดจ่ายจริงตามใบเสร็จ:</span>
+                                        <span className="font-mono font-black text-indigo-700">{formatMoney(clearingForPlanApproval.actual_spent_amount)} บาท</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">ผลการเคลียร์:</span>
+                                        <span className="font-bold">
+                                            {clearingForPlanApproval.clearing_result === 'refund' && `🟢 คืนคลัง ${formatMoney(clearingForPlanApproval.difference_amount)} บาท`}
+                                            {clearingForPlanApproval.clearing_result === 'exact' && `🔵 พอดี (0.00 บาท)`}
+                                            {clearingForPlanApproval.clearing_result === 'reimburse' && `🟠 ขอเบิกชดเชย ${formatMoney(clearingForPlanApproval.difference_amount)} บาท`}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block font-bold text-slate-800 mb-1">เลขที่ตัดยอดงานแผนงาน *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="เช่น ผง.เคลียร์ 01/2569"
+                                        value={planDocNumberInput}
+                                        onChange={(e) => setPlanDocNumberInput(e.target.value)}
+                                        className="w-full rounded-xl border-slate-300 px-3 py-2 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:ring-indigo-500"
+                                    />
+                                    <p className="text-[11px] text-slate-400 mt-1">เลขที่เอกสารลงทะเบียนตัดยอดงบประมาณของงานแผนงาน</p>
+                                </div>
+
+                                <div>
+                                    <label className="block font-bold text-slate-800 mb-1">หมายเหตุงานแผนงาน (ระบุหรือไม่ก็ได้)</label>
+                                    <textarea
+                                        rows="2"
+                                        placeholder="เช่น ตรวจสอบใบเสร็จถูกต้อง ตัดยอดจากโครงการ..."
+                                        value={planNotesInput}
+                                        onChange={(e) => setPlanNotesInput(e.target.value)}
+                                        className="w-full rounded-xl border-slate-300 px-3 py-2 text-xs text-slate-800 focus:border-indigo-500 focus:ring-indigo-500"
+                                    ></textarea>
+                                </div>
+
+                                <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlanApproveModalOpen(false)}
+                                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmittingPlanApproval}
+                                        className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs shadow-md transition cursor-pointer disabled:opacity-50"
+                                    >
+                                        {isSubmittingPlanApproval ? 'กำลังบันทึก...' : '📊 ยืนยันอนุมัติตัดยอดงบประมาณ'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* 9. Modal: งานการเงินปิดยอดการเบิกจ่าย / รับเงินคืนคลัง */}
+                {financeModalOpen && clearingForFinance && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+                        <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-emerald-100 my-8">
+                            <div className="flex justify-between items-center border-b border-slate-200 pb-3 mb-4">
+                                <div>
+                                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-200">
+                                        💳 งานการเงิน (Finance Completion)
+                                    </span>
+                                    <h3 className="text-base font-black text-slate-900 mt-1">
+                                        บันทึกปิดยอดการเงินและการรับเงินคืน/จ่ายชดเชย
+                                    </h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setFinanceModalOpen(false)}
+                                    className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSubmitFinance} className="space-y-3.5 text-xs">
+                                <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-1.5">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-600">เลขที่เอกสารเคลียร์:</span>
+                                        <span className="font-mono font-bold text-slate-800">{clearingForFinance.clearing_number}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-600">ผู้ขอเบิก:</span>
+                                        <span className="font-bold text-slate-800">{clearingForFinance.claimant_name}</span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-emerald-200/60 pt-1.5">
+                                        <span className="font-bold text-emerald-950">การดำเนินการการเงิน:</span>
+                                        <span className="font-black text-emerald-900">
+                                            {clearingForFinance.clearing_result === 'refund' && `รับเงินคืนคลัง: ${formatMoney(clearingForFinance.difference_amount)} บาท`}
+                                            {clearingForFinance.clearing_result === 'exact' && `จ่ายครบพอดี (ไม่ต้องรับ/จ่ายเงินเพิ่ม)`}
+                                            {clearingForFinance.clearing_result === 'reimburse' && `จ่ายเงินชดเชยให้ผู้ขอเบิก: ${formatMoney(clearingForFinance.difference_amount)} บาท`}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block font-bold text-slate-800 mb-1">เลขที่เอกสารการเงิน / ใบสำคัญ</label>
+                                    <input
+                                        type="text"
+                                        placeholder="เช่น กง. 45/2569, ใบสำคัญจ่ายเล่ม 2"
+                                        value={financeDocNumberInput}
+                                        onChange={(e) => setFinanceDocNumberInput(e.target.value)}
+                                        className="w-full rounded-xl border-slate-300 px-3 py-2 text-xs font-bold text-slate-900 focus:border-emerald-500 focus:ring-emerald-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block font-bold text-slate-800 mb-1">เลขอ้างอิงการชำระเงิน / เลขที่ใบเสร็จรับเงินคืนคลัง</label>
+                                    <input
+                                        type="text"
+                                        placeholder="เช่น KTB Netbank Ref: xxxx, เลขที่เช็ค, เลขที่ใบเสร็จเล่ม..."
+                                        value={financePaymentRefInput}
+                                        onChange={(e) => setFinancePaymentRefInput(e.target.value)}
+                                        className="w-full rounded-xl border-slate-300 px-3 py-2 text-xs text-slate-800 focus:border-emerald-500 focus:ring-emerald-500"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block font-bold text-slate-800 mb-1">หมายเหตุงานการเงิน</label>
+                                    <textarea
+                                        rows="2"
+                                        placeholder="หมายเหตุเพิ่มเติม..."
+                                        value={financeNotesInput}
+                                        onChange={(e) => setFinanceNotesInput(e.target.value)}
+                                        className="w-full rounded-xl border-slate-300 px-3 py-2 text-xs text-slate-800 focus:border-emerald-500 focus:ring-emerald-500"
+                                    ></textarea>
+                                </div>
+
+                                <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFinanceModalOpen(false)}
+                                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer transition"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSubmittingFinance}
+                                        className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition cursor-pointer disabled:opacity-50"
+                                    >
+                                        {isSubmittingFinance ? 'กำลังบันทึก...' : '💳 ยืนยันปิดยอดการเงิน'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };

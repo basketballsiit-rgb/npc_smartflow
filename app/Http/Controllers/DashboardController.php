@@ -111,6 +111,22 @@ class DashboardController extends Controller
             ->get();
         $data['advancePayments'] = $advancePayments;
 
+        $expenseClearings = \App\Models\ExpenseClearing::with([
+            'project.department',
+            'routineBudgetPlan.department',
+            'fundingSource',
+            'travelLoan',
+            'user',
+            'planApprover',
+            'financeApprover'
+        ])->latest()->get();
+        $data['expenseClearings'] = $expenseClearings;
+
+        $data['availableProjectsForClearing'] = Project::whereIn('status', ['approved', 'in_progress', 'completed'])
+            ->with(['department', 'budget'])
+            ->latest()
+            ->get(['id', 'title', 'academic_year', 'department_id', 'allocated_budget', 'estimated_budget']);
+
         // Load External Travel Loans (from npc_eleve / npc_hr)
         $allTravelLoans = TravelLoan::with(['fundingSource', 'planCutByUser', 'project'])
             ->latest()

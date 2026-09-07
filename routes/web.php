@@ -183,6 +183,13 @@ Route::middleware('auth')->group(function () {
 
     // Final stitched report download
     Route::get('projects/{project}/download-report', [ProjectController::class, 'downloadReport'])->name('projects.download_report');
+
+    // Expense & Loan Clearing Routes (With Loan & Direct Reimbursement)
+    Route::post('/clearings', [\App\Http\Controllers\ExpenseClearingController::class, 'store'])->name('clearings.store');
+    Route::post('/clearings/{clearing}/plan-approve', [\App\Http\Controllers\ExpenseClearingController::class, 'planApprove'])->name('clearings.plan_approve');
+    Route::post('/clearings/{clearing}/finance-complete', [\App\Http\Controllers\ExpenseClearingController::class, 'financeComplete'])->name('clearings.finance_complete');
+    Route::delete('/clearings/{clearing}', [\App\Http\Controllers\ExpenseClearingController::class, 'destroy'])->name('clearings.destroy');
+    Route::get('/clearings/{clearing}/print', [\App\Http\Controllers\ExpenseClearingController::class, 'print'])->name('clearings.print');
 });
 
 require __DIR__.'/auth.php';
