@@ -477,23 +477,47 @@ export default function Dashboard({
     const [isSubmittingFinance, setIsSubmittingFinance] = useState(false);
 
     const openClearingFromLoan = (loan) => {
-        const isTravelLoan = Boolean(loan.contract_no !== undefined || loan.travel_id !== undefined);
-        const loanAmt = isTravelLoan ? (parseFloat(loan.total_loan_amount) || 0) : (parseFloat(loan.advance_amount || loan.allocated_amount) || 0);
-        const borrowerName = isTravelLoan ? (loan.borrower_name || auth.user?.name || '') : (loan.project?.user?.name || auth.user?.name || '');
-        const borrowerPos = isTravelLoan ? (loan.borrower_position || auth.user?.position || '') : (loan.project?.user?.position || auth.user?.position || '');
-        const borrowerDept = isTravelLoan ? (loan.borrower_department || auth.user?.department?.name || '') : (loan.project?.department?.name || auth.user?.department?.name || '');
-        const loanTitle = isTravelLoan 
-            ? (`เคลียร์เงินยืมสัญญาเลขที่ ${loan.contract_no || '-'}: ${loan.subject || ''}`)
-            : (`เคลียร์เงินยืมทดรองโครงการ: ${loan.project?.title || ''}`);
+        if (!loan) return;
+        const actualLoanObj = loan.raw || loan;
+        const isTravelLoan = Boolean(
+            loan.source_type === 'travel_loan' ||
+            actualLoanObj.contract_no !== undefined ||
+            actualLoanObj.travel_id !== undefined ||
+            loan.contract_no?.startsWith('TL-') ||
+            loan.contract_no?.includes('กค') ||
+            loan.contract_no?.includes('/')
+        );
+
+        const loanAmt = parseFloat(loan.amount)
+            || parseFloat(loan.total_loan_amount)
+            || parseFloat(actualLoanObj.total_loan_amount)
+            || parseFloat(loan.advance_amount)
+            || parseFloat(actualLoanObj.advance_amount)
+            || parseFloat(loan.allocated_amount)
+            || parseFloat(actualLoanObj.allocated_amount)
+            || 0;
+
+        const borrowerName = (loan.borrower_name && loan.borrower_name !== '-')
+            ? loan.borrower_name
+            : (actualLoanObj.borrower_name || actualLoanObj.project?.user?.name || auth.user?.name || '');
+        const borrowerPos = loan.borrower_position || actualLoanObj.borrower_position || actualLoanObj.project?.user?.position || auth.user?.position || '';
+        const borrowerDept = (loan.borrower_department && loan.borrower_department !== '-')
+            ? loan.borrower_department
+            : (actualLoanObj.borrower_department || actualLoanObj.project?.department?.name || auth.user?.department?.name || '');
+        const contractNo = loan.contract_no || actualLoanObj.contract_no || '-';
+        const subjectText = actualLoanObj.subject || loan.title || actualLoanObj.project?.title || '';
+        const loanTitle = isTravelLoan
+            ? (`เคลียร์เงินยืมสัญญาเลขที่ ${contractNo}: ${subjectText}`)
+            : (`เคลียร์เงินยืมทดรองโครงการ: ${subjectText}`);
 
         setClearingModalType('with_loan');
         setClearingTargetLoan(loan);
         setClearingFormData({
             clearing_type: 'with_loan',
-            travel_loan_id: isTravelLoan ? loan.id : '',
-            project_id: loan.project_id || (loan.project?.id || ''),
+            travel_loan_id: isTravelLoan ? (loan.id || actualLoanObj.id) : '',
+            project_id: actualLoanObj.project_id || (actualLoanObj.project?.id || ''),
             routine_budget_plan_id: '',
-            funding_source_id: loan.funding_source_id || '',
+            funding_source_id: actualLoanObj.funding_source_id || '',
             budget_target_type: 'project',
             claimant_name: borrowerName,
             claimant_position: borrowerPos,
@@ -505,7 +529,7 @@ export default function Dashboard({
             receipt_count: 1,
             receipt_reference: '',
             items: [
-                { description: isTravelLoan ? 'ค่าใช้จ่ายตามใบเสร็จการไปราชการ' : 'ค่าใช้จ่ายตามใบเสร็จการดำเนินงาน', amount: loanAmt }
+                { description: isTravelLoan ? 'ค่าใช้จ่ายตามใบเสร็จการไปราชการ' : 'ค่าใช้จ่ายตามใบเสร็จการดำเนินงาน', amount: loanAmt > 0 ? loanAmt : '' }
             ],
             notes: '',
         });
@@ -5212,36 +5236,46 @@ ${itemsListText}
         const pendingAdvancePayments = rawAdvancePayments.filter(b => !b.advance_cleared_at);
 
         const combinedPendingLoans = [
-            ...pendingTravelLoans.map(tl => ({
-                id: tl.id,
-                source_type: 'travel_loan',
-                contract_no: tl.contract_no || ('TL-' + tl.id),
-                title: tl.subject || 'สัญญาการยืมเงินไปราชการ',
-                borrower_name: tl.borrower_name || '-',
-                borrower_department: tl.borrower_department || '-',
-                borrower_position: tl.borrower_position || '',
-                amount: parseFloat(tl.total_loan_amount) || 0,
-                doc_date: tl.doc_date || tl.created_at?.slice(0, 10),
-                due_date: tl.due_date,
-                project_id: tl.project_id,
-                funding_source_id: tl.funding_source_id,
-                raw: tl,
-            })),
-            ...pendingAdvancePayments.map(ap => ({
-                id: ap.id,
-                source_type: 'advance_payment',
-                contract_no: ap.project?.title ? ('ยืมทดรอง: ' + ap.project.title) : ('ยืมทดรอง #' + ap.id),
-                title: ap.project?.title || 'เงินยืมทดรองจ่ายโครงการ',
-                borrower_name: ap.project?.user?.name || '-',
-                borrower_department: ap.project?.department?.name || '-',
-                borrower_position: ap.project?.user?.position || '',
-                amount: parseFloat(ap.advance_amount || ap.allocated_amount) || 0,
-                doc_date: ap.created_at?.slice(0, 10),
-                due_date: null,
-                project_id: ap.project_id,
-                funding_source_id: ap.funding_source_id,
-                raw: ap,
-            }))
+            ...pendingTravelLoans.map(tl => {
+                const amt = parseFloat(tl.total_loan_amount) || 0;
+                return {
+                    id: tl.id,
+                    source_type: 'travel_loan',
+                    contract_no: tl.contract_no || ('TL-' + tl.id),
+                    title: tl.subject || 'สัญญาการยืมเงินไปราชการ',
+                    borrower_name: tl.borrower_name || '-',
+                    borrower_department: tl.borrower_department || '-',
+                    borrower_position: tl.borrower_position || '',
+                    amount: amt,
+                    total_loan_amount: amt,
+                    doc_date: tl.doc_date || tl.created_at?.slice(0, 10),
+                    due_date: tl.due_date,
+                    project_id: tl.project_id,
+                    funding_source_id: tl.funding_source_id,
+                    raw: tl,
+                };
+            }),
+            ...pendingAdvancePayments.map(ap => {
+                const amt = parseFloat(ap.advance_amount || ap.allocated_amount) || 0;
+                return {
+                    id: ap.id,
+                    source_type: 'advance_payment',
+                    contract_no: ap.project?.title ? ('ยืมทดรอง: ' + ap.project.title) : ('ยืมทดรอง #' + ap.id),
+                    title: ap.project?.title || 'เงินยืมทดรองจ่ายโครงการ',
+                    borrower_name: ap.project?.user?.name || '-',
+                    borrower_department: ap.project?.department?.name || '-',
+                    borrower_position: ap.project?.user?.position || '',
+                    amount: amt,
+                    total_loan_amount: amt,
+                    advance_amount: amt,
+                    allocated_amount: amt,
+                    doc_date: ap.created_at?.slice(0, 10),
+                    due_date: null,
+                    project_id: ap.project_id,
+                    funding_source_id: ap.funding_source_id,
+                    raw: ap,
+                };
+            })
         ];
 
         // 2. Clearings List from props
@@ -5992,22 +6026,70 @@ ${itemsListText}
 
                                 {/* Loan Amount for With Loan */}
                                 {clearingModalType === 'with_loan' && (
-                                    <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                                        <div>
-                                            <span className="font-bold text-amber-900">จำนวนเงินที่ยืมทดรองราชการไปตามสัญญา:</span>
-                                            <p className="text-[11px] text-amber-700">ยอดเงินที่ได้รับไปล่วงหน้าจากงานการเงิน</p>
-                                        </div>
-                                        <div className="flex items-center gap-1.5">
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                required
-                                                value={clearingFormData.loan_amount}
-                                                onChange={(e) => setClearingFormData({ ...clearingFormData, loan_amount: e.target.value })}
-                                                className="w-36 rounded-xl border-amber-300 bg-white px-3 py-1.5 text-right font-mono font-black text-amber-900 text-sm focus:border-amber-500 focus:ring-amber-500"
-                                            />
-                                            <span className="font-bold text-amber-900">บาท</span>
+                                    <div className="space-y-3">
+                                        {combinedPendingLoans.length > 0 && (
+                                            <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200">
+                                                <label className="block font-bold text-amber-950 mb-1.5 flex items-center justify-between">
+                                                    <span className="flex items-center gap-1.5">
+                                                        <span>📋</span> สัญญายืมเงินที่ต้องการเคลียร์ล้างหนี้ *
+                                                    </span>
+                                                    <span className="text-[11px] font-normal text-amber-700">
+                                                        (เลือกระบุสัญญาเพื่อดึงยอดเงินยืมและข้อมูลอัตโนมัติ)
+                                                    </span>
+                                                </label>
+                                                <select
+                                                    value={
+                                                        clearingFormData.travel_loan_id 
+                                                            ? ('travel_loan-' + clearingFormData.travel_loan_id) 
+                                                            : (clearingFormData.project_id ? ('advance_payment-' + clearingFormData.project_id) : '')
+                                                    }
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        const matched = combinedPendingLoans.find(l => {
+                                                            const key = l.source_type + '-' + (l.source_type === 'travel_loan' ? l.id : (l.project_id || l.id));
+                                                            return key === val || String(l.id) === val;
+                                                        });
+                                                        if (matched) {
+                                                            openClearingFromLoan(matched);
+                                                        }
+                                                    }}
+                                                    className="w-full rounded-xl border-amber-300 bg-white px-3 py-2 text-xs font-bold text-slate-900 focus:border-amber-500 focus:ring-amber-500"
+                                                >
+                                                    <option value="">-- เลือกสัญญาการยืมเงินจากรายการคงค้าง --</option>
+                                                    {combinedPendingLoans.map((l) => (
+                                                        <option 
+                                                            key={l.source_type + '-' + l.id} 
+                                                            value={l.source_type + '-' + (l.source_type === 'travel_loan' ? l.id : (l.project_id || l.id))}
+                                                        >
+                                                            [{l.contract_no}] {l.borrower_name} - {l.title} (ยอดเงินยืม: {formatMoney(l.amount)} บาท)
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+
+                                        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-300 shadow-xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black text-amber-950 text-sm">จำนวนเงินที่ยืมทดรองราชการไปตามสัญญา:</span>
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300/60">
+                                                        🔒 ดึงจากสัญญาอัตโนมัติ
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-amber-700 mt-0.5">ยอดเงินที่ได้รับอนุมัติและรับเงินไปล่วงหน้าจากงานการเงินตามสัญญา</p>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    required
+                                                    value={clearingFormData.loan_amount}
+                                                    onChange={(e) => setClearingFormData({ ...clearingFormData, loan_amount: e.target.value })}
+                                                    className="w-40 rounded-xl border-amber-300 bg-white px-3 py-2 text-right font-mono font-black text-amber-900 text-base shadow-xs focus:border-amber-500 focus:ring-amber-500"
+                                                />
+                                                <span className="font-black text-amber-900 text-sm">บาท</span>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
