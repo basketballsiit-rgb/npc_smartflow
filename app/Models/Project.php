@@ -9,6 +9,8 @@ class Project extends Model
     protected $fillable = [
         'user_id',
         'department_id',
+        'user_position_id',
+        'proposer_duty',
         'title',
         'academic_year',
         'background_rationale',
@@ -89,6 +91,14 @@ class Project extends Model
     public function department()
     {
         return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * Get the specific duty/position under which this project was proposed.
+     */
+    public function userPosition()
+    {
+        return $this->belongsTo(UserPosition::class);
     }
 
     /**

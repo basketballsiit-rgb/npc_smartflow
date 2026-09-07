@@ -109,6 +109,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     const { data, setData, patch, processing, errors } = useForm({
         title: project?.title || '',
         academic_year: project?.academic_year || 2569,
+        user_position_id: project?.user_position_id || '',
+        department_id: project?.department_id || '',
         responsible_person: project?.responsible_person || project?.user?.name || '',
         position: project?.position || 'ครูผู้สอน / ผู้รับผิดชอบโครงการ',
         phone: project?.phone || '',
@@ -652,6 +654,47 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                         {errors.estimated_budget && <span className="text-xs text-rose-500 mt-1 block">{errors.estimated_budget}</span>}
                                     </div>
                                 </div>
+
+                                {/* Duty / Capacity Selection */}
+                                {user?.all_positions && user.all_positions.length > 1 && (
+                                    <div className="rounded-2xl border-2 border-purple-300 bg-purple-50/40 p-4 shadow-xs">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                                                <span>🎯</span> เสนอโครงการในนาม / ภาระงานหน้าที่ (Capacity / Role)
+                                            </label>
+                                            <span className="text-[11px] font-bold text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full">
+                                                มี {user.all_positions.length} ภาระงานในสังกัด
+                                            </span>
+                                        </div>
+                                        <select
+                                            value={data.user_position_id || ''}
+                                            onChange={(e) => {
+                                                const posId = e.target.value;
+                                                const selected = user.all_positions.find(p => String(p.id) === String(posId));
+                                                if (selected) {
+                                                    setData(prev => ({
+                                                        ...prev,
+                                                        user_position_id: selected.id,
+                                                        department_id: selected.sub_department_id || selected.department_id || prev.department_id,
+                                                        position: selected.formatted_title || selected.position || prev.position,
+                                                    }));
+                                                }
+                                            }}
+                                            disabled={isTitleLocked}
+                                            className="w-full rounded-xl border-purple-300 bg-white px-3.5 py-2.5 text-xs font-bold text-purple-950 focus:border-purple-600 focus:ring-purple-600 shadow-xs disabled:bg-slate-100"
+                                        >
+                                            <option value="">-- เลือกภาระงานหน้าที่ที่เสนอโครงการ --</option>
+                                            {user.all_positions.map((pos) => (
+                                                <option key={pos.id} value={pos.id}>
+                                                    {pos.formatted_title} {pos.is_primary ? '★ (ภาระงานหลัก)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="text-[11px] text-purple-600 mt-1.5 flex items-center gap-1">
+                                            <span>ℹ️</span> ระบบจะผูกฝ่าย/งาน และกำหนดขั้นตอนการอนุมัติตามภาระงานหน้าที่ที่ท่านเลือก
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Responsible Person & Position & Contact */}
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-1">

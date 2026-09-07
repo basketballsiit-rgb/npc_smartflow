@@ -158,6 +158,7 @@ class ProjectController extends Controller
             'title' => 'required|string|max:255',
             'academic_year' => 'required|integer|min:2500|max:2650',
             'proposed_budget' => 'required|numeric|min:0',
+            'user_position_id' => 'nullable|exists:user_positions,id',
             'department_id' => 'nullable|exists:departments,id',
             'responsible_person' => 'nullable|string',
             'position' => 'nullable|string',
@@ -174,7 +175,20 @@ class ProjectController extends Controller
         ]);
 
         $user = auth()->user();
-        $deptId = $request->input('department_id') ?: ($user->department_id ?: Department::first()->id);
+
+        // ดึงข้อมูลภาระงานที่เลือก
+        $userPosId = $request->input('user_position_id');
+        $userPosition = null;
+        if ($userPosId) {
+            $userPosition = \App\Models\UserPosition::find($userPosId);
+        }
+        if (!$userPosition && $user->userPositions()->exists()) {
+            $userPosition = $user->userPositions()->where('is_primary', true)->first() ?: $user->userPositions()->first();
+        }
+
+        $deptId = $request->input('department_id') ?: ($userPosition ? ($userPosition->sub_department_id ?: $userPosition->department_id) : ($user->department_id ?: Department::first()->id));
+        $posTitle = $validated['position'] ?? ($userPosition ? $userPosition->formatPositionTitle() : $user->position);
+        $proposerDuty = $userPosition?->duty;
 
         $iqa = \App\Models\IqaStrategy::firstOrCreate(
             ['id' => 1],
@@ -189,13 +203,15 @@ class ProjectController extends Controller
 
         $project = new Project();
         $project->user_id = $user->id;
+        $project->user_position_id = $userPosition?->id;
+        $project->proposer_duty = $proposerDuty;
         $project->department_id = $deptId;
         $project->title = $validated['title'];
         $project->academic_year = $validated['academic_year'];
         $project->proposed_budget = $validated['proposed_budget'];
         $project->estimated_budget = $validated['proposed_budget'];
         $project->responsible_person = $validated['responsible_person'] ?? $user->name;
-        $project->position = $validated['position'] ?? $user->position;
+        $project->position = $posTitle;
         $project->phone = $validated['phone'] ?? '';
         $project->email = $validated['email'] ?? $user->email;
         $project->background_rationale = $validated['background_rationale'] ?? 'เสนอคำขอรับการจัดสรรงบประมาณโครงการเบื้องต้น';
@@ -429,7 +445,7 @@ class ProjectController extends Controller
      */
     public function show(Project $project)
     {
-        $project->load(['user', 'department', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items']);
+        $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
         
         // Deduplicate approvals (prevent duplicate records from legacy submits)
@@ -447,7 +463,7 @@ class ProjectController extends Controller
         
         if ($project->status === 'submitted' || $project->status === 'pending_approval') {
             switch ($project->current_approval_step) {
-                case 2: // Head of Department (HOD) - Must be Admin, Plan Head, or designated Department Head (and not proposing teacher)
+                case 2: // Head of Department / Head of Work / Head of Major
                     $canApprove = $user->isAdmin() 
                         || $user->isPlanHead() 
                         || ($user->isDepartmentHead($project->department_id) && $user->id !== $project->user_id);
@@ -455,8 +471,10 @@ class ProjectController extends Controller
                 case 3: // Plan Head
                     $canApprove = $user->isAdmin() || $user->isPlanHead();
                     break;
-                case 4: // Deputy Director
-                case 5: // Deputy Director 2
+                case 4: // Deputy Director of relevant department
+                    $canApprove = $user->isAdmin() || $user->isExecutiveForDepartment($project->department_id);
+                    break;
+                case 5: // Deputy Director of Planning
                 case 6: // Director
                     $canApprove = $user->isAdmin() || $user->isExecutive();
                     break;
@@ -562,6 +580,8 @@ class ProjectController extends Controller
             'iqa_strategy_id' => 'nullable|exists:iqa_strategies,id',
             'ovec_strategy_id' => 'nullable|exists:ovec_strategies,id',
             'estimated_budget' => 'required|numeric|min:0',
+            'user_position_id' => 'nullable|exists:user_positions,id',
+            'department_id' => 'nullable|exists:departments,id',
         ], [
             'academic_year.required' => 'กรุณาระบุปีการศึกษา (พ.ศ.)',
             'academic_year.integer' => 'ปีการศึกษาต้องเป็นตัวเลข พ.ศ.',
@@ -593,6 +613,16 @@ class ProjectController extends Controller
         // If previously preliminary without budget approval, change to draft
         if ($project->status === 'preliminary') {
             $validated['status'] = 'draft';
+        }
+
+        if ($request->filled('user_position_id')) {
+            $userPos = \App\Models\UserPosition::with(['department', 'subDepartment'])->find($request->user_position_id);
+            if ($userPos && $userPos->user_id === $project->user_id) {
+                $validated['user_position_id'] = $userPos->id;
+                $validated['department_id'] = $userPos->sub_department_id ?? $userPos->department_id;
+                $validated['proposer_duty'] = $userPos->duty;
+                $validated['position'] = $userPos->formatPositionTitle();
+            }
         }
 
         $project->update($validated);
@@ -725,8 +755,19 @@ class ProjectController extends Controller
             abort(403, 'เฉพาะโครงการที่เป็นแบบร่าง ได้รับจัดสรรงบแล้ว หรือส่งกลับแก้ไขเท่านั้นที่สามารถยื่นขออนุมัติได้');
         }
 
+        $isHeadProposer = false;
+        if ($project->user_position_id) {
+            $userPos = \App\Models\UserPosition::find($project->user_position_id);
+            if ($userPos && in_array($userPos->duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา'])) {
+                $isHeadProposer = true;
+            }
+        }
+        if (!$isHeadProposer && $user->isDepartmentHead($project->department_id)) {
+            $isHeadProposer = true;
+        }
+
         $project->status = 'pending_approval';
-        $project->current_approval_step = 2; // Advance to HOD review step
+        $project->current_approval_step = $isHeadProposer ? 3 : 2;
         $project->save();
 
         // Create submission log
@@ -737,6 +778,16 @@ class ProjectController extends Controller
             'status' => 'submitted',
             'comments' => 'ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ (Submitted for 6-Step Approval)',
         ]);
+
+        if ($isHeadProposer) {
+            ProjectApproval::create([
+                'project_id' => $project->id,
+                'user_id' => auth()->id(),
+                'step_number' => 2,
+                'status' => 'approved',
+                'comments' => 'เห็นชอบเสนอโครงการ (ผู้เสนอเป็นหัวหน้างาน/หัวหน้าสาขาวิชา)',
+            ]);
+        }
 
         return redirect()->back()->with('success', 'ยื่นเสนอขออนุมัติเพื่อดำเนินงานโครงการต่อเรียบร้อยแล้ว');
     }
@@ -758,6 +809,8 @@ class ProjectController extends Controller
                     $isAuthorized = $user->isAdmin() || $user->isPlanHead();
                     break;
                 case 4:
+                    $isAuthorized = $user->isAdmin() || $user->isExecutiveForDepartment($project->department_id);
+                    break;
                 case 5:
                 case 6:
                     $isAuthorized = $user->isAdmin() || $user->isExecutive();
@@ -941,6 +994,8 @@ class ProjectController extends Controller
                     $isAuthorized = $user->isAdmin() || $user->isPlanHead();
                     break;
                 case 4:
+                    $isAuthorized = $user->isAdmin() || $user->isExecutiveForDepartment($project->department_id);
+                    break;
                 case 5:
                 case 6:
                     $isAuthorized = $user->isAdmin() || $user->isExecutive();

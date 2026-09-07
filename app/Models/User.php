@@ -110,15 +110,27 @@ class User extends Authenticatable
 
     public function isDepartmentHead(?int $departmentId = null): bool
     {
+        if ($this->isAdmin()) return true;
         if ($this->role?->name === 'department_head') return true;
 
         $posQuery = $this->userPositions()
             ->where(function($q) {
-                $q->where('position', 'like', '%หัวหน้า%');
+                $q->whereIn('duty', ['หัวหน้างาน', 'หัวหน้าสาขาวิชา'])
+                  ->orWhere('position', 'like', '%หัวหน้า%');
             });
 
         if ($departmentId) {
-            $posQuery->where('department_id', $departmentId);
+            // Check direct match on department_id or sub_department_id
+            $targetDept = \App\Models\Department::find($departmentId);
+            $parentId = $targetDept?->parent_id;
+
+            $posQuery->where(function($q) use ($departmentId, $parentId) {
+                $q->where('department_id', $departmentId)
+                  ->orWhere('sub_department_id', $departmentId);
+                if ($parentId) {
+                    $q->orWhere('department_id', $parentId);
+                }
+            });
         }
 
         if ($posQuery->exists()) {
@@ -129,6 +141,12 @@ class User extends Authenticatable
             if (!$departmentId || $this->department_id === $departmentId) {
                 return true;
             }
+            if ($departmentId) {
+                $targetDept = \App\Models\Department::find($departmentId);
+                if ($targetDept && $targetDept->parent_id && $this->department_id === $targetDept->parent_id) {
+                    return true;
+                }
+            }
         }
 
         return false;
@@ -136,11 +154,15 @@ class User extends Authenticatable
 
     public function isPlanHead(): bool
     {
+        if ($this->isAdmin()) return true;
         if ($this->role?->name === 'plan_head') return true;
         return $this->userPositions()
             ->where(function($q) {
                 $q->where('position', 'like', '%หัวหน้างานแผน%')
-                  ->orWhere('position', 'like', '%งานวางแผน%');
+                  ->orWhere('position', 'like', '%งานวางแผน%')
+                  ->orWhere('sub_department_id', function($sub) {
+                      $sub->select('id')->from('departments')->where('name', 'like', '%แผน%');
+                  });
             })->exists();
     }
 
@@ -149,27 +171,70 @@ class User extends Authenticatable
         if ($this->isAdmin()) return true;
         if ($this->role?->name === 'finance_head' || $this->role?->name === 'finance_staff') return true;
         if ($this->department && ($this->department->code === 'FIN' || str_contains($this->department->name, 'การเงิน'))) return true;
-        return str_contains($this->position ?? '', 'การเงิน');
+        return str_contains($this->position ?? '', 'การเงิน') ||
+            $this->userPositions()->where(function($q) {
+                $q->where('position', 'like', '%การเงิน%')
+                  ->orWhere('sub_department_id', function($sub) {
+                      $sub->select('id')->from('departments')->where('name', 'like', '%การเงิน%');
+                  });
+            })->exists();
     }
 
     public function isProcurementHead(): bool
     {
+        if ($this->isAdmin()) return true;
         if ($this->role?->name === 'procurement_head') return true;
         return $this->userPositions()
             ->where(function($q) {
                 $q->where('position', 'like', '%หัวหน้างานพัสดุ%')
-                  ->orWhere('position', 'like', '%งานพัสดุ%');
+                  ->orWhere('position', 'like', '%งานพัสดุ%')
+                  ->orWhere('sub_department_id', function($sub) {
+                      $sub->select('id')->from('departments')->where('name', 'like', '%พัสดุ%');
+                  });
             })->exists();
     }
 
     public function isExecutive(): bool
     {
+        if ($this->isAdmin()) return true;
         if ($this->role?->name === 'executive') return true;
         return $this->userPositions()
             ->where(function($q) {
                 $q->where('position', 'like', '%ผู้อำนวยการ%')
                   ->orWhere('position', 'like', '%รองผู้อำนวยการ%');
-            })->exists();
+            })->exists() || (str_contains($this->position ?? '', 'ผู้อำนวยการ') || str_contains($this->position ?? '', 'รองผู้อำนวยการ'));
+    }
+
+    /**
+     * ตรวจสอบว่าเป็นรองผู้อำนวยการหรือผู้บริหารที่กำกับดูแลฝ่ายนั้นหรือไม่ (Step 4)
+     */
+    public function isExecutiveForDepartment(?int $departmentId = null): bool
+    {
+        if ($this->isAdmin()) return true;
+        if (!$this->isExecutive()) return false;
+
+        // ผู้อำนวยการวิทยาลัย อนุมัติได้ทุกฝ่าย
+        $userPosText = ($this->position ?? '') . ' ' . $this->userPositions()->pluck('position')->implode(' ');
+        if (str_contains($userPosText, 'ผู้อำนวยการวิทยาลัย') && !str_contains($userPosText, 'รองผู้อำนวยการ')) {
+            return true;
+        }
+
+        if (!$departmentId) return true;
+
+        $targetDept = \App\Models\Department::find($departmentId);
+        if (!$targetDept) return true;
+
+        // หาฝ่ายหลัก (Main Division)
+        $mainDeptName = $targetDept->parent ? $targetDept->parent->name : $targetDept->name;
+
+        // ตรวจสอบชื่อตำแหน่งรองผู้อำนวยการว่าตรงกับฝ่ายหรือไม่
+        if (str_contains($mainDeptName, 'บริหารทรัพยากร') && str_contains($userPosText, 'บริหารทรัพยากร')) return true;
+        if (str_contains($mainDeptName, 'วิชาการ') && str_contains($userPosText, 'วิชาการ')) return true;
+        if (str_contains($mainDeptName, 'พัฒนากิจการ') && (str_contains($userPosText, 'พัฒนากิจการ') || str_contains($userPosText, 'พัฒนานักเรียน'))) return true;
+        if ((str_contains($mainDeptName, 'แผนงาน') || str_contains($mainDeptName, 'ยุทธศาสตร์')) && (str_contains($userPosText, 'แผนงาน') || str_contains($userPosText, 'ยุทธศาสตร์'))) return true;
+
+        // Fallback: หากเป็นผู้บริหารแต่ไม่ระบุฝ่ายเฉพาะ ให้มีสิทธิ์
+        return true;
     }
 
     /**
@@ -189,12 +254,22 @@ class User extends Authenticatable
             $ids[] = $this->department_id;
         }
 
-        // ดึงจากทุกฝ่ายที่มีใน user_positions
-        $positionDeptIds = $this->userPositions()
+        // ดึงจากทุกตำแหน่งใน user_positions (ทั้ง department_id และ sub_department_id)
+        $posDeptIds = $this->userPositions()
             ->whereNotNull('department_id')
             ->pluck('department_id')
             ->toArray();
+        
+        $subDeptIds = $this->userPositions()
+            ->whereNotNull('sub_department_id')
+            ->pluck('sub_department_id')
+            ->toArray();
 
-        return array_unique(array_merge($ids, $positionDeptIds));
+        $merged = array_unique(array_merge($ids, $posDeptIds, $subDeptIds));
+
+        // หากเป็นหัวหน้าฝ่ายหลัก ให้ดึงงานย่อยภายใต้ฝ่ายนั้นมารวมด้วย
+        $childIds = \App\Models\Department::whereIn('parent_id', $merged)->pluck('id')->toArray();
+
+        return array_unique(array_merge($merged, $childIds));
     }
 }

@@ -862,12 +862,19 @@ ${itemsListText}
                     {/* Top Status Header */}
                     <div className="mb-6 rounded-2xl border border-purple-100 bg-white p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
-                            <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-100 uppercase tracking-wider">
-                                {project.department?.name || 'ฝ่ายบริหารจัดการ / งานวางแผน'}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md border border-purple-200">
+                                    {project.department?.parent ? `${project.department.parent.name} › ` : ''}{project.department?.name || 'ฝ่ายบริหารจัดการ / งานวางแผน'}
+                                </span>
+                                {project.proposer_duty && (
+                                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-200">
+                                        ภาระงาน: {project.proposer_duty}
+                                    </span>
+                                )}
+                            </div>
                             <h1 className="text-xl font-black text-purple-950 mt-2">{project.title}</h1>
                             <p className="text-xs text-slate-500 mt-1">
-                                <span className="font-bold text-slate-700">ผู้เสนอโครงการ:</span> {project.user?.name} | <span className="font-bold text-slate-700">ปีการศึกษา พ.ศ.:</span> {project.academic_year} | <span className="font-bold text-purple-800">งบประมาณเสนอขอ:</span> {formatCurrency(project.estimated_budget)}
+                                <span className="font-bold text-slate-700">ผู้เสนอโครงการ:</span> {project.responsible_person || project.user?.name} {project.position ? `(${project.position})` : ''} | <span className="font-bold text-slate-700">ปีการศึกษา พ.ศ.:</span> {project.academic_year} | <span className="font-bold text-purple-800">งบประมาณเสนอขอ:</span> {formatCurrency(project.estimated_budget)}
                             </p>
                         </div>
                         <div className="flex items-center gap-x-3">

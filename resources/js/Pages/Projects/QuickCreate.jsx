@@ -4,19 +4,42 @@ import { Head, useForm, Link } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 
 export default function QuickCreate({ auth, departments, currentFiscalYear }) {
+    const allPositions = auth.user.all_positions || [];
+    const defaultPosition = allPositions.find(p => p.is_primary) || allPositions[0] || null;
+
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         academic_year: currentFiscalYear || new Date().getFullYear() + 543,
-        department_id: auth.user.department_id || (departments?.[0]?.id || ''),
+        user_position_id: defaultPosition ? defaultPosition.id : '',
+        department_id: defaultPosition 
+            ? (defaultPosition.sub_department_id || defaultPosition.department_id || auth.user.department_id || '')
+            : (auth.user.department_id || (departments?.[0]?.id || '')),
         proposed_budget: '',
         responsible_person: auth.user.name || '',
-        position: auth.user.position || 'ครูผู้สอน',
+        position: defaultPosition ? defaultPosition.formatted_title : (auth.user.position || 'ครูผู้สอน'),
         phone: '',
         email: auth.user.email || '',
         background_rationale: '',
     });
 
     const isPlanStaff = auth.user.is_admin || (auth.user.role?.name === 'plan_head' || auth.user.role?.name === 'admin');
+
+    const handlePositionChange = (posId) => {
+        const selected = allPositions.find(p => String(p.id) === String(posId));
+        if (selected) {
+            setData(prev => ({
+                ...prev,
+                user_position_id: selected.id,
+                department_id: selected.sub_department_id || selected.department_id || prev.department_id,
+                position: selected.formatted_title || selected.position || prev.position,
+            }));
+        } else {
+            setData(prev => ({
+                ...prev,
+                user_position_id: '',
+            }));
+        }
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -88,6 +111,52 @@ export default function QuickCreate({ auth, departments, currentFiscalYear }) {
                                 <h4 className="text-sm font-bold text-purple-950 border-b border-purple-100 pb-2">
                                     1. ข้อมูลคำของบประมาณโครงการเบื้องต้น
                                 </h4>
+
+                                {/* Role / Capacity Selection */}
+                                {allPositions.length > 1 ? (
+                                    <div className="rounded-2xl border-2 border-purple-300 bg-white p-4 shadow-xs">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="block text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                                                <span>🎯</span> เสนอโครงการในนาม / ภาระงานหน้าที่ (Capacity / Role) *
+                                            </label>
+                                            <span className="text-[11px] font-bold text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full">
+                                                มี {allPositions.length} ภาระงานในสังกัด
+                                            </span>
+                                        </div>
+                                        <select
+                                            value={data.user_position_id}
+                                            onChange={(e) => handlePositionChange(e.target.value)}
+                                            className="w-full rounded-xl border-purple-300 bg-purple-50/40 px-3.5 py-2.5 text-xs font-bold text-purple-950 focus:border-purple-600 focus:ring-purple-600 shadow-xs"
+                                            required
+                                        >
+                                            {allPositions.map((pos) => (
+                                                <option key={pos.id} value={pos.id}>
+                                                    {pos.formatted_title} {pos.is_primary ? '★ (ภาระงานหลัก)' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="text-[11px] text-purple-600 mt-1.5 flex items-center gap-1">
+                                            <span>ℹ️</span> ระบบจะผูกฝ่าย/งาน และกำหนดขั้นตอนการอนุมัติตามภาระงานหน้าที่ที่ท่านเลือกเสนอโครงการ
+                                        </p>
+                                    </div>
+                                ) : allPositions.length === 1 ? (
+                                    <div className="rounded-xl border border-purple-200 bg-purple-100/50 px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+                                        <div>
+                                            <span className="text-slate-500 font-medium">เสนอโครงการในนามภาระงาน: </span>
+                                            <span className="font-bold text-purple-950">{allPositions[0].formatted_title}</span>
+                                        </div>
+                                        <span className="text-[11px] font-semibold text-purple-700 bg-purple-200/60 px-2.5 py-0.5 rounded-md w-fit">
+                                            ฝ่าย: {allPositions[0].department_name || '-'}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-900 flex items-center justify-between">
+                                        <span>⚠️ ท่านยังไม่ได้ระบุภาระงานและฝ่ายที่สังกัดในข้อมูลส่วนตัว</span>
+                                        <Link href={route('profile.edit')} className="font-bold underline text-amber-800 hover:text-amber-950">
+                                            ตั้งค่าข้อมูลส่วนตัว →
+                                        </Link>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
