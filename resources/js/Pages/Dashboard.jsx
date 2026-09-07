@@ -820,6 +820,7 @@ export default function Dashboard({
     // Admin User Modal State
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
+    const [isSyncingLine, setIsSyncingLine] = useState(false);
     const [userForm, setUserForm] = useState({
         name: '',
         email: '',
@@ -1162,6 +1163,32 @@ export default function Dashboard({
                     onSuccess: () => {
                         Swal.fire('ลบสำเร็จ!', 'ลบบัญชีผู้ใช้เรียบร้อยแล้ว', 'success');
                     },
+                });
+            }
+        });
+    };
+
+    const handleSyncAllLineUsers = () => {
+        Swal.fire({
+            title: 'ซิงค์ LINE User ID จาก npc_eleve',
+            text: 'ระบบจะเชื่อมต่อฐานข้อมูล npc_eleve เพื่อดึง LINE User ID ของบุคลากรทุกคนมาอัปเดตใน SmartFlow ต้องการดำเนินการหรือไม่?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#7c3aed',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonText: '📲 เริ่มการซิงค์',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setIsSyncingLine(true);
+                router.post(route('admin.users.sync_line_ids'), {}, {
+                    preserveScroll: true,
+                    onFinish: () => setIsSyncingLine(false),
+                    onSuccess: () => {
+                        Swal.fire('สำเร็จ!', 'ซิงค์ LINE User ID จากระบบ npc_eleve เรียบร้อยแล้ว', 'success');
+                    },
+                    onError: () => {
+                        Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อหรือซิงค์ LINE User ID ได้ในขณะนี้', 'error');
+                    }
                 });
             }
         });
@@ -1594,7 +1621,7 @@ export default function Dashboard({
                 {renderApiConnectionBanner()}
 
                 {/* Admin Stat Overview */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
                     <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
                         <span className="text-xs font-bold uppercase tracking-wider text-purple-600">ผู้ใช้งานทั้งหมด</span>
                         <p className="mt-2 text-3xl font-black text-slate-900">{adminData.stats.totalUsers} คน</p>
@@ -1607,6 +1634,10 @@ export default function Dashboard({
                         <span className="text-xs font-bold uppercase tracking-wider text-rose-600">ระงับการใช้งาน</span>
                         <p className="mt-2 text-3xl font-black text-slate-900">{adminData.stats.suspendedUsers} คน</p>
                     </div>
+                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-6 shadow-sm">
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">ผูก LINE ID แล้ว</span>
+                        <p className="mt-2 text-3xl font-black text-emerald-600">{adminData.stats.syncedLineUsers || 0} คน</p>
+                    </div>
                     <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
                         <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">ฝ่าย / แผนกวิชา</span>
                         <p className="mt-2 text-3xl font-black text-slate-900">{adminData.stats.totalDepartments} ฝ่าย</p>
@@ -1615,17 +1646,27 @@ export default function Dashboard({
 
                 {/* Users Table Header */}
                 <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
-                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex justify-between items-center">
+                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-wrap justify-between items-center gap-3">
                         <div>
                             <h3 className="text-lg font-bold text-slate-900">จัดการบุคลากร ผู้ใช้งาน และสิทธิ์ระบบ</h3>
-                            <p className="text-xs text-slate-600">กำหนดชื่อ ตำแหน่งงาน สิทธิ์การใช้งาน และสถานะเปิด/ปิดสิทธิ์</p>
+                            <p className="text-xs text-slate-600">กำหนดชื่อ ตำแหน่งงาน สิทธิ์การใช้งาน และสถานะเปิด/ปิดสิทธิ์ รวมถึง LINE Notification</p>
                         </div>
-                        <button
-                            onClick={openCreateUserModal}
-                            className="inline-flex items-center rounded-xl bg-purple-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-purple-700 transition-all hover:scale-105"
-                        >
-                            + เพิ่มผู้ใช้งานใหม่
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleSyncAllLineUsers}
+                                disabled={isSyncingLine}
+                                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-emerald-700 transition-all hover:scale-105 disabled:opacity-50"
+                                title="ดึงข้อมูล Line User ID จาก npc_eleve มาผูกกับผู้ใช้ในระบบทั้งหมดทันที"
+                            >
+                                📲 {isSyncingLine ? 'กำลังซิงค์ LINE...' : 'ซิงค์ LINE ID จาก npc_eleve'}
+                            </button>
+                            <button
+                                onClick={openCreateUserModal}
+                                className="inline-flex items-center rounded-xl bg-purple-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-purple-700 transition-all hover:scale-105"
+                            >
+                                + เพิ่มผู้ใช้งานใหม่
+                            </button>
+                        </div>
                     </div>
 
                     <div className="w-full overflow-hidden">
@@ -1634,6 +1675,7 @@ export default function Dashboard({
                                 <tr className="border-b border-purple-100 bg-purple-50/50 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
                                     <th className="px-6 py-3.5 whitespace-nowrap">ชื่อ - นามสกุล</th>
                                     <th className="px-6 py-3.5 whitespace-nowrap">อีเมล (Email)</th>
+                                    <th className="px-6 py-3.5 text-center whitespace-nowrap">สถานะ LINE</th>
                                     <th className="px-6 py-3.5 text-center whitespace-nowrap">การจัดการ</th>
                                 </tr>
                             </thead>
@@ -1642,6 +1684,18 @@ export default function Dashboard({
                                     <tr key={u.id} className="hover:bg-purple-50/20 whitespace-nowrap">
                                         <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap">{u.name}</td>
                                         <td className="px-6 py-4 text-slate-600 font-mono text-xs whitespace-nowrap">{u.email}</td>
+                                        <td className="px-6 py-4 text-center whitespace-nowrap">
+                                            {u.line_user_id ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200" title={`LINE User ID: ${u.line_user_id}`}>
+                                                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                                    ผูกแล้ว
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-normal text-slate-400 bg-slate-100 border border-slate-200" title="ยังไม่มี LINE User ID (จะซิงค์อัตโนมัติเมื่อเข้าสู่ระบบ หรือกดปุ่มซิงค์)">
+                                                    ยังไม่ผูก
+                                                </span>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4 text-center whitespace-nowrap">
                                             <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                                                 <button
@@ -1885,6 +1939,19 @@ export default function Dashboard({
                                     />
                                     <label htmlFor="is_active_chk" className="text-sm cursor-pointer">เปิดสิทธิ์การใช้งานในระบบ (Active)</label>
                                 </div>
+
+                                {editingUser && (
+                                    <div className="rounded-xl bg-purple-50/70 p-3 border border-purple-100 flex items-center justify-between">
+                                        <div className="text-xs">
+                                            <span className="font-bold text-slate-700">การเชื่อมต่อ LINE Notification: </span>
+                                            {editingUser.line_user_id ? (
+                                                <span className="text-emerald-700 font-semibold">ผูกเรียบร้อย ({editingUser.line_user_id})</span>
+                                            ) : (
+                                                <span className="text-slate-500">ยังไม่ผูก LINE ID (จะผูกอัตโนมัติเมื่อเข้าใช้งาน หรือกดปุ่มซิงค์)</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="flex justify-end gap-x-3 pt-4 border-t border-purple-100">
                                     <button

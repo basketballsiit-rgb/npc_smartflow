@@ -201,12 +201,14 @@ class DashboardController extends Controller
                         'department_name' => $u->department?->name ?? 'N/A',
                         'position' => $u->position ?? 'ไม่ได้ระบุ',
                         'is_active' => (bool)$u->is_active,
+                        'line_user_id' => $u->line_user_id,
                     ];
                 }),
                 'stats' => [
                     'totalUsers' => User::count(),
                     'activeUsers' => User::where('is_active', true)->count(),
                     'suspendedUsers' => User::where('is_active', false)->count(),
+                    'syncedLineUsers' => User::whereNotNull('line_user_id')->where('line_user_id', '!=', '')->count(),
                     'totalDepartments' => Department::count(),
                     'totalProjects' => Project::count(),
                 ],

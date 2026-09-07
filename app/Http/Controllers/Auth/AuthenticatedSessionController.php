@@ -33,6 +33,16 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // ตรวจสอบและดึง Line User ID จากระบบ npc_eleve มาบันทึกใน SmartFlow (ถ้ายังไม่มี)
+        $user = Auth::user();
+        if ($user && empty($user->line_user_id)) {
+            try {
+                \App\Http\Controllers\Api\TravelLoanApiController::fetchAndSyncUserLineId($user);
+            } catch (\Exception $ex) {
+                \Illuminate\Support\Facades\Log::warning("Login: ไม่สามารถดึง LineUserID จาก npc_eleve สำหรับ {$user->name}: " . $ex->getMessage());
+            }
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

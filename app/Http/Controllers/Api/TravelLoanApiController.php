@@ -7,6 +7,7 @@ use App\Models\TravelLoan;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -471,5 +472,70 @@ class TravelLoanApiController extends Controller
             'unmatchedCount' => $unmatched,
             'details' => $details,
         ]);
+    }
+
+    /**
+     * Fetch Line User ID from npc_eleve API and update user in SmartFlow
+     */
+    public static function fetchAndSyncUserLineId(User $user, ?string $username = null): ?string
+    {
+        if (!empty($user->line_user_id)) {
+            return $user->line_user_id;
+        }
+
+        $apiBase = config('services.npc_eleve.api_url', 'http://127.0.0.1:5000');
+        $url = rtrim($apiBase, '/') . '/api/users/lookup-line';
+
+        $queryParams = ['name' => $user->name];
+        if ($username) {
+            $queryParams['username'] = $username;
+        }
+
+        try {
+            Log::info("SmartFlow: Checking LineUserID from npc_eleve for {$user->name} at {$url}");
+            $response = Http::timeout(3)->get($url, $queryParams);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $lineId = $data['user']['lineUserId'] ?? null;
+                if (!empty($lineId)) {
+                    $user->line_user_id = $lineId;
+                    $user->save();
+                    Log::info("SmartFlow: Successfully synced line_user_id for {$user->name} from npc_eleve: {$lineId}");
+                    return $lineId;
+                }
+            } else {
+                Log::info("SmartFlow: npc_eleve lookup for {$user->name} returned status " . $response->status());
+            }
+        } catch (\Exception $e) {
+            Log::warning("SmartFlow: Failed to query npc_eleve API for {$user->name}: " . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Trigger bulk sync from npc_eleve into SmartFlow
+     */
+    public static function pullAllLineUsersFromNpcEleve(): array
+    {
+        $apiBase = config('services.npc_eleve.api_url', 'http://127.0.0.1:5000');
+        $url = rtrim($apiBase, '/') . '/api/smartflow/sync-all-line-users';
+
+        try {
+            $response = Http::timeout(10)->post($url);
+            if ($response->successful()) {
+                return $response->json();
+            }
+            return [
+                'success' => false,
+                'message' => 'HTTP ' . $response->status() . ': ' . $response->body()
+            ];
+        } catch (\Exception $e) {
+            return [
+                'success' => false,
+                'message' => 'Connection error: ' . $e->getMessage()
+            ];
+        }
     }
 }

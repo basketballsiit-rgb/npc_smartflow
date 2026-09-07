@@ -50,4 +50,11 @@ return [
         'api_token' => env('NPCJOB_API_TOKEN', 'npc_sf_2026_api_key_x9k2m'),
     ],
 
+    // npc_eleve Internal API (ดึงข้อมูล Line User ID และสัญญาเงินยืม)
+    'npc_eleve' => [
+        'api_url'   => env('NPC_ELEVE_API_URL', 'http://127.0.0.1:5000'),
+        'public_url'=> env('NPC_ELEVE_PUBLIC_URL', 'https://service.npc.ac.th/npc_eleve'),
+        'api_token' => env('SMARTFLOW_API_TOKEN', 'npc_smartflow_secret_token_2026'),
+    ],
+
 ];

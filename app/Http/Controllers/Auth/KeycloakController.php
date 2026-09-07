@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Str;
+use App\Http\Controllers\Api\TravelLoanApiController;
 
 class KeycloakController extends Controller
 {
@@ -91,6 +92,15 @@ class KeycloakController extends Controller
 
             // 5.5 Sync ตำแหน่งทั้งหมดจาก npcjob → user_positions
             $this->syncUserPositions($user, $npcjobProfile);
+
+            // 5.6 ตรวจสอบและดึงข้อมูล Line User ID จากระบบ npc_eleve มาบันทึกใน SmartFlow (ถ้ายังไม่มี)
+            if (empty($user->line_user_id)) {
+                try {
+                    TravelLoanApiController::fetchAndSyncUserLineId($user, $username);
+                } catch (\Exception $ex) {
+                    Log::warning("Keycloak SSO: ไม่สามารถดึง LineUserID จาก npc_eleve สำหรับ {$user->name}: " . $ex->getMessage());
+                }
+            }
 
             // 6. ตรวจสอบสถานะบัญชี
             if (!$user->is_active) {

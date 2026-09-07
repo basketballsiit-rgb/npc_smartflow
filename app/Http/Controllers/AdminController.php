@@ -630,4 +630,40 @@ class AdminController extends Controller
 
         return redirect()->back()->with('success', 'ลบแหล่งเงินงบประมาณเรียบร้อยแล้ว');
     }
+
+    /**
+     * Bulk sync Line User IDs from npc_eleve for all users.
+     */
+    public function syncAllLineUsersFromEleve()
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        }
+
+        // 1. เรียก pullAllLineUsersFromNpcEleve เพื่อให้ npc_eleve push users ทั้งหมดที่ผูก LINE เข้ามา
+        $res = \App\Http\Controllers\Api\TravelLoanApiController::pullAllLineUsersFromNpcEleve();
+
+        if (!empty($res['success'])) {
+            $matched = $res['data']['matchedCount'] ?? ($res['count'] ?? 0);
+            return redirect()->back()->with('success', "ซิงค์ LINE User ID จาก npc_eleve สำเร็จ (จับคู่กับผู้ใช้ในระบบได้ {$matched} บัญชี)");
+        }
+
+        // 2. Fallback: หาก npc_eleve endpoint สำหรับ push ไม่สำเร็จ ให้ดึงทีละคนผ่าน API lookup
+        $usersWithoutLine = User::whereNull('line_user_id')->orWhere('line_user_id', '')->get();
+        $syncedCount = 0;
+
+        foreach ($usersWithoutLine as $u) {
+            $lid = \App\Http\Controllers\Api\TravelLoanApiController::fetchAndSyncUserLineId($u);
+            if ($lid) {
+                $syncedCount++;
+            }
+        }
+
+        if ($syncedCount > 0) {
+            return redirect()->back()->with('success', "ซิงค์ LINE User ID จาก npc_eleve สำเร็จ โดยตรวจพบและอัปเดต {$syncedCount} บัญชี");
+        }
+
+        $msg = $res['message'] ?? 'ไม่พบข้อมูล LINE User ID ใหม่ที่ตรงกับผู้ใช้งานในระบบ หรือผู้ใช้ทุกคนผูกเรียบร้อยแล้ว';
+        return redirect()->back()->with('info', "ผลการซิงค์: {$msg}");
+    }
 }
