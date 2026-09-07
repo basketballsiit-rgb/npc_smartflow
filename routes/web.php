@@ -27,27 +27,32 @@ Route::get('/auth/keycloak/callback', [KeycloakController::class, 'callback'])->
 
 
 Route::get('/', function () {
+    $approvedQuery = \App\Models\Project::where(function ($q) {
+        $q->whereNotNull('approved_at')
+          ->orWhereIn('status', ['approved', 'in_progress', 'evaluating', 'completed'])
+          ->orWhere('current_approval_step', '>=', 6);
+    });
+
     return Inertia::render('Welcome', [
         'publicStats' => [
             'totalProjects' => \App\Models\Project::count(),
-            'approvedProjects' => \App\Models\Project::where('status', 'approved')->count(),
+            'approvedProjects' => (clone $approvedQuery)->count(),
             'totalBudget' => (float)\App\Models\Project::sum('estimated_budget'),
             'satisfactionRate' => (function() {
                 $avgScore = \App\Models\SurveyResponse::selectRaw('AVG((rating_q1 + rating_q2 + rating_q3 + rating_q4 + rating_q5) / 5.0) as avg_score')->value('avg_score');
                 return $avgScore ? round(($avgScore / 5.0) * 100, 1) : 0;
             })(),
         ],
-        'recentProjects' => \App\Models\Project::where('status', 'approved')
+        'recentProjects' => (clone $approvedQuery)
             ->with(['department', 'user'])
             ->latest()
-            ->take(4)
+            ->take(8)
             ->get()
             ->map(function ($p) {
                 return [
                     'id' => $p->id,
                     'title' => $p->title,
                     'department' => $p->department?->name ?? 'N/A',
-                    'budget' => (float)$p->estimated_budget,
                     'academic_year' => $p->academic_year,
                 ];
             }),

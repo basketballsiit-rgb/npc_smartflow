@@ -190,8 +190,8 @@ export default function Welcome({ publicStats, recentProjects }) {
                                     <p className="text-xs text-slate-600">{project.department}</p>
                                 </div>
                                 <div className="border-t border-purple-100 pt-3 mt-4 flex justify-between items-center text-xs">
-                                    <span className="text-slate-500">ปีการศึกษา {project.academic_year}</span>
-                                    <span className="font-bold text-purple-700">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.budget)}</span>
+                                    <span className="text-slate-500 font-medium">ปีการศึกษา {project.academic_year || '2569'}</span>
+                                    <span className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">โครงการตามแผน</span>
                                 </div>
                             </div>
                         ))
