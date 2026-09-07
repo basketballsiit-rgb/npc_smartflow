@@ -185,7 +185,7 @@ class ProfileController extends Controller
     /**
      * Update or register the user's 13-digit Thai Citizen ID (stored encrypted).
      */
-    public function updateCitizenId(Request $request): RedirectResponse
+    public function updateCitizenId(Request $request)
     {
         $request->validate([
             'citizen_id' => 'required|string|regex:/^[0-9\-]{13,17}$/',
@@ -194,17 +194,55 @@ class ProfileController extends Controller
             'citizen_id.regex' => 'รูปแบบเลขประจำตัวประชาชนไม่ถูกต้อง (ต้องเป็นตัวเลข 13 หลัก)',
         ]);
 
-        $cleanCitizenId = preg_replace('/[^0-9]/', '', $request->input('citizen_id'));
+        $cleanCitizenId = preg_replace('/[^0-9]/', '', (string)$request->input('citizen_id'));
 
         if (strlen($cleanCitizenId) !== 13) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'เลขประจำตัวประชาชนต้องมีครบ 13 หลัก',
+                    'errors' => ['citizen_id' => 'เลขประจำตัวประชาชนต้องมีครบ 13 หลัก'],
+                ], 422);
+            }
             return Redirect::back()->withErrors(['citizen_id' => 'เลขประจำตัวประชาชนต้องมีครบ 13 หลัก']);
         }
 
-        $user = $request->user();
-        $user->citizen_id = $cleanCitizenId;
-        $user->save();
+        try {
+            $user = $request->user();
 
-        return Redirect::back()->with('message', 'บันทึกเลขประจำตัวประชาชน 13 หลัก (เข้ารหัสความปลอดภัย AES-256) เรียบร้อยแล้ว');
+            // Auto-check and create citizen_id column if not yet migrated on server
+            if (!\Illuminate\Support\Facades\Schema::hasColumn('users', 'citizen_id')) {
+                \Illuminate\Support\Facades\Schema::table('users', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->text('citizen_id')->nullable()->after('department_id');
+                });
+            }
+
+            $user->citizen_id = $cleanCitizenId;
+            $user->save();
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'บันทึกเลขประจำตัวประชาชน 13 หลัก (เข้ารหัสความปลอดภัย AES-256) เรียบร้อยแล้ว',
+                ]);
+            }
+
+            return Redirect::back()->with('message', 'บันทึกเลขประจำตัวประชาชน 13 หลัก (เข้ารหัสความปลอดภัย AES-256) เรียบร้อยแล้ว');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Citizen ID Update Error: ' . $e->getMessage(), [
+                'user_id' => $request->user()?->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'เกิดข้อผิดพลาดในการบันทึกข้อมูล: ' . $e->getMessage(),
+                ], 500);
+            }
+
+            return Redirect::back()->withErrors(['citizen_id' => 'เกิดข้อผิดพลาด: ' . $e->getMessage()]);
+        }
     }
 
     /**

@@ -1,7 +1,8 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 
 export default function AuthenticatedLayout({ header, children }) {
     const { auth, asset_url } = usePage().props;
@@ -111,19 +112,29 @@ export default function AuthenticatedLayout({ header, children }) {
         }
 
         setIsSavingCitizenId(true);
-        import('@inertiajs/react').then(({ router }) => {
-            router.post(route('profile.update_citizen_id'), {
-                citizen_id: clean,
-            }, {
-                onSuccess: () => {
-                    setIsSavingCitizenId(false);
-                    setShowCitizenModal(false);
-                },
-                onError: (errs) => {
-                    setIsSavingCitizenId(false);
-                    setCitizenIdError(errs.citizen_id || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
-                }
-            });
+        setCitizenIdError('');
+
+        axios.post(route('profile.update_citizen_id'), {
+            citizen_id: clean,
+        }, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+            }
+        })
+        .then(() => {
+            setIsSavingCitizenId(false);
+            setShowCitizenModal(false);
+            sessionStorage.setItem('dismiss_citizen_modal', 'true');
+            // Reload user data so top bar and state update immediately
+            router.reload({ preserveScroll: true });
+        })
+        .catch((error) => {
+            setIsSavingCitizenId(false);
+            const msg = error.response?.data?.errors?.citizen_id 
+                || error.response?.data?.message 
+                || (error.message ? `เกิดข้อผิดพลาด: ${error.message}` : 'เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง');
+            setCitizenIdError(String(msg));
         });
     };
 
