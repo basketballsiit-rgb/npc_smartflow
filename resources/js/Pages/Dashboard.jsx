@@ -6649,7 +6649,7 @@ ${itemsListText}
                     title: "เอกสารการเงินทั้งหมด",
                     pendingLabel: "รอดำเนินการ",
                     completedLabel: "เสร็จ",
-                    spentSublabel: "เฉพาะเอกสารที่ดำเนินการเสร็จแล้ว"
+                    spentSublabel: "รวมยอดชุดจัดซื้อจัดจ้าง & สัญญายืมเงินที่ปิดยอดแล้ว"
                 })}
 
                 {/* 2. Primary KPI Cards */}
@@ -7893,7 +7893,7 @@ ${itemsListText}
                         title: "เอกสารพัสดุทั้งหมด",
                         pendingLabel: "รอดำเนินการ",
                         completedLabel: "เสร็จ",
-                        spentSublabel: "เฉพาะเอกสารที่จัดซื้อ/ส่งการเงินแล้ว"
+                        spentSublabel: "ยอดรวมตามชุดจัดซื้อจัดจ้างที่ส่งการเงินแล้ว"
                     });
                 })()}
 
@@ -10412,7 +10412,7 @@ return (
                     title: "เอกสารการเงินทั้งหมด",
                     pendingLabel: "รอดำเนินการ",
                     completedLabel: "เสร็จ",
-                    spentSublabel: "เฉพาะเอกสารที่จ่าย/ปิดยอดแล้ว"
+                    spentSublabel: "รวมยอดชุดจัดซื้อจัดจ้าง & สัญญายืมเงินที่ปิดยอดแล้ว"
                 })}
 
                 {/* KPI Cards */}
