@@ -4328,6 +4328,11 @@ ${itemsListText}
             // Add to planned budget
             rowData[cat].planBudget += alloc;
 
+            // If user customized the title (e.g. changed rate count like "1.1 ครูอัตราจ้าง 8 อัตรา"), update row title
+            if (plan.title && plan.title.trim()) {
+                rowData[cat].title = plan.title;
+            }
+
             // Resolve funding source column
             const sourceName = plan.funding_source?.name;
             const colIdx = getColumnIndexBySourceName(sourceName);

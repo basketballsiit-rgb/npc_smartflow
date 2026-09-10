@@ -110,6 +110,36 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         items: []
     });
 
+    // Headcount / Rates for categories that specify rates (1.1, 1.2, 1.3, 1.4, 2.1.3)
+    const [rateCount, setRateCount] = useState('');
+
+    const isRateCategory = (catCode) => {
+        return ['1.1', '1.2', '1.3', '1.4', '2.1.3'].includes(catCode);
+    };
+
+    const getBaseTemplateName = (catCode) => {
+        switch(catCode) {
+            case '1.1': return 'ครูอัตราจ้าง';
+            case '1.2': return 'ค่าสมทบประกันสังคมของครูอัตราจ้าง';
+            case '1.3': return 'เจ้าหน้าที่';
+            case '1.4': return 'ค่าสมทบประกันสังคมของเจ้าหน้าที่';
+            case '2.1.3': return 'ค่าตอบแทนครูสอนระยะสั้นรายชั่วโมง';
+            default: return '';
+        }
+    };
+
+    const getUnitName = (catCode) => {
+        if (catCode === '2.1.3') return 'ราย';
+        return 'อัตรา';
+    };
+
+    // Helper to extract headcount from title string (e.g. "1.1 ครูอัตราจ้าง 8 อัตรา" -> 8)
+    const extractRateFromTitle = (title) => {
+        if (!title) return '';
+        const match = title.match(/(\d+)\s*(อัตรา|ราย)/);
+        return match ? match[1] : '';
+    };
+
     // Calculations
     const totalAllocated = routinePlans.reduce((sum, p) => sum + parseFloat(p.allocated_amount), 0);
     const totalSpent = routinePlans.reduce((sum, p) => sum + parseFloat(p.spent_amount), 0);
@@ -124,6 +154,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                 onSuccess: () => {
                     Swal.fire('สำเร็จ!', 'แก้ไขข้อมูลแผนงบประมาณเรียบร้อยแล้ว', 'success');
                     setEditingPlan(null);
+                    setRateCount('');
                     resetPlan();
                 }
             });
@@ -131,6 +162,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
             postPlan(route('admin.routine_budgets.store'), {
                 onSuccess: () => {
                     Swal.fire('สำเร็จ!', 'เพิ่มแผนงบประมาณประจำปีเรียบร้อยแล้ว', 'success');
+                    setRateCount('');
                     resetPlan();
                 }
             });
@@ -447,6 +479,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                     type="button"
                                     onClick={() => {
                                         setEditingPlan(null);
+                                        setRateCount('');
                                         resetPlan();
                                     }}
                                     className="bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold px-3 py-1.5 rounded-xl transition"
@@ -518,14 +551,25 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                         value={planData.report_category}
                                         onChange={e => {
                                             const catCode = e.target.value;
+                                            const base = getBaseTemplateName(catCode);
+                                            const unit = getUnitName(catCode);
+                                            const defaultNum = catCode === '1.1' ? '6' : catCode === '1.2' ? '9' : catCode === '1.3' ? '15' : catCode === '1.4' ? '16' : catCode === '2.1.3' ? '7' : '';
+                                            const currentRate = rateCount || defaultNum;
+                                            if (isRateCategory(catCode)) {
+                                                setRateCount(currentRate);
+                                            }
+
                                             setPlanData(prev => {
                                                 let autoTitle = prev.title;
-                                                // If title is blank or user is selecting a template, suggest the name
                                                 if (catCode) {
-                                                    for (const group of REPORT_CATEGORIES) {
-                                                        const found = group.items.find(it => it.code === catCode);
-                                                        if (found && (!prev.title || prev.title === '')) {
-                                                            autoTitle = found.name;
+                                                    if (isRateCategory(catCode)) {
+                                                        autoTitle = `${catCode} ${base} ${currentRate} ${unit}`;
+                                                    } else {
+                                                        for (const group of REPORT_CATEGORIES) {
+                                                            const found = group.items.find(it => it.code === catCode);
+                                                            if (found) {
+                                                                autoTitle = found.name;
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -552,6 +596,40 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                     <span className="text-[10px] text-gray-400 mt-1 block">เลือกล็อคหมวดเพื่อให้นำตัวเลขไปแสดงในรายงานงบรายจ่ายแผนปฏิบัติราชการโดยอัตโนมัติ</span>
                                 </div>
                             </div>
+
+                            {/* Conditional Rate / Headcount Input */}
+                            {isRateCategory(planData.report_category) && (
+                                <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/70 animate-in fade-in duration-200">
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                        <div>
+                                            <label className="block text-xs font-bold text-amber-900">
+                                                👥 จำนวน ({getUnitName(planData.report_category)}) ของหมวดนี้:
+                                            </label>
+                                            <p className="text-[11px] text-amber-700 mt-0.5">
+                                                ระบุจำนวนอัตราที่ต้องการ ระบบจะปรับชื่อหมวดและข้อความในรายงานให้อัตโนมัติ
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={rateCount}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    setRateCount(val);
+                                                    const base = getBaseTemplateName(planData.report_category);
+                                                    const unit = getUnitName(planData.report_category);
+                                                    const newTitle = val ? `${planData.report_category} ${base} ${val} ${unit}` : `${planData.report_category} ${base}`;
+                                                    setPlanData('title', newTitle);
+                                                }}
+                                                className="w-28 text-sm font-bold text-center rounded-xl border-amber-300 focus:ring-amber-500 focus:border-amber-500 p-2 bg-white text-gray-900"
+                                                placeholder="เช่น 6"
+                                            />
+                                            <span className="text-xs font-bold text-amber-900">{getUnitName(planData.report_category)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="block text-xs font-bold text-gray-700 mb-1">
@@ -597,6 +675,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                         type="button"
                                         onClick={() => {
                                             setEditingPlan(null);
+                                            setRateCount('');
                                             resetPlan();
                                             setActiveTab('plans');
                                         }}
@@ -622,6 +701,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                 <button
                                     onClick={() => {
                                         setEditingPlan(null);
+                                        setRateCount('');
                                         resetPlan();
                                         setActiveTab('create_plan');
                                     }}
@@ -703,6 +783,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                                                 <button
                                                                     onClick={() => {
                                                                         setEditingPlan(plan);
+                                                                        setRateCount(extractRateFromTitle(plan.title));
                                                                         setPlanData({
                                                                             fiscal_year: plan.fiscal_year,
                                                                             department_id: plan.department_id,
