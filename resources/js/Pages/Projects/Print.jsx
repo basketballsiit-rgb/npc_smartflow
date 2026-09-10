@@ -163,6 +163,10 @@ export default function Print({ project, strategyCategories = [] }) {
                         break-inside: avoid;
                         page-break-inside: avoid;
                     }
+                    h1, h2, h3, h4 {
+                        break-after: avoid;
+                        page-break-after: avoid;
+                    }
                 }
             `}</style>
 
@@ -202,7 +206,7 @@ export default function Print({ project, strategyCategories = [] }) {
                             }`}
                             title="ขนาดมาตรฐาน (15px)"
                         >
-                            มาตรฐาน
+                            ปกติ
                         </button>
                         <button
                             type="button"
@@ -214,9 +218,19 @@ export default function Print({ project, strategyCategories = [] }) {
                             }`}
                             title="ขนาดใหญ่ (16.5px)"
                         >
-                            ใหญ่
+                            ตัวโต
                         </button>
                     </div>
+
+                    <a
+                        href={route('projects.chapter2.print', project.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 transition shadow-2xs"
+                        title="ดูรายงานผลโครงการ บทที่ ๒ เอกสารและงานวิจัยที่เกี่ยวข้อง"
+                    >
+                        📖 พิมพ์บทที่ ๒ (งานวิจัย & สอศ.)
+                    </a>
 
                     <button
                         onClick={() => window.close()}
@@ -226,7 +240,7 @@ export default function Print({ project, strategyCategories = [] }) {
                     </button>
                     <button
                         onClick={handlePrint}
-                        className="rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/20 hover:scale-105 transition-all flex items-center gap-1.5"
+                        className="rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/20 hover:scale-105 transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                         <span>🖨️</span> พิมพ์ / บันทึก PDF
                     </button>
