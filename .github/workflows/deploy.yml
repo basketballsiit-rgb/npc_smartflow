@@ -16,6 +16,8 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         password: ${{ secrets.SERVER_PASSWORD }}
+        timeout: 120s
+        command_timeout: 15m
         script: |
           cd /var/www/npc_smartflow
           git fetch origin main
