@@ -498,13 +498,22 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {isSidebarOpen && <span>งบประมาณสถานศึกษา</span>}
                                     </Link>
                                     <Link
-                                        href={route('admin.routine_budgets.index')}
-                                        className={getSubLinkClass(url.includes('routine-budgets'))}
-                                        title="แผนงบดำเนินงานประจำปี & แดชบอร์ด"
+                                        href={`${route('admin.routine_budgets.index')}?tab=create_plan`}
+                                        className={getSubLinkClass(url.includes('routine-budgets') && url.includes('tab=create_plan'))}
+                                        title="ลงแผนงบดำเนินงานประจำปี (สร้าง/แก้ไข)"
                                     >
-                                        <span className={getPrefixClass(url.includes('routine-budgets'), 'text-purple-300')}>└─</span>
-                                        <span className="text-sm">📅</span>
-                                        {isSidebarOpen && <span>งบประจำปี & แดชบอร์ด</span>}
+                                        <span className={getPrefixClass(url.includes('routine-budgets') && url.includes('tab=create_plan'), 'text-purple-300')}>└─</span>
+                                        <span className="text-sm">📝</span>
+                                        {isSidebarOpen && <span>ลงแผนงบประจำปี</span>}
+                                    </Link>
+                                    <Link
+                                        href={route('admin.routine_budgets.index')}
+                                        className={getSubLinkClass(url.includes('routine-budgets') && !url.includes('tab=create_plan'))}
+                                        title="ตารางแสดงการจัดสรรงบดำเนินงานประจำปีและแดชบอร์ด"
+                                    >
+                                        <span className={getPrefixClass(url.includes('routine-budgets') && !url.includes('tab=create_plan'), 'text-purple-300')}>└─</span>
+                                        <span className="text-sm">📋</span>
+                                        {isSidebarOpen && <span>ตารางการจัดสรรงบประจำปี</span>}
                                     </Link>
                                     <Link
                                         href={route('dashboard', { tab: 'action_plan_report' })}

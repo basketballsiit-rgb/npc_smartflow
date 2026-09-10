@@ -13,26 +13,28 @@ class RoutineBudgetController extends Controller
     /**
      * Display a listing of routine budget plans.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = auth()->user();
         $fiscalYear = SystemSetting::where('key', 'current_fiscal_year')->value('value') ?? date('Y') + 543;
 
         if ($user->isAdmin() || $user->isPlanHead()) {
-            $routinePlans = RoutineBudgetPlan::with(['department', 'procurements.items', 'procurements.committees'])->latest()->get();
+            $routinePlans = RoutineBudgetPlan::with(['department', 'procurements.items', 'procurements.committees', 'fundingSource'])->latest()->get();
         } else {
             $deptIds = $user->getResponsibleDepartmentIds();
             $routinePlans = RoutineBudgetPlan::whereIn('department_id', $deptIds)
-                ->with(['department', 'procurements.items', 'procurements.committees'])
+                ->with(['department', 'procurements.items', 'procurements.committees', 'fundingSource'])
                 ->latest()
                 ->get();
         }
 
         return Inertia::render('RoutineBudgets/Index', [
             'routinePlans' => $routinePlans,
-            'departments' => Department::all(),
+            'departments' => Department::orderBy('name', 'asc')->get(),
+            'fundingSources' => \App\Models\FundingSource::orderBy('name', 'asc')->get(),
             'currentFiscalYear' => $fiscalYear,
             'allUsers' => \App\Models\User::where('is_active', true)->orderBy('name', 'asc')->get(),
+            'initialTab' => $request->query('tab', 'dashboard'),
         ]);
     }
 
