@@ -7797,7 +7797,11 @@ ${itemsListText}
         const waitingIntakeCount = queue.filter(p => !p.procurement || p.procurement.status === 'pending').length;
         const receivedCount = queue.filter(p => p.procurement?.status === 'received' || p.procurement?.status === 'processing').length;
         const forwardedCount = queue.filter(p => p.procurement?.status === 'forwarded_to_finance').length;
-        const totalBudgetSum = queue.reduce((sum, p) => sum + (parseFloat(p.estimated_budget || p.allocated_budget || 0)), 0);
+        const totalBudgetSum = queue.reduce((sum, p) => {
+            const items = p.procurement?.items || [];
+            const itemSum = items.reduce((iSum, it) => iSum + (parseFloat(it.quantity || 0) * parseFloat(it.unit_price || 0)), 0);
+            return sum + (itemSum > 0 ? itemSum : (parseFloat(p.allocated_budget || p.estimated_budget || 0)));
+        }, 0);
 
         const filteredQueue = queue.filter(p => {
             const procStatus = p.procurement?.status || 'pending';
@@ -8183,7 +8187,7 @@ ${itemsListText}
                                     <span className="text-xl">💰</span>
                                 </div>
                                 <p className="mt-2 text-2xl font-black text-indigo-950">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalBudgetSum)}</p>
-                                <p className="text-[11px] text-indigo-700 mt-1">วงเงินงบประมาณที่ได้รับจัดสรร</p>
+                                <p className="text-[11px] text-indigo-700 mt-1">ยอดรวมตามชุดจัดซื้อจัดจ้างจริง</p>
                             </div>
                         </div>
 
