@@ -451,15 +451,17 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>ติดตามเอกสารและโครงการ</span>}
                                 </Link>
 
-                                <Link
-                                    href={route('admin.routine_budgets.index')}
-                                    className={getSubLinkClass(url.includes('routine-budgets'))}
-                                    title="งบดำเนินงานประจำปี & จัดซื้อจัดจ้างตรง"
-                                >
-                                    <span className={getPrefixClass(url.includes('routine-budgets'))}>└─</span>
-                                    <span className="text-sm">🗓️</span>
-                                    {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
-                                </Link>
+                                {!isPlanHead && (
+                                    <Link
+                                        href={route('admin.routine_budgets.index')}
+                                        className={getSubLinkClass(url.includes('routine-budgets'))}
+                                        title="งบดำเนินงานประจำปี & จัดซื้อจัดจ้างตรง"
+                                    >
+                                        <span className={getPrefixClass(url.includes('routine-budgets'))}>└─</span>
+                                        <span className="text-sm">🗓️</span>
+                                        {isSidebarOpen && <span>งบประจำปี & จัดซื้อตรง</span>}
+                                    </Link>
+                                )}
                             </div>
                             )}
                         </div>
