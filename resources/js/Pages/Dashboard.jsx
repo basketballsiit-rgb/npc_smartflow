@@ -6477,12 +6477,9 @@ ${itemsListText}
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-xs font-bold text-slate-500">ยอดใช้จ่ายรวม</p>
-                            <div className="mt-1 flex items-baseline gap-1.5">
-                                <h3 className="text-2xl sm:text-3xl font-black font-heading text-slate-900 tracking-tight">
-                                    {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalSpent)}
-                                </h3>
-                                <span className="text-xs font-bold text-slate-500">บาท</span>
-                            </div>
+                            <h3 className="mt-1 text-2xl sm:text-3xl font-black font-heading text-slate-900 tracking-tight">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalSpent)}
+                            </h3>
                         </div>
                         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600 shadow-2xs">
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -8147,7 +8144,7 @@ ${itemsListText}
                                     <span className="text-xs font-black uppercase tracking-wider text-amber-900">🟡 รอดำเนินการ / รอลงรับ</span>
                                     <span className="text-xl">📦</span>
                                 </div>
-                                <p className="mt-2 text-3xl font-black text-amber-950">{pendingCount} <span className="text-xs font-normal text-amber-800">โครงการ</span></p>
+                                <p className="mt-2 text-3xl font-black font-heading text-amber-950">{pendingCount} <span className="text-xs font-normal text-amber-800">โครงการ</span></p>
                                 <p className="text-[11px] text-amber-700 mt-1">รอพัสดุลงรับ ({waitingIntakeCount}) | ลงรับแล้วรอเบิก ({receivedCount})</p>
                             </button>
 
@@ -8162,7 +8159,7 @@ ${itemsListText}
                                     <span className="text-xs font-black uppercase tracking-wider text-emerald-900">🟢 ส่งงานการเงินแล้ว</span>
                                     <span className="text-xl">📤</span>
                                 </div>
-                                <p className="mt-2 text-3xl font-black text-emerald-950">{forwardedCount} <span className="text-xs font-normal text-emerald-800">โครงการ</span></p>
+                                <p className="mt-2 text-3xl font-black font-heading text-emerald-950">{forwardedCount} <span className="text-xs font-normal text-emerald-800">โครงการ</span></p>
                                 <p className="text-[11px] text-emerald-700 mt-1">ส่งต่อให้งานการเงินเบิกจ่ายแล้ว</p>
                             </button>
 
@@ -8177,7 +8174,7 @@ ${itemsListText}
                                     <span className="text-xs font-black uppercase tracking-wider text-purple-900">📁 รายการทั้งหมด</span>
                                     <span className="text-xl">📑</span>
                                 </div>
-                                <p className="mt-2 text-3xl font-black text-purple-950">{queue.length} <span className="text-xs font-normal text-purple-800">โครงการ</span></p>
+                                <p className="mt-2 text-3xl font-black font-heading text-purple-950">{queue.length} <span className="text-xs font-normal text-purple-800">โครงการ</span></p>
                                 <p className="text-[11px] text-purple-700 mt-1">โครงการจัดซื้อจัดจ้างทั้งหมด</p>
                             </button>
 
