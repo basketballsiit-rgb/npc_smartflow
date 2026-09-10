@@ -6478,7 +6478,7 @@ ${itemsListText}
                         <div>
                             <p className="text-xs font-bold text-slate-500">ยอดใช้จ่ายรวม</p>
                             <div className="mt-1 flex items-baseline gap-1.5">
-                                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
+                                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                                     {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalSpent)}
                                 </h3>
                                 <span className="text-xs font-bold text-slate-500">บาท</span>
