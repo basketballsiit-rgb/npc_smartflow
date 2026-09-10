@@ -6478,7 +6478,7 @@ ${itemsListText}
                         <div>
                             <p className="text-xs font-bold text-slate-500">ยอดใช้จ่ายรวม</p>
                             <div className="mt-1 flex items-baseline gap-1.5">
-                                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                                <h3 className="text-2xl sm:text-3xl font-black font-heading text-slate-900 tracking-tight">
                                     {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalSpent)}
                                 </h3>
                                 <span className="text-xs font-bold text-slate-500">บาท</span>
@@ -8186,7 +8186,9 @@ ${itemsListText}
                                     <span className="text-xs font-black uppercase tracking-wider text-indigo-900">งบประมาณจัดซื้อรวม</span>
                                     <span className="text-xl">💰</span>
                                 </div>
-                                <p className="mt-2 text-2xl font-black text-indigo-950">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalBudgetSum)}</p>
+                                <h3 className="mt-2 text-2xl sm:text-3xl font-black font-heading text-indigo-950 tracking-tight">
+                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalBudgetSum)}
+                                </h3>
                                 <p className="text-[11px] text-indigo-700 mt-1">ยอดรวมตามชุดจัดซื้อจัดจ้างจริง</p>
                             </div>
                         </div>
