@@ -184,6 +184,11 @@ Route::middleware('auth')->group(function () {
     // Final stitched report download
     Route::get('projects/{project}/download-report', [ProjectController::class, 'downloadReport'])->name('projects.download_report');
 
+    // Chapter 2 AI Generation, Save, and Print
+    Route::post('projects/{project}/chapter-2/generate', [ProjectController::class, 'generateChapter2'])->name('projects.chapter2.generate');
+    Route::post('projects/{project}/chapter-2/save', [ProjectController::class, 'saveChapter2'])->name('projects.chapter2.save');
+    Route::get('projects/{project}/chapter-2/print', [ProjectController::class, 'printChapter2'])->name('projects.chapter2.print');
+
     // Expense & Loan Clearing Routes (With Loan & Direct Reimbursement)
     Route::post('/clearings', [\App\Http\Controllers\ExpenseClearingController::class, 'store'])->name('clearings.store');
     Route::post('/clearings/{clearing}/plan-approve', [\App\Http\Controllers\ExpenseClearingController::class, 'planApprove'])->name('clearings.plan_approve');

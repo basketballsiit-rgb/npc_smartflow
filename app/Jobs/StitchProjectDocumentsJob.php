@@ -50,9 +50,22 @@ class StitchProjectDocumentsJob implements ShouldQueue
         $content .= "Department: " . ($this->project->department?->name ?? 'N/A') . "\n";
         $content .= "Proposer: " . ($this->project->user?->name ?? 'N/A') . "\n";
         $content .= "Estimated Budget: " . number_format($this->project->estimated_budget, 2) . " THB\n";
-        $content .= "Approved At: " . ($this->project->approved_at ? $this->project->approved_at->toDateTimeString() : 'N/A') . "\n\n";
+        $content .= "2. CHAPTER 2: RELATED LITERATURE & OVEC STRATEGIES (บทที่ ๒)\n";
+        $content .= "------------------------------------------------------------------------\n";
+        if (!empty($this->project->chapter_2_content)) {
+            $content .= $this->project->chapter_2_content . "\n\n";
+        } elseif (!empty($this->project->chapter_2_sections)) {
+            $s = $this->project->chapter_2_sections;
+            $content .= ($s['intro'] ?? '') . "\n\n";
+            $content .= ($s['section_2_1'] ?? '') . "\n\n";
+            $content .= ($s['section_2_2'] ?? '') . "\n\n";
+            $content .= ($s['section_2_3'] ?? '') . "\n\n";
+            $content .= ($s['references'] ?? '') . "\n\n";
+        } else {
+            $content .= "No Chapter 2 content recorded yet.\n\n";
+        }
 
-        $content .= "2. BUDGET ALLOCATION (PHASE 2 - DO)\n";
+        $content .= "3. BUDGET ALLOCATION (PHASE 2 - DO)\n";
         $content .= "------------------------------------------------------------------------\n";
         if ($this->project->budget) {
             $content .= "Funding Pool: " . ($this->project->budget->fundingSource?->name ?? 'Revenue') . "\n";

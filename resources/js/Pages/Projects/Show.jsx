@@ -18,6 +18,78 @@ export default function Show({ project, strategyCategories = [], fundingSources 
     const [appendixFile, setAppendixFile] = useState(null);
     const [uploading, setUploading] = useState(false);
 
+    // Chapter 2 State
+    const [chapter2Sections, setChapter2Sections] = useState(
+        project.chapter_2_sections || {
+            intro: '',
+            section_2_1: '',
+            section_2_2: '',
+            section_2_3: '',
+            references: '',
+        }
+    );
+    const [chapter2FullContent, setChapter2FullContent] = useState(project.chapter_2_content || '');
+    const [generatingChapter2, setGeneratingChapter2] = useState(false);
+    const [savingChapter2, setSavingChapter2] = useState(false);
+    const [activeChapter2Tab, setActiveChapter2Tab] = useState('2_2');
+    const [linkedOvecStrategies, setLinkedOvecStrategies] = useState([]);
+
+    const handleGenerateChapter2 = () => {
+        setGeneratingChapter2(true);
+        window.axios.post(route('projects.chapter2.generate', project.id))
+            .then(res => {
+                if (res.data.success) {
+                    setChapter2Sections(res.data.sections);
+                    setChapter2FullContent(res.data.full_content);
+                    if (res.data.linked_ovec_strategies) {
+                        setLinkedOvecStrategies(res.data.linked_ovec_strategies);
+                    }
+                    Swal.fire({
+                        title: '✨ AI สังเคราะห์เนื้อหาบทที่ ๒ สำเร็จ!',
+                        html: `ระบบได้ร่างเนื้อหา ๓ หัวข้อสำคัญ พร้อม<b>ขยายความยุทธศาสตร์ สอศ.</b> และรวบรวมการอ้างอิงเอกสาร/บรรณานุกรมเรียบร้อยแล้ว`,
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed',
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างเนื้อหาบทที่ ๒ ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+            })
+            .finally(() => {
+                setGeneratingChapter2(false);
+            });
+    };
+
+    const handleSaveChapter2 = () => {
+        setSavingChapter2(true);
+        const full = `บทที่ ๒\nเอกสารและงานวิจัยที่เกี่ยวข้อง\n\n${chapter2Sections.intro || ''}\n\n${chapter2Sections.section_2_1 || ''}\n\n${chapter2Sections.section_2_2 || ''}\n\n${chapter2Sections.section_2_3 || ''}\n\n${chapter2Sections.references || ''}`;
+        
+        window.axios.post(route('projects.chapter2.save', project.id), {
+            sections: chapter2Sections,
+            full_content: full
+        })
+            .then(res => {
+                if (res.data.success) {
+                    setChapter2FullContent(full);
+                    Swal.fire({
+                        title: '💾 บันทึกสำเร็จ!',
+                        text: 'บันทึกเนื้อหาบทที่ ๒ และการอ้างอิงเอกสารเรียบร้อยแล้ว',
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed',
+                        timer: 2000,
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+            })
+            .finally(() => {
+                setSavingChapter2(false);
+            });
+    };
+
     // Procurement Items & Committee Form State
     const [procurementItems, setProcurementItems] = useState(
         project.procurement?.items?.length > 0 
@@ -1864,6 +1936,289 @@ ${itemsListText}
                                     </a>
                                 </div>
                             )}
+
+                            {/* Chapter 2: Literature Review & OVEC Strategies Card */}
+                            <div className="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm space-y-6 font-sans">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-50 pb-5">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 text-purple-700 text-lg shadow-xs">
+                                                📖
+                                            </span>
+                                            <div>
+                                                <h3 className="text-base font-bold text-slate-900">
+                                                    บทที่ ๒: เอกสารและงานวิจัยที่เกี่ยวข้อง (Literature Review & OVEC Strategies)
+                                                </h3>
+                                                <p className="text-xs text-slate-500 mt-0.5">
+                                                    สังเคราะห์เอกสาร ทฤษฎี ยุทธศาสตร์ สอศ. ที่เชื่อมโยง และงานวิจัยที่เกี่ยวข้อง พร้อมการอ้างอิงและบรรณานุกรมมาตรฐาน
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateChapter2}
+                                            disabled={generatingChapter2}
+                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-800 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                                        >
+                                            {generatingChapter2 ? (
+                                                <>
+                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                                    </svg>
+                                                    AI กำลังค้นคว้า & สังเคราะห์...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    ✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒
+                                                </>
+                                            )}
+                                        </button>
+                                        <a
+                                            href={route('projects.chapter2.print', project.id)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
+                                        >
+                                            🖨️ พิมพ์ / ดูเล่มบทที่ ๒
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveChapter2}
+                                            disabled={savingChapter2}
+                                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
+                                        >
+                                            {savingChapter2 ? 'กำลังบันทึก...' : '💾 บันทึกเนื้อหาบทที่ ๒'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Banner for Strategy and Reference Standards */}
+                                <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50/80 via-purple-50/80 to-slate-50 border border-indigo-100 text-xs text-slate-700 space-y-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 font-bold text-indigo-950">
+                                            <span>🎯 ยุทธศาสตร์ / นโยบายจุดเน้น สอศ. ที่โครงการนี้เชื่อมโยง:</span>
+                                        </div>
+                                        <span className="text-[11px] bg-purple-100 text-purple-800 font-semibold px-2 py-0.5 rounded-md">
+                                            ตัดหัวข้อ ๒.๔ ออกตามเกณฑ์มาตรฐาน
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {project.strategy_item?.name ? (
+                                            <span className="bg-indigo-100/90 text-indigo-900 px-2.5 py-1 rounded-lg text-xs font-semibold border border-indigo-200 flex items-center gap-1">
+                                                <span>📌</span> {project.strategy_item.name}
+                                            </span>
+                                        ) : project.strategy_category?.name ? (
+                                            <span className="bg-indigo-100/90 text-indigo-900 px-2.5 py-1 rounded-lg text-xs font-semibold border border-indigo-200 flex items-center gap-1">
+                                                <span>📌</span> {project.strategy_category.name}
+                                            </span>
+                                        ) : project.strategy?.name ? (
+                                            <span className="bg-indigo-100/90 text-indigo-900 px-2.5 py-1 rounded-lg text-xs font-semibold border border-indigo-200 flex items-center gap-1">
+                                                <span>📌</span> {project.strategy.name}
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-500 italic">
+                                                ยังไม่ได้ระบุยุทธศาสตร์เฉพาะ (AI จะใช้ยุทธศาสตร์การจัดการศึกษาอาชีวศึกษาเพื่อพัฒนาสมรรถนะวิชาชีพเป็นฐาน)
+                                            </span>
+                                        )}
+                                        {linkedOvecStrategies.map((st, idx) => (
+                                            <span key={idx} className="bg-purple-100/80 text-purple-900 px-2.5 py-1 rounded-lg text-xs font-semibold border border-purple-200 flex items-center gap-1">
+                                                <span>📌</span> {st}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 pt-1">
+                                        💡 หัวข้อ ๒.๒ จะวิเคราะห์และขยายความเชื่อมโยงกับยุทธศาสตร์ สอศ. ดังกล่าวอย่างละเอียด และทุกหัวข้อจะมีการอ้างอิงทางวิชาการ (ชื่อผู้แต่ง, ปี พ.ศ., สถาบัน/สำนักพิมพ์) และจัดทำบรรณานุกรมท้ายบทครบถ้วน
+                                    </p>
+                                </div>
+
+                                {/* Subsection Tabs */}
+                                <div className="border-b border-slate-200">
+                                    <div className="flex flex-wrap -mb-px text-xs font-bold gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveChapter2Tab('intro')}
+                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
+                                                activeChapter2Tab === 'intro'
+                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            บทนำบทที่ ๒
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveChapter2Tab('2_1')}
+                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
+                                                activeChapter2Tab === '2_1'
+                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            ๒.๑ แนวคิด & ทฤษฎี
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveChapter2Tab('2_2')}
+                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
+                                                activeChapter2Tab === '2_2'
+                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            <span className="text-amber-500">★</span> ๒.๒ ยุทธศาสตร์ สอศ.
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveChapter2Tab('2_3')}
+                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
+                                                activeChapter2Tab === '2_3'
+                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            ๒.๓ เอกสาร & งานวิจัย
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveChapter2Tab('references')}
+                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
+                                                activeChapter2Tab === 'references'
+                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            📚 บรรณานุกรม / แหล่งอ้างอิง
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setActiveChapter2Tab('full')}
+                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
+                                                activeChapter2Tab === 'full'
+                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
+                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                                            }`}
+                                        >
+                                            📄 ดูภาพรวมทั้งบท
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Editor Panels */}
+                                <div className="space-y-3">
+                                    {activeChapter2Tab === 'intro' && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                ข้อความเกริ่นนำบทที่ ๒ (Introduction to Chapter 2):
+                                            </label>
+                                            <textarea
+                                                rows={6}
+                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed"
+                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' เพื่อร่างข้อความเกริ่นนำ หรือพิมพ์ข้อความด้วยตนเอง..."
+                                                value={chapter2Sections.intro || ''}
+                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, intro: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {activeChapter2Tab === '2_1' && (
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-xs font-bold text-slate-700">
+                                                    ๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง (พร้อมการอ้างอิงในเนื้อหา):
+                                                </label>
+                                                <span className="text-[11px] text-purple-600">
+                                                    เช่น ทฤษฎีการเรียนรู้เชิงประสบการณ์ (Kolb), วงจรบริหารงานคุณภาพ PDCA
+                                                </span>
+                                            </div>
+                                            <textarea
+                                                rows={12}
+                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
+                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' เพื่อให้ AI ช่วยค้นคว้าแนวคิดและทฤษฎีที่ตรงกับโครงการ..."
+                                                value={chapter2Sections.section_2_1 || ''}
+                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_1: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {activeChapter2Tab === '2_2' && (
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-xs font-bold text-slate-700">
+                                                    ๒.๒ ยุทธศาสตร์และนโยบายจุดเน้นของ สอศ. ที่เกี่ยวข้อง (ขยายความและวิเคราะห์การเชื่อมโยง):
+                                                </label>
+                                                <span className="text-[11px] text-amber-600 font-semibold">
+                                                    ★ เชื่อมโยงกับนโยบายที่เลือกไว้ในขั้นตอนเสนอโครงการ
+                                                </span>
+                                            </div>
+                                            <textarea
+                                                rows={12}
+                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
+                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' เพื่อให้ AI ดึงยุทธศาสตร์ สอศ. ที่ระบุไว้มาขยายความอย่างละเอียด..."
+                                                value={chapter2Sections.section_2_2 || ''}
+                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_2: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {activeChapter2Tab === '2_3' && (
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-xs font-bold text-slate-700">
+                                                    ๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง (ระบุชื่อผู้วิจัย, ปี พ.ศ., ชื่องานวิจัย, สถาบัน):
+                                                </label>
+                                                <span className="text-[11px] text-purple-600">
+                                                    งานวิจัยที่เกี่ยวข้องทั้งในและต่างประเทศ
+                                                </span>
+                                            </div>
+                                            <textarea
+                                                rows={12}
+                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
+                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' เพื่อค้นหางานวิจัยที่สอดคล้องกับโครงการ..."
+                                                value={chapter2Sections.section_2_3 || ''}
+                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_3: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {activeChapter2Tab === 'references' && (
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="block text-xs font-bold text-slate-700">
+                                                    📚 รายการเอกสารอ้างอิง / บรรณานุกรมท้ายบท (References & Bibliography):
+                                                </label>
+                                                <span className="text-[11px] text-slate-500">
+                                                    ระบุชื่อผู้แต่ง, ปีที่พิมพ์, ชื่อหนังสือ/งานวิจัย, สำนักพิมพ์/สถาบัน
+                                                </span>
+                                            </div>
+                                            <textarea
+                                                rows={10}
+                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono bg-slate-50/50"
+                                                placeholder="รายการเอกสารอ้างอิงตามมาตรฐานวิชาการ..."
+                                                value={chapter2Sections.references || ''}
+                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, references: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {activeChapter2Tab === 'full' && (
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                📄 ตัวอย่างเนื้อหาบทที่ ๒ ฉบับเต็มที่จะนำไปออกรายงานและพิมพ์:
+                                            </label>
+                                            <div className="w-full max-h-96 overflow-y-auto text-xs font-sans rounded-xl border border-slate-200 bg-slate-50 p-4 leading-relaxed whitespace-pre-wrap text-slate-800">
+                                                {chapter2FullContent || (
+                                                    <span className="text-slate-400 italic">
+                                                        ยังไม่มีเนื้อหาฉบับเต็ม กรุณาคลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' แล้วกด '💾 บันทึกเนื้อหาบทที่ ๒'
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
 
                             {/* Appendices Upload Card */}
                             <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-5 font-sans">
