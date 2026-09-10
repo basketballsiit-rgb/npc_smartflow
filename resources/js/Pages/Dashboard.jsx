@@ -6419,6 +6419,83 @@ ${itemsListText}
     };
 
 
+    // Reusable 3-card Document KPI Component matching the user reference design
+    const renderDocumentKpiCards = ({
+        totalDocs = 0,
+        pendingDocs = 0,
+        completedDocs = 0,
+        totalSpent = 0,
+        title = "เอกสารทั้งหมด",
+        pendingLabel = "รอดำเนินการ",
+        completedLabel = "เสร็จ",
+        spentSublabel = "เฉพาะเอกสารที่เสร็จแล้ว"
+    }) => {
+        const percentCompleted = totalDocs > 0 ? Math.round((completedDocs / totalDocs) * 100) : 0;
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Card 1: เอกสารทั้งหมด */}
+                <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all hover:shadow-md">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-blue-600"></div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-bold text-slate-500">{title}</p>
+                            <h3 className="mt-1 text-3xl font-black text-slate-900 tracking-tight">{totalDocs}</h3>
+                        </div>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 shadow-2xs">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500 font-medium">
+                        {pendingLabel} <span className="font-bold text-slate-700">{pendingDocs}</span> · {completedLabel} <span className="font-bold text-slate-700">{completedDocs}</span>
+                    </p>
+                </div>
+
+                {/* Card 2: เสร็จสมบูรณ์ */}
+                <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all hover:shadow-md">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-emerald-500"></div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-bold text-slate-500">เสร็จสมบูรณ์</p>
+                            <h3 className="mt-1 text-3xl font-black text-slate-900 tracking-tight">{completedDocs}</h3>
+                        </div>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 shadow-2xs">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500 font-medium">
+                        <span className="font-bold text-emerald-600">{percentCompleted}%</span> ของทั้งหมด
+                    </p>
+                </div>
+
+                {/* Card 3: ยอดใช้จ่ายรวม */}
+                <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all hover:shadow-md">
+                    <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500"></div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="text-xs font-bold text-slate-500">ยอดใช้จ่ายรวม</p>
+                            <div className="mt-1 flex items-baseline gap-1.5">
+                                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 font-mono tracking-tight">
+                                    {new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalSpent)}
+                                </h3>
+                                <span className="text-xs font-bold text-slate-500">บาท</span>
+                            </div>
+                        </div>
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-600 shadow-2xs">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <p className="mt-3 text-xs text-slate-500 font-medium">{spentSublabel}</p>
+                </div>
+            </div>
+        );
+    };
+
     // 2.2 Finance Central Budgets & Categories Component Rendering
     const renderCentralBudgetsTab = () => {
         const toggleCategoryExpand = (catId) => {
@@ -6504,6 +6581,46 @@ ${itemsListText}
 
         const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
 
+        // Document KPI calculations for Finance
+        // 1. Projects with procurement or advance at finance
+        const finProcDocs = allProjects.filter(p => {
+            const ps = p.procurement_status || p.procurement?.status;
+            return ps === 'forwarded_to_finance' || ps === 'completed' || ps === 'disbursed' || p.finance_doc_number || p.procurement?.finance_disbursed_at;
+        });
+        const completedFinProcDocs = finProcDocs.filter(p => {
+            const ps = p.procurement_status || p.procurement?.status;
+            return ps === 'completed' || ps === 'disbursed' || p.procurement?.finance_disbursed_at;
+        });
+        const spentFinProc = completedFinProcDocs.reduce((sum, p) => {
+            const amt = parseFloat(p.finance_disbursed_amount) || parseFloat(p.procurement?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0;
+            return sum + amt;
+        }, 0);
+
+        // 2. Travel Loans at finance
+        const finLoanDocs = (Array.isArray(allTravelLoans) ? allTravelLoans : []).filter(l => {
+            return l.finance_doc_number || l.finance_received_at || l.cleared_at || ['plan_cut', 'finance_received', 'cleared'].includes(l.loan_status || l.status);
+        });
+        const completedFinLoanDocs = finLoanDocs.filter(l => (l.loan_status || l.status) === 'cleared' || l.cleared_at);
+        const spentFinLoan = completedFinLoanDocs.reduce((sum, l) => {
+            const amt = parseFloat(l.finance_disbursed_amount) || parseFloat(l.cleared_amount) || parseFloat(l.approved_amount) || parseFloat(l.loan_amount) || 0;
+            return sum + amt;
+        }, 0);
+
+        // 3. Expense Clearings & direct claims at finance
+        const finClearingDocs = (Array.isArray(expenseClearings) ? expenseClearings : []).filter(c => {
+            return c.finance_doc_number || ['plan_approved', 'finance_completed'].includes(c.status);
+        });
+        const completedFinClearingDocs = finClearingDocs.filter(c => c.status === 'finance_completed');
+        const spentFinClearing = completedFinClearingDocs.reduce((sum, c) => {
+            const amt = parseFloat(c.actual_spent_amount) || parseFloat(c.net_clearing_amount) || 0;
+            return sum + amt;
+        }, 0);
+
+        const totalFinDocs = finProcDocs.length + finLoanDocs.length + finClearingDocs.length;
+        const completedFinDocs = completedFinProcDocs.length + completedFinLoanDocs.length + completedFinClearingDocs.length;
+        const pendingFinDocs = Math.max(0, totalFinDocs - completedFinDocs);
+        const totalFinSpent = spentFinProc + spentFinLoan + spentFinClearing;
+
         return (
             <div className="space-y-6 font-sans">
                 {/* 1. Header Banner */}
@@ -6522,6 +6639,18 @@ ${itemsListText}
                         </div>
                     </div>
                 </div>
+
+                {/* Document Status KPI Cards (งานการเงิน) */}
+                {renderDocumentKpiCards({
+                    totalDocs: totalFinDocs,
+                    pendingDocs: pendingFinDocs,
+                    completedDocs: completedFinDocs,
+                    totalSpent: totalFinSpent,
+                    title: "เอกสารการเงินทั้งหมด",
+                    pendingLabel: "รอดำเนินการ",
+                    completedLabel: "เสร็จ",
+                    spentSublabel: "เฉพาะเอกสารที่ดำเนินการเสร็จแล้ว"
+                })}
 
                 {/* 2. Primary KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -7743,6 +7872,30 @@ ${itemsListText}
                         </button>
                     </div>
                 </div>
+
+                {/* Procurement Document Status KPI Cards */}
+                {(() => {
+                    const completedProjects = queue.filter(p => {
+                        const ps = p.procurement?.status;
+                        return ps === 'forwarded_to_finance' || ps === 'completed';
+                    });
+                    const spentProc = completedProjects.reduce((sum, p) => {
+                        const items = p.procurement?.items || [];
+                        const itemSum = items.reduce((iSum, it) => iSum + (parseFloat(it.quantity || 0) * parseFloat(it.unit_price || 0)), 0);
+                        return sum + (itemSum > 0 ? itemSum : (parseFloat(p.allocated_budget || p.estimated_budget || 0)));
+                    }, 0);
+
+                    return renderDocumentKpiCards({
+                        totalDocs: queue.length,
+                        pendingDocs: queue.length - completedProjects.length,
+                        completedDocs: completedProjects.length,
+                        totalSpent: spentProc,
+                        title: "เอกสารพัสดุทั้งหมด",
+                        pendingLabel: "รอดำเนินการ",
+                        completedLabel: "เสร็จ",
+                        spentSublabel: "เฉพาะเอกสารที่จัดซื้อ/ส่งการเงินแล้ว"
+                    });
+                })()}
 
                 {/* VIEW 1: คลังวัสดุ & ราคากลาง (Direct view when procActiveTool === 'item_catalog') */}
                 {procActiveTool === 'item_catalog' && (
@@ -10246,6 +10399,21 @@ return (
                         )}
                     </div>
                 </div>
+
+                {/* Top Document KPI Cards matching standard format */}
+                {isStrictFinanceUser && renderDocumentKpiCards({
+                    totalDocs: trackingList.length,
+                    pendingDocs: Math.max(0, trackingList.length - countFinCompleted),
+                    completedDocs: countFinCompleted,
+                    totalSpent: trackingList.filter(p => p.isAllFinCompleted).reduce((sum, p) => {
+                        const amt = parseFloat(p.finance_disbursed_amount) || parseFloat(p.procurement?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0;
+                        return sum + amt;
+                    }, 0),
+                    title: "เอกสารการเงินทั้งหมด",
+                    pendingLabel: "รอดำเนินการ",
+                    completedLabel: "เสร็จ",
+                    spentSublabel: "เฉพาะเอกสารที่จ่าย/ปิดยอดแล้ว"
+                })}
 
                 {/* KPI Cards */}
                 {isStrictFinanceUser ? (
