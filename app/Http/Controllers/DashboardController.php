@@ -392,8 +392,153 @@ class DashboardController extends Controller
             ];
         }
 
-        // Master Projects list for Admin, Plan Head, Procurement, Finance & Executives
-        if ($user->isAdmin() || $user->isPlanHead() || $user->isProcurementHead() || $user->isFinanceStaff() || $user->isExecutive() || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report'])) {
+        // 5. Plan & Executive Annual Budget Requests (4 Divisions) & Institutional Projections
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || in_array($request->query('tab'), ['annual_budget_requests', 'budgets', 'action_plan_report', 'executive_overview'])) {
+            $mainDivisions = Department::whereNull('parent_id')->with('children')->get();
+            $divisionBudgetRequests = [];
+            $totalProjectedRevenue = (float)FundingSource::sum('total_amount') ?: 10000000.00;
+
+            $totalRequestedAll = 0;
+            $totalAllocatedAll = 0;
+            $totalSpentAll = 0;
+
+            foreach ($mainDivisions as $mainDept) {
+                $childIds = $mainDept->children->pluck('id')->toArray();
+                $allIds = array_merge([$mainDept->id], $childIds);
+
+                $divProjects = Project::whereIn('department_id', $allIds)
+                    ->with(['department', 'user', 'budget', 'fundingSource'])
+                    ->latest()
+                    ->get();
+
+                $totalProjects = $divProjects->count();
+                $preliminaryCount = $divProjects->where('status', 'preliminary')->count();
+                $fullProposalsCount = $divProjects->where('status', '!=', 'preliminary')->count();
+                $pendingApprovalCount = $divProjects->whereIn('status', ['preliminary', 'pending_approval', 'submitted'])->count();
+                $approvedCount = $divProjects->whereIn('status', ['approved', 'in_progress', 'completed'])->count();
+
+                $totalProposed = (float)$divProjects->sum(function ($p) {
+                    return (float)($p->proposed_budget ?: $p->estimated_budget);
+                });
+                $totalAllocated = (float)$divProjects->sum(function ($p) {
+                    return (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?? 0));
+                });
+                $totalSpent = (float)$divProjects->sum(function ($p) {
+                    return (float)($p->budget?->spent_amount ?? 0);
+                });
+
+                $routineSum = (float)\App\Models\RoutineBudgetPlan::whereIn('department_id', $allIds)->sum('total_amount');
+
+                $totalRequestedAll += $totalProposed;
+                $totalAllocatedAll += $totalAllocated;
+                $totalSpentAll += $totalSpent;
+
+                $projectSummaries = $divProjects->map(function ($p) {
+                    return [
+                        'id' => $p->id,
+                        'title' => $p->title,
+                        'academic_year' => $p->academic_year,
+                        'status' => $p->status,
+                        'current_approval_step' => $p->current_approval_step,
+                        'department_name' => $p->department?->name ?? 'ไม่ระบุงาน',
+                        'department_id' => $p->department_id,
+                        'proposer_name' => $p->user?->name ?? 'ไม่ระบุชื่อ',
+                        'proposed_budget' => (float)($p->proposed_budget ?: $p->estimated_budget),
+                        'allocated_budget' => (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?? 0)),
+                        'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
+                        'funding_source_id' => $p->funding_source_id ?: ($p->budget?->funding_source_id ?? null),
+                        'funding_source_name' => $p->fundingSource?->name ?: ($p->budget?->fundingSource?->name ?? 'ยังไม่จัดสรร'),
+                        'report_category' => $p->report_category,
+                        'committee_comment' => $p->committee_comment,
+                        'created_at' => $p->created_at ? $p->created_at->format('d/m/Y H:i') : '',
+                        'is_preliminary' => $p->status === 'preliminary',
+                    ];
+                });
+
+                $divisionBudgetRequests[] = [
+                    'id' => $mainDept->id,
+                    'name' => $mainDept->name,
+                    'code' => $mainDept->code ?? 'DIV',
+                    'total_projects' => $totalProjects,
+                    'preliminary_count' => $preliminaryCount,
+                    'full_proposals_count' => $fullProposalsCount,
+                    'pending_approval_count' => $pendingApprovalCount,
+                    'approved_count' => $approvedCount,
+                    'total_proposed_budget' => $totalProposed,
+                    'total_allocated_budget' => $totalAllocated,
+                    'total_spent_budget' => $totalSpent,
+                    'routine_budget_plans_sum' => $routineSum,
+                    'balance_remaining' => $totalAllocated - $totalSpent,
+                    'projects' => $projectSummaries,
+                ];
+            }
+
+            // Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา ๔ มิติ)
+            $routineCeiling = 2000000.00;
+            $projectsCeiling = 5000000.00;
+            $utilitiesCeiling = 2000000.00;
+            $contingencyCeiling = 1000000.00;
+
+            $routineSpent = (float)\App\Models\RoutineBudgetPlan::sum('total_amount');
+            $centralSpent = (float)\App\Models\CentralAllocation::sum('amount');
+
+            $institutionalExpenditureProjections = [
+                'total_projected_pool' => $totalProjectedRevenue,
+                'categories' => [
+                    [
+                        'id' => 'routine_divisions',
+                        'name' => '๑. งบดำเนินงานและภารกิจประจำ ๔ ฝ่าย',
+                        'description' => 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
+                        'projected_ceiling' => $routineCeiling,
+                        'requested_amount' => (float)\App\Models\RoutineBudgetPlan::sum('total_amount'),
+                        'allocated_amount' => (float)\App\Models\RoutineBudgetPlan::sum('total_amount'),
+                        'spent_amount' => $routineSpent,
+                    ],
+                    [
+                        'id' => 'strategic_projects',
+                        'name' => '๒. งบโครงการตามแผนปฏิบัติราชการประจำปี',
+                        'description' => 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
+                        'projected_ceiling' => $projectsCeiling,
+                        'requested_amount' => $totalRequestedAll,
+                        'allocated_amount' => $totalAllocatedAll,
+                        'spent_amount' => $totalSpentAll,
+                    ],
+                    [
+                        'id' => 'utilities_overhead',
+                        'name' => '๓. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
+                        'description' => 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
+                        'projected_ceiling' => $utilitiesCeiling,
+                        'requested_amount' => $centralSpent > 0 ? $centralSpent : 1500000.00,
+                        'allocated_amount' => $centralSpent > 0 ? $centralSpent : 1500000.00,
+                        'spent_amount' => $centralSpent,
+                    ],
+                    [
+                        'id' => 'contingency_reserve',
+                        'name' => '๔. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
+                        'description' => 'เงินสำรองกรณีเร่งด่วน ภัยพิบัติ หรือโครงการนโยบายเร่งด่วนพิเศษ',
+                        'projected_ceiling' => $contingencyCeiling,
+                        'requested_amount' => 0.00,
+                        'allocated_amount' => $contingencyCeiling,
+                        'spent_amount' => 0.00,
+                    ],
+                ],
+                'summary' => [
+                    'total_projected_ceiling' => $routineCeiling + $projectsCeiling + $utilitiesCeiling + $contingencyCeiling,
+                    'total_requested' => $totalRequestedAll + (float)\App\Models\RoutineBudgetPlan::sum('total_amount') + $centralSpent,
+                    'total_allocated' => $totalAllocatedAll + (float)\App\Models\RoutineBudgetPlan::sum('total_amount') + $centralSpent + $contingencyCeiling,
+                    'total_spent' => $totalSpentAll + $routineSpent + $centralSpent,
+                ],
+            ];
+
+            $data['divisionBudgetRequests'] = $divisionBudgetRequests;
+            $data['institutionalExpenditureProjections'] = $institutionalExpenditureProjections;
+        } else {
+            $data['divisionBudgetRequests'] = [];
+            $data['institutionalExpenditureProjections'] = null;
+        }
+
+        // Master Projects list for Admin, Plan Head, Plan Staff, Procurement, Finance & Executives
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isProcurementHead() || $user->isProcurementStaff() || $user->isFinanceStaff() || $user->isExecutive() || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests'])) {
             $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
                 ->latest()
                 ->get()

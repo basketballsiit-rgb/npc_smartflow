@@ -166,6 +166,20 @@ class User extends Authenticatable
             })->exists();
     }
 
+    public function isPlanStaff(): bool
+    {
+        if ($this->isAdmin() || $this->isPlanHead()) return true;
+        if ($this->role?->name === 'plan_staff') return true;
+        if ($this->department && ($this->department->code === 'PLAN' || str_contains($this->department->name, 'แผน'))) return true;
+        return str_contains($this->position ?? '', 'แผน') ||
+            $this->userPositions()->where(function($q) {
+                $q->where('position', 'like', '%แผน%')
+                  ->orWhere('sub_department_id', function($sub) {
+                      $sub->select('id')->from('departments')->where('name', 'like', '%แผน%');
+                  });
+            })->exists();
+    }
+
     public function isFinanceStaff(): bool
     {
         if ($this->isAdmin()) return true;
@@ -188,6 +202,20 @@ class User extends Authenticatable
             ->where(function($q) {
                 $q->where('position', 'like', '%หัวหน้างานพัสดุ%')
                   ->orWhere('position', 'like', '%งานพัสดุ%')
+                  ->orWhere('sub_department_id', function($sub) {
+                      $sub->select('id')->from('departments')->where('name', 'like', '%พัสดุ%');
+                  });
+            })->exists();
+    }
+
+    public function isProcurementStaff(): bool
+    {
+        if ($this->isAdmin() || $this->isProcurementHead()) return true;
+        if ($this->role?->name === 'procurement_staff') return true;
+        if ($this->department && ($this->department->code === 'PROC' || str_contains($this->department->name, 'พัสดุ'))) return true;
+        return str_contains($this->position ?? '', 'พัสดุ') ||
+            $this->userPositions()->where(function($q) {
+                $q->where('position', 'like', '%พัสดุ%')
                   ->orWhere('sub_department_id', function($sub) {
                       $sub->select('id')->from('departments')->where('name', 'like', '%พัสดุ%');
                   });

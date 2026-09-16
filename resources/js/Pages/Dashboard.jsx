@@ -28,6 +28,8 @@ export default function Dashboard({
     apiIntegrationStatus = {},
     docNumberSettings = {},
     nextUnifiedDocNumber = '',
+    divisionBudgetRequests = [],
+    institutionalExpenditureProjections = null,
     currentTab
 }) {
     const { auth, flash } = usePage().props;
@@ -1100,6 +1102,11 @@ export default function Dashboard({
             setActiveTab(currentTab);
         }
     }, [currentTab]);
+
+    // Annual Budget Requests (4 Divisions) Filter States
+    const [annualBudgetDivisionFilter, setAnnualBudgetDivisionFilter] = useState('all');
+    const [annualBudgetStatusFilter, setAnnualBudgetStatusFilter] = useState('all');
+    const [annualBudgetSearch, setAnnualBudgetSearch] = useState('');
 
     // Admin User Modal State
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -3241,6 +3248,522 @@ ${itemsListText}
         });
     };
 
+    // 1.9 Annual Budget Requests Overview Tab (4 Main Divisions & Committee Allocation)
+    const renderAnnualBudgetRequestsTab = () => {
+        const isPlanStaffOrAdmin = role === 'admin' || role === 'plan_head' || auth.user?.is_plan_head || auth.user?.is_plan_staff || role === 'executive' || auth.user?.is_executive;
+
+        // Fallback calculation if divisionBudgetRequests is empty
+        const divisionsData = (divisionBudgetRequests && divisionBudgetRequests.length > 0)
+            ? divisionBudgetRequests
+            : (() => {
+                const mainDepts = allDepartments.filter(d => !d.parent_id);
+                return mainDepts.map(main => {
+                    const childIds = allDepartments.filter(d => d.parent_id === main.id).map(d => d.id);
+                    const allIds = [main.id, ...childIds];
+                    const projs = (allProjectsMaster || []).filter(p => allIds.includes(p.department_id));
+                    const totalProposed = projs.reduce((s, p) => s + (parseFloat(p.proposed_budget || p.estimated_budget) || 0), 0);
+                    const totalAlloc = projs.reduce((s, p) => s + (parseFloat(p.allocated_budget || p.allocated_amount) || 0), 0);
+                    const totalSpent = projs.reduce((s, p) => s + (parseFloat(p.spent_amount) || 0), 0);
+                    return {
+                        id: main.id,
+                        name: main.name,
+                        code: main.code || 'DIV',
+                        total_projects: projs.length,
+                        preliminary_count: projs.filter(p => p.status === 'preliminary').length,
+                        full_proposals_count: projs.filter(p => p.status !== 'preliminary').length,
+                        pending_approval_count: projs.filter(p => ['preliminary', 'pending_approval', 'submitted'].includes(p.status)).length,
+                        approved_count: projs.filter(p => ['approved', 'in_progress', 'completed', 'budget_approved'].includes(p.status)).length,
+                        total_proposed_budget: totalProposed,
+                        total_allocated_budget: totalAlloc,
+                        total_spent_budget: totalSpent,
+                        balance_remaining: totalAlloc - totalSpent,
+                        projects: projs.map(p => ({
+                            id: p.id,
+                            title: p.title,
+                            academic_year: p.academic_year,
+                            status: p.status,
+                            current_approval_step: p.current_approval_step,
+                            department_name: p.department_name || p.department?.name || 'ไม่ระบุงาน',
+                            department_id: p.department_id,
+                            proposer_name: p.proposer_name || p.user?.name || 'ไม่ระบุชื่อ',
+                            proposed_budget: parseFloat(p.proposed_budget || p.estimated_budget) || 0,
+                            allocated_budget: parseFloat(p.allocated_budget || p.allocated_amount) || 0,
+                            spent_amount: parseFloat(p.spent_amount) || 0,
+                            created_at: p.created_at || '',
+                            is_preliminary: p.status === 'preliminary',
+                            funding_source_id: p.funding_source_id,
+                            funding_source_name: p.funding_source_name,
+                            report_category: p.report_category,
+                            committee_comment: p.committee_comment,
+                        })),
+                    };
+                });
+            })();
+
+        const grandTotalProposed = divisionsData.reduce((s, d) => s + (d.total_proposed_budget || 0), 0);
+        const grandTotalAllocated = divisionsData.reduce((s, d) => s + (d.total_allocated_budget || 0), 0);
+        const grandTotalSpent = divisionsData.reduce((s, d) => s + (d.total_spent_budget || 0), 0);
+        const grandTotalProjects = divisionsData.reduce((s, d) => s + (d.total_projects || 0), 0);
+        const grandPreliminaryCount = divisionsData.reduce((s, d) => s + (d.preliminary_count || 0), 0);
+        const grandPendingCount = divisionsData.reduce((s, d) => s + (d.pending_approval_count || 0), 0);
+        const grandApprovedCount = divisionsData.reduce((s, d) => s + (d.approved_count || 0), 0);
+
+        const getDivisionConfig = (name) => {
+            if (name?.includes('บริหาร') || name?.includes('ทรัพยากร')) {
+                return {
+                    icon: '🏢',
+                    gradient: 'from-amber-500/10 via-orange-500/10 to-amber-500/5',
+                    badgeBg: 'bg-amber-100 text-amber-900 border-amber-300',
+                    border: 'border-amber-200',
+                    accentColor: 'text-amber-700',
+                    barColor: 'bg-amber-500',
+                };
+            }
+            if (name?.includes('วิชาการ')) {
+                return {
+                    icon: '📚',
+                    gradient: 'from-blue-500/10 via-indigo-500/10 to-blue-500/5',
+                    badgeBg: 'bg-blue-100 text-blue-900 border-blue-300',
+                    border: 'border-blue-200',
+                    accentColor: 'text-blue-700',
+                    barColor: 'bg-blue-500',
+                };
+            }
+            if (name?.includes('พัฒนากิจการ') || name?.includes('นักเรียน') || name?.includes('นักศึกษา')) {
+                return {
+                    icon: '🏆',
+                    gradient: 'from-emerald-500/10 via-teal-500/10 to-emerald-500/5',
+                    badgeBg: 'bg-emerald-100 text-emerald-900 border-emerald-300',
+                    border: 'border-emerald-200',
+                    accentColor: 'text-emerald-700',
+                    barColor: 'bg-emerald-500',
+                };
+            }
+            return {
+                icon: '📑',
+                gradient: 'from-purple-500/10 via-fuchsia-500/10 to-purple-500/5',
+                badgeBg: 'bg-purple-100 text-purple-900 border-purple-300',
+                border: 'border-purple-200',
+                accentColor: 'text-purple-700',
+                barColor: 'bg-purple-500',
+            };
+        };
+
+        // Filter projects for the table
+        let projectPool = [];
+        if (annualBudgetDivisionFilter === 'all') {
+            projectPool = divisionsData.flatMap(d => (d.projects || []).map(p => ({ ...p, division_id: d.id, division_name: d.name })));
+        } else {
+            const targetDiv = divisionsData.find(d => String(d.id) === String(annualBudgetDivisionFilter));
+            if (targetDiv) {
+                projectPool = (targetDiv.projects || []).map(p => ({ ...p, division_id: targetDiv.id, division_name: targetDiv.name }));
+            }
+        }
+
+        if (annualBudgetStatusFilter === 'preliminary') {
+            projectPool = projectPool.filter(p => p.status === 'preliminary' || p.is_preliminary);
+        } else if (annualBudgetStatusFilter === 'pending') {
+            projectPool = projectPool.filter(p => ['preliminary', 'pending_approval', 'submitted', 'draft'].includes(p.status));
+        } else if (annualBudgetStatusFilter === 'approved') {
+            projectPool = projectPool.filter(p => ['approved', 'in_progress', 'completed', 'budget_approved'].includes(p.status));
+        }
+
+        if (annualBudgetSearch.trim()) {
+            const q = annualBudgetSearch.toLowerCase().trim();
+            projectPool = projectPool.filter(p =>
+                p.title?.toLowerCase().includes(q) ||
+                p.department_name?.toLowerCase().includes(q) ||
+                p.proposer_name?.toLowerCase().includes(q)
+            );
+        }
+
+        const fiscalYear = systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569';
+
+        return (
+            <div className="space-y-8 font-sans">
+                {/* 1. Header Banner */}
+                <div className="rounded-3xl bg-gradient-to-r from-amber-900 via-purple-900 to-indigo-950 p-6 md:p-8 text-white shadow-xl space-y-6 relative overflow-hidden">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative z-10">
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold border border-amber-400/30 uppercase tracking-wider mb-2">
+                                <span>📊</span> งานแผนและงบประมาณ & ผู้บริหารสถานศึกษา
+                            </div>
+                            <h2 className="text-xl md:text-3xl font-black text-white tracking-tight">
+                                ภาพรวมคำของบประมาณประจำปี (แยก ๔ ฝ่ายหลัก)
+                            </h2>
+                            <p className="text-xs sm:text-sm text-purple-200 mt-1 max-w-3xl leading-relaxed">
+                                สรุปยอดคำขอตั้งงบประมาณจำแนกตาม ๔ ฝ่ายหลักของสถานศึกษา เพื่อพิจารณาอนุมัติจัดสรรงบประมาณดำเนินโครงการและแผนปฏิบัติราชการ ประจำปีงบประมาณ พ.ศ. {fiscalYear}
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                            {isPlanStaffOrAdmin && (
+                                <button
+                                    type="button"
+                                    onClick={openDirectAllocateModal}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                                >
+                                    <span>➕</span> เพิ่มโครงการ & จัดสรรงบตรง
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('action_plan_report')}
+                                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer"
+                            >
+                                <span>📑</span> รายงานแผนปฏิบัติราชการ
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Top Stats Cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 border-t border-white/15 pt-6 relative z-10">
+                        <div className="bg-white/10 backdrop-blur-xs p-4 rounded-2xl border border-white/10">
+                            <span className="text-purple-200 text-xs block">ยอดคำขอตั้งงบรวม ๔ ฝ่าย</span>
+                            <span className="text-lg md:text-2xl font-black text-amber-300 mt-1 block">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(grandTotalProposed)}
+                            </span>
+                            <span className="text-[11px] text-purple-300 mt-0.5 block">
+                                รวมทั้งสิ้น {grandTotalProjects} โครงการ
+                            </span>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-xs p-4 rounded-2xl border border-white/10">
+                            <span className="text-purple-200 text-xs block">ยอดอนุมัติจัดสรรจริงแล้ว</span>
+                            <span className="text-lg md:text-2xl font-black text-emerald-300 mt-1 block">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(grandTotalAllocated)}
+                            </span>
+                            <span className="text-[11px] text-emerald-200 mt-0.5 block">
+                                อนุมัติแล้ว {grandApprovedCount} โครงการ ({grandTotalProposed > 0 ? Math.round((grandTotalAllocated / grandTotalProposed) * 100) : 0}%)
+                            </span>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-xs p-4 rounded-2xl border border-white/10">
+                            <span className="text-purple-200 text-xs block">เบิกจ่ายสะสมรวม</span>
+                            <span className="text-lg md:text-2xl font-black text-rose-300 mt-1 block">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(grandTotalSpent)}
+                            </span>
+                            <span className="text-[11px] text-rose-200 mt-0.5 block">
+                                คงเหลือเบิกจ่าย {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(grandTotalAllocated - grandTotalSpent)}
+                            </span>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-xs p-4 rounded-2xl border border-white/10">
+                            <span className="text-purple-200 text-xs block">สถานะการพิจารณา</span>
+                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-400/20 text-amber-200 text-xs font-bold border border-amber-400/30">
+                                    💡 ตั้งงบ: {grandPreliminaryCount}
+                                </span>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-sky-400/20 text-sky-200 text-xs font-bold border border-sky-400/30">
+                                    ⏳ รออนุมัติ: {grandPendingCount}
+                                </span>
+                            </div>
+                            <span className="text-[11px] text-purple-300 mt-1.5 block">
+                                ฉบับเต็ม: {grandTotalProjects - grandPreliminaryCount} โครงการ
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. Four Main Divisions Summary Cards (แยก ๔ ฝ่าย ชัดเจน) */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl">🏛️</span>
+                            <h3 className="text-base sm:text-lg font-black text-slate-900">
+                                คำของบประมาณจำแนกตาม ๔ ฝ่ายหลักของสถานศึกษา
+                            </h3>
+                        </div>
+                        <span className="text-xs text-slate-500">
+                            คลิกที่การ์ดฝ่ายเพื่อกรองรายการโครงการด้านล่าง
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                        {divisionsData.map((div, idx) => {
+                            const style = getDivisionConfig(div.name);
+                            const isSelected = String(annualBudgetDivisionFilter) === String(div.id);
+                            const allocPercent = div.total_proposed_budget > 0 
+                                ? Math.min(Math.round((div.total_allocated_budget / div.total_proposed_budget) * 100), 100) 
+                                : 0;
+
+                            return (
+                                <div
+                                    key={div.id || idx}
+                                    onClick={() => setAnnualBudgetDivisionFilter(isSelected ? 'all' : String(div.id))}
+                                    className={`rounded-3xl p-5 border transition-all cursor-pointer shadow-sm relative overflow-hidden flex flex-col justify-between ${
+                                        isSelected 
+                                            ? 'ring-4 ring-purple-400 border-purple-500 bg-gradient-to-b from-purple-50 via-white to-purple-50 shadow-md scale-[1.02]' 
+                                            : `bg-white hover:shadow-md hover:scale-[1.01] ${style.border}`
+                                    }`}
+                                >
+                                    <div className="space-y-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex items-center gap-2.5">
+                                                <span className="text-2xl p-2 rounded-2xl bg-slate-50 border border-slate-100 shadow-2xs">
+                                                    {style.icon}
+                                                </span>
+                                                <div>
+                                                    <h4 className="text-sm font-black text-slate-900 leading-tight">
+                                                        {div.name}
+                                                    </h4>
+                                                    <span className={`inline-block text-[10px] font-mono font-bold px-2 py-0.5 rounded-md border mt-1 ${style.badgeBg}`}>
+                                                        {div.code || 'DIV'} • {div.total_projects} โครงการ
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {isSelected && (
+                                                <span className="px-2 py-0.5 rounded-full bg-purple-600 text-white text-[10px] font-bold shrink-0">
+                                                    กำลังเลือก
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Financial Highlights */}
+                                        <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-1.5 text-xs">
+                                            <div className="flex justify-between items-center text-slate-600">
+                                                <span>ขอตั้งงบ (Proposed):</span>
+                                                <span className="font-bold font-mono text-slate-900">
+                                                    {new Intl.NumberFormat('th-TH').format(div.total_proposed_budget)} ฿
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-emerald-700">
+                                                <span>จัดสรรจริง (Allocated):</span>
+                                                <span className="font-black font-mono text-emerald-700">
+                                                    {new Intl.NumberFormat('th-TH').format(div.total_allocated_budget)} ฿
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-rose-600">
+                                                <span>เบิกจ่ายสะสม (Spent):</span>
+                                                <span className="font-mono text-rose-600">
+                                                    {new Intl.NumberFormat('th-TH').format(div.total_spent_budget)} ฿
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Allocation Progress Bar */}
+                                        <div className="space-y-1">
+                                            <div className="flex justify-between text-[11px] text-slate-500">
+                                                <span>สัดส่วนจัดสรรแล้ว</span>
+                                                <span className="font-bold text-slate-700">{allocPercent}%</span>
+                                            </div>
+                                            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full transition-all ${style.barColor}`}
+                                                    style={{ width: `${allocPercent}%` }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Project Breakdown Badges */}
+                                        <div className="grid grid-cols-2 gap-1.5 pt-1 text-[11px]">
+                                            <div className="p-1.5 rounded-xl bg-amber-50 text-amber-900 border border-amber-200/80 text-center font-bold">
+                                                💡 ตั้งงบ: {div.preliminary_count}
+                                            </div>
+                                            <div className="p-1.5 rounded-xl bg-sky-50 text-sky-900 border border-sky-200/80 text-center font-bold">
+                                                ⏳ รออนุมัติ: {div.pending_approval_count}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className={`mt-4 w-full py-2 px-3 rounded-xl text-xs font-bold transition-all text-center ${
+                                            isSelected
+                                                ? 'bg-purple-900 text-white shadow-sm'
+                                                : 'bg-slate-100 hover:bg-purple-50 hover:text-purple-900 text-slate-700'
+                                        }`}
+                                    >
+                                        {isSelected ? '✕ ยกเลิกการเลือก' : '🔍 ดูโครงการของฝ่ายนี้'}
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* 3. Interactive Projects Table for Budget Allocation Review */}
+                <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl">📋</span>
+                            <div>
+                                <h3 className="text-base font-black text-slate-900">
+                                    รายการโครงการขอตั้งงบประมาณเพื่อพิจารณาอนุมัติจัดสรร
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    พบทั้งหมด {projectPool.length} รายการ (คลิก "จัดสรรงบ" เพื่อกำหนดวงเงินจัดสรรจริงและระบุแหล่งเงินทุน)
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Search & Filters */}
+                        <div className="flex items-center gap-2 w-full lg:w-auto flex-wrap">
+                            <div className="relative flex-1 sm:w-64">
+                                <input
+                                    type="text"
+                                    value={annualBudgetSearch}
+                                    onChange={e => setAnnualBudgetSearch(e.target.value)}
+                                    placeholder="🔍 ค้นชื่อโครงการ / ฝ่าย / ผู้เสนอ..."
+                                    className="w-full text-xs rounded-xl border-slate-200 focus:ring-purple-500 focus:border-purple-500 pl-3 pr-8 py-2"
+                                />
+                                {annualBudgetSearch && (
+                                    <button
+                                        onClick={() => setAnnualBudgetSearch('')}
+                                        className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+
+                            <select
+                                value={annualBudgetStatusFilter}
+                                onChange={e => setAnnualBudgetStatusFilter(e.target.value)}
+                                className="text-xs rounded-xl border-slate-200 focus:ring-purple-500 focus:border-purple-500 py-2 px-3 bg-white"
+                            >
+                                <option value="all">ทุกสถานะโครงการ</option>
+                                <option value="preliminary">💡 ขอตั้งงบเบื้องต้น</option>
+                                <option value="pending">⏳ รอพิจารณาอนุมัติ</option>
+                                <option value="approved">✅ จัดสรรงบแล้ว / ดำเนินงาน</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Division Filter Pills */}
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
+                        <button
+                            type="button"
+                            onClick={() => setAnnualBudgetDivisionFilter('all')}
+                            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
+                                annualBudgetDivisionFilter === 'all'
+                                    ? 'bg-purple-900 text-white shadow-sm ring-2 ring-purple-400'
+                                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                            }`}
+                        >
+                            ทุกฝ่ายหลัก ({grandTotalProjects})
+                        </button>
+                        {divisionsData.map(d => (
+                            <button
+                                key={d.id}
+                                type="button"
+                                onClick={() => setAnnualBudgetDivisionFilter(String(d.id))}
+                                className={`px-3.5 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap cursor-pointer ${
+                                    String(annualBudgetDivisionFilter) === String(d.id)
+                                        ? 'bg-purple-900 text-white shadow-sm ring-2 ring-purple-400'
+                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                }`}
+                            >
+                                {d.name} ({d.total_projects})
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Projects Table */}
+                    <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold">
+                                    <th className="p-3.5 w-12 text-center">#</th>
+                                    <th className="p-3.5">ชื่อโครงการ / วัตถุประสงค์</th>
+                                    <th className="p-3.5">ฝ่าย / งานย่อย</th>
+                                    <th className="p-3.5">ผู้เสนอโครงการ</th>
+                                    <th className="p-3.5 text-right">วงเงินขอตั้งงบ</th>
+                                    <th className="p-3.5 text-right">วงเงินจัดสรรจริง</th>
+                                    <th className="p-3.5 text-center">สถานะ</th>
+                                    <th className="p-3.5 text-center w-36">การพิจารณา</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {projectPool.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="8" className="p-8 text-center text-slate-400">
+                                            <span className="text-3xl block mb-2">📭</span>
+                                            ไม่พบรายการโครงการคำของบประมาณตามเงื่อนไขที่เลือก
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    projectPool.map((p, idx) => (
+                                        <tr key={p.id || idx} className="hover:bg-purple-50/40 transition">
+                                            <td className="p-3.5 text-center font-mono text-slate-500">
+                                                {idx + 1}
+                                            </td>
+                                            <td className="p-3.5">
+                                                <div className="font-bold text-slate-900 line-clamp-2">
+                                                    {p.title}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
+                                                    <span>ปี พ.ศ. {p.academic_year || fiscalYear}</span>
+                                                    {p.created_at && (
+                                                        <>
+                                                            <span>•</span>
+                                                            <span>ยื่นเมื่อ {p.created_at}</span>
+                                                        </>
+                                                    )}
+                                                    {p.is_preliminary && (
+                                                        <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold text-[10px]">
+                                                            💡 ขอตั้งงบเบื้องต้น
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="p-3.5">
+                                                <div className="font-medium text-slate-800">
+                                                    {p.department_name}
+                                                </div>
+                                                <div className="text-[11px] text-slate-500">
+                                                    {p.division_name}
+                                                </div>
+                                            </td>
+                                            <td className="p-3.5 text-slate-700">
+                                                {p.proposer_name}
+                                            </td>
+                                            <td className="p-3.5 text-right font-mono font-bold text-slate-900">
+                                                {new Intl.NumberFormat('th-TH').format(p.proposed_budget)} ฿
+                                            </td>
+                                            <td className="p-3.5 text-right font-mono font-bold text-emerald-700">
+                                                {p.allocated_budget > 0 
+                                                    ? `${new Intl.NumberFormat('th-TH').format(p.allocated_budget)} ฿` 
+                                                    : <span className="text-slate-400 font-normal">-</span>
+                                                }
+                                            </td>
+                                            <td className="p-3.5 text-center">
+                                                {getStatusBadge(p.status, p.current_approval_step, p)}
+                                            </td>
+                                            <td className="p-3.5 text-center">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    {isPlanStaffOrAdmin && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCommitteeModal(p)}
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-[11px] shadow-sm transition hover:scale-105 active:scale-95 cursor-pointer"
+                                                            title="พิจารณาอนุมัติจัดสรรงบประมาณโครงการนี้"
+                                                        >
+                                                            <span>⚡</span> จัดสรรงบ
+                                                        </button>
+                                                    )}
+                                                    <a
+                                                        href={route('projects.print', p.id)}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition"
+                                                        title="พิมพ์ / ดูเอกสารโครงการ"
+                                                    >
+                                                        <span>🖨️</span> พิมพ์
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // 2. Plan Head Component Rendering
     const renderBudgetsTab = () => {
         if (!planHeadData) {
@@ -3302,6 +3825,155 @@ ${itemsListText}
                         </div>
                     </div>
                 </div>
+
+                {/* 1.5 Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา ๔ มิติ) */}
+                {(() => {
+                    const expProjections = institutionalExpenditureProjections || {
+                        total_projected_pool: 10000000.00,
+                        categories: [
+                            {
+                                id: 'routine_divisions',
+                                name: '๑. งบดำเนินงานและภารกิจประจำ ๔ ฝ่าย',
+                                description: 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
+                                projected_ceiling: 2000000.00,
+                                requested_amount: routineAllocated,
+                                allocated_amount: routineAllocated,
+                                spent_amount: routineSpent,
+                            },
+                            {
+                                id: 'strategic_projects',
+                                name: '๒. งบโครงการตามแผนปฏิบัติราชการประจำปี',
+                                description: 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
+                                projected_ceiling: 5000000.00,
+                                requested_amount: parseFloat(planHeadData.globalAllocated || 0),
+                                allocated_amount: parseFloat(planHeadData.globalAllocated || 0),
+                                spent_amount: parseFloat(planHeadData.globalSpent || 0),
+                            },
+                            {
+                                id: 'utilities_overhead',
+                                name: '๓. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
+                                description: 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
+                                projected_ceiling: 2000000.00,
+                                requested_amount: totalCentralReceived > 0 ? totalCentralReceived : 1500000.00,
+                                allocated_amount: totalCentralReceived > 0 ? totalCentralReceived : 1500000.00,
+                                spent_amount: totalCentralReceived,
+                            },
+                            {
+                                id: 'contingency_reserve',
+                                name: '๔. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
+                                description: 'เงินสำรองกรณีเร่งด่วน ภัยพิบัติ หรือโครงการนโยบายเร่งด่วนพิเศษ',
+                                projected_ceiling: 1000000.00,
+                                requested_amount: 0.00,
+                                allocated_amount: 1000000.00,
+                                spent_amount: 0.00,
+                            },
+                        ],
+                        summary: {
+                            total_projected_ceiling: 10000000.00,
+                            total_requested: (parseFloat(planHeadData.globalAllocated || 0) + routineAllocated + totalCentralReceived),
+                            total_allocated: (parseFloat(planHeadData.globalAllocated || 0) + routineAllocated + totalCentralReceived + 1000000.00),
+                            total_spent: totalSpentAll,
+                        }
+                    };
+
+                    const getExpIcon = (id) => {
+                        if (id === 'routine_divisions') return '🏢';
+                        if (id === 'strategic_projects') return '🎯';
+                        if (id === 'utilities_overhead') return '⚡';
+                        return '🛡️';
+                    };
+
+                    return (
+                        <div className="rounded-3xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/20 to-indigo-50/30 p-6 sm:p-8 shadow-sm space-y-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-purple-100 pb-4">
+                                <div>
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200 mb-2">
+                                        <span>🏛️</span> กรอบประมาณการรายจ่ายสถานศึกษา (Institutional Expenditure Projections)
+                                    </div>
+                                    <h3 className="text-lg sm:text-xl font-black text-purple-950">
+                                        ประมาณการรายจ่ายสถานศึกษา ๔ มิติหลัก ประจำปีงบประมาณ
+                                    </h3>
+                                    <p className="text-xs text-slate-600 mt-0.5">
+                                        ควบคุมกรอบวงเงินประมาณการใช้จ่ายจำแนกตามประเภทภารกิจ เปรียบเทียบกับยอดคำขอจริง วงเงินจัดสรร และยอดเบิกจ่ายสะสม
+                                    </p>
+                                </div>
+
+                                <div className="text-right shrink-0">
+                                    <span className="text-[11px] text-slate-500 block">กรอบวงเงินประมาณการรวมทั้งสิ้น</span>
+                                    <span className="text-lg md:text-xl font-black font-mono text-purple-950">
+                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(expProjections.summary?.total_projected_ceiling || 10000000)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                {expProjections.categories?.map((cat, idx) => {
+                                    const ceiling = cat.projected_ceiling || 0;
+                                    const alloc = cat.allocated_amount || 0;
+                                    const spent = cat.spent_amount || 0;
+                                    const remaining = ceiling - spent;
+                                    const spentRate = ceiling > 0 ? Math.min(Math.round((spent / ceiling) * 100), 100) : 0;
+
+                                    return (
+                                        <div key={cat.id || idx} className="bg-white rounded-2xl p-4 border border-purple-100/80 shadow-xs flex flex-col justify-between space-y-3">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-xl">{getExpIcon(cat.id)}</span>
+                                                    <h4 className="text-xs font-black text-slate-900 line-clamp-1">
+                                                        {cat.name}
+                                                    </h4>
+                                                </div>
+                                                <p className="text-[10px] text-slate-500 line-clamp-2 min-h-[28px]">
+                                                    {cat.description}
+                                                </p>
+                                            </div>
+
+                                            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 space-y-1 text-xs">
+                                                <div className="flex justify-between items-center text-slate-600">
+                                                    <span className="text-[10px]">เพดานประมาณการ:</span>
+                                                    <span className="font-bold font-mono text-slate-800">
+                                                        {new Intl.NumberFormat('th-TH').format(ceiling)} ฿
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-purple-800">
+                                                    <span className="text-[10px]">จัดสรรลงแผน:</span>
+                                                    <span className="font-bold font-mono text-purple-800">
+                                                        {new Intl.NumberFormat('th-TH').format(alloc)} ฿
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-rose-600">
+                                                    <span className="text-[10px]">เบิกจ่ายจริง:</span>
+                                                    <span className="font-mono text-rose-600">
+                                                        {new Intl.NumberFormat('th-TH').format(spent)} ฿
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between items-center text-emerald-700 pt-0.5 border-t border-slate-200">
+                                                    <span className="text-[10px] font-bold">คงเหลือตามเพดาน:</span>
+                                                    <span className="font-black font-mono text-emerald-700">
+                                                        {new Intl.NumberFormat('th-TH').format(remaining)} ฿
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                                <div className="flex justify-between text-[10px] text-slate-500">
+                                                    <span>เบิกจ่ายแล้ว</span>
+                                                    <span className="font-bold text-slate-700">{spentRate}%</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full bg-purple-600 transition-all"
+                                                        style={{ width: `${spentRate}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {/* 2. Side-by-side comparison */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -11604,6 +12276,7 @@ return (
                         {activeTab === 'central_budgets' && renderCentralBudgetsTab()}
                         {activeTab === 'document_tracking' && renderDocumentTrackingTab()}
                         {activeTab === 'proposals' && renderProposalsTab()}
+                        {activeTab === 'annual_budget_requests' && renderAnnualBudgetRequestsTab()}
                         {activeTab === 'budgets' && renderBudgetsTab()}
                         {activeTab === 'action_plan_report' && renderActionPlanReportTab()}
                         {activeTab === 'reviews' && renderReviewsTab()}

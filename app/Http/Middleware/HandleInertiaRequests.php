@@ -49,8 +49,12 @@ class HandleInertiaRequests extends Middleware
                     'is_active'       => $user->is_active,
                     'is_admin'           => $user->isAdmin(),
                     'is_teacher'         => $user->isTeacher(),
+                    'is_department_head' => $user->isDepartmentHead(),
                     'is_plan_head'       => $user->isPlanHead(),
+                    'is_plan_staff'      => $user->isPlanStaff(),
                     'is_procurement_head'=> $user->isProcurementHead(),
+                    'is_procurement_staff'=> $user->isProcurementStaff(),
+                    'is_finance_staff'   => $user->isFinanceStaff(),
                     'is_executive'       => $user->isExecutive(),
                     // ทุกตำแหน่งจาก user_positions table
                     'all_positions'   => $user->userPositions()->with(['department', 'subDepartment'])->get()->map(fn($p) => [
