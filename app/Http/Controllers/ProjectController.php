@@ -76,9 +76,25 @@ class ProjectController extends Controller
      */
     public function preliminaryCreate()
     {
+        $activeCategories = [];
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('strategy_categories')) {
+                $activeCategories = \App\Models\StrategyCategory::with(['items' => function($q) {
+                    $q->where('is_active', true)->orderBy('order_index', 'asc');
+                }])->where('is_active', true)->orderBy('order_index', 'asc')->get();
+            }
+        } catch (\Exception $e) {
+            $activeCategories = [];
+        }
+
         return Inertia::render('Projects/QuickCreate', [
             'departments' => Department::all(),
             'currentFiscalYear' => \App\Models\SystemSetting::where('key', 'current_fiscal_year')->value('value') ?: (int)(new \DateTime())->format('Y') + 543,
+            'strategyCategories' => $activeCategories,
+            'iqaStrategies' => IqaStrategy::all(),
+            'ovecStrategies' => OvecStrategy::all(),
+            'nationalStrategies' => \App\Models\NationalStrategy::all(),
+            'provincialStrategies' => \App\Models\ProvincialStrategy::all(),
         ]);
     }
 
@@ -168,6 +184,14 @@ class ProjectController extends Controller
             'mission' => 'nullable|string',
             'goal' => 'nullable|string',
             'strategy_tactic' => 'nullable|string',
+            'objectives' => 'nullable|array',
+            'targets' => 'nullable|array',
+            'indicators' => 'nullable|array',
+            'strategy_selections' => 'nullable|array',
+            'iqa_strategy_ids' => 'nullable|array',
+            'ovec_strategy_ids' => 'nullable|array',
+            'national_strategy_ids' => 'nullable|array',
+            'provincial_strategy_ids' => 'nullable|array',
         ], [
             'title.required' => 'กรุณาระบุชื่อโครงการ',
             'academic_year.required' => 'กรุณาระบุปีงบประมาณ พ.ศ.',
@@ -201,6 +225,19 @@ class ProjectController extends Controller
         $defaultIqaId = $iqa->id;
         $defaultOvecId = $ovec->id;
 
+        $iqaIds = $request->input('iqa_strategy_ids', [$defaultIqaId]);
+        if (empty($iqaIds)) $iqaIds = [$defaultIqaId];
+        $ovecIds = $request->input('ovec_strategy_ids', [$defaultOvecId]);
+        if (empty($ovecIds)) $ovecIds = [$defaultOvecId];
+
+        // Filter and sanitize user objectives
+        $userObjectives = array_values(array_filter($request->input('objectives', []), fn($val) => !empty(trim($val ?? ''))));
+
+        // Filter and sanitize targets
+        $userTargets = $request->input('targets', []);
+        $quantTargets = array_values(array_filter($userTargets['quantitative'] ?? [], fn($val) => !empty(trim($val ?? ''))));
+        $qualTargets = array_values(array_filter($userTargets['qualitative'] ?? [], fn($val) => !empty(trim($val ?? ''))));
+
         $project = new Project();
         $project->user_id = $user->id;
         $project->user_position_id = $userPosition?->id;
@@ -218,12 +255,20 @@ class ProjectController extends Controller
         $project->mission = $validated['mission'] ?? '';
         $project->goal = $validated['goal'] ?? '';
         $project->strategy_tactic = $validated['strategy_tactic'] ?? '';
-        $project->iqa_strategy_id = $defaultIqaId;
-        $project->ovec_strategy_id = $defaultOvecId;
-        $project->iqa_strategy_ids = [$defaultIqaId];
-        $project->ovec_strategy_ids = [$defaultOvecId];
-        $project->objectives = ['เพื่อดำเนินโครงการตามวัตถุประสงค์ที่กำหนด'];
-        $project->targets = ['quantitative' => ['ผู้เข้าร่วมโครงการตามเป้าหมาย'], 'qualitative' => ['มีความพึงพอใจในระดับดีขึ้นไป']];
+        $project->iqa_strategy_id = $iqaIds[0] ?? $defaultIqaId;
+        $project->ovec_strategy_id = $ovecIds[0] ?? $defaultOvecId;
+        $project->iqa_strategy_ids = $iqaIds;
+        $project->ovec_strategy_ids = $ovecIds;
+        $project->national_strategy_ids = $request->input('national_strategy_ids', []);
+        $project->provincial_strategy_ids = $request->input('provincial_strategy_ids', []);
+        $project->strategy_selections = $request->input('strategy_selections', []);
+
+        $project->objectives = !empty($userObjectives) ? $userObjectives : ['เพื่อดำเนินโครงการตามวัตถุประสงค์ที่กำหนด'];
+        $project->targets = [
+            'quantitative' => !empty($quantTargets) ? $quantTargets : ['ผู้เข้าร่วมโครงการตามเป้าหมาย'],
+            'qualitative' => !empty($qualTargets) ? $qualTargets : ['มีความพึงพอใจในระดับดีขึ้นไป']
+        ];
+        $project->indicators = $request->input('indicators') ?: null;
         $project->outputs = ['ผลผลิตโครงการ'];
         $project->outcomes = ['ผลลัพธ์โครงการ'];
         $project->status = 'preliminary';
