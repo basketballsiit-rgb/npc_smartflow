@@ -41,28 +41,64 @@ export default function AuthenticatedLayout({ header, children }) {
         sessionStorage.setItem('sidebar-scroll', e.target.scrollTop);
     };
 
-    // Collapsible Sidebar Sections State (Default open for active, or all open)
+    const allClosedSections = {
+        proposal: false,
+        five_chapters: false,
+        procurement_loan: false,
+        procurement_hub: false,
+        finance_hub: false,
+        plan_hub: false,
+        executive_hub: false,
+        admin_console: false,
+    };
+
+    const getActiveSectionForUrl = (currentUrl) => {
+        if (!currentUrl) return null;
+        if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2')) {
+            return 'five_chapters';
+        }
+        if (currentUrl.includes('tab=admin_') || (currentUrl.includes('tab=all_projects') && isAdmin)) {
+            return 'admin_console';
+        }
+        if (currentUrl.includes('tab=executive_overview') || (isExecutive && (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets')))) {
+            return 'executive_hub';
+        }
+        if (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || (currentUrl.includes('tab=reviews') && isPlanStaff) || (isPlanStaff && currentUrl.includes('routine-budgets')) || currentUrl.includes('tab=action_plan_report')) {
+            return 'plan_hub';
+        }
+        if (currentUrl.includes('tab=procurement') || (currentUrl.includes('vendors') && isProcurementStaff)) {
+            return 'procurement_hub';
+        }
+        if (currentUrl.includes('tab=central_budgets') || (currentUrl.includes('tab=clearings') && isFinanceStaff)) {
+            return 'finance_hub';
+        }
+        if (currentUrl.includes('routine-budgets') || (currentUrl.includes('tab=clearings') && !isFinanceStaff)) {
+            return 'procurement_loan';
+        }
+        if (currentUrl.includes('tab=proposals') || currentUrl.includes('tab=document_tracking') || currentUrl.includes('tab=reviews') || (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')))) {
+            return 'proposal';
+        }
+        return null;
+    };
+
+    // Collapsible Sidebar Sections State (Strict Accordion: Open ONLY 1 section at a time)
     const [openSections, setOpenSections] = useState(() => {
-        const saved = localStorage.getItem('sidebar-open-sections-v2');
+        const saved = localStorage.getItem('sidebar-open-sections-v3');
         if (saved) {
             try { return JSON.parse(saved); } catch (e) {}
         }
-        return {
-            proposal: true,
-            five_chapters: true,
-            procurement_loan: true,
-            procurement_hub: true,
-            finance_hub: true,
-            plan_hub: true,
-            executive_hub: true,
-            admin_console: true,
-        };
+        const initialActive = getActiveSectionForUrl(url || '');
+        return initialActive ? { ...allClosedSections, [initialActive]: true } : { ...allClosedSections, proposal: true };
     });
 
     const toggleSection = (sectionKey) => {
         setOpenSections(prev => {
-            const next = { ...prev, [sectionKey]: !prev[sectionKey] };
-            localStorage.setItem('sidebar-open-sections-v2', JSON.stringify(next));
+            const isCurrentlyOpen = prev[sectionKey];
+            // Accordion mode: collapse if currently open, else expand ONLY the clicked section
+            const next = isCurrentlyOpen
+                ? { ...allClosedSections }
+                : { ...allClosedSections, [sectionKey]: true };
+            localStorage.setItem('sidebar-open-sections-v3', JSON.stringify(next));
             return next;
         });
     };
@@ -158,31 +194,13 @@ export default function AuthenticatedLayout({ header, children }) {
         return 'ครูผู้เสนอโครงการ';
     };
 
-    // Auto-open the section that contains the currently active URL/page
+    // Auto-open ONLY the section that contains the currently active URL/page
     useEffect(() => {
-        if (url.includes('tab=admin_') || (url.includes('tab=all_projects') && isAdmin)) {
-            setOpenSections(prev => ({ ...prev, admin_console: true }));
-        }
-        if (url.includes('tab=proposals') || (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')))) {
-            setOpenSections(prev => ({ ...prev, proposal: true }));
-        }
-        if (url.includes('chapter=') || url.includes('filter=reporting') || url.includes('chapter-2')) {
-            setOpenSections(prev => ({ ...prev, five_chapters: true }));
-        }
-        if (url.includes('routine-budgets') && !isPlanStaff && !isFinanceStaff) {
-            setOpenSections(prev => ({ ...prev, procurement_loan: true }));
-        }
-        if (url.includes('tab=annual_budget_requests') || url.includes('tab=budgets') || (url.includes('tab=reviews') && isPlanStaff) || (isPlanStaff && url.includes('routine-budgets'))) {
-            setOpenSections(prev => ({ ...prev, plan_hub: true }));
-        }
-        if (url.includes('tab=procurement') || (url.includes('vendors') && isProcurementStaff)) {
-            setOpenSections(prev => ({ ...prev, procurement_hub: true }));
-        }
-        if (url.includes('tab=central_budgets') || (url.includes('tab=clearings') && isFinanceStaff)) {
-            setOpenSections(prev => ({ ...prev, finance_hub: true }));
-        }
-        if (url.includes('tab=executive_overview') || (isExecutive && url.includes('tab=annual_budget_requests'))) {
-            setOpenSections(prev => ({ ...prev, executive_hub: true }));
+        const activeKey = getActiveSectionForUrl(url);
+        if (activeKey) {
+            const next = { ...allClosedSections, [activeKey]: true };
+            setOpenSections(next);
+            localStorage.setItem('sidebar-open-sections-v3', JSON.stringify(next));
         }
     }, [url]);
 
