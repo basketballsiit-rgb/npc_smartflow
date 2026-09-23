@@ -24,6 +24,7 @@ use Inertia\Inertia;
 // Keycloak SSO Routes
 Route::get('/auth/keycloak', [KeycloakController::class, 'redirect'])->name('keycloak.redirect');
 Route::get('/auth/keycloak/callback', [KeycloakController::class, 'callback'])->name('keycloak.callback');
+Route::get('/auth/keycloak/debug', [KeycloakController::class, 'debug'])->name('keycloak.debug');
 
 
 Route::get('/', function () {

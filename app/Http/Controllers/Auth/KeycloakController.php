@@ -126,11 +126,89 @@ class KeycloakController extends Controller
             return redirect()->intended(route('dashboard'));
 
         } catch (\Exception $e) {
-            Log::error('Keycloak SSO Error: ' . $e->getMessage());
+            $errorMessage = $e->getMessage();
+            
+            if ($e instanceof \GuzzleHttp\Exception\BadResponseException) {
+                $responseBody = (string) $e->getResponse()->getBody();
+                Log::error('Keycloak SSO Guzzle Error: ' . $errorMessage . ' | Response: ' . $responseBody);
+                $json = json_decode($responseBody, true);
+                if (isset($json['error_description'])) {
+                    $errorMessage = $json['error_description'];
+                } elseif (isset($json['error'])) {
+                    $errorMessage = $json['error'];
+                }
+            } else {
+                Log::error('Keycloak SSO Error: ' . $errorMessage . "\n" . $e->getTraceAsString());
+            }
 
             return redirect()->route('login')
-                ->withErrors(['email' => 'การเข้าสู่ระบบด้วย SSO ล้มเหลว: ' . $e->getMessage()]);
+                ->withErrors(['email' => 'การเข้าสู่ระบบด้วย SSO ล้มเหลว: ' . $errorMessage]);
         }
+    }
+
+    /**
+     * Diagnostic Debug Endpoint สำหรับตรวจสอบการเชื่อมต่อ Keycloak & Config
+     */
+    public function debug()
+    {
+        $baseUrl      = config('services.keycloak.base_url');
+        $realm        = config('services.keycloak.realms');
+        $clientId     = config('services.keycloak.client_id');
+        $clientSecret = config('services.keycloak.client_secret');
+        $redirectUri  = config('services.keycloak.redirect');
+
+        $discoveryUrl = rtrim($baseUrl, '/') . "/realms/{$realm}/.well-known/openid-configuration";
+        
+        $results = [
+            'timestamp' => now()->toDateTimeString(),
+            'config' => [
+                'base_url'      => $baseUrl,
+                'realm'         => $realm,
+                'client_id'     => $clientId,
+                'has_secret'    => !empty($clientSecret),
+                'redirect_uri'  => $redirectUri ?: route('keycloak.callback'),
+                'discovery_url' => $discoveryUrl,
+            ],
+            'checks' => [],
+        ];
+
+        // Check 1: Keycloak OIDC Discovery Endpoint
+        try {
+            $res = Http::timeout(5)->get($discoveryUrl);
+            $results['checks']['keycloak_discovery'] = [
+                'status'      => $res->successful() ? 'OK' : 'FAILED',
+                'http_status' => $res->status(),
+                'endpoints'   => $res->successful() ? [
+                    'authorization_endpoint' => $res->json('authorization_endpoint'),
+                    'token_endpoint'         => $res->json('token_endpoint'),
+                    'userinfo_endpoint'      => $res->json('userinfo_endpoint'),
+                ] : null,
+            ];
+        } catch (\Exception $ex) {
+            $results['checks']['keycloak_discovery'] = [
+                'status' => 'ERROR',
+                'error'  => $ex->getMessage(),
+            ];
+        }
+
+        // Check 2: npcjob Internal API Endpoint
+        try {
+            $npcjobUrl   = config('services.npcjob.api_url');
+            $npcjobToken = config('services.npcjob.api_token');
+            $res = Http::timeout(5)->get($npcjobUrl, ['username' => 'test', 'token' => $npcjobToken]);
+            $results['checks']['npcjob_api'] = [
+                'status'      => $res->successful() ? 'OK' : 'FAILED',
+                'http_status' => $res->status(),
+                'url'         => $npcjobUrl,
+            ];
+        } catch (\Exception $ex) {
+            $results['checks']['npcjob_api'] = [
+                'status' => 'ERROR',
+                'error'  => $ex->getMessage(),
+            ];
+        }
+
+        return response()->json($results, 200, [], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 
     /**

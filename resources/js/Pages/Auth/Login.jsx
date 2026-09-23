@@ -3,12 +3,14 @@ import InputError from '@/Components/InputError';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
 export default function Login({ status, canResetPassword }) {
-    const { asset_url } = usePage().props;
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { asset_url, errors: pageErrors } = usePage().props;
+    const { data, setData, post, processing, errors: formErrors, reset } = useForm({
         email: '',
         password: '',
         remember: false,
     });
+
+    const errors = { ...pageErrors, ...formErrors };
 
     const submit = (e) => {
         e.preventDefault();
@@ -144,6 +146,19 @@ export default function Login({ status, canResetPassword }) {
                     {status && (
                         <div className="mb-5 rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
                             {status}
+                        </div>
+                    )}
+
+                    {/* SSO / Session Error Banner */}
+                    {pageErrors && (pageErrors.email || pageErrors.error) && (
+                        <div className="mb-5 rounded-xl bg-red-50 border border-red-200 p-4 text-sm text-red-700 flex items-start gap-3 shadow-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                            </svg>
+                            <div>
+                                <p className="font-semibold text-red-800">การเข้าสู่ระบบไม่สำเร็จ</p>
+                                <p className="text-xs text-red-600 mt-1 leading-relaxed">{pageErrors.email || pageErrors.error}</p>
+                            </div>
                         </div>
                     )}
 

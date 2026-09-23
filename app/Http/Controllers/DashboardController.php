@@ -292,11 +292,13 @@ class DashboardController extends Controller
                     ->get(),
                 'vendors' => \App\Models\Vendor::orderBy('name', 'asc')->get(),
                 'users' => User::with('department')->get()->map(function ($u) {
+                    $cId = null;
+                    try { $cId = $u->citizen_id; } catch (\Throwable $e) { $cId = null; }
                     return [
                         'id' => $u->id,
                         'name' => $u->name,
                         'email' => $u->email,
-                        'citizen_id' => $u->citizen_id,
+                        'citizen_id' => $cId,
                         'role_display' => $u->role?->display_name ?? 'Teacher',
                         'department_name' => $u->department?->name ?? 'N/A',
                         'position' => $u->position ?? 'ไม่ได้ระบุ',

@@ -24,8 +24,33 @@ class AppServiceProvider extends ServiceProvider
         Vite::prefetch(concurrency: 3);
 
         // Force HTTPS scheme when behind SSL reverse proxy / production server
-        if (config('app.env') === 'production' || str_contains(request()->header('X-Forwarded-Proto', ''), 'https') || request()->secure()) {
+        $isHttps = config('app.env') === 'production' 
+            || str_contains(request()->header('X-Forwarded-Proto', ''), 'https') 
+            || str_contains(request()->header('X-Forwarded-Ssl', ''), 'on')
+            || request()->secure();
+
+        if ($isHttps) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
+        // Dynamically resolve base subpath (e.g. /npc_smartflow) from request or APP_URL
+        $requestUri = request()->getRequestUri() ?? '';
+        $subfolder = '';
+        if (str_contains($requestUri, '/npc_smartflow')) {
+            $subfolder = '/npc_smartflow';
+        } elseif (request()->getBaseUrl()) {
+            $subfolder = request()->getBaseUrl();
+        }
+
+        if ($subfolder) {
+            $scheme = $isHttps ? 'https' : (request()->getScheme() ?: 'http');
+            $host = request()->getHost() ?: 'service.npc.ac.th';
+            $rootUrl = "{$scheme}://{$host}{$subfolder}";
+            \Illuminate\Support\Facades\URL::forceRootUrl($rootUrl);
+        } elseif ($appUrl = config('app.url')) {
+            if ($appUrl !== 'http://localhost') {
+                \Illuminate\Support\Facades\URL::forceRootUrl($appUrl);
+            }
         }
 
         // Force asset root path if ASSET_URL is defined
