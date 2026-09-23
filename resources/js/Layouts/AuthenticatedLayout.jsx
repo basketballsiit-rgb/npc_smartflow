@@ -49,6 +49,7 @@ export default function AuthenticatedLayout({ header, children }) {
         }
         return {
             proposal: true,
+            five_chapters: true,
             procurement_loan: true,
             procurement_hub: true,
             finance_hub: true,
@@ -164,6 +165,9 @@ export default function AuthenticatedLayout({ header, children }) {
         }
         if (url.includes('tab=proposals') || (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')))) {
             setOpenSections(prev => ({ ...prev, proposal: true }));
+        }
+        if (url.includes('chapter=') || url.includes('filter=reporting') || url.includes('chapter-2')) {
+            setOpenSections(prev => ({ ...prev, five_chapters: true }));
         }
         if (url.includes('routine-budgets') && !isPlanStaff && !isFinanceStaff) {
             setOpenSections(prev => ({ ...prev, procurement_loan: true }));
@@ -410,6 +414,77 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className={getPrefixClass(url.includes('tab=document_tracking'))}>●</span>
                                     <span className="text-sm">📍</span>
                                     {isSidebarOpen && <span>ติดตามเอกสารและโครงการ</span>}
+                                </Link>
+                            </div>
+                            )}
+                        </div>
+                        )}
+
+                        {/* ๒. 5-CHAPTER PROJECT DOCUMENTATION (การจัดทำเอกสารรายงานโครงการ ๕ บท) */}
+                        {(!isFinanceStaff || isAdmin || isPlanStaff) && (
+                        <div className="pt-2 space-y-1">
+                            {isSidebarOpen ? (
+                                <button
+                                    type="button"
+                                    onClick={() => toggleSection('five_chapters')}
+                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/70 via-purple-800/50 to-transparent text-purple-100 border-l-4 border-emerald-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/80 hover:to-purple-900/40 transition cursor-pointer"
+                                >
+                                    <div className="flex items-center gap-x-2">
+                                        <span>📖</span>
+                                        <span>๒. เอกสารรายงานโครงการ (๕ บท)</span>
+                                    </div>
+                                    <span className="text-[11px] text-purple-300">{openSections.five_chapters ? '▼' : '▶'}</span>
+                                </button>
+                            ) : (
+                                <div className="h-px bg-white/20 my-1.5" />
+                            )}
+
+                            {(!isSidebarOpen || openSections.five_chapters) && (
+                            <div className="pl-2.5 border-l-2 border-emerald-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
+                                <Link
+                                    href={route('dashboard', { tab: 'proposals', chapter: 1 })}
+                                    className={getSubLinkClass(url.includes('chapter=1'))}
+                                    title="บทที่ ๑: บทนำ & ข้อเสนอโครงการ"
+                                >
+                                    <span className={getPrefixClass(url.includes('chapter=1'), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">📘</span>
+                                    {isSidebarOpen && <span>บทที่ ๑: บทนำ & ข้อมูลโครงการ</span>}
+                                </Link>
+                                <Link
+                                    href={route('dashboard', { tab: 'proposals', chapter: 2 })}
+                                    className={getSubLinkClass(url.includes('chapter=2') || url.includes('chapter-2'))}
+                                    title="บทที่ ๒: เอกสารและงานวิจัยที่เกี่ยวข้อง (AI สังเคราะห์)"
+                                >
+                                    <span className={getPrefixClass(url.includes('chapter=2') || url.includes('chapter-2'), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">📗</span>
+                                    {isSidebarOpen && <span>บทที่ ๒: งานวิจัย & นโยบาย (AI)</span>}
+                                </Link>
+                                <Link
+                                    href={route('dashboard', { tab: 'proposals', chapter: 3 })}
+                                    className={getSubLinkClass(url.includes('chapter=3'))}
+                                    title="บทที่ ๓: วิธีดำเนินงาน & จัดซื้อจัดจ้าง (Do Phase)"
+                                >
+                                    <span className={getPrefixClass(url.includes('chapter=3'), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">📙</span>
+                                    {isSidebarOpen && <span>บทที่ ๓: วิธีดำเนินงาน & พัสดุ</span>}
+                                </Link>
+                                <Link
+                                    href={route('dashboard', { tab: 'proposals', chapter: 4 })}
+                                    className={getSubLinkClass(url.includes('chapter=4'))}
+                                    title="บทที่ ๔: ผลการดำเนินงาน & ประเมินผล (Check Phase)"
+                                >
+                                    <span className={getPrefixClass(url.includes('chapter=4'), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">📕</span>
+                                    {isSidebarOpen && <span>บทที่ ๔: ผลดำเนินงาน & ประเมิน</span>}
+                                </Link>
+                                <Link
+                                    href={route('dashboard', { tab: 'proposals', filter: 'reporting', chapter: 5 })}
+                                    className={getSubLinkClass(url.includes('chapter=5') || (url.includes('filter=reporting') && !url.includes('chapter=')))}
+                                    title="บทที่ ๕: สรุปผล อภิปรายผล & พิมพ์รูปเล่ม (Act Phase)"
+                                >
+                                    <span className={getPrefixClass(url.includes('chapter=5') || (url.includes('filter=reporting') && !url.includes('chapter=')), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">📓</span>
+                                    {isSidebarOpen && <span>บทที่ ๕: สรุปผล & พิมพ์เล่ม ๕ บท</span>}
                                 </Link>
                             </div>
                             )}
@@ -942,6 +1017,28 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'document_tracking' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📍</span> ติดตามเอกสารและโครงการ
+                                        </Link>
+                                    </div>
+                                )}
+
+                                {/* ๒. รายงานโครงการ ๕ บท */}
+                                {(!isFinanceStaff || isAdmin || isPlanStaff) && (
+                                    <div className="space-y-1 pt-1 border-t border-white/10">
+                                        <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">๒. รายงานโครงการ ๕ บท</div>
+                                        <Link href={route('dashboard', { tab: 'proposals', chapter: 1 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📘</span> บทที่ ๑: บทนำ & ข้อมูลโครงการ
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'proposals', chapter: 2 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📗</span> บทที่ ๒: งานวิจัย & นโยบาย (AI)
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'proposals', chapter: 3 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📙</span> บทที่ ๓: วิธีดำเนินงาน & พัสดุ
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'proposals', chapter: 4 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📕</span> บทที่ ๔: ผลดำเนินงาน & ประเมิน
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'proposals', filter: 'reporting', chapter: 5 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📓</span> บทที่ ๕: สรุปผล & พิมพ์เล่ม ๕ บท
                                         </Link>
                                     </div>
                                 )}
