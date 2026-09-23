@@ -491,7 +491,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* 2. PROCUREMENT & LOAN (สำหรับผู้ขอซื้อ/ยืมเงิน ครู และสาขาวิชา) */}
+                        {/* 3. PROCUREMENT & LOAN (สำหรับผู้ขอซื้อ/ยืมเงิน ครู และสาขาวิชา) */}
                         {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
@@ -502,7 +502,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>💼</span>
-                                        <span>๒. จัดซื้อจัดจ้าง & สัญญายืมเงิน</span>
+                                        <span>๓. จัดซื้อจัดจ้าง & สัญญายืมเงิน</span>
                                     </div>
                                     <span className="text-[11px] text-purple-300">{openSections.procurement_loan ? '▼' : '▶'}</span>
                                 </button>
@@ -553,7 +553,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* 3. PROCUREMENT HUB (เฉพาะเจ้าหน้าที่งานพัสดุ และ Admin) */}
+                        {/* 4. PROCUREMENT HUB (เฉพาะเจ้าหน้าที่งานพัสดุ และ Admin) */}
                         {(isProcurementStaff || isAdmin) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
@@ -564,7 +564,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📦</span>
-                                        <span>๓. ศูนย์งานพัสดุ (Procurement)</span>
+                                        <span>๔. ศูนย์งานพัสดุ (Procurement)</span>
                                     </div>
                                     <span className="text-[11px] text-blue-300">{openSections.procurement_hub ? '▼' : '▶'}</span>
                                 </button>
@@ -615,7 +615,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* 4. FINANCE HUB (เฉพาะเจ้าหน้าที่งานการเงิน และ Admin) */}
+                        {/* 5. FINANCE HUB (เฉพาะเจ้าหน้าที่งานการเงิน และ Admin) */}
                         {(isFinanceStaff || isAdmin) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
@@ -626,7 +626,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>💳</span>
-                                        <span>๔. ศูนย์งานการเงิน (Finance)</span>
+                                        <span>๕. ศูนย์งานการเงิน (Finance)</span>
                                     </div>
                                     <span className="text-[11px] text-emerald-300">{openSections.finance_hub ? '▼' : '▶'}</span>
                                 </button>
@@ -686,7 +686,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* 5. PLANNING HUB (เฉพาะเจ้าหน้าที่งานแผนงานและงบประมาณ และ Admin) */}
+                        {/* 6. PLANNING HUB (เฉพาะเจ้าหน้าที่งานแผนงานและงบประมาณ และ Admin) */}
                         {(isPlanStaff || isAdmin) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
@@ -697,7 +697,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📊</span>
-                                        <span>๕. งานแผนและงบประมาณ</span>
+                                        <span>๖. งานแผนและงบประมาณ</span>
                                     </div>
                                     <span className="text-[11px] text-amber-300">{openSections.plan_hub ? '▼' : '▶'}</span>
                                 </button>
@@ -784,7 +784,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* 6. EXECUTIVE HUB (สำหรับ ผอ., รอง ผอ. ๔ ฝ่าย และ Admin) */}
+                        {/* 7. EXECUTIVE HUB (สำหรับ ผอ., รอง ผอ. ๔ ฝ่าย และ Admin) */}
                         {(isExecutive || isAdmin) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
@@ -795,7 +795,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>🏛️</span>
-                                        <span>๖. ผู้บริหาร (Executive)</span>
+                                        <span>๗. ผู้บริหาร (Executive)</span>
                                     </div>
                                     <span className="text-[11px] text-violet-300">{openSections.executive_hub ? '▼' : '▶'}</span>
                                 </button>
@@ -855,7 +855,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* 7. ADMIN CONSOLE (เฉพาะ Super Admin) */}
+                        {/* 8. ADMIN CONSOLE (เฉพาะ Super Admin) */}
                         {isAdmin && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
@@ -866,7 +866,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>⚙️</span>
-                                        <span>๗. ผู้ดูแลระบบ (Admin)</span>
+                                        <span>๘. ผู้ดูแลระบบ (Admin)</span>
                                     </div>
                                     <span className="text-[11px] text-rose-300">{openSections.admin_console ? '▼' : '▶'}</span>
                                 </button>
@@ -1043,10 +1043,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </div>
                                 )}
 
-                                {/* 2. จัดซื้อ & สัญญายืมเงิน */}
+                                {/* 3. จัดซื้อ & สัญญายืมเงิน */}
                                 {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-sky-300 uppercase px-2">๒. จัดซื้อจัดจ้าง & สัญญายืมเงิน</div>
+                                        <div className="text-[10px] font-bold text-sky-300 uppercase px-2">๓. จัดซื้อจัดจ้าง & สัญญายืมเงิน</div>
                                         <Link href={route('dashboard', { tab: 'clearings' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📝</span> สัญญายืมเงิน กค.๑๐๑
                                         </Link>
@@ -1059,10 +1059,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </div>
                                 )}
 
-                                {/* 3. พัสดุ */}
+                                {/* 4. พัสดุ */}
                                 {(isProcurementStaff || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-blue-300 uppercase px-2">๓. งานพัสดุ</div>
+                                        <div className="text-[10px] font-bold text-blue-300 uppercase px-2">๔. งานพัสดุ</div>
                                         <Link href={route('dashboard', { tab: 'procurement' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📋</span> คิวลงรับจัดซื้อ & กรรมการ
                                         </Link>
@@ -1075,10 +1075,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </div>
                                 )}
 
-                                {/* 4. การเงิน */}
+                                {/* 5. การเงิน */}
                                 {(isFinanceStaff || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">๔. งานการเงิน</div>
+                                        <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">๕. งานการเงิน</div>
                                         <Link href={route('dashboard', { tab: 'central_budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🏛️</span> จัดสรรงบส่วนกลาง
                                         </Link>
@@ -1088,10 +1088,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </div>
                                 )}
 
-                                {/* 5. แผนงาน */}
+                                {/* 6. แผนงาน */}
                                 {(isPlanStaff || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-amber-300 uppercase px-2">๕. งานแผนและงบประมาณ</div>
+                                        <div className="text-[10px] font-bold text-amber-300 uppercase px-2">๖. งานแผนและงบประมาณ</div>
                                         <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-amber-300 font-bold">
                                             <span>📊</span> ภาพรวมคำของบแยก ๔ ฝ่าย
                                         </Link>
@@ -1107,10 +1107,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </div>
                                 )}
 
-                                {/* 6. ผู้บริหาร */}
+                                {/* 7. ผู้บริหาร */}
                                 {(isExecutive || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-violet-300 uppercase px-2">๖. ผู้บริหารสถานศึกษา</div>
+                                        <div className="text-[10px] font-bold text-violet-300 uppercase px-2">๗. ผู้บริหารสถานศึกษา</div>
                                         <Link href={route('dashboard', { tab: 'executive_overview' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📈</span> ภาพรวม ๔ ฝ่าย
                                         </Link>
@@ -1123,10 +1123,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </div>
                                 )}
 
-                                {/* 7. Admin */}
+                                {/* 8. Admin */}
                                 {isAdmin && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-rose-300 uppercase px-2">๗. ผู้ดูแลระบบ</div>
+                                        <div className="text-[10px] font-bold text-rose-300 uppercase px-2">๘. ผู้ดูแลระบบ</div>
                                         <Link href={route('dashboard', { tab: 'admin_users' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>👤</span> จัดการผู้ใช้ & สิทธิ์
                                         </Link>
