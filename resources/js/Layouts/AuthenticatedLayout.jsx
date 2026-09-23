@@ -8,6 +8,15 @@ export default function AuthenticatedLayout({ header, children }) {
     const { auth, asset_url } = usePage().props;
     const user = auth.user;
     const url = usePage().url || '';
+
+    const userRoleName = user?.role?.name || (typeof user?.role === 'string' ? user.role : '');
+    const isAdmin = Boolean(user?.is_admin || userRoleName === 'admin');
+    const isExecutive = Boolean(user?.is_executive || userRoleName === 'executive' || isAdmin);
+    const isPlanHead = Boolean(user?.is_plan_head || userRoleName === 'plan_head' || isAdmin);
+    const isPlanStaff = Boolean(user?.is_plan_staff || isPlanHead || (user?.department && (user.department.name?.includes('แผน') || user.department.code === 'PLAN')) || user?.position?.includes('แผน'));
+    const isProcurementStaff = Boolean(user?.is_procurement_staff || user?.is_procurement_head || userRoleName === 'procurement_head' || isAdmin || (user?.department && (user.department.name?.includes('พัสดุ') || user.department.code === 'PROC')) || user?.position?.includes('พัสดุ'));
+    const isFinanceStaff = Boolean(user?.is_finance_staff || userRoleName === 'finance_head' || userRoleName === 'finance_staff' || isAdmin || (user?.department && (user.department.name?.includes('การเงิน') || user.department.code === 'FIN')) || user?.position?.includes('การเงิน'));
+
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         const saved = localStorage.getItem('sidebar-open');
         return saved !== null ? saved === 'true' : true;
@@ -175,14 +184,6 @@ export default function AuthenticatedLayout({ header, children }) {
             setCitizenIdError(String(msg));
         });
     };
-
-    const userRoleName = user?.role?.name || (typeof user?.role === 'string' ? user.role : '');
-    const isAdmin = Boolean(user?.is_admin || userRoleName === 'admin');
-    const isExecutive = Boolean(user?.is_executive || userRoleName === 'executive' || isAdmin);
-    const isPlanHead = Boolean(user?.is_plan_head || userRoleName === 'plan_head' || isAdmin);
-    const isPlanStaff = Boolean(user?.is_plan_staff || isPlanHead || (user?.department && (user.department.name?.includes('แผน') || user.department.code === 'PLAN')) || user?.position?.includes('แผน'));
-    const isProcurementStaff = Boolean(user?.is_procurement_staff || user?.is_procurement_head || userRoleName === 'procurement_head' || isAdmin || (user?.department && (user.department.name?.includes('พัสดุ') || user.department.code === 'PROC')) || user?.position?.includes('พัสดุ'));
-    const isFinanceStaff = Boolean(user?.is_finance_staff || userRoleName === 'finance_head' || userRoleName === 'finance_staff' || isAdmin || (user?.department && (user.department.name?.includes('การเงิน') || user.department.code === 'FIN')) || user?.position?.includes('การเงิน'));
 
     // Determine user role label for the top-right header display
     const getRoleLabel = () => {

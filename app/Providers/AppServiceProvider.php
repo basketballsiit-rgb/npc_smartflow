@@ -47,9 +47,11 @@ class AppServiceProvider extends ServiceProvider
             $host = request()->getHost() ?: 'service.npc.ac.th';
             $rootUrl = "{$scheme}://{$host}{$subfolder}";
             \Illuminate\Support\Facades\URL::forceRootUrl($rootUrl);
+            \Illuminate\Support\Facades\URL::forceAssetRoot($rootUrl);
         } elseif ($appUrl = config('app.url')) {
             if ($appUrl !== 'http://localhost') {
                 \Illuminate\Support\Facades\URL::forceRootUrl($appUrl);
+                \Illuminate\Support\Facades\URL::forceAssetRoot($appUrl);
             }
         }
 
