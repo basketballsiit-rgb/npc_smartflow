@@ -28,14 +28,20 @@ class KeycloakController extends Controller
      * รับข้อมูลจาก Keycloak หลังยืนยันตัวตนสำเร็จ
      * + ดึงข้อมูลตำแหน่ง/ฝ่าย จาก npcjob API
      */
-    public function callback()
+    public function callback(\Illuminate\Http\Request $request)
     {
         try {
             // 1. ดึงข้อมูล user จาก Keycloak
             $keycloakUser = Socialite::driver('keycloak')->stateless()->user();
 
-            $email    = $keycloakUser->getEmail();
-            $username = $keycloakUser->user['preferred_username'] ?? null;
+            $username = $keycloakUser->user['preferred_username'] ?? $keycloakUser->user['username'] ?? null;
+            $email    = $keycloakUser->getEmail() 
+                        ?? ($keycloakUser->user['email'] ?? null)
+                        ?? ($username ? (str_contains($username, '@') ? $username : $username . '@npc.ac.th') : null);
+
+            if (!$email) {
+                throw new \Exception('ไม่พบอีเมลในข้อมูลจาก Keycloak SSO กรุณาติดต่อผู้ดูแลระบบ');
+            }
 
             // 2. ดึงข้อมูลเพิ่มเติมจาก npcjob API (ฝ่าย + ตำแหน่ง)
             $npcjobProfile = $this->fetchNpcjobProfile($username);
@@ -48,6 +54,11 @@ class KeycloakController extends Controller
 
             // 5. หา/สร้าง User ใน npc_smartflow
             $user = User::where('email', $email)->first();
+
+            if (!$user && $username) {
+                // ค้นหาเผื่อ user มีอีเมลต่างกันแต่อาจใช้ username เดียวกัน
+                $user = User::where('email', 'like', $username . '@%')->first();
+            }
 
             if (!$user) {
                 // Auto-provision: สร้าง user ใหม่
@@ -108,8 +119,9 @@ class KeycloakController extends Controller
                     ->withErrors(['email' => 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ']);
             }
 
-            // 7. เข้าสู่ระบบ
+            // 7. เข้าสู่ระบบ และ Regenerate Session
             Auth::login($user, true);
+            $request->session()->regenerate();
 
             return redirect()->intended(route('dashboard'));
 

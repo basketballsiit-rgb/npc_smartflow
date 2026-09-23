@@ -329,7 +329,7 @@ export default function Login({ status, canResetPassword }) {
 
                         {/* Keycloak SSO Button */}
                         <a
-                            href="/npc_smartflow/auth/keycloak"
+                            href={typeof route !== 'undefined' ? route('keycloak.redirect') : '/auth/keycloak'}
                             id="keycloak-sso-btn"
                             className="w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2.5"
                             style={{

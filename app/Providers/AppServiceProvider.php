@@ -23,6 +23,16 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
+        // Force HTTPS scheme when behind SSL reverse proxy / production server
+        if (config('app.env') === 'production' || str_contains(request()->header('X-Forwarded-Proto', ''), 'https') || request()->secure()) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
+        // Force asset root path if ASSET_URL is defined
+        if ($assetUrl = config('app.asset_url')) {
+            \Illuminate\Support\Facades\URL::forceAssetRoot($assetUrl);
+        }
+
         // Register Keycloak Socialite Provider
         \Event::listen(SocialiteWasCalled::class, function (SocialiteWasCalled $event) {
             $event->extendSocialite('keycloak', \SocialiteProviders\Keycloak\Provider::class);
