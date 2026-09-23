@@ -47,17 +47,12 @@ class AppServiceProvider extends ServiceProvider
             $host = request()->getHost() ?: 'service.npc.ac.th';
             $rootUrl = "{$scheme}://{$host}{$subfolder}";
             \Illuminate\Support\Facades\URL::forceRootUrl($rootUrl);
-            \Illuminate\Support\Facades\URL::forceAssetRoot($rootUrl);
+            config(['app.asset_url' => $rootUrl]);
         } elseif ($appUrl = config('app.url')) {
             if ($appUrl !== 'http://localhost') {
                 \Illuminate\Support\Facades\URL::forceRootUrl($appUrl);
-                \Illuminate\Support\Facades\URL::forceAssetRoot($appUrl);
+                config(['app.asset_url' => $appUrl]);
             }
-        }
-
-        // Force asset root path if ASSET_URL is defined
-        if ($assetUrl = config('app.asset_url')) {
-            \Illuminate\Support\Facades\URL::forceAssetRoot($assetUrl);
         }
 
         // Register Keycloak Socialite Provider
