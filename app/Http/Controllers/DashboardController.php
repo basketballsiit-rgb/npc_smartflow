@@ -34,15 +34,16 @@ class DashboardController extends Controller
             'currentTab' => $request->query('tab'),
         ];
 
-        // Auto-cleanup any residual duplicate departments for Admin
-        if ($user->isAdmin()) {
-            $hasDuplicates = Department::whereIn('name', ['ฝ่ายบริหารจัดการ / งานวางแผน', 'ฝ่ายวิชาการ / สาขาวิชาการ'])
-                ->orWhere('name', 'like', '%ฝ่ายบริหารจัดการ / งานวางแผน%')
-                ->orWhere('name', 'like', '%ฝ่ายวิชาการ / สาขาวิชาการ%')
-                ->exists();
-            if ($hasDuplicates) {
-                AdminController::cleanupDuplicateDepartments();
-            }
+        // Auto-cleanup any residual duplicate/imported test departments
+        $hasDuplicates = Department::where(function ($q) {
+            $q->where('name', 'like', '%ฝ่ายบริหารจัดการ%')
+              ->orWhere('name', 'like', '%/ สาขาวิชาการ%')
+              ->orWhere('name', 'like', '%/สาขาวิชาการ%')
+              ->orWhere('name', 'like', '%งานวางแผน%')->where('parent_id', null)->where('name', '!=', 'ฝ่ายยุทธศาสตร์และแผนงาน');
+        })->exists();
+
+        if ($hasDuplicates) {
+            AdminController::cleanupDuplicateDepartments();
         }
 
         // Global data available for User/Admin Management
