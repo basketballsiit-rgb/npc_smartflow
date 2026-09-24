@@ -17,6 +17,11 @@ class StrategyDashboardController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+        if (!$user || (!$user->isAdmin() && !$user->isExecutive() && !$user->isPlanStaff() && !$user->isPlanHead())) {
+            abort(403, 'เฉพาะผู้บริหารและเจ้าหน้าที่งานแผนงานเท่านั้นที่มีสิทธิ์เข้าถึงหน้านี้');
+        }
+
         $currentFiscalYear = SystemSetting::where('key', 'current_fiscal_year')->value('value') ?: (date('Y') + 543);
 
         $fiscalYear = $request->query('fiscal_year', $currentFiscalYear);
@@ -233,6 +238,7 @@ class StrategyDashboardController extends Controller
             'fiscalYears' => $distinctYears,
             'departments' => $departments,
             'currentFiscalYear' => $currentFiscalYear,
+            'canManageStrategies' => $user->isAdmin() || $user->isPlanHead(),
             'filters' => [
                 'fiscal_year' => $fiscalYear,
                 'department_id' => $departmentId,

@@ -8,6 +8,7 @@ export default function Dashboard({
     fiscalYears = [],
     departments = [],
     currentFiscalYear,
+    canManageStrategies = false,
     filters = {}
 }) {
     // Local filter state
@@ -188,6 +189,14 @@ export default function Dashboard({
                     </div>
 
                     <div className="flex items-center gap-2 print:hidden">
+                        {canManageStrategies && (
+                            <Link
+                                href={`${route('dashboard')}?tab=admin_strategies`}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold shadow-2xs transition"
+                            >
+                                <span>⚙️</span> จัดการ/เพิ่ม-ลดหัวข้อยุทธศาสตร์
+                            </Link>
+                        )}
                         <button
                             type="button"
                             onClick={() => window.print()}

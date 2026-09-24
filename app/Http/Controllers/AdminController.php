@@ -367,8 +367,8 @@ class AdminController extends Controller
      */
     public function storeStrategyCategory(Request $request)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $validated = $request->validate([
@@ -391,8 +391,8 @@ class AdminController extends Controller
      */
     public function updateStrategyCategory(Request $request, \App\Models\StrategyCategory $category)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $validated = $request->validate([
@@ -410,8 +410,8 @@ class AdminController extends Controller
      */
     public function toggleStrategyCategoryActive(\App\Models\StrategyCategory $category)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $category->update([
@@ -427,8 +427,8 @@ class AdminController extends Controller
      */
     public function deleteStrategyCategory(\App\Models\StrategyCategory $category)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $category->delete();
@@ -441,8 +441,8 @@ class AdminController extends Controller
      */
     public function storeStrategyItem(Request $request)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $validated = $request->validate([
@@ -465,8 +465,8 @@ class AdminController extends Controller
      */
     public function updateStrategyItem(Request $request, \App\Models\StrategyItem $item)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $validated = $request->validate([
@@ -483,8 +483,8 @@ class AdminController extends Controller
      */
     public function toggleStrategyItemActive(\App\Models\StrategyItem $item)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $item->update([
@@ -499,8 +499,8 @@ class AdminController extends Controller
      */
     public function deleteStrategyItem(\App\Models\StrategyItem $item)
     {
-        if (!auth()->user()->isAdmin()) {
-            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $item->delete();

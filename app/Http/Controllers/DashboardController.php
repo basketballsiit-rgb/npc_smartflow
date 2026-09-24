@@ -215,7 +215,7 @@ class DashboardController extends Controller
         $data['apiIntegrationStatus'] = $apiIntegrationStatus;
 
         // 0. Admin Dashboard Data
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->isPlanHead()) {
             $data['adminData'] = [
                 'users' => User::with(['role', 'department'])->get()->map(function ($u) {
                     return [
