@@ -400,25 +400,7 @@ export default function QuickCreate({
                                             className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs"
                                         />
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">เบอร์โทรศัพท์ติดต่อ</label>
-                                        <input
-                                            type="text"
-                                            value={data.phone}
-                                            onChange={(e) => setData('phone', e.target.value)}
-                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs"
-                                            placeholder="08x-xxxxxxx"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">อีเมลติดต่อ</label>
-                                        <input
-                                            type="email"
-                                            value={data.email}
-                                            onChange={(e) => setData('email', e.target.value)}
-                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs"
-                                        />
-                                    </div>
+
                                 </div>
 
                                 <div>
