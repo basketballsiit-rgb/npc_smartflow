@@ -3,9 +3,10 @@ import Dropdown from '@/Components/Dropdown';
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
+import FirstTimeDutySetupModal from '@/Components/FirstTimeDutySetupModal';
 
 export default function AuthenticatedLayout({ header, children }) {
-    const { auth, asset_url } = usePage().props;
+    const { auth, asset_url, departments_data } = usePage().props;
     const user = auth.user;
     const url = usePage().url || '';
 
@@ -111,6 +112,14 @@ export default function AuthenticatedLayout({ header, children }) {
             return next;
         });
     };
+
+    const [showDutyModal, setShowDutyModal] = useState(() => {
+        if (user && !user.has_set_positions && (!user.all_positions || user.all_positions.length === 0)) {
+            const dismissed = sessionStorage.getItem('dismiss_duty_modal');
+            return !dismissed;
+        }
+        return false;
+    });
 
     const [citizenIdInput, setCitizenIdInput] = useState('');
     const [citizenIdError, setCitizenIdError] = useState('');
@@ -1257,8 +1266,16 @@ export default function AuthenticatedLayout({ header, children }) {
 
             </div>
 
+            {/* FIRST-TIME DUTY & WORK SETUP MODAL */}
+            <FirstTimeDutySetupModal
+                isOpen={showDutyModal}
+                onClose={() => setShowDutyModal(false)}
+                user={user}
+                departmentsData={departments_data || {}}
+            />
+
             {/* FIRST-TIME CITIZEN ID REGISTRATION MODAL */}
-            {showCitizenModal && (
+            {!showDutyModal && showCitizenModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-purple-950/60 backdrop-blur-sm p-4 animate-fadeIn">
                     <div className="bg-white rounded-3xl shadow-2xl border border-purple-200 max-w-lg w-full overflow-hidden animate-scaleUp">
                         {/* Modal Header */}

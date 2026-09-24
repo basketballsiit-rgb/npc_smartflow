@@ -163,6 +163,13 @@ class ProfileController extends Controller
             $user->save();
         }
 
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'บันทึกข้อมูลภาระงานและหน้าที่ความรับผิดชอบเรียบร้อยแล้ว',
+            ]);
+        }
+
         return Redirect::back()->with('message', 'บันทึกข้อมูลภาระงานและหน้าที่ความรับผิดชอบเรียบร้อยแล้ว');
     }
 

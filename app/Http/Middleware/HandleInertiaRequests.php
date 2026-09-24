@@ -59,6 +59,7 @@ class HandleInertiaRequests extends Middleware
                     'position'        => $user->position,
                     'citizen_id'      => $citizenId,
                     'has_citizen_id'  => $hasCitizenId,
+                    'has_set_positions' => $user->userPositions()->exists(),
                     'department_name' => $user->department?->name,
                     'department_id'   => $user->department_id,
                     'role'            => $user->role?->name,
@@ -96,6 +97,29 @@ class HandleInertiaRequests extends Middleware
                     }),
                 ] : null,
             ],
+            'departments_data' => \Illuminate\Support\Facades\Cache::remember('shared_departments_data', 3600, function() {
+                return [
+                    'divisions' => \App\Models\Department::whereNull('parent_id')->orderBy('id', 'asc')->get(['id', 'name', 'code']),
+                    'sub_departments' => \App\Models\Department::whereNotNull('parent_id')->orderBy('parent_id', 'asc')->orderBy('id', 'asc')->get(['id', 'name', 'code', 'parent_id']),
+                    'available_majors' => [
+                        'ช่างยนต์',
+                        'สารสนเทศ',
+                        'เทคนิคพื้นฐาน',
+                        'อิเล็กทรอนิกส์',
+                        'ไฟฟ้า',
+                        'บัญชี',
+                        'การตลาด',
+                        'สามัญสัมพันธ์',
+                        'ระยะสั้น',
+                    ],
+                    'available_duties' => [
+                        'หัวหน้างาน',
+                        'หัวหน้าสาขาวิชา',
+                        'เจ้าหน้าที่',
+                        'ครูผู้สอน',
+                    ],
+                ];
+            }),
         ];
     }
 }
