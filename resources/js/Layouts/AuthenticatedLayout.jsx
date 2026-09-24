@@ -97,7 +97,7 @@ export default function AuthenticatedLayout({ header, children }) {
             try { return JSON.parse(saved); } catch (e) {}
         }
         const initialActive = getActiveSectionForUrl(url || '');
-        return initialActive ? { ...allClosedSections, [initialActive]: true } : { ...allClosedSections, proposal: true };
+        return initialActive ? { ...allClosedSections, [initialActive]: true } : { ...allClosedSections };
     });
 
     const toggleSection = (sectionKey) => {
@@ -204,6 +204,25 @@ export default function AuthenticatedLayout({ header, children }) {
             localStorage.setItem('sidebar-open-sections-v3', JSON.stringify(next));
         }
     }, [url]);
+
+    const isAnySectionOpen = Object.values(openSections).some(Boolean);
+    const activeSectionKey = getActiveSectionForUrl(url);
+    const isMainDashboardActive = (
+        typeof route !== 'undefined' &&
+        route().current('dashboard') &&
+        (!url.includes('tab=') || url.includes('tab=overview')) &&
+        !url.includes('chapter=') &&
+        !url.includes('strategies') &&
+        !activeSectionKey &&
+        !isAnySectionOpen
+    );
+
+    const getSectionHeaderClass = (isOpen, activeGradient, borderAccent, activeTextColor = 'text-white') => {
+        if (isOpen) {
+            return `w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl ${activeGradient} ${activeTextColor} border-l-4 ${borderAccent} text-xs font-black uppercase tracking-wider shadow-lg ring-1 ring-white/20 scale-[1.01] transition-all cursor-pointer`;
+        }
+        return 'w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border border-white/5 text-xs font-bold transition-all duration-150 cursor-pointer';
+    };
 
     const getSubLinkClass = (isActive) =>
         `flex items-center gap-x-2 px-3 py-2 rounded-xl text-xs transition-all ${
@@ -348,10 +367,14 @@ export default function AuthenticatedLayout({ header, children }) {
                         {/* 0. MAIN DASHBOARD HOME ENTRY */}
                         <Link
                             href={route('dashboard')}
-                            className={`flex items-center gap-x-3 px-3.5 py-2.5 rounded-xl transition-all text-sm ${
-                                route().current('dashboard') && (!url.includes('tab=') || url.includes('tab=admin_users'))
-                                    ? 'bg-gradient-to-r from-white via-purple-50 to-white text-purple-950 shadow-lg shadow-purple-950/20 font-black ring-2 ring-purple-300 scale-[1.02]'
-                                    : 'text-white bg-white/10 hover:bg-white/20 font-medium'
+                            onClick={() => {
+                                setOpenSections({ ...allClosedSections });
+                                localStorage.setItem('sidebar-open-sections-v3', JSON.stringify({ ...allClosedSections }));
+                            }}
+                            className={`flex items-center gap-x-3 px-3.5 py-2.5 rounded-xl transition-all text-xs ${
+                                isMainDashboardActive
+                                    ? 'bg-gradient-to-r from-white via-purple-50 to-white text-purple-950 shadow-lg shadow-purple-950/20 font-black ring-2 ring-purple-300 scale-[1.01] border-l-4 border-purple-500'
+                                    : 'w-full bg-white/10 hover:bg-white/15 text-white/80 hover:text-white border border-white/5 font-bold'
                             }`}
                             title="ศูนย์ควบคุมหลัก"
                         >
@@ -366,13 +389,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('proposal')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/70 via-purple-800/50 to-transparent text-purple-100 border-l-4 border-amber-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/80 hover:to-purple-900/40 transition cursor-pointer"
+                                    className={getSectionHeaderClass(openSections.proposal, 'bg-gradient-to-r from-purple-800 via-purple-700 to-indigo-800', 'border-amber-400')}
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📝</span>
                                         <span>๑. งานเสนอ & วงจรโครงการ</span>
                                     </div>
-                                    <span className="text-[11px] text-purple-300">{openSections.proposal ? '▼' : '▶'}</span>
+                                    <span className={`text-[11px] ${openSections.proposal ? 'text-amber-300' : 'text-white/40'}`}>
+                                        {openSections.proposal ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
@@ -446,13 +471,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('five_chapters')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/70 via-purple-800/50 to-transparent text-purple-100 border-l-4 border-emerald-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/80 hover:to-purple-900/40 transition cursor-pointer"
+                                    className={getSectionHeaderClass(openSections.five_chapters, 'bg-gradient-to-r from-emerald-800 via-teal-700 to-emerald-900', 'border-emerald-400')}
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📖</span>
                                         <span>๒. เอกสารรายงานโครงการ (๕ บท)</span>
                                     </div>
-                                    <span className="text-[11px] text-purple-300">{openSections.five_chapters ? '▼' : '▶'}</span>
+                                    <span className={`text-[11px] ${openSections.five_chapters ? 'text-emerald-300' : 'text-white/40'}`}>
+                                        {openSections.five_chapters ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
@@ -517,13 +544,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('procurement_loan')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-purple-900/60 via-purple-800/40 to-transparent text-purple-100 border-l-4 border-sky-400 text-xs font-black uppercase tracking-wider hover:from-purple-800/70 hover:to-purple-900/30 transition cursor-pointer"
+                                    className={getSectionHeaderClass(openSections.procurement_loan, 'bg-gradient-to-r from-sky-800 via-blue-700 to-indigo-900', 'border-sky-400')}
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>💼</span>
                                         <span>๓. จัดซื้อจัดจ้าง & สัญญายืมเงิน</span>
                                     </div>
-                                    <span className="text-[11px] text-purple-300">{openSections.procurement_loan ? '▼' : '▶'}</span>
+                                    <span className={`text-[11px] ${openSections.procurement_loan ? 'text-sky-300' : 'text-white/40'}`}>
+                                        {openSections.procurement_loan ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
@@ -579,13 +608,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('procurement_hub')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-blue-900/80 via-indigo-900/60 to-purple-900/40 text-blue-200 border-l-4 border-blue-400 text-xs font-black uppercase tracking-wider hover:from-blue-800 hover:to-indigo-800 transition cursor-pointer"
+                                    className={getSectionHeaderClass(openSections.procurement_hub, 'bg-gradient-to-r from-blue-900 via-indigo-800 to-purple-900', 'border-blue-400')}
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📦</span>
                                         <span>๔. ศูนย์งานพัสดุ (Procurement)</span>
                                     </div>
-                                    <span className="text-[11px] text-blue-300">{openSections.procurement_hub ? '▼' : '▶'}</span>
+                                    <span className={`text-[11px] ${openSections.procurement_hub ? 'text-blue-300' : 'text-white/40'}`}>
+                                        {openSections.procurement_hub ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
@@ -641,13 +672,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('finance_hub')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-900/80 via-teal-900/60 to-purple-900/40 text-emerald-200 border-l-4 border-emerald-400 text-xs font-black uppercase tracking-wider hover:from-emerald-800 hover:to-teal-800 transition cursor-pointer"
+                                    className={getSectionHeaderClass(openSections.finance_hub, 'bg-gradient-to-r from-teal-900 via-emerald-800 to-purple-900', 'border-emerald-400')}
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>💳</span>
                                         <span>๕. ศูนย์งานการเงิน (Finance)</span>
                                     </div>
-                                    <span className="text-[11px] text-emerald-300">{openSections.finance_hub ? '▼' : '▶'}</span>
+                                    <span className={`text-[11px] ${openSections.finance_hub ? 'text-emerald-300' : 'text-white/40'}`}>
+                                        {openSections.finance_hub ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
@@ -712,13 +745,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('plan_hub')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-amber-900/80 via-orange-900/60 to-purple-900/40 text-amber-200 border-l-4 border-amber-400 text-xs font-black uppercase tracking-wider hover:from-amber-800 hover:to-orange-800 transition cursor-pointer"
+                                    className={getSectionHeaderClass(openSections.plan_hub, 'bg-gradient-to-r from-amber-900 via-orange-800 to-purple-900', 'border-amber-400')}
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📊</span>
                                         <span>๖. งานแผนและงบประมาณ</span>
                                     </div>
-                                    <span className="text-[11px] text-amber-300">{openSections.plan_hub ? '▼' : '▶'}</span>
+                                    <span className={`text-[11px] ${openSections.plan_hub ? 'text-amber-300' : 'text-white/40'}`}>
+                                        {openSections.plan_hub ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
@@ -828,13 +863,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('executive_hub')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-violet-900/80 via-purple-900/60 to-fuchsia-900/40 text-violet-200 border-l-4 border-violet-400 text-xs font-black uppercase tracking-wider hover:from-violet-800 hover:to-purple-800 transition cursor-pointer"
+                                    className={getSectionHeaderClass(openSections.executive_hub, 'bg-gradient-to-r from-violet-900 via-purple-800 to-fuchsia-900', 'border-violet-400')}
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>🏛️</span>
                                         <span>๗. ผู้บริหาร (Executive)</span>
                                     </div>
-                                    <span className="text-[11px] text-violet-300">{openSections.executive_hub ? '▼' : '▶'}</span>
+                                    <span className={`text-[11px] ${openSections.executive_hub ? 'text-violet-300' : 'text-white/40'}`}>
+                                        {openSections.executive_hub ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
@@ -908,13 +945,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <button
                                     type="button"
                                     onClick={() => toggleSection('admin_console')}
-                                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-red-950/80 via-rose-900/60 to-purple-900/40 text-rose-200 border-l-4 border-rose-500 text-xs font-black uppercase tracking-wider hover:from-rose-900 hover:to-purple-900 transition cursor-pointer"
+                                    className={getSectionHeaderClass(openSections.admin_console, 'bg-gradient-to-r from-rose-950 via-rose-900 to-purple-900', 'border-rose-500')}
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>⚙️</span>
                                         <span>๘. ผู้ดูแลระบบ (Admin)</span>
                                     </div>
-                                    <span className="text-[11px] text-rose-300">{openSections.admin_console ? '▼' : '▶'}</span>
+                                    <span className={`text-[11px] ${openSections.admin_console ? 'text-rose-300' : 'text-white/40'}`}>
+                                        {openSections.admin_console ? '▼' : '▶'}
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="h-px bg-white/20 my-1.5" />
