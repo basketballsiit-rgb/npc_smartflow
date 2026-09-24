@@ -1,6 +1,31 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import React, { useState, useMemo } from 'react';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    ArcElement,
+    PointElement,
+    LineElement,
+} from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    ArcElement,
+    PointElement,
+    LineElement
+);
 
 export default function Dashboard({
     categories = [],
@@ -18,6 +43,10 @@ export default function Dashboard({
     const [selectedCoverage, setSelectedCoverage] = useState(filters.coverage || 'all');
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [activeCategoryTab, setActiveCategoryTab] = useState(filters.category_id || 'all');
+
+    // Chart display states
+    const [showCharts, setShowCharts] = useState(true);
+    const [chartMetric, setChartMetric] = useState('projects'); // 'projects' or 'budget'
 
     // Expanded accordion cards state: map of itemId -> boolean
     const [expandedItems, setExpandedItems] = useState(() => {
@@ -107,6 +136,243 @@ export default function Dashboard({
             minimumFractionDigits: 0,
             maximumFractionDigits: 2,
         }).format(amount || 0);
+    };
+
+    // 1. Category Projects Doughnut Data
+    const categoryProjectsChartData = useMemo(() => {
+        const labels = categories.map(c => c.name);
+        const data = categories.map(c => c.unique_projects_count);
+        return {
+            labels,
+            datasets: [
+                {
+                    label: 'จำนวนโครงการ',
+                    data,
+                    backgroundColor: [
+                        '#7c3aed',
+                        '#0284c7',
+                        '#059669',
+                        '#d97706',
+                        '#e11d48',
+                        '#4f46e5',
+                        '#0891b2',
+                        '#ca8a04',
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                }
+            ]
+        };
+    }, [categories]);
+
+    // 2. Category Budget Doughnut Data
+    const categoryBudgetChartData = useMemo(() => {
+        const labels = categories.map(c => c.name);
+        const data = categories.map(c => c.total_budget);
+        return {
+            labels,
+            datasets: [
+                {
+                    label: 'งบประมาณ (บาท)',
+                    data,
+                    backgroundColor: [
+                        '#8b5cf6',
+                        '#38bdf8',
+                        '#34d399',
+                        '#fbbf24',
+                        '#f43f5e',
+                        '#6366f1',
+                        '#22d3ee',
+                        '#facc15',
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                }
+            ]
+        };
+    }, [categories]);
+
+    // 3. Strategic Coverage Gauge Data (Covered vs Uncovered)
+    const coverageChartData = useMemo(() => {
+        return {
+            labels: ['ขับเคลื่อนแล้ว', 'ยังไม่มีโครงการ'],
+            datasets: [
+                {
+                    data: [stats.covered_items || 0, stats.uncovered_items || 0],
+                    backgroundColor: ['#10b981', '#e2e8f0'],
+                    hoverBackgroundColor: ['#059669', '#cbd5e1'],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                }
+            ]
+        };
+    }, [stats]);
+
+    // 4. Target Items for Bar Chart
+    const targetBarItems = useMemo(() => {
+        const items = [];
+        displayedCategories.forEach(cat => {
+            (cat.items || []).forEach(it => {
+                items.push({
+                    id: it.id,
+                    name: it.name,
+                    code: it.code || `ข้อ ${it.order_index || it.id}`,
+                    categoryName: cat.name,
+                    projects_count: it.projects_count || 0,
+                    total_budget: it.total_budget || 0,
+                });
+            });
+        });
+        return items;
+    }, [displayedCategories]);
+
+    // 5. Items Comparison Bar Chart Data
+    const itemsBarChartData = useMemo(() => {
+        const labels = targetBarItems.map(it => {
+            if (it.code && it.code.trim() !== '') {
+                return it.code;
+            }
+            return it.name.length > 20 ? it.name.substring(0, 18) + '...' : it.name;
+        });
+
+        const data = targetBarItems.map(it => chartMetric === 'projects' ? it.projects_count : it.total_budget);
+        const bgColors = targetBarItems.map(it => it.projects_count > 0 ? (chartMetric === 'projects' ? '#7c3aed' : '#0284c7') : '#e2e8f0');
+
+        return {
+            labels,
+            datasets: [
+                {
+                    label: chartMetric === 'projects' ? 'จำนวนโครงการ (โครงการ)' : 'งบประมาณรวม (บาท)',
+                    data,
+                    backgroundColor: bgColors,
+                    borderRadius: 6,
+                    maxBarThickness: 45,
+                }
+            ]
+        };
+    }, [targetBarItems, chartMetric]);
+
+    // Chart Options
+    const doughnutOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 10,
+                    font: { family: 'Kanit', size: 10 },
+                    padding: 8,
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        const val = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                        return ` ${context.label}: ${val} โครงการ (${pct}%)`;
+                    }
+                }
+            }
+        },
+        cutout: '68%',
+    };
+
+    const budgetDoughnutOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 10,
+                    font: { family: 'Kanit', size: 10 },
+                    padding: 8,
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        const val = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                        return ` ${context.label}: ฿${formatCurrency(val)} (${pct}%)`;
+                    }
+                }
+            }
+        },
+        cutout: '68%',
+    };
+
+    const coverageDoughnutOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    boxWidth: 10,
+                    font: { family: 'Kanit', size: 10 },
+                    padding: 8,
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: (context) => {
+                        const val = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                        return ` ${context.label}: ${val} ประเด็น (${pct}%)`;
+                    }
+                }
+            }
+        },
+        cutout: '68%',
+    };
+
+    const barOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                callbacks: {
+                    title: (context) => {
+                        const idx = context[0].dataIndex;
+                        const item = targetBarItems[idx];
+                        return item ? `[${item.categoryName}] ${item.name}` : '';
+                    },
+                    label: (context) => {
+                        const val = context.raw || 0;
+                        if (chartMetric === 'budget') {
+                            return ` วงเงินงบประมาณ: ฿${formatCurrency(val)} บาท`;
+                        }
+                        return ` จำนวนโครงการ: ${val} โครงการ`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: (val) => chartMetric === 'budget' ? `฿${formatCurrency(val)}` : val,
+                    font: { family: 'Kanit', size: 10 }
+                },
+                grid: { color: '#f1f5f9' }
+            },
+            x: {
+                ticks: {
+                    font: { family: 'Kanit', size: 10 },
+                    maxRotation: 45,
+                    minRotation: 0,
+                },
+                grid: { display: false }
+            }
+        }
     };
 
     const getStatusBadge = (status) => {
@@ -456,6 +722,127 @@ export default function Dashboard({
                             </div>
                         </div>
                     </div>
+                </div>
+
+                {/* 2.5 VISUAL STRATEGIC ANALYTICS & CHARTS PANEL */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-xs print:break-inside-avoid">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl">📊</span>
+                            <div>
+                                <h3 className="text-sm font-black text-slate-900">
+                                    แผนภูมิและการวิเคราะห์เชิงภาพ (Visual Strategic Analytics)
+                                </h3>
+                                <p className="text-[11px] text-slate-500">
+                                    สัดส่วนและเปรียบเทียบการขับเคลื่อนตามหมวดหมู่และประเด็นยุทธศาสตร์
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 print:hidden">
+                            {/* Metric Selector for Bar Chart */}
+                            <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+                                <button
+                                    type="button"
+                                    onClick={() => setChartMetric('projects')}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                                        chartMetric === 'projects'
+                                            ? 'bg-purple-700 text-white shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    📋 โครงการ
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setChartMetric('budget')}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
+                                        chartMetric === 'budget'
+                                            ? 'bg-purple-700 text-white shadow-2xs'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    💰 งบประมาณ
+                                </button>
+                            </div>
+
+                            {/* Toggle Show/Hide Charts */}
+                            <button
+                                type="button"
+                                onClick={() => setShowCharts(!showCharts)}
+                                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition"
+                            >
+                                {showCharts ? '▲ ซ่อนกราฟ' : '▼ แสดงกราฟ'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {showCharts && (
+                        <div className="pt-4 space-y-5 animate-in fade-in duration-200">
+                            {/* Top 3 Doughnut / Breakdown Charts */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* Chart 1: Projects by Category */}
+                                <div className="bg-slate-50/70 rounded-xl p-3.5 border border-slate-200 flex flex-col">
+                                    <div className="text-center mb-2">
+                                        <h4 className="text-xs font-bold text-slate-800">
+                                            สัดส่วนโครงการตามหมวดยุทธศาสตร์
+                                        </h4>
+                                        <span className="text-[10px] text-slate-400">แยกตามจำนวนโครงการที่เชื่อมโยง</span>
+                                    </div>
+                                    <div className="h-56 relative flex items-center justify-center">
+                                        <Doughnut data={categoryProjectsChartData} options={doughnutOptions} />
+                                    </div>
+                                </div>
+
+                                {/* Chart 2: Budget by Category */}
+                                <div className="bg-slate-50/70 rounded-xl p-3.5 border border-slate-200 flex flex-col">
+                                    <div className="text-center mb-2">
+                                        <h4 className="text-xs font-bold text-slate-800">
+                                            สัดส่วนงบประมาณตามหมวดยุทธศาสตร์
+                                        </h4>
+                                        <span className="text-[10px] text-slate-400">แยกตามวงเงินจัดสรร/ประมาณการ</span>
+                                    </div>
+                                    <div className="h-56 relative flex items-center justify-center">
+                                        <Doughnut data={categoryBudgetChartData} options={budgetDoughnutOptions} />
+                                    </div>
+                                </div>
+
+                                {/* Chart 3: Coverage Rate */}
+                                <div className="bg-slate-50/70 rounded-xl p-3.5 border border-slate-200 flex flex-col">
+                                    <div className="text-center mb-2">
+                                        <h4 className="text-xs font-bold text-slate-800">
+                                            ความครอบคลุมการขับเคลื่อนยุทธศาสตร์
+                                        </h4>
+                                        <span className="text-[10px] text-slate-400">
+                                            ขับเคลื่อนแล้ว {stats.coverage_rate || 0}% ({stats.covered_items || 0}/{stats.total_items || 0} ประเด็น)
+                                        </span>
+                                    </div>
+                                    <div className="h-56 relative flex items-center justify-center">
+                                        <Doughnut data={coverageChartData} options={coverageDoughnutOptions} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bottom Bar Chart: Item-Level Breakdown */}
+                            <div className="bg-slate-50/70 rounded-xl p-4 border border-slate-200">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-900">
+                                            เปรียบเทียบ{chartMetric === 'projects' ? 'จำนวนโครงการ' : 'งบประมาณ'}ในแต่ละประเด็นยุทธศาสตร์
+                                        </h4>
+                                        <span className="text-[11px] text-slate-500">
+                                            {activeCategoryTab === 'all'
+                                                ? 'แสดงทุกประเด็นยุทธศาสตร์ในระบบ (แท่งสีเทาคือประเด็นที่ยังไม่มีโครงการ)'
+                                                : `แสดงเฉพาะประเด็นในหมวด: ${displayedCategories[0]?.name || ''}`}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="h-64 sm:h-72 w-full">
+                                    <Bar data={itemsBarChartData} options={barOptions} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* 3. MAIN CATEGORY TABS ("แยกเป็นหัวข้อหลัก") */}
