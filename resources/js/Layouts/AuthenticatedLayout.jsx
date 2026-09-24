@@ -393,7 +393,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📝</span>
-                                        <span>๑. งานเสนอ & วงจรโครงการ</span>
+                                        <span>1. งานเสนอ & วงจรโครงการ</span>
                                     </div>
                                     <span className={`text-[11px] ${openSections.proposal ? 'text-amber-300' : 'text-white/40'}`}>
                                         {openSections.proposal ? '▼' : '▶'}
@@ -444,11 +444,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', filter: 'reporting' })}
                                     className={getSubLinkClass(url.includes('filter=reporting'))}
-                                    title="สรุปและจัดทำรูปเล่มโครงการ ๕ บท"
+                                    title="สรุปและจัดทำรูปเล่มโครงการ 5 บท"
                                 >
                                     <span className={getPrefixClass(url.includes('filter=reporting'))}>└─</span>
                                     <span className="text-sm">📖</span>
-                                    {isSidebarOpen && <span>สรุป & เล่มโครงการ ๕ บท</span>}
+                                    {isSidebarOpen && <span>สรุป & เล่มโครงการ 5 บท</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
@@ -464,7 +464,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* ๒. 5-CHAPTER PROJECT DOCUMENTATION (การจัดทำเอกสารรายงานโครงการ ๕ บท) */}
+                        {/* 2. 5-CHAPTER PROJECT DOCUMENTATION (การจัดทำเอกสารรายงานโครงการ 5 บท) */}
                         {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
@@ -475,7 +475,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📖</span>
-                                        <span>๒. เอกสารรายงานโครงการ (๕ บท)</span>
+                                        <span>2. เอกสารรายงานโครงการ (5 บท)</span>
                                     </div>
                                     <span className={`text-[11px] ${openSections.five_chapters ? 'text-emerald-300' : 'text-white/40'}`}>
                                         {openSections.five_chapters ? '▼' : '▶'}
@@ -490,47 +490,47 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', chapter: 1 })}
                                     className={getSubLinkClass(url.includes('chapter=1'))}
-                                    title="บทที่ ๑: บทนำ & ข้อเสนอโครงการ"
+                                    title="บทที่ 1: บทนำ & ข้อเสนอโครงการ"
                                 >
                                     <span className={getPrefixClass(url.includes('chapter=1'), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📘</span>
-                                    {isSidebarOpen && <span>บทที่ ๑: บทนำ & ข้อมูลโครงการ</span>}
+                                    {isSidebarOpen && <span>บทที่ 1: บทนำ & ข้อมูลโครงการ</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', chapter: 2 })}
                                     className={getSubLinkClass(url.includes('chapter=2') || url.includes('chapter-2'))}
-                                    title="บทที่ ๒: เอกสารและงานวิจัยที่เกี่ยวข้อง (AI สังเคราะห์)"
+                                    title="บทที่ 2: เอกสารและงานวิจัยที่เกี่ยวข้อง (AI สังเคราะห์)"
                                 >
                                     <span className={getPrefixClass(url.includes('chapter=2') || url.includes('chapter-2'), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📗</span>
-                                    {isSidebarOpen && <span>บทที่ ๒: งานวิจัย & นโยบาย (AI)</span>}
+                                    {isSidebarOpen && <span>บทที่ 2: งานวิจัย & นโยบาย (AI)</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', chapter: 3 })}
                                     className={getSubLinkClass(url.includes('chapter=3'))}
-                                    title="บทที่ ๓: วิธีดำเนินงาน & จัดซื้อจัดจ้าง (Do Phase)"
+                                    title="บทที่ 3: วิธีดำเนินงาน & จัดซื้อจัดจ้าง (Do Phase)"
                                 >
                                     <span className={getPrefixClass(url.includes('chapter=3'), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📙</span>
-                                    {isSidebarOpen && <span>บทที่ ๓: วิธีดำเนินงาน & พัสดุ</span>}
+                                    {isSidebarOpen && <span>บทที่ 3: วิธีดำเนินงาน & พัสดุ</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', chapter: 4 })}
                                     className={getSubLinkClass(url.includes('chapter=4'))}
-                                    title="บทที่ ๔: ผลการดำเนินงาน & ประเมินผล (Check Phase)"
+                                    title="บทที่ 4: ผลการดำเนินงาน & ประเมินผล (Check Phase)"
                                 >
                                     <span className={getPrefixClass(url.includes('chapter=4'), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📕</span>
-                                    {isSidebarOpen && <span>บทที่ ๔: ผลดำเนินงาน & ประเมิน</span>}
+                                    {isSidebarOpen && <span>บทที่ 4: ผลดำเนินงาน & ประเมิน</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', filter: 'reporting', chapter: 5 })}
                                     className={getSubLinkClass(url.includes('chapter=5') || (url.includes('filter=reporting') && !url.includes('chapter=')))}
-                                    title="บทที่ ๕: สรุปผล อภิปรายผล & พิมพ์รูปเล่ม (Act Phase)"
+                                    title="บทที่ 5: สรุปผล อภิปรายผล & พิมพ์รูปเล่ม (Act Phase)"
                                 >
                                     <span className={getPrefixClass(url.includes('chapter=5') || (url.includes('filter=reporting') && !url.includes('chapter=')), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📓</span>
-                                    {isSidebarOpen && <span>บทที่ ๕: สรุปผล & พิมพ์เล่ม ๕ บท</span>}
+                                    {isSidebarOpen && <span>บทที่ 5: สรุปผล & พิมพ์เล่ม 5 บท</span>}
                                 </Link>
                             </div>
                             )}
@@ -548,7 +548,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>💼</span>
-                                        <span>๓. จัดซื้อจัดจ้าง & สัญญายืมเงิน</span>
+                                        <span>3. จัดซื้อจัดจ้าง & สัญญายืมเงิน</span>
                                     </div>
                                     <span className={`text-[11px] ${openSections.procurement_loan ? 'text-sky-300' : 'text-white/40'}`}>
                                         {openSections.procurement_loan ? '▼' : '▶'}
@@ -563,20 +563,20 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'proposals' })}
                                     className={getSubLinkClass(false)}
-                                    title="จัดทำชุดจัดซื้อจัดจ้าง ๔ ฉบับจากโครงการ"
+                                    title="จัดทำชุดจัดซื้อจัดจ้าง 4 ฉบับจากโครงการ"
                                 >
                                     <span className={getPrefixClass(false)}>└─</span>
                                     <span className="text-sm">📑</span>
-                                    {isSidebarOpen && <span>จัดทำชุดจัดซื้อจัดจ้าง (๔ ฉบับ)</span>}
+                                    {isSidebarOpen && <span>จัดทำชุดจัดซื้อจัดจ้าง (4 ฉบับ)</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'clearings' })}
                                     className={getSubLinkClass(url.includes('tab=clearings') && !url.includes('action='))}
-                                    title="สัญญายืมเงิน กค.๑๐๑ / ยืมเงินไปราชการ"
+                                    title="สัญญายืมเงิน กค.101 / ยืมเงินไปราชการ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=clearings') && !url.includes('action='))}>└─</span>
                                     <span className="text-sm">📝</span>
-                                    {isSidebarOpen && <span>สัญญายืมเงิน กค.๑๐๑ / ไปราชการ</span>}
+                                    {isSidebarOpen && <span>สัญญายืมเงิน กค.101 / ไปราชการ</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'clearings', action: 'new' })}
@@ -612,7 +612,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📦</span>
-                                        <span>๔. ศูนย์งานพัสดุ (Procurement)</span>
+                                        <span>4. ศูนย์งานพัสดุ (Procurement)</span>
                                     </div>
                                     <span className={`text-[11px] ${openSections.procurement_hub ? 'text-blue-300' : 'text-white/40'}`}>
                                         {openSections.procurement_hub ? '▼' : '▶'}
@@ -676,7 +676,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>💳</span>
-                                        <span>๕. ศูนย์งานการเงิน (Finance)</span>
+                                        <span>5. ศูนย์งานการเงิน (Finance)</span>
                                     </div>
                                     <span className={`text-[11px] ${openSections.finance_hub ? 'text-emerald-300' : 'text-white/40'}`}>
                                         {openSections.finance_hub ? '▼' : '▶'}
@@ -700,11 +700,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
                                     className={getSubLinkClass(url.includes('tab=document_tracking'))}
-                                    title="คิวตรวจจ่ายและโอนเงินยืม กค.๑๐๑ / จัดซื้อ"
+                                    title="คิวตรวจจ่ายและโอนเงินยืม กค.101 / จัดซื้อ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=document_tracking'), 'text-emerald-300')}>●</span>
                                     <span className="text-sm">💵</span>
-                                    {isSidebarOpen && <span>คิวตรวจจ่ายโอนเงินยืม (กค.๑๐๑)</span>}
+                                    {isSidebarOpen && <span>คิวตรวจจ่ายโอนเงินยืม (กค.101)</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'clearings' })}
@@ -749,7 +749,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>📊</span>
-                                        <span>๖. งานแผนและงบประมาณ</span>
+                                        <span>6. งานแผนและงบประมาณ</span>
                                     </div>
                                     <span className={`text-[11px] ${openSections.plan_hub ? 'text-amber-300' : 'text-white/40'}`}>
                                         {openSections.plan_hub ? '▼' : '▶'}
@@ -764,11 +764,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'annual_budget_requests' })}
                                     className={getSubLinkClass(url.includes('tab=annual_budget_requests'))}
-                                    title="ภาพรวมคำของบประมาณประจำปี แยก ๔ ฝ่าย พร้อมพิจารณาอนุมัติจัดสรร"
+                                    title="ภาพรวมคำของบประมาณประจำปี แยก 4 ฝ่าย พร้อมพิจารณาอนุมัติจัดสรร"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=annual_budget_requests'), 'text-amber-300')}>●</span>
                                     <span className="text-sm">📊</span>
-                                    {isSidebarOpen && <span className="font-black text-amber-300">ภาพรวมคำของบแยก ๔ ฝ่าย</span>}
+                                    {isSidebarOpen && <span className="font-black text-amber-300">ภาพรวมคำของบแยก 4 ฝ่าย</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'budgets' })}
@@ -782,11 +782,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'reviews' })}
                                     className={getSubLinkClass(url.includes('tab=reviews'))}
-                                    title="ตรวจสอบแผน & พิจารณาอนุมัติโครงการ (ขั้น ๓)"
+                                    title="ตรวจสอบแผน & พิจารณาอนุมัติโครงการ (ขั้น 3)"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=reviews'), 'text-amber-300')}>└─</span>
                                     <span className="text-sm">🔍</span>
-                                    {isSidebarOpen && <span>ตรวจสอบแผน & อนุมัติ (ขั้น ๓)</span>}
+                                    {isSidebarOpen && <span>ตรวจสอบแผน & อนุมัติ (ขั้น 3)</span>}
                                 </Link>
                                 <Link
                                     href={`${route('admin.routine_budgets.index')}?tab=create_plan`}
@@ -856,7 +856,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* 7. EXECUTIVE HUB (สำหรับ ผอ., รอง ผอ. ๔ ฝ่าย และ Admin) */}
+                        {/* 7. EXECUTIVE HUB (สำหรับ ผอ., รอง ผอ. 4 ฝ่าย และ Admin) */}
                         {(isExecutive || isAdmin) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
@@ -867,7 +867,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>🏛️</span>
-                                        <span>๗. ผู้บริหาร (Executive)</span>
+                                        <span>7. ผู้บริหาร (Executive)</span>
                                     </div>
                                     <span className={`text-[11px] ${openSections.executive_hub ? 'text-violet-300' : 'text-white/40'}`}>
                                         {openSections.executive_hub ? '▼' : '▶'}
@@ -882,11 +882,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'executive_overview' })}
                                     className={getSubLinkClass(url.includes('tab=executive_overview'))}
-                                    title="ภาพรวมผลงานและงบประมาณ ๔ ฝ่ายหลัก"
+                                    title="ภาพรวมผลงานและงบประมาณ 4 ฝ่ายหลัก"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=executive_overview'), 'text-violet-300')}>└─</span>
                                     <span className="text-sm">📈</span>
-                                    {isSidebarOpen && <span>ภาพรวมผลงาน & งบ ๔ ฝ่าย</span>}
+                                    {isSidebarOpen && <span>ภาพรวมผลงาน & งบ 4 ฝ่าย</span>}
                                 </Link>
                                 <Link
                                     href={route('strategies.dashboard')}
@@ -900,20 +900,20 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'annual_budget_requests' })}
                                     className={getSubLinkClass(url.includes('tab=annual_budget_requests'))}
-                                    title="คำของบประมาณ ๔ ฝ่าย & พิจารณาอนุมัติ"
+                                    title="คำของบประมาณ 4 ฝ่าย & พิจารณาอนุมัติ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=annual_budget_requests'), 'text-violet-300')}>●</span>
                                     <span className="text-sm">📊</span>
-                                    {isSidebarOpen && <span>คำของบประมาณ ๔ ฝ่าย</span>}
+                                    {isSidebarOpen && <span>คำของบประมาณ 4 ฝ่าย</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'budgets' })}
                                     className={getSubLinkClass(url.includes('tab=budgets'))}
-                                    title="ประมาณการรายจ่ายสถานศึกษา ๔ มิติ"
+                                    title="ประมาณการรายจ่ายสถานศึกษา 4 มิติ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=budgets'), 'text-violet-300')}>└─</span>
                                     <span className="text-sm">💰</span>
-                                    {isSidebarOpen && <span>ประมาณการรายจ่าย ๔ มิติ</span>}
+                                    {isSidebarOpen && <span>ประมาณการรายจ่าย 4 มิติ</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'action_plan_report' })}
@@ -927,11 +927,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'reviews' })}
                                     className={getSubLinkClass(url.includes('tab=reviews'))}
-                                    title="คิวลงนามอนุมัติของผู้บริหาร (ขั้น ๔-๖)"
+                                    title="คิวลงนามอนุมัติของผู้บริหาร (ขั้น 4-6)"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=reviews'), 'text-violet-300')}>└─</span>
                                     <span className="text-sm">✍️</span>
-                                    {isSidebarOpen && <span>คิวลงนามอนุมัติ (ขั้น ๔-๖)</span>}
+                                    {isSidebarOpen && <span>คิวลงนามอนุมัติ (ขั้น 4-6)</span>}
                                 </Link>
                             </div>
                             )}
@@ -949,7 +949,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <span>⚙️</span>
-                                        <span>๘. ผู้ดูแลระบบ (Admin)</span>
+                                        <span>8. ผู้ดูแลระบบ (Admin)</span>
                                     </div>
                                     <span className={`text-[11px] ${openSections.admin_console ? 'text-rose-300' : 'text-white/40'}`}>
                                         {openSections.admin_console ? '▼' : '▶'}
@@ -1087,7 +1087,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {/* 1. วงจรชีวิตโครงการ */}
                                 {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-amber-300 uppercase px-2">๑. งานเสนอ & วงจรโครงการ</div>
+                                        <div className="text-[10px] font-bold text-amber-300 uppercase px-2">1. งานเสนอ & วงจรโครงการ</div>
                                         <Link href={route('projects.quick_create')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>💡</span> เสนอโครงการเบื้องต้น
                                         </Link>
@@ -1106,24 +1106,24 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </div>
                                 )}
 
-                                {/* ๒. รายงานโครงการ ๕ บท */}
+                                {/* 2. รายงานโครงการ 5 บท */}
                                 {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">๒. รายงานโครงการ ๕ บท</div>
+                                        <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">2. รายงานโครงการ 5 บท</div>
                                         <Link href={route('dashboard', { tab: 'proposals', chapter: 1 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📘</span> บทที่ ๑: บทนำ & ข้อมูลโครงการ
+                                            <span>📘</span> บทที่ 1: บทนำ & ข้อมูลโครงการ
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'proposals', chapter: 2 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📗</span> บทที่ ๒: งานวิจัย & นโยบาย (AI)
+                                            <span>📗</span> บทที่ 2: งานวิจัย & นโยบาย (AI)
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'proposals', chapter: 3 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📙</span> บทที่ ๓: วิธีดำเนินงาน & พัสดุ
+                                            <span>📙</span> บทที่ 3: วิธีดำเนินงาน & พัสดุ
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'proposals', chapter: 4 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📕</span> บทที่ ๔: ผลดำเนินงาน & ประเมิน
+                                            <span>📕</span> บทที่ 4: ผลดำเนินงาน & ประเมิน
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'proposals', filter: 'reporting', chapter: 5 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📓</span> บทที่ ๕: สรุปผล & พิมพ์เล่ม ๕ บท
+                                            <span>📓</span> บทที่ 5: สรุปผล & พิมพ์เล่ม 5 บท
                                         </Link>
                                     </div>
                                 )}
@@ -1131,9 +1131,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {/* 3. จัดซื้อ & สัญญายืมเงิน */}
                                 {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-sky-300 uppercase px-2">๓. จัดซื้อจัดจ้าง & สัญญายืมเงิน</div>
+                                        <div className="text-[10px] font-bold text-sky-300 uppercase px-2">3. จัดซื้อจัดจ้าง & สัญญายืมเงิน</div>
                                         <Link href={route('dashboard', { tab: 'clearings' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📝</span> สัญญายืมเงิน กค.๑๐๑
+                                            <span>📝</span> สัญญายืมเงิน กค.101
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'clearings', action: 'new' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🧾</span> ส่งใบเสร็จเคลียร์เงินยืม
@@ -1147,7 +1147,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {/* 4. พัสดุ */}
                                 {(isProcurementStaff || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-blue-300 uppercase px-2">๔. งานพัสดุ</div>
+                                        <div className="text-[10px] font-bold text-blue-300 uppercase px-2">4. งานพัสดุ</div>
                                         <Link href={route('dashboard', { tab: 'procurement' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📋</span> คิวลงรับจัดซื้อ & กรรมการ
                                         </Link>
@@ -1163,7 +1163,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {/* 5. การเงิน */}
                                 {(isFinanceStaff || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">๕. งานการเงิน</div>
+                                        <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">5. งานการเงิน</div>
                                         <Link href={route('dashboard', { tab: 'central_budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🏛️</span> จัดสรรงบส่วนกลาง
                                         </Link>
@@ -1176,15 +1176,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {/* 6. แผนงาน */}
                                 {(isPlanStaff || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-amber-300 uppercase px-2">๖. งานแผนและงบประมาณ</div>
+                                        <div className="text-[10px] font-bold text-amber-300 uppercase px-2">6. งานแผนและงบประมาณ</div>
                                         <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-amber-300 font-bold">
-                                            <span>📊</span> ภาพรวมคำของบแยก ๔ ฝ่าย
+                                            <span>📊</span> ภาพรวมคำของบแยก 4 ฝ่าย
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>💰</span> งบสถานศึกษา & ประมาณการ
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>🔍</span> ตรวจสอบแผน (ขั้น ๓)
+                                            <span>🔍</span> ตรวจสอบแผน (ขั้น 3)
                                         </Link>
                                         <Link href={route('admin.routine_budgets.index')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📋</span> ตารางจัดสรรงบประจำปี
@@ -1195,15 +1195,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {/* 7. ผู้บริหาร */}
                                 {(isExecutive || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-violet-300 uppercase px-2">๗. ผู้บริหารสถานศึกษา</div>
+                                        <div className="text-[10px] font-bold text-violet-300 uppercase px-2">7. ผู้บริหารสถานศึกษา</div>
                                         <Link href={route('dashboard', { tab: 'executive_overview' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📈</span> ภาพรวม ๔ ฝ่าย
+                                            <span>📈</span> ภาพรวม 4 ฝ่าย
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📊</span> คำของบประมาณ ๔ ฝ่าย
+                                            <span>📊</span> คำของบประมาณ 4 ฝ่าย
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>✍️</span> คิวลงนามอนุมัติ (ขั้น ๔-๖)
+                                            <span>✍️</span> คิวลงนามอนุมัติ (ขั้น 4-6)
                                         </Link>
                                     </div>
                                 )}
@@ -1211,7 +1211,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {/* 8. Admin */}
                                 {isAdmin && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-rose-300 uppercase px-2">๘. ผู้ดูแลระบบ</div>
+                                        <div className="text-[10px] font-bold text-rose-300 uppercase px-2">8. ผู้ดูแลระบบ</div>
                                         <Link href={route('dashboard', { tab: 'admin_users' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>👤</span> จัดการผู้ใช้ & สิทธิ์
                                         </Link>
