@@ -84,8 +84,8 @@ export default function AuthenticatedLayout({ header, children }) {
         if (currentUrl.includes('routine-budgets') || (currentUrl.includes('tab=clearings') && !isFinanceStaff)) {
             return 'procurement_loan';
         }
-        if (currentUrl.includes('tab=proposals') || currentUrl.includes('tab=document_tracking') || currentUrl.includes('tab=reviews') || (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')))) {
-            return 'proposal';
+        if (currentUrl.includes('tab=proposals') || currentUrl.includes('tab=document_tracking') || currentUrl.includes('tab=reviews') || currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create') || route().current('strategies.dashboard')))) {
+            return isPlanStaff ? 'plan_hub' : 'proposal';
         }
         return null;
     };
@@ -433,6 +433,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className={getPrefixClass(url.includes('tab=document_tracking'))}>●</span>
                                     <span className="text-sm">📍</span>
                                     {isSidebarOpen && <span>ติดตามเอกสารและโครงการ</span>}
+                                </Link>
+                                <Link
+                                    href={route('strategies.dashboard')}
+                                    className={getSubLinkClass(route().current('strategies.dashboard'))}
+                                    title="แดชบอร์ดยุทธศาสตร์ & กรองโครงการตามยุทธศาสตร์สถานศึกษา"
+                                >
+                                    <span className={getPrefixClass(route().current('strategies.dashboard'))}>●</span>
+                                    <span className="text-sm">🎯</span>
+                                    {isSidebarOpen && <span className="font-bold text-amber-200">แดชบอร์ดยุทธศาสตร์โครงการ</span>}
                                 </Link>
                             </div>
                             )}
@@ -798,6 +807,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className="text-sm">🏛️</span>
                                     {isSidebarOpen && <span>สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                 </Link>
+                                <Link
+                                    href={route('strategies.dashboard')}
+                                    className={getSubLinkClass(route().current('strategies.dashboard'))}
+                                    title="แดชบอร์ดเชื่อมโยงยุทธศาสตร์และโครงการสถานศึกษา"
+                                >
+                                    <span className={getPrefixClass(route().current('strategies.dashboard'), 'text-amber-300')}>●</span>
+                                    <span className="text-sm">🎯</span>
+                                    {isSidebarOpen && <span className="font-black text-amber-300">แดชบอร์ดเชื่อมโยงยุทธศาสตร์</span>}
+                                </Link>
                             </div>
                             )}
                         </div>
@@ -832,6 +850,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className={getPrefixClass(url.includes('tab=executive_overview'), 'text-violet-300')}>└─</span>
                                     <span className="text-sm">📈</span>
                                     {isSidebarOpen && <span>ภาพรวมผลงาน & งบ ๔ ฝ่าย</span>}
+                                </Link>
+                                <Link
+                                    href={route('strategies.dashboard')}
+                                    className={getSubLinkClass(route().current('strategies.dashboard'))}
+                                    title="แดชบอร์ดภาพรวมการขับเคลื่อนยุทธศาสตร์สถานศึกษา"
+                                >
+                                    <span className={getPrefixClass(route().current('strategies.dashboard'), 'text-violet-300')}>●</span>
+                                    <span className="text-sm">🎯</span>
+                                    {isSidebarOpen && <span className="font-bold text-violet-200">ขับเคลื่อนยุทธศาสตร์สถานศึกษา</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'annual_budget_requests' })}

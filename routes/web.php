@@ -135,6 +135,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/admin/strategy-items/{item}', [AdminController::class, 'updateStrategyItem'])->name('admin.items.update');
     Route::patch('/admin/strategy-items/{item}/toggle', [AdminController::class, 'toggleStrategyItemActive'])->name('admin.items.toggle');
     Route::delete('/admin/strategy-items/{item}', [AdminController::class, 'deleteStrategyItem'])->name('admin.items.delete');
+    
+    // Strategic Alignment Dashboard & Filtering
+    Route::get('/strategies/dashboard', [\App\Http\Controllers\StrategyDashboardController::class, 'index'])->name('strategies.dashboard');
 
     // Projects CRUD & Approvals
     Route::get('projects/quick-create', [ProjectController::class, 'preliminaryCreate'])->name('projects.quick_create');
