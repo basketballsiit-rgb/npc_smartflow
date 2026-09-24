@@ -6,11 +6,15 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Department;
 use App\Models\Project;
+use App\Models\UserPosition;
+use App\Models\RoutineBudgetPlan;
 use App\Models\SystemSetting;
 use App\Models\IqaStrategy;
 use App\Models\OvecStrategy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
@@ -545,24 +549,56 @@ class AdminController extends Controller
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
         }
 
-        // Prevent deletion if there are active projects attached to this department
-        if (Project::where('department_id', $department->id)->count() > 0) {
-            return redirect()->back()->with('error', 'ไม่สามารถลบฝ่ายนี้ได้ เนื่องจากมีโครงการในระบบผูกอยู่กับฝ่ายนี้');
+        try {
+            DB::transaction(function () use ($department) {
+                // หาฝ่ายหลักสำรอง (Fallback) เพื่อย้ายโครงการและบุคลากรไปอยู่ฝ่ายที่ถูกต้อง
+                $fallbackDeptId = $department->parent_id;
+                if (!$fallbackDeptId) {
+                    // หากเป็นฝ่ายหลัก ให้ย้ายไปฝ่ายยุทธศาสตร์และแผนงาน หรือฝ่ายหลักแรกสุดที่มี
+                    $fallbackDeptId = Department::where('id', '!=', $department->id)
+                        ->whereNull('parent_id')
+                        ->where('name', 'like', '%ยุทธศาสตร์%')
+                        ->value('id')
+                        ?: Department::where('id', '!=', $department->id)->whereNull('parent_id')->value('id');
+                }
+
+                // 1. ปลอดภัย: ย้ายโครงการทั้งหมดที่ผูกกับฝ่ายนี้ ไปยังฝ่ายหลักสำรอง
+                Project::where('department_id', $department->id)->update([
+                    'department_id' => $fallbackDeptId
+                ]);
+
+                // 2. ปลอดภัย: ย้ายงบประมาณประจำ (Routine Budgets) ไปยังฝ่ายหลักสำรอง
+                RoutineBudgetPlan::where('department_id', $department->id)->update([
+                    'department_id' => $fallbackDeptId
+                ]);
+
+                // 3. ปลอดภัย: ย้ายบุคลากร (Users) ไปยังฝ่ายหลักสำรอง
+                User::where('department_id', $department->id)->update([
+                    'department_id' => $fallbackDeptId
+                ]);
+
+                // 4. ปลอดภัย: อัปเดตตำแหน่งงานใน user_positions
+                UserPosition::where('department_id', $department->id)->update([
+                    'department_id' => $fallbackDeptId
+                ]);
+                UserPosition::where('sub_department_id', $department->id)->update([
+                    'sub_department_id' => null
+                ]);
+
+                // 5. ปลอดภัย: ย้ายงานย่อยในฝ่ายนี้ (ถ้ามี) ไปสังกัด parent หรือยกระดับ
+                Department::where('parent_id', $department->id)->update([
+                    'parent_id' => $department->parent_id
+                ]);
+
+                // 6. ดำเนินการลบฝ่าย
+                $department->delete();
+            });
+
+            return redirect()->back()->with('success', 'ลบข้อมูลฝ่าย/สังกัดแผนกเรียบร้อยแล้ว');
+        } catch (\Throwable $e) {
+            Log::error('Delete Department Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return redirect()->back()->with('error', 'ไม่สามารถลบฝ่ายได้: ' . $e->getMessage());
         }
-
-        // Safely reassign users to parent department or null before deleting
-        User::where('department_id', $department->id)->update([
-            'department_id' => $department->parent_id
-        ]);
-
-        // Safely reassign any child sub-departments to parent department
-        Department::where('parent_id', $department->id)->update([
-            'parent_id' => $department->parent_id
-        ]);
-
-        $department->delete();
-
-        return redirect()->back()->with('success', 'ลบข้อมูลฝ่าย/สังกัดแผนกเรียบร้อยแล้ว');
     }
 
     /**

@@ -1577,7 +1577,7 @@ export default function Dashboard({
     const handleDeleteDepartment = (dept) => {
         Swal.fire({
             title: 'ยืนยันการลบฝ่าย/สังกัดแผนก?',
-            text: `ต้องการลบ "${dept.name}" หรือไม่?`,
+            text: `ต้องการลบ "${dept.name}" หรือไม่? หากมีโครงการหรืองานในสังกัด ระบบจะย้ายไปยังฝ่ายหลักสำรองให้อัตโนมัติ`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#e11d48',
@@ -1587,7 +1587,19 @@ export default function Dashboard({
         }).then((result) => {
             if (result.isConfirmed) {
                 router.delete(route('admin.departments.delete', dept.id), {
-                    onSuccess: () => Swal.fire('ลบสำเร็จ', 'ลบข้อมูลฝ่าย/สังกัดแผนกเรียบร้อยแล้ว', 'success')
+                    preserveScroll: true,
+                    onSuccess: (page) => {
+                        const flashError = page?.props?.flash?.error;
+                        if (flashError) {
+                            Swal.fire('ไม่สามารถลบได้', flashError, 'error');
+                        } else {
+                            Swal.fire('ลบสำเร็จ', 'ลบข้อมูลฝ่าย/สังกัดแผนกเรียบร้อยแล้ว', 'success');
+                        }
+                    },
+                    onError: (errors) => {
+                        const errorMsg = Object.values(errors).join('\n') || 'เกิดข้อผิดพลาดในการลบข้อมูล';
+                        Swal.fire('เกิดข้อผิดพลาด', errorMsg, 'error');
+                    }
                 });
             }
         });

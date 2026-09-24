@@ -268,29 +268,49 @@ class KeycloakController extends Controller
     }
 
     /**
-     * หา Department ที่ตรงกันใน npc_smartflow หรือสร้างใหม่
+     * หา Department ที่ตรงกันใน npc_smartflow หรือแมปเข้าฝ่ายหลักที่มีอยู่
      */
     private function resolveOrCreateDepartment(array $npcjobProfile): ?Department
     {
-        $departmentName = $npcjobProfile['department_name'] ?? null;
+        $departmentName = trim($npcjobProfile['department_name'] ?? '');
 
         if (!$departmentName) return null;
 
-        // หา department ที่ชื่อตรงกัน
+        // 1. หา department ที่ชื่อตรงกันเป๊ะ
         $dept = Department::where('name', $departmentName)->first();
+        if ($dept) return $dept;
 
-        if (!$dept) {
-            // สร้าง department ใหม่ถ้ายังไม่มี
-            $code = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $departmentName), 0, 10))
-                    ?: 'DEPT' . rand(100, 999);
-
-            $dept = Department::create([
-                'name' => $departmentName,
-                'code' => $code,
-            ]);
-
-            Log::info("สร้างฝ่ายใหม่จาก npcjob: {$departmentName} (code: {$code})");
+        // 2. ป้องกันการสร้างฝ่ายซ้ำซ้อน: แมปเข้า ๔ ฝ่ายหลักเดิมที่มีในระบบ
+        if (mb_strpos($departmentName, 'แผนงาน') !== false || mb_strpos($departmentName, 'ยุทธศาสตร์') !== false || mb_strpos($departmentName, 'วางแผน') !== false) {
+            $matched = Department::where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%')->first();
+            if ($matched) return $matched;
         }
+
+        if (mb_strpos($departmentName, 'บริหารทรัพยากร') !== false || mb_strpos($departmentName, 'บริหารจัดการ') !== false) {
+            $matched = Department::where('name', 'like', '%บริหารทรัพยากร%')->first();
+            if ($matched) return $matched;
+        }
+
+        if (mb_strpos($departmentName, 'วิชาการ') !== false) {
+            $matched = Department::where('name', 'like', '%วิชาการ%')->first();
+            if ($matched) return $matched;
+        }
+
+        if (mb_strpos($departmentName, 'พัฒนากิจการ') !== false || mb_strpos($departmentName, 'กิจการนักเรียน') !== false) {
+            $matched = Department::where('name', 'like', '%กิจการ%')->first();
+            if ($matched) return $matched;
+        }
+
+        // 3. สร้าง department ใหม่ถ้าไม่มีฝ่ายหลักที่ตรงกัน
+        $code = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $departmentName), 0, 10))
+                ?: 'DEPT' . rand(100, 999);
+
+        $dept = Department::create([
+            'name' => $departmentName,
+            'code' => $code,
+        ]);
+
+        Log::info("สร้างฝ่ายใหม่จาก npcjob: {$departmentName} (code: {$code})");
 
         return $dept;
     }
