@@ -35,11 +35,10 @@ class DatabaseSeeder extends Seeder
 
         // 2. Seed Departments
         $departments = [
-            ['name' => 'ฝ่ายบริหารจัดการ / งานวางแผน', 'code' => 'PLAN'],
-            ['name' => 'ฝ่ายวิชาการ / สาขาวิชาการ', 'code' => 'ACAD'],
+            ['name' => 'ฝ่ายบริหารทรัพยากร', 'code' => 'PLAN'],
+            ['name' => 'ฝ่ายวิชาการ', 'code' => 'ACAD'],
             ['name' => 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', 'code' => 'STUD'],
-            ['name' => 'ฝ่ายบริหารงานทั่วไป / งานพัสดุ', 'code' => 'ADMIN'],
-            ['name' => 'ฝ่ายบริหารจัดการ / งานการเงิน', 'code' => 'FIN'],
+            ['name' => 'ฝ่ายยุทธศาสตร์และแผนงาน', 'code' => 'ADMIN'],
         ];
 
         foreach ($departments as $deptData) {

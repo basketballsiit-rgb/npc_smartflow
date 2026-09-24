@@ -8,6 +8,14 @@ use App\Models\Department;
 use App\Models\Project;
 use App\Models\UserPosition;
 use App\Models\RoutineBudgetPlan;
+use App\Models\Budget;
+use App\Models\ProjectApproval;
+use App\Models\Procurement;
+use App\Models\Survey;
+use App\Models\Appendix;
+use App\Models\ProjectPhoto;
+use App\Models\ExpenseClearing;
+use App\Models\TravelLoan;
 use App\Models\SystemSetting;
 use App\Models\IqaStrategy;
 use App\Models\OvecStrategy;
@@ -600,6 +608,102 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'ไม่สามารถลบฝ่ายได้: ' . $e->getMessage());
         }
     }
+
+    /**
+     * ลบและทำความสะอาดฝ่ายซ้ำซ้อนและโครงการทดสอบตามที่ระบุ
+     */
+    public static function cleanupDuplicateDepartments(): array
+    {
+        $targetNames = [
+            'ฝ่ายบริหารจัดการ / งานวางแผน',
+            'ฝ่ายวิชาการ / สาขาวิชาการ',
+        ];
+
+        $results = [
+            'deleted_departments' => [],
+            'deleted_projects' => [],
+            'reassigned_users' => 0,
+        ];
+
+        $depts = Department::whereIn('name', $targetNames)
+            ->orWhere('name', 'like', '%ฝ่ายบริหารจัดการ / งานวางแผน%')
+            ->orWhere('name', 'like', '%ฝ่ายวิชาการ / สาขาวิชาการ%')
+            ->get();
+
+        if ($depts->isEmpty()) {
+            return $results;
+        }
+
+        DB::transaction(function () use ($depts, &$results) {
+            $planDept = Department::where('name', 'like', '%ฝ่ายยุทธศาสตร์และแผนงาน%')->first()
+                ?: Department::where('name', 'like', '%แผนงาน%')->first();
+            $acadDept = Department::where('name', 'ฝ่ายวิชาการ')->first()
+                ?: Department::where('name', 'like', '%วิชาการ%')->whereNotIn('name', ['ฝ่ายวิชาการ / สาขาวิชาการ'])->first();
+
+            foreach ($depts as $dept) {
+                // 1. ระบุฝ่ายหลักที่ถูกต้องสำหรับย้ายบุคลากร
+                $correctDept = str_contains($dept->name, 'วางแผน') ? $planDept : $acadDept;
+                $correctDeptId = $correctDept?->id ?: Department::whereNotIn('id', $depts->pluck('id'))->whereNull('parent_id')->value('id');
+
+                // 2. ลบโครงการทั้งหมดที่อยู่ใต้ฝ่ายซ้ำซ้อนนี้ (เนื่องจากเป็นโครงการทดสอบตามที่ผู้ใช้ร้องขอ)
+                $projects = Project::where('department_id', $dept->id)->get();
+                foreach ($projects as $proj) {
+                    Budget::where('project_id', $proj->id)->delete();
+                    ProjectApproval::where('project_id', $proj->id)->delete();
+                    Procurement::where('project_id', $proj->id)->delete();
+                    Survey::where('project_id', $proj->id)->delete();
+                    Appendix::where('project_id', $proj->id)->delete();
+                    ProjectPhoto::where('project_id', $proj->id)->delete();
+                    ExpenseClearing::where('project_id', $proj->id)->delete();
+                    TravelLoan::where('project_id', $proj->id)->update(['project_id' => null]);
+
+                    $results['deleted_projects'][] = [
+                        'id' => $proj->id,
+                        'title' => $proj->title,
+                        'budget' => $proj->estimated_budget,
+                    ];
+                    $proj->delete();
+                }
+
+                // 3. ย้ายบุคลากรไปยังฝ่ายที่ถูกต้อง
+                if ($correctDeptId) {
+                    $userCount = User::where('department_id', $dept->id)->update(['department_id' => $correctDeptId]);
+                    UserPosition::where('department_id', $dept->id)->update(['department_id' => $correctDeptId]);
+                    UserPosition::where('sub_department_id', $dept->id)->update(['sub_department_id' => null]);
+                    Department::where('parent_id', $dept->id)->update(['parent_id' => $correctDeptId]);
+                    RoutineBudgetPlan::where('department_id', $dept->id)->update(['department_id' => $correctDeptId]);
+                    $results['reassigned_users'] += $userCount;
+                }
+
+                // 4. ลบฝ่ายซ้ำซ้อน
+                $results['deleted_departments'][] = [
+                    'id' => $dept->id,
+                    'name' => $dept->name,
+                ];
+                $dept->delete();
+            }
+        });
+
+        Log::info("Cleanup Duplicate Departments Results: " . json_encode($results, JSON_UNESCAPED_UNICODE));
+
+        return $results;
+    }
+
+    /**
+     * Web endpoint สำหรับให้ Admin สั่งลบทำความสะอาดฝ่ายซ้ำซ้อนและโครงการทดสอบ
+     */
+    public function runCleanupDuplicateDepartments()
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        }
+
+        $results = self::cleanupDuplicateDepartments();
+
+        return redirect()->route('dashboard', ['tab' => 'admin_users'])
+            ->with('success', 'ลบข้อมูลฝ่ายซ้ำซ้อนและโครงการทดสอบเรียบร้อยแล้ว (' . count($results['deleted_departments']) . ' ฝ่าย, ' . count($results['deleted_projects']) . ' โครงการ)');
+    }
+
 
     /**
      * Store a newly created funding source (by Plan Staff or Admin).

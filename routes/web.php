@@ -88,6 +88,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/admin/users/{user}/toggle', [AdminController::class, 'toggleUserStatus'])->name('admin.users.toggle');
     Route::delete('/admin/users/{user}', [AdminController::class, 'deleteUser'])->name('admin.users.delete');
     Route::post('/admin/users/sync-line-ids', [AdminController::class, 'syncAllLineUsersFromEleve'])->name('admin.users.sync_line_ids');
+    Route::match(['get', 'post'], '/admin/cleanup-departments', [AdminController::class, 'runCleanupDuplicateDepartments'])->name('admin.cleanup_departments');
     Route::post('/admin/settings', [AdminController::class, 'updateSettings'])->name('admin.settings.update');
 
     // Funding Sources Management (Plan Staff & Admin)
