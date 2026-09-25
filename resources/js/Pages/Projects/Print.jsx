@@ -111,10 +111,24 @@ export default function Print({ project, strategyCategories = [] }) {
         large: { docSize: '16.5px', lineHeight: '1.5', tableSize: '14px', titleSize: '17.5px' },
     }[fontSizePreset];
 
-    const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล');
-    const formattedProjectTitle = project.title 
-        ? (project.title.trim().startsWith('โครงการ') ? project.title.trim().replace(/^โครงการ\s*/, '') : project.title.trim())
-        : '';
+    const formatProjectTitleForApproval = (title) => {
+        if (!title) return '';
+        let clean = title.trim();
+        // Remove redundant leading 'โครงการการ...', 'โครงการ...', or 'การ...'
+        // so that "๑๒. การอนุมัติโครงการ..." flows naturally into the action verb
+        clean = clean.replace(/^โครงการ\s*การ\s*/, '')
+                     .replace(/^โครงการ\s*/, '')
+                     .replace(/^การ\s*/, '');
+        
+        // Prevent awkward word breaking where only "น่าน" or province is cut off from college name
+        clean = clean.replace(/วิทยาลัยสารพัดช่าง\s*น่าน/g, 'วิทยาลัยสารพัดช่าง\u2060น่าน');
+
+        // Allow natural Thai phrase boundary breaking before "เพื่อ" if attached to preceding word
+        clean = clean.replace(/([^\s])(เพื่อ)/g, '$1 $2');
+
+        return clean;
+    };
+    const formattedProjectTitle = formatProjectTitleForApproval(project.title);
 
     const getApprovalByStep = (step) => {
         return project.approvals?.find(a => a.step_number === step && (a.status === 'approved' || a.status === 'submitted'));
@@ -751,7 +765,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                 {/* Section 12: การอนุมัติโครงการ */}
                 <div className="pt-8 print-break-inside-avoid font-sarabun">
-                    <p className="print-title font-bold text-slate-900 mb-8">
+                    <p className="print-title font-bold text-slate-900 mb-8 pl-[2.2rem] -indent-[2.2rem] leading-relaxed text-left" style={{ textWrap: 'pretty' }}>
                         ๑๒. การอนุมัติโครงการ{formattedProjectTitle ? toThaiNumerals(formattedProjectTitle) : '......................................................'}
                     </p>
                     
@@ -923,10 +937,10 @@ export default function Print({ project, strategyCategories = [] }) {
                                         ผู้อนุมัติโครงการ
                                     </span>
                                 </div>
-                                <p className="font-bold text-sm sm:text-base pt-1.5 whitespace-nowrap">
+                                <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
                                     ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : 'นายกเชษฐ์ กิ่งชนะ'})
                                 </p>
-                                <p className="text-[12px] font-semibold leading-relaxed pt-0.5 text-slate-800">
+                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal text-slate-800">
                                     {sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'}
                                 </p>
                             </div>
