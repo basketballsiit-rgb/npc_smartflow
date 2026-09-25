@@ -18,8 +18,8 @@ class StrategyDashboardController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-        if (!$user || (!$user->isAdmin() && !$user->isExecutive() && !$user->isPlanStaff() && !$user->isPlanHead())) {
-            abort(403, 'เฉพาะผู้บริหารและเจ้าหน้าที่งานแผนงานเท่านั้นที่มีสิทธิ์เข้าถึงหน้านี้');
+        if (!$user) {
+            return redirect()->route('login');
         }
 
         $currentFiscalYear = SystemSetting::where('key', 'current_fiscal_year')->value('value') ?: (date('Y') + 543);

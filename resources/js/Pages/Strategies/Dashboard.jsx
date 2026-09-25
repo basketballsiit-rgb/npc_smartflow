@@ -42,6 +42,7 @@ export default function Dashboard({
     const [selectedStatus, setSelectedStatus] = useState(filters.status || 'all');
     const [selectedCoverage, setSelectedCoverage] = useState(filters.coverage || 'all');
     const [activeCategoryTab, setActiveCategoryTab] = useState(filters.category_id || 'all');
+    const [searchTerm, setSearchTerm] = useState(filters.search || '');
 
     const toArabic = (str) => {
         if (!str || typeof str !== 'string') return str;
@@ -60,7 +61,7 @@ export default function Dashboard({
     const [expandedItems, setExpandedItems] = useState(() => {
         // By default, expand items that have projects
         const initial = {};
-        categories.forEach(cat => {
+        (categories || []).forEach(cat => {
             (cat.items || []).forEach(item => {
                 if (item.projects_count > 0) {
                     initial[item.id] = true;
@@ -79,7 +80,7 @@ export default function Dashboard({
 
     const expandAll = () => {
         const next = {};
-        categories.forEach(cat => {
+        (categories || []).forEach(cat => {
             (cat.items || []).forEach(item => {
                 next[item.id] = true;
             });
@@ -877,7 +878,7 @@ export default function Dashboard({
                             </span>
                         </button>
 
-                        {categories.map((cat, idx) => {
+                        {categories.map((cat) => {
                             const isActive = String(activeCategoryTab) === String(cat.id);
                             return (
                                 <button
@@ -1117,7 +1118,7 @@ export default function Dashboard({
                                                             {hasProjects ? (
                                                                 <div className="mt-2 space-y-2">
                                                                     <div className="flex items-center justify-between text-xs font-bold text-slate-600 px-1 mb-2">
-                                                                        <span>รายชื่อโครงการที่ขับเคลื่อนยุทธศาสตร์ข้อนี้ ({item.projects.length} โครงการ)</span>
+                                                                        <span>รายชื่อโครงการที่ขับเคลื่อนยุทธศาสตร์ข้อนี้ ({(item.projects || []).length} โครงการ)</span>
                                                                         <span className="text-[11px] text-slate-400 font-normal">คลิกชื่อโครงการเพื่อเปิดดูรายละเอียดฉบับเต็ม</span>
                                                                     </div>
 
@@ -1136,7 +1137,7 @@ export default function Dashboard({
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody className="divide-y divide-slate-100">
-                                                                                {item.projects.map((proj, pIdx) => (
+                                                                                {(item.projects || []).map((proj, pIdx) => (
                                                                                     <tr key={proj.id} className="hover:bg-purple-50/40 transition">
                                                                                         <td className="py-3 px-3 text-center text-slate-400 font-medium">
                                                                                             {pIdx + 1}
@@ -1190,7 +1191,7 @@ export default function Dashboard({
 
                                                                     {/* Mobile Card List View */}
                                                                     <div className="space-y-2 sm:hidden">
-                                                                        {item.projects.map((proj, pIdx) => (
+                                                                        {(item.projects || []).map((proj) => (
                                                                             <div key={proj.id} className="p-3 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2">
                                                                                 <div className="flex items-start justify-between gap-2">
                                                                                     <Link
