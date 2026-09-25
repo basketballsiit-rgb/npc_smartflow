@@ -4228,26 +4228,28 @@ ${itemsListText}
 
     // 2. Plan Head Component Rendering
     const renderBudgetsTab = () => {
-        if (!planHeadData) {
-            return (
-                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm font-sans">
-                    <p className="text-purple-900 font-bold text-base">กำลังโหลดข้อมูลงบประมาณ...</p>
-                </div>
-            );
-        }
+        const pHead = planHeadData || {
+            globalAllocated: 0,
+            globalSpent: 0,
+            globalEncumbered: 0,
+            fundingSources: allFundingSources || [],
+            fundingChannelProgress: fundingChannelProgress || [],
+            preliminaryQueue: [],
+            planHeadQueue: [],
+        };
 
         const routineAllocated = routinePlans.reduce((sum, p) => sum + parseFloat(p.allocated_amount || 0), 0);
         const routineSpent = routinePlans.reduce((sum, p) => sum + parseFloat(p.spent_amount || 0), 0);
         const routineRemaining = routineAllocated - routineSpent;
 
-        const totalAllocatedAll = parseFloat(planHeadData.globalAllocated || 0) + routineAllocated;
-        const totalSpentAll = parseFloat(planHeadData.globalSpent || 0) + routineSpent;
+        const totalAllocatedAll = parseFloat(pHead.globalAllocated || 0) + routineAllocated;
+        const totalSpentAll = parseFloat(pHead.globalSpent || 0) + routineSpent;
         const totalRemainingAll = totalAllocatedAll - totalSpentAll;
 
         const totalCentralReceived = centralAllocations.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
         const centralRemaining = totalCentralReceived - totalAllocatedAll;
 
-        const isPlanHeadOrAdmin = role === 'admin' || role === 'plan_head' || auth.user.is_plan_head;
+        const isPlanHeadOrAdmin = role === 'admin' || role === 'plan_head' || auth.user.is_plan_head || auth.user.is_plan_staff || auth.user.is_executive || role === 'executive';
 
         return (
             <div className="space-y-8 font-sans">
@@ -4307,9 +4309,9 @@ ${itemsListText}
                                 name: '๒. งบโครงการตามแผนปฏิบัติราชการประจำปี',
                                 description: 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
                                 projected_ceiling: 5000000.00,
-                                requested_amount: parseFloat(planHeadData.globalAllocated || 0),
-                                allocated_amount: parseFloat(planHeadData.globalAllocated || 0),
-                                spent_amount: parseFloat(planHeadData.globalSpent || 0),
+                                requested_amount: parseFloat(pHead.globalAllocated || 0),
+                                allocated_amount: parseFloat(pHead.globalAllocated || 0),
+                                spent_amount: parseFloat(pHead.globalSpent || 0),
                             },
                             {
                                 id: 'utilities_overhead',
@@ -4332,8 +4334,8 @@ ${itemsListText}
                         ],
                         summary: {
                             total_projected_ceiling: 10000000.00,
-                            total_requested: (parseFloat(planHeadData.globalAllocated || 0) + routineAllocated + totalCentralReceived),
-                            total_allocated: (parseFloat(planHeadData.globalAllocated || 0) + routineAllocated + totalCentralReceived + 1000000.00),
+                            total_requested: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived),
+                            total_allocated: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived + 1000000.00),
                             total_spent: totalSpentAll,
                         }
                     };
@@ -4450,19 +4452,19 @@ ${itemsListText}
                             <div className="p-2 bg-gray-50 rounded-xl">
                                 <span className="text-[10px] text-gray-500 block">จัดสรร</span>
                                 <span className="text-xs font-bold text-gray-800">
-                                    {new Intl.NumberFormat('th-TH').format(planHeadData.globalAllocated)}
+                                    {new Intl.NumberFormat('th-TH').format(pHead.globalAllocated)}
                                 </span>
                             </div>
                             <div className="p-2 bg-gray-50 rounded-xl">
                                 <span className="text-[10px] text-gray-500 block">ผูกพัน</span>
                                 <span className="text-xs font-bold text-amber-600">
-                                    {new Intl.NumberFormat('th-TH').format(planHeadData.globalEncumbered)}
+                                    {new Intl.NumberFormat('th-TH').format(pHead.globalEncumbered)}
                                 </span>
                             </div>
                             <div className="p-2 bg-gray-50 rounded-xl">
                                 <span className="text-[10px] text-gray-500 block">เบิกจ่าย</span>
                                 <span className="text-xs font-bold text-red-600">
-                                    {new Intl.NumberFormat('th-TH').format(planHeadData.globalSpent)}
+                                    {new Intl.NumberFormat('th-TH').format(pHead.globalSpent)}
                                 </span>
                             </div>
                         </div>
@@ -4471,13 +4473,13 @@ ${itemsListText}
                             <div className="flex justify-between text-[11px] text-gray-500">
                                 <span>อัตราการเบิกจ่ายโครงการ</span>
                                 <span>
-                                    {planHeadData.globalAllocated > 0 ? ((planHeadData.globalSpent / planHeadData.globalAllocated) * 100).toFixed(1) : 0}%
+                                    {pHead.globalAllocated > 0 ? ((pHead.globalSpent / pHead.globalAllocated) * 100).toFixed(1) : 0}%
                                 </span>
                             </div>
                             <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                                 <div 
                                     className="bg-purple-600 h-full rounded-full" 
-                                    style={{ width: `${planHeadData.globalAllocated > 0 ? Math.min((planHeadData.globalSpent / planHeadData.globalAllocated) * 100, 100) : 0}%` }}
+                                    style={{ width: `${pHead.globalAllocated > 0 ? Math.min((pHead.globalSpent / pHead.globalAllocated) * 100, 100) : 0}%` }}
                                 />
                             </div>
                         </div>
@@ -4568,7 +4570,7 @@ ${itemsListText}
                                         className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
                                     >
                                         <option value="">เลือกแหล่งเงินทุน...</option>
-                                        {planHeadData?.fundingSources?.map(src => (
+                                        {(pHead?.fundingSources || allFundingSources || []).map(src => (
                                             <option key={src.id} value={src.id}>{src.name}</option>
                                         ))}
                                     </select>
@@ -4761,7 +4763,7 @@ ${itemsListText}
                                         className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
                                     >
                                         <option value="">เลือกแหล่งเงินทุน...</option>
-                                        {planHeadData?.fundingSources?.map(src => (
+                                        {(pHead?.fundingSources || allFundingSources || []).map(src => (
                                             <option key={src.id} value={src.id}>{src.name}</option>
                                         ))}
                                     </select>
@@ -4996,7 +4998,7 @@ ${itemsListText}
                 <div className="rounded-3xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
                     <h3 className="font-extrabold text-gray-800 text-base">💵 งบจำแนกตามช่องทางเงินทุน (โครงการ)</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {planHeadData.fundingChannelProgress?.map((source) => (
+                        {(pHead.fundingChannelProgress || fundingChannelProgress || [])?.map((source) => (
                             <div key={source.id} className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100/50 space-y-2">
                                 <span className="font-bold text-xs text-purple-900 block truncate">{source.name}</span>
                                 <div className="space-y-1">
@@ -5789,21 +5791,18 @@ ${itemsListText}
     };
 
     const renderReviewsTab = () => {
-        if (!planHeadData) {
-            return (
-                <div className="rounded-2xl border border-purple-100 bg-white p-8 text-center shadow-sm font-sans">
-                    <p className="text-purple-900 font-bold text-base">กำลังโหลดคิวอนุมัติโครงการ...</p>
-                </div>
-            );
-        }
+        const pHead = planHeadData || {
+            preliminaryQueue: [],
+            planHeadQueue: [],
+        };
 
-        const prelimCount = planHeadData.preliminaryQueue?.filter(p => p.status === 'preliminary').length || 0;
-        const allocCount = planHeadData.preliminaryQueue?.filter(p => p.status === 'budget_approved').length || 0;
-        const rejectCount = planHeadData.preliminaryQueue?.filter(p => p.status === 'budget_rejected').length || 0;
+        const prelimCount = pHead.preliminaryQueue?.filter(p => p.status === 'preliminary').length || 0;
+        const allocCount = pHead.preliminaryQueue?.filter(p => p.status === 'budget_approved').length || 0;
+        const rejectCount = pHead.preliminaryQueue?.filter(p => p.status === 'budget_rejected').length || 0;
 
         // Group preliminary projects by department
         const prelimByDeptMap = {};
-        (planHeadData.preliminaryQueue || []).forEach(p => {
+        (pHead.preliminaryQueue || []).forEach(p => {
             const deptId = p.department_id || p.department?.id || 'other';
             const deptName = p.department?.name || 'ฝ่ายงานทั่วไป';
             if (!prelimByDeptMap[deptId]) {
@@ -5832,8 +5831,8 @@ ${itemsListText}
         });
         const prelimDeptList = Object.values(prelimByDeptMap).sort((a, b) => b.proposedSum - a.proposedSum);
 
-        const totalProposedSum = (planHeadData.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.proposed_budget || p.estimated_budget || 0), 0);
-        const totalAllocatedSum = (planHeadData.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.allocated_budget || 0), 0);
+        const totalProposedSum = (pHead.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.proposed_budget || p.estimated_budget || 0), 0);
+        const totalAllocatedSum = (pHead.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.allocated_budget || 0), 0);
 
         return (
             <div className="space-y-8 font-sans">
@@ -5905,7 +5904,7 @@ ${itemsListText}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-amber-100/60">
-                                {(!planHeadData.preliminaryQueue || planHeadData.preliminaryQueue.length === 0) ? (
+                                {(!pHead.preliminaryQueue || pHead.preliminaryQueue.length === 0) ? (
                                     <tr>
                                         <td colSpan="6" className="px-6 py-8 text-center text-xs text-slate-500">
                                             ยังไม่มีรายการข้อเสนอโครงการเบื้องต้นในระบบ
@@ -6059,11 +6058,11 @@ ${itemsListText}
                                     })
                                 )}
                             </tbody>
-                            {planHeadData.preliminaryQueue && planHeadData.preliminaryQueue.length > 0 && (
+                            {pHead.preliminaryQueue && pHead.preliminaryQueue.length > 0 && (
                                 <tfoot className="border-t-2 border-amber-300 bg-amber-100/70 font-black text-xs text-purple-950">
                                     <tr>
                                         <td colSpan={2} className="px-3.5 py-3 font-bold text-sm">
-                                            📊 ยอดรวมทุกฝ่าย ({planHeadData.preliminaryQueue.length} โครงการ)
+                                            📊 ยอดรวมทุกฝ่าย ({pHead.preliminaryQueue.length} โครงการ)
                                         </td>
                                         <td className="px-3 py-3 text-right font-mono font-black text-sm text-slate-950 whitespace-nowrap">
                                             ฿{new Intl.NumberFormat('th-TH').format(totalProposedSum)}
@@ -6072,7 +6071,7 @@ ${itemsListText}
                                             ฿{new Intl.NumberFormat('th-TH').format(totalAllocatedSum)}
                                         </td>
                                         <td className="px-2 py-3 text-center text-xs font-bold text-slate-700 whitespace-nowrap">
-                                            {allocCount}/{planHeadData.preliminaryQueue.length} โครงการ
+                                            {allocCount}/{pHead.preliminaryQueue.length} โครงการ
                                         </td>
                                         <td className="px-2.5 py-3 text-right text-xs text-slate-600">
                                             {prelimCount > 0 ? `รอจัดสรร ${prelimCount}` : 'จัดสรรครบแล้ว'}
@@ -6085,7 +6084,7 @@ ${itemsListText}
                 </div>
 
                 {/* 1.5 External Travel Loans Queue (จากระบบ npc_eleve) */}
-                {planHeadData && (
+                {pHead && (
                     <div className="overflow-hidden rounded-3xl border border-purple-200 bg-white shadow-sm">
                         <div className="border-b border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
@@ -6260,7 +6259,7 @@ ${itemsListText}
                             <p className="text-xs text-slate-600 mt-0.5">ตรวจสอบรายละเอียดข้อเสนอโครงการฉบับสมบูรณ์ และอนุมัติส่งต่อตามลำดับสายงาน 6 ขั้นตอน</p>
                         </div>
                         <div className="bg-purple-100/70 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
-                            รออนุมัติในระบบ: {planHeadData.planHeadQueue?.length || 0} รายการ
+                            รออนุมัติในระบบ: {pHead.planHeadQueue?.length || 0} รายการ
                         </div>
                     </div>
                     <div className="overflow-x-auto">
@@ -6275,14 +6274,14 @@ ${itemsListText}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-purple-100 text-sm">
-                                {(!planHeadData.planHeadQueue || planHeadData.planHeadQueue.length === 0) ? (
+                                {(!pHead.planHeadQueue || pHead.planHeadQueue.length === 0) ? (
                                     <tr>
                                         <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
                                             ไม่มีรายการโครงการรออนุมัติในคิวงานขณะนี้
                                         </td>
                                     </tr>
                                 ) : (
-                                    planHeadData.planHeadQueue.map((p) => (
+                                    pHead.planHeadQueue.map((p) => (
                                         <tr key={p.id} className="hover:bg-purple-50/20 transition-all">
                                             <td className="px-6 py-4 font-bold text-slate-900 max-w-xs truncate" title={p.title}>
                                                 {p.title}

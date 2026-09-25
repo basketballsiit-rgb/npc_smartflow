@@ -156,6 +156,13 @@ class User extends Authenticatable
     {
         if ($this->isAdmin()) return true;
         if ($this->role?->name === 'plan_head') return true;
+
+        // รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ / รองฝ่ายยุทธศาสตร์และแผนงาน
+        $userPosText = ($this->position ?? '') . ' ' . $this->userPositions()->pluck('position')->implode(' ');
+        if (str_contains($userPosText, 'รองผู้อำนวยการ') && (str_contains($userPosText, 'แผน') || str_contains($userPosText, 'ยุทธศาสตร์'))) {
+            return true;
+        }
+
         return $this->userPositions()
             ->where(function($q) {
                 $q->where('position', 'like', '%หัวหน้างานแผน%')
@@ -170,10 +177,12 @@ class User extends Authenticatable
     {
         if ($this->isAdmin() || $this->isPlanHead()) return true;
         if ($this->role?->name === 'plan_staff') return true;
-        if ($this->department && ($this->department->code === 'PLAN' || str_contains($this->department->name, 'แผน'))) return true;
+        if ($this->department && ($this->department->code === 'PLAN' || str_contains($this->department->name, 'แผน') || str_contains($this->department->name, 'ยุทธศาสตร์'))) return true;
         return str_contains($this->position ?? '', 'แผน') ||
+            str_contains($this->position ?? '', 'ยุทธศาสตร์') ||
             $this->userPositions()->where(function($q) {
                 $q->where('position', 'like', '%แผน%')
+                  ->orWhere('position', 'like', '%ยุทธศาสตร์%')
                   ->orWhere('sub_department_id', function($sub) {
                       $sub->select('id')->from('departments')->where('name', 'like', '%แผน%');
                   });

@@ -67,8 +67,8 @@ class DashboardController extends Controller
                 ->get();
         }
 
-        // Fetch central allocations based on permissions (Admin, Plan Head, Finance Staff)
-        if ($user->isAdmin() || $user->isPlanHead() || $user->isFinanceStaff()) {
+        // Fetch central allocations based on permissions (Admin, Plan Head, Plan Staff, Executive, Finance Staff)
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || $user->isFinanceStaff() || in_array($request->query('tab'), ['budgets', 'action_plan_report', 'central_budgets', 'annual_budget_requests'])) {
             $data['centralAllocations'] = \App\Models\CentralAllocation::with(['fundingSource'])->latest()->get();
         } else {
             $data['centralAllocations'] = [];
@@ -259,8 +259,8 @@ class DashboardController extends Controller
             'totalBudget' => Project::where('user_id', $user->id)->sum('estimated_budget'),
         ];
 
-        // 2. Plan Head Dashboard Data
-        if ($user->isPlanHead() || $user->isAdmin()) {
+        // 2. Plan Head, Plan Staff & Executive Dashboard Data
+        if ($user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || $user->isAdmin() || in_array($request->query('tab'), ['budgets', 'annual_budget_requests', 'action_plan_report', 'reviews'])) {
             $data['planHeadData'] = [
                 'fundingSources' => $fundingSources,
                 'globalAllocated' => Budget::sum('allocated_amount'),
@@ -552,7 +552,7 @@ class DashboardController extends Controller
         }
 
         // Master Projects list for Admin, Plan Head, Plan Staff, Procurement, Finance & Executives
-        if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isProcurementHead() || $user->isProcurementStaff() || $user->isFinanceStaff() || $user->isExecutive() || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests'])) {
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isProcurementHead() || $user->isProcurementStaff() || $user->isFinanceStaff() || $user->isExecutive() || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets'])) {
             $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
                 ->latest()
                 ->get()
