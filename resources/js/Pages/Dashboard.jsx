@@ -2573,31 +2573,132 @@ export default function Dashboard({
         });
     };
 
+    const handleAddMainTopic = (cat) => {
+        Swal.fire({
+            title: `📁 เพิ่มหัวข้อหลักใหม่ (${cat.name})`,
+            html: `
+                <div class="text-left space-y-3 font-sans text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">
+                            ชื่อหัวข้อหลัก / ยุทธศาสตร์หลัก / นโยบายหลัก <span class="text-rose-500">*</span>:
+                        </label>
+                        <input id="swal-main-group" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น ยุทธศาสตร์ที่ 1 ด้านความมั่นคง / พันธกิจที่ 1... / นโยบายหลักที่ 1...">
+                        <p class="text-[11px] text-slate-500 mt-1">💡 หัวข้อหลักนี้จะใช้เป็นกลุ่มสำหรับบรรจุรายการย่อย/กลยุทธ์ต่าง ๆ (เพิ่มได้ไม่จำกัด)</p>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">
+                            รายการย่อย / กลยุทธ์ข้อแรก <span class="text-rose-500">*</span>:
+                        </label>
+                        <textarea id="swal-sub-item" rows="3" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น กลยุทธ์ที่ 1.1 ส่งเสริมและพัฒนา... (สามารถเพิ่มข้ออื่น ๆ ในหัวข้อนี้ต่อได้เรื่อย ๆ)"></textarea>
+                    </div>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: '💾 บันทึกหัวข้อหลัก',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#7c3aed',
+            preConfirm: () => {
+                const groupName = document.getElementById('swal-main-group').value.trim();
+                const itemName = document.getElementById('swal-sub-item').value.trim();
+                if (!groupName) {
+                    Swal.showValidationMessage('กรุณาระบุชื่อหัวข้อหลัก');
+                    return false;
+                }
+                if (!itemName) {
+                    Swal.showValidationMessage('กรุณาระบุรายการย่อยข้อแรก');
+                    return false;
+                }
+                return { group_name: groupName, name: itemName };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.items.store'), {
+                    strategy_category_id: cat.id,
+                    group_name: result.value.group_name,
+                    name: result.value.name,
+                }, {
+                    onSuccess: () => Swal.fire('สำเร็จ', 'เพิ่มหัวข้อหลักและรายการย่อยเรียบร้อยแล้ว', 'success')
+                });
+            }
+        });
+    };
+
+    const handleEditMainTopic = (cat, oldGroupName) => {
+        Swal.fire({
+            title: '✏️ แก้ไขชื่อหัวข้อหลัก',
+            input: 'text',
+            inputValue: oldGroupName,
+            inputLabel: `ชื่อหัวข้อหลักในหมวด: ${cat.name}`,
+            inputPlaceholder: 'ระบุชื่อหัวข้อหลักใหม่...',
+            showCancelButton: true,
+            confirmButtonText: '💾 อัปเดตชื่อ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#7c3aed',
+            inputValidator: (value) => {
+                if (!value || !value.trim()) return 'กรุณาระบุชื่อหัวข้อหลัก';
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value.trim() !== oldGroupName) {
+                router.put(route('admin.groups.update'), {
+                    strategy_category_id: cat.id,
+                    old_group_name: oldGroupName,
+                    new_group_name: result.value.trim(),
+                }, {
+                    onSuccess: () => Swal.fire('สำเร็จ', 'เปลี่ยนชื่อหัวข้อหลักเรียบร้อยแล้ว', 'success')
+                });
+            }
+        });
+    };
+
+    const handleDeleteMainTopic = (cat, groupName) => {
+        Swal.fire({
+            title: 'ยืนยันการลบหัวข้อหลัก?',
+            text: `ต้องการลบหัวข้อหลัก "${groupName}" และรายการย่อยทั้งหมดในหัวข้อนี้หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#e11d48',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonText: 'ลบทั้งหมด'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.groups.delete'), {
+                    data: {
+                        strategy_category_id: cat.id,
+                        group_name: groupName,
+                    },
+                    onSuccess: () => Swal.fire('ลบสำเร็จ', 'ลบหัวข้อหลักและรายการย่อยเรียบร้อยแล้ว', 'success')
+                });
+            }
+        });
+    };
+
     const handleAddStrategyItem = (catId, defaultGroup = '') => {
         const cat = (adminData.strategyCategories || []).find(c => c.id === catId);
         const existingGroups = Array.from(new Set((cat?.items || []).map(i => (i.group_name || '').trim()).filter(Boolean)));
         const datalistOptions = existingGroups.map(g => `<option value="${g.replace(/"/g, '&quot;')}">`).join('');
         const safeDefaultGroup = (defaultGroup || '').replace(/"/g, '&quot;');
+        const catName = cat?.name || 'ยุทธศาสตร์';
 
         Swal.fire({
-            title: '➕ เพิ่มตัวเลือกยุทธศาสตร์',
+            title: `➕ เพิ่มรายการย่อย (${catName})`,
             html: `
                 <div class="text-left space-y-3 font-sans text-xs">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">
-                            หัวข้อหลัก / พันธกิจ (ถ้ามี - เลือกจากเดิมหรือพิมพ์ใหม่ได้ไม่จำกัด):
+                            หัวข้อหลัก / ยุทธศาสตร์หลัก / นโยบายหลัก (เลือกจากเดิมหรือพิมพ์ใหม่ได้ไม่จำกัด):
                         </label>
-                        <input id="swal-group-name" list="swal-group-list" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น พันธกิจที่ 1 ผลิตและพัฒนากำลังคน... (เว้นว่างได้ถ้าไม่มีหัวข้อหลัก)" value="${safeDefaultGroup}">
+                        <input id="swal-group-name" list="swal-group-list" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เลือกหัวข้อหลักเดิม หรือพิมพ์หัวข้อหลักใหม่ (เว้นว่างได้ถ้าเป็นรายการทั่วไป)" value="${safeDefaultGroup}">
                         <datalist id="swal-group-list">
                             ${datalistOptions}
                         </datalist>
-                        <p class="text-[11px] text-slate-500 mt-1">💡 หากมีหัวข้อย่อย ให้ระบุหัวข้อหลักที่นี่ (ระบบจะจัดกลุ่มให้อัตโนมัติ)</p>
+                        <p class="text-[11px] text-slate-500 mt-1">💡 หากต้องการจัดเข้ากลุ่มหัวข้อหลัก ให้พิมพ์หรือเลือกหัวข้อหลักที่นี่</p>
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">
-                            รายการย่อย / กลยุทธ์ / ตัวเลือกยุทธศาสตร์ <span class="text-rose-500">*</span>:
+                            รายการย่อย / กลยุทธ์ / ข้อย่อย <span class="text-rose-500">*</span>:
                         </label>
-                        <textarea id="swal-item-name" rows="3" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น กลยุทธ์ที่ 1 ส่งเสริมและพัฒนาการจัดการศึกษา..."></textarea>
+                        <textarea id="swal-item-name" rows="3" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น กลยุทธ์ที่ 1... / ตัวเลือกยุทธศาสตร์ข้อนี้..."></textarea>
                     </div>
                 </div>
             `,
@@ -2622,7 +2723,7 @@ export default function Dashboard({
                     group_name: result.value.group_name || null,
                     name: result.value.name,
                 }, {
-                    onSuccess: () => Swal.fire('สำเร็จ', 'เพิ่มตัวเลือกยุทธศาสตร์เรียบร้อยแล้ว', 'success')
+                    onSuccess: () => Swal.fire('สำเร็จ', 'เพิ่มรายการย่อยเรียบร้อยแล้ว', 'success')
                 });
             }
         });
@@ -2636,14 +2737,14 @@ export default function Dashboard({
         const safeName = (item.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         Swal.fire({
-            title: '✏️ แก้ไขตัวเลือกยุทธศาสตร์',
+            title: '✏️ แก้ไขรายการย่อย / ตัวเลือกยุทธศาสตร์',
             html: `
                 <div class="text-left space-y-3 font-sans text-xs">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">
-                            หัวข้อหลัก / พันธกิจ (ถ้ามี):
+                            หัวข้อหลัก / ยุทธศาสตร์หลัก / นโยบายหลัก (ถ้ามี):
                         </label>
-                        <input id="swal-group-name" list="swal-group-list" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น พันธกิจที่ 1 ผลิตและพัฒนากำลังคน... (เว้นว่างได้ถ้าไม่มีหัวข้อหลัก)" value="${safeGroup}">
+                        <input id="swal-group-name" list="swal-group-list" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เลือกหัวข้อหลัก หรือเว้นว่างถ้าเป็นรายการทั่วไป" value="${safeGroup}">
                         <datalist id="swal-group-list">
                             ${datalistOptions}
                         </datalist>
@@ -2676,7 +2777,7 @@ export default function Dashboard({
                     group_name: result.value.group_name || null,
                     name: result.value.name,
                 }, {
-                    onSuccess: () => Swal.fire('สำเร็จ', 'อัปเดตตัวเลือกยุทธศาสตร์เรียบร้อยแล้ว', 'success')
+                    onSuccess: () => Swal.fire('สำเร็จ', 'อัปเดตข้อมูลเรียบร้อยแล้ว', 'success')
                 });
             }
         });
@@ -2713,9 +2814,9 @@ export default function Dashboard({
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200 mb-1.5">
                             <span>🎯</span> ระบบบริหารจัดการหมวดหมู่อยุทธศาสตร์
                         </div>
-                        <h3 className="text-base sm:text-lg font-bold text-purple-950">กำหนดหมวดหมู่ หัวข้อหลัก (พันธกิจ) และรายการย่อย (กลยุทธ์) ได้ไม่จำกัด</h3>
+                        <h3 className="text-base sm:text-lg font-bold text-purple-950">กำหนดหมวดหมู่ หัวข้อหลัก และรายการย่อยได้ทุกยุทธศาสตร์ (ไม่จำกัดจำนวน)</h3>
                         <p className="text-xs text-slate-600 mt-0.5">
-                            สามารถเพิ่มหัวข้อยุทธศาสตร์ได้เรื่อย ๆ อย่างอิสระ พร้อมระบบจัดกลุ่มหัวข้อหลักและรายการย่อยอัตโนมัติ
+                            รองรับการเพิ่มหัวข้อย่อยได้ในทุก ๆ ยุทธศาสตร์ (เช่น ยุทธศาสตร์ประกันคุณภาพ, ยุทธศาสตร์ สอศ., ยุทธศาสตร์ชาติ, ยุทธศาสตร์จังหวัด หรือยุทธศาสตร์ใหม่ใด ๆ ที่เพิ่มขึ้นมา)
                         </p>
                     </div>
                     <button
@@ -2793,16 +2894,26 @@ export default function Dashboard({
 
                                 {/* Category Items List */}
                                 <div className="p-4 space-y-3">
-                                    <div className="flex justify-between items-center px-1">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 px-1">
                                         <span className="text-xs font-bold text-purple-950">
                                             รายการตัวเลือกยุทธศาสตร์ ({cat.items?.length || 0} ข้อ)
                                         </span>
-                                        <button
-                                            onClick={() => handleAddStrategyItem(cat.id)}
-                                            className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-all"
-                                        >
-                                            <span>➕</span> เพิ่มตัวเลือกในหมวดนี้
-                                        </button>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <button
+                                                onClick={() => handleAddMainTopic(cat)}
+                                                className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200 transition-all shadow-2xs"
+                                                title="เพิ่มหัวข้อหลักใหม่ (เช่น ยุทธศาสตร์หลัก/นโยบายหลัก/ด้านการพัฒนา)"
+                                            >
+                                                <span>📁</span> เพิ่มหัวข้อหลัก
+                                            </button>
+                                            <button
+                                                onClick={() => handleAddStrategyItem(cat.id)}
+                                                className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-all shadow-2xs"
+                                                title="เพิ่มรายการย่อยในหมวดนี้"
+                                            >
+                                                <span>➕</span> เพิ่มรายการย่อย
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Grouped or Flat Items */}
@@ -2819,13 +2930,29 @@ export default function Dashboard({
                                                                     {group.items.length} รายการ
                                                                 </span>
                                                             </div>
-                                                            <button
-                                                                onClick={() => handleAddStrategyItem(cat.id, group.name)}
-                                                                className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-md border border-purple-200 transition-all flex items-center gap-1"
-                                                                title="เพิ่มรายการย่อยในหัวข้อหลักนี้"
-                                                            >
-                                                                <span>+</span> เพิ่มรายการย่อย
-                                                            </button>
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    onClick={() => handleAddStrategyItem(cat.id, group.name)}
+                                                                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-md border border-purple-200 transition-all flex items-center gap-1"
+                                                                    title="เพิ่มรายการย่อยในหัวข้อหลักนี้"
+                                                                >
+                                                                    <span>+</span> เพิ่มรายการย่อย
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEditMainTopic(cat, group.name)}
+                                                                    className="text-[11px] font-bold text-slate-600 hover:text-purple-700 bg-slate-50 hover:bg-purple-50 px-1.5 py-0.5 rounded-md border border-slate-200 transition-all"
+                                                                    title="แก้ไขชื่อหัวข้อหลักนี้"
+                                                                >
+                                                                    ✏️
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteMainTopic(cat, group.name)}
+                                                                    className="text-[11px] font-bold text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded-md border border-rose-200 transition-all"
+                                                                    title="ลบหัวข้อหลักนี้และรายการย่อยทั้งหมด"
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                         <ul className="divide-y divide-purple-100/60 pl-2">
                                                             {group.items.map((item) => (
@@ -2838,12 +2965,14 @@ export default function Dashboard({
                                                                         <button
                                                                             onClick={() => handleEditStrategyItem(item)}
                                                                             className="rounded-md bg-white px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-50 shadow-2xs"
+                                                                            title="แก้ไขรายการย่อยนี้"
                                                                         >
                                                                             ✏️
                                                                         </button>
                                                                         <button
                                                                             onClick={() => handleDeleteStrategyItem(item)}
                                                                             className="rounded-md bg-white px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200 hover:bg-rose-50 shadow-2xs"
+                                                                            title="ลบรายการย่อยนี้"
                                                                         >
                                                                             🗑️
                                                                         </button>
@@ -2870,12 +2999,14 @@ export default function Dashboard({
                                                                         <button
                                                                             onClick={() => handleEditStrategyItem(item)}
                                                                             className="rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-100"
+                                                                            title="แก้ไขหรือกำหนดหัวข้อหลัก"
                                                                         >
                                                                             ✏️
                                                                         </button>
                                                                         <button
                                                                             onClick={() => handleDeleteStrategyItem(item)}
                                                                             className="rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200 hover:bg-rose-100"
+                                                                            title="ลบรายการนี้"
                                                                         >
                                                                             🗑️
                                                                         </button>
@@ -2890,7 +3021,7 @@ export default function Dashboard({
 
                                         {(!cat.items || cat.items.length === 0) && (
                                             <div className="py-6 text-center text-slate-400 text-xs font-normal border border-dashed border-purple-100 rounded-xl">
-                                                ยังไม่มีตัวเลือกยุทธศาสตร์ในหมวดนี้ (กด + เพิ่มตัวเลือกเพื่อเริ่มต้น)
+                                                ยังไม่มีตัวเลือกยุทธศาสตร์ในหมวดนี้ (กด + เพิ่มหัวข้อหลัก หรือ + เพิ่มรายการย่อย เพื่อเริ่มต้น)
                                             </div>
                                         )}
                                     </div>

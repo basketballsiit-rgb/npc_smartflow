@@ -916,6 +916,20 @@ export default function Dashboard({
                     displayedCategories.map((category, catIndex) => {
                         const accent = getCategoryAccent(category.code, catIndex);
                         const items = category.items || [];
+                        const groupedItems = [];
+                        const groupMap = new Map();
+                        items.forEach(item => {
+                            const gName = (item.group_name || '').trim();
+                            if (!groupMap.has(gName)) {
+                                const groupObj = { name: gName, items: [], totalProjects: 0, totalBudget: 0 };
+                                groupMap.set(gName, groupObj);
+                                groupedItems.push(groupObj);
+                            }
+                            const grp = groupMap.get(gName);
+                            grp.items.push(item);
+                            grp.totalProjects += (item.projects_count || 0);
+                            grp.totalBudget += (item.total_budget || 0);
+                        });
 
                         return (
                             <div
@@ -977,7 +991,36 @@ export default function Dashboard({
                                             <p className="text-xs">ไม่พบรายการยุทธศาสตร์ย่อยในหมวดนี้ที่ตรงกับเงื่อนไขการกรอง</p>
                                         </div>
                                     ) : (
-                                        items.map((item, itemIdx) => {
+                                        groupedItems.map((group, gIdx) => (
+                                            <div key={gIdx} className="space-y-3">
+                                                {group.name ? (
+                                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-gradient-to-r from-purple-100/90 via-purple-50/60 to-white p-3 rounded-xl border border-purple-200 shadow-2xs mt-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-base">📁</span>
+                                                            <span className="font-extrabold text-sm text-purple-950">{group.name}</span>
+                                                            <span className="text-[10px] bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-bold">
+                                                                {group.items.length} รายการย่อย
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2.5 text-xs font-bold">
+                                                            <span className="text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-200">
+                                                                ขับเคลื่อน {group.totalProjects} โครงการ
+                                                            </span>
+                                                            <span className="text-purple-950 bg-white px-2.5 py-0.5 rounded-md border border-purple-200 font-mono">
+                                                                ฿{formatCurrency(group.totalBudget)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    groupedItems.length > 1 ? (
+                                                        <div className="text-xs font-bold text-slate-500 px-1 pt-1 flex items-center gap-1.5">
+                                                            <span>📋</span> รายการทั่วไป (ไม่มีหัวข้อหลัก):
+                                                        </div>
+                                                    ) : null
+                                                )}
+
+                                                <div className={`space-y-3 ${group.name ? 'pl-2 sm:pl-3 border-l-2 border-purple-200/60' : ''}`}>
+                                                    {group.items.map((item, itemIdx) => {
                                             const isExpanded = !!expandedItems[item.id];
                                             const hasProjects = item.projects_count > 0;
 
@@ -1200,10 +1243,13 @@ export default function Dashboard({
                                                             )}
                                                         </div>
                                                     )}
-                                                </div>
-                                            );
-                                        })
-                                    )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                                 </div>
                             </div>
                         );

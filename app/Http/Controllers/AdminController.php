@@ -515,6 +515,49 @@ class AdminController extends Controller
     }
 
     /**
+     * Rename a Strategy Group under a Category.
+     */
+    public function updateStrategyGroup(Request $request)
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead() && !auth()->user()->isPlanStaff()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
+        }
+
+        $validated = $request->validate([
+            'strategy_category_id' => 'required|exists:strategy_categories,id',
+            'old_group_name' => 'required|string',
+            'new_group_name' => 'required|string|max:255',
+        ]);
+
+        \App\Models\StrategyItem::where('strategy_category_id', $validated['strategy_category_id'])
+            ->where('group_name', $validated['old_group_name'])
+            ->update(['group_name' => trim($validated['new_group_name'])]);
+
+        return redirect()->back()->with('success', 'เปลี่ยนชื่อหัวข้อหลักเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Delete a Strategy Group and all its sub-items under a Category.
+     */
+    public function deleteStrategyGroup(Request $request)
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead() && !auth()->user()->isPlanStaff()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
+        }
+
+        $validated = $request->validate([
+            'strategy_category_id' => 'required|exists:strategy_categories,id',
+            'group_name' => 'required|string',
+        ]);
+
+        \App\Models\StrategyItem::where('strategy_category_id', $validated['strategy_category_id'])
+            ->where('group_name', $validated['group_name'])
+            ->delete();
+
+        return redirect()->back()->with('success', 'ลบหัวข้อหลักและรายการย่อยทั้งหมดเรียบร้อยแล้ว');
+    }
+
+    /**
      * Store a newly created department.
      */
     public function storeDepartment(Request $request)
