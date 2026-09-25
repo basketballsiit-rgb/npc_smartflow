@@ -112,6 +112,9 @@ export default function Print({ project, strategyCategories = [] }) {
     }[fontSizePreset];
 
     const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล');
+    const formattedProjectTitle = project.title 
+        ? (project.title.trim().startsWith('โครงการ') ? project.title.trim().replace(/^โครงการ\s*/, '') : project.title.trim())
+        : '';
 
     const getApprovalByStep = (step) => {
         return project.approvals?.find(a => a.step_number === step && (a.status === 'approved' || a.status === 'submitted'));
@@ -749,15 +752,17 @@ export default function Print({ project, strategyCategories = [] }) {
                 {/* Section 12: การอนุมัติโครงการ */}
                 <div className="pt-8 print-break-inside-avoid font-sarabun">
                     <p className="print-title font-bold text-slate-900 mb-8">
-                        ๑๒. การอนุมัติโครงการ......................................................
+                        ๑๒. การอนุมัติโครงการ{formattedProjectTitle ? toThaiNumerals(formattedProjectTitle) : '......................................................'}
                     </p>
                     
                     <div className="space-y-12 text-xs sm:text-sm">
-                        {/* Row 1: ผู้เสนอโครงการ (จัดวางชิดขวาตาม Image 2) */}
-                        <div className="flex justify-end pr-4 sm:pr-10">
-                            <div className="flex flex-col items-center text-center font-sarabun w-80">
-                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
-                                    <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
+                        {/* Row 1: ผู้เสนอโครงการ (อยู่กึ่งกลางหน้ากระดาษ) */}
+                        <div className="flex justify-center">
+                            <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                                <div className="relative flex items-center justify-center">
+                                    <span className="absolute right-full mr-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                        ลงชื่อ
+                                    </span>
                                     <div className="relative inline-flex flex-col items-center">
                                         {sig1?.signature_data ? (
                                             <img 
@@ -768,14 +773,16 @@ export default function Print({ project, strategyCategories = [] }) {
                                         ) : (
                                             <div className="h-6"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-40 sm:w-48 inline-block mb-1"></span>
                                     </div>
-                                    <span className="shrink-0 ml-1 font-normal">ผู้เสนอโครงการ</span>
+                                    <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                        ผู้เสนอโครงการ
+                                    </span>
                                 </div>
-                                <p className="font-bold pt-1.5 text-xs sm:text-[13px]">
+                                <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
                                     ({toThaiNumerals(sig1?.user?.name ? cleanPersonName(sig1.user.name) : (cleanedResponsiblePerson || '...............................................'))})
                                 </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[220px] text-slate-800">
+                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
                                     {project.position 
                                         ? toThaiNumerals(project.position) 
                                         : (project.department?.name 
@@ -786,119 +793,143 @@ export default function Print({ project, strategyCategories = [] }) {
                         </div>
 
                         {/* Row 2: ผู้ตรวจสอบโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ (ขวา) */}
-                        <div className="grid grid-cols-2 gap-x-6">
+                        <div className="grid grid-cols-2 gap-x-8">
                             {/* ซ้าย: ผู้ตรวจสอบโครงการ (นายพิพัฒน์ สีมา) */}
-                            <div className="flex flex-col items-center text-center font-sarabun">
-                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
-                                    <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
-                                    <div className="relative inline-flex flex-col items-center">
-                                        {sig3?.signature_data ? (
-                                            <img 
-                                                src={sig3.signature_data} 
-                                                alt="ลายมือชื่อ" 
-                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
-                                            />
-                                        ) : (
-                                            <div className="h-6"></div>
-                                        )}
-                                        <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                            <div className="flex justify-center">
+                                <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                                    <div className="relative flex items-center justify-center">
+                                        <span className="absolute right-full mr-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                            ลงชื่อ
+                                        </span>
+                                        <div className="relative inline-flex flex-col items-center">
+                                            {sig3?.signature_data ? (
+                                                <img 
+                                                    src={sig3.signature_data} 
+                                                    alt="ลายมือชื่อ" 
+                                                    className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                />
+                                            ) : (
+                                                <div className="h-6"></div>
+                                            )}
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-40 inline-block mb-1"></span>
+                                        </div>
+                                        <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                            ผู้ตรวจสอบโครงการ
+                                        </span>
                                     </div>
-                                    <span className="shrink-0 ml-1 font-normal">ผู้ตรวจสอบโครงการ</span>
+                                    <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
+                                        ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : 'นายพิพัฒน์ สีมา'})
+                                    </p>
+                                    <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
+                                        {sig3?.user?.position_level ? toThaiNumerals(sig3.user.position_level) : 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ'}
+                                    </p>
                                 </div>
-                                <p className="font-bold pt-1.5 text-xs sm:text-[13px]">
-                                    ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : 'นายพิพัฒน์ สีมา'})
-                                </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[220px] text-slate-800">
-                                    {sig3?.user?.position_level ? toThaiNumerals(sig3.user.position_level) : 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ'}
-                                </p>
                             </div>
 
                             {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่าย...) */}
-                            <div className="flex flex-col items-center text-center font-sarabun">
-                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
-                                    <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
-                                    <div className="relative inline-flex flex-col items-center">
-                                        {sig4?.signature_data ? (
-                                            <img 
-                                                src={sig4.signature_data} 
-                                                alt="ลายมือชื่อ" 
-                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
-                                            />
-                                        ) : (
-                                            <div className="h-6"></div>
-                                        )}
-                                        <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                            <div className="flex justify-center">
+                                <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                                    <div className="relative flex items-center justify-center">
+                                        <span className="absolute right-full mr-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                            ลงชื่อ
+                                        </span>
+                                        <div className="relative inline-flex flex-col items-center">
+                                            {sig4?.signature_data ? (
+                                                <img 
+                                                    src={sig4.signature_data} 
+                                                    alt="ลายมือชื่อ" 
+                                                    className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                />
+                                            ) : (
+                                                <div className="h-6"></div>
+                                            )}
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-40 inline-block mb-1"></span>
+                                        </div>
+                                        <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                            ผู้เห็นชอบโครงการ
+                                        </span>
                                     </div>
-                                    <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
+                                    <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
+                                        ({sig4?.user?.name 
+                                            ? toThaiNumerals(cleanPersonName(sig4.user.name)) 
+                                            : (project.department?.deputy_director_name 
+                                                ? toThaiNumerals(cleanPersonName(project.department.deputy_director_name)) 
+                                                : (project.department?.parent?.deputy_director_name 
+                                                    ? toThaiNumerals(cleanPersonName(project.department.parent.deputy_director_name)) 
+                                                    : '...............................................'))})
+                                    </p>
+                                    <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
+                                        {sig4?.user?.position_level 
+                                            || project.department?.deputy_director_position 
+                                            || project.department?.parent?.deputy_director_position 
+                                            || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................'))}
+                                    </p>
                                 </div>
-                                <p className="font-bold pt-1.5 text-xs sm:text-[13px]">
-                                    ({sig4?.user?.name 
-                                        ? toThaiNumerals(cleanPersonName(sig4.user.name)) 
-                                        : (project.department?.deputy_director_name 
-                                            ? toThaiNumerals(cleanPersonName(project.department.deputy_director_name)) 
-                                            : (project.department?.parent?.deputy_director_name 
-                                                ? toThaiNumerals(cleanPersonName(project.department.parent.deputy_director_name)) 
-                                                : '...............................................'))})
-                                </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[220px] text-slate-800">
-                                    {sig4?.user?.position_level 
-                                        || project.department?.deputy_director_position 
-                                        || project.department?.parent?.deputy_director_position 
-                                        || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................'))}
-                                </p>
                             </div>
                         </div>
 
                         {/* Row 3: ผู้เห็นชอบโครงการ (นายนิพนธ์ ร่องพืช / รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน - ตรงกลาง) */}
-                        <div className="flex flex-col items-center text-center font-sarabun max-w-sm mx-auto">
-                            <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
-                                <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
-                                <div className="relative inline-flex flex-col items-center">
-                                    {sig5?.signature_data ? (
-                                        <img 
-                                            src={sig5.signature_data} 
-                                            alt="ลายมือชื่อ" 
-                                            className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
-                                        />
-                                    ) : (
-                                        <div className="h-6"></div>
-                                    )}
-                                    <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                        <div className="flex justify-center">
+                            <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                                <div className="relative flex items-center justify-center">
+                                    <span className="absolute right-full mr-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                        ลงชื่อ
+                                    </span>
+                                    <div className="relative inline-flex flex-col items-center">
+                                        {sig5?.signature_data ? (
+                                            <img 
+                                                src={sig5.signature_data} 
+                                                alt="ลายมือชื่อ" 
+                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                            />
+                                        ) : (
+                                            <div className="h-6"></div>
+                                        )}
+                                        <span className="border-b border-dotted border-slate-700 w-40 sm:w-48 inline-block mb-1"></span>
+                                    </div>
+                                    <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                        ผู้เห็นชอบโครงการ
+                                    </span>
                                 </div>
-                                <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
+                                <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
+                                    ({sig5?.user?.name ? toThaiNumerals(cleanPersonName(sig5.user.name)) : 'นายนิพนธ์ ร่องพืช'})
+                                </p>
+                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
+                                    {sig5?.user?.position_level ? toThaiNumerals(sig5.user.position_level) : 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'}
+                                </p>
                             </div>
-                            <p className="font-bold pt-1.5 text-xs sm:text-[13px]">
-                                ({sig5?.user?.name ? toThaiNumerals(cleanPersonName(sig5.user.name)) : 'นายนิพนธ์ ร่องพืช'})
-                            </p>
-                            <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[240px] text-slate-800">
-                                {sig5?.user?.position_level ? toThaiNumerals(sig5.user.position_level) : 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'}
-                            </p>
                         </div>
 
                         {/* Row 4: ผู้อนุมัติโครงการ (นายกเชษฐ์ กิ่งชนะ / ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน - ตรงกลาง) */}
-                        <div className="flex flex-col items-center text-center font-sarabun max-w-sm mx-auto">
-                            <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
-                                <span className="shrink-0 mr-1.5 font-normal">ลงชื่อ</span>
-                                <div className="relative inline-flex flex-col items-center">
-                                    {sig6?.signature_data ? (
-                                        <img 
-                                            src={sig6.signature_data} 
-                                            alt="ลายมือชื่อ" 
-                                            className="h-12 max-w-[150px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
-                                        />
-                                    ) : (
-                                        <div className="h-7"></div>
-                                    )}
-                                    <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                        <div className="flex justify-center">
+                            <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                                <div className="relative flex items-center justify-center">
+                                    <span className="absolute right-full mr-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                        ลงชื่อ
+                                    </span>
+                                    <div className="relative inline-flex flex-col items-center">
+                                        {sig6?.signature_data ? (
+                                            <img 
+                                                src={sig6.signature_data} 
+                                                alt="ลายมือชื่อ" 
+                                                className="h-12 max-w-[150px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                            />
+                                        ) : (
+                                            <div className="h-7"></div>
+                                        )}
+                                        <span className="border-b border-dotted border-slate-700 w-40 sm:w-48 inline-block mb-1"></span>
+                                    </div>
+                                    <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                        ผู้อนุมัติโครงการ
+                                    </span>
                                 </div>
-                                <span className="shrink-0 ml-1.5 font-normal">ผู้อนุมัติโครงการ</span>
+                                <p className="font-bold text-sm sm:text-base pt-1.5 whitespace-nowrap">
+                                    ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : 'นายกเชษฐ์ กิ่งชนะ'})
+                                </p>
+                                <p className="text-[12px] font-semibold leading-relaxed pt-0.5 text-slate-800">
+                                    {sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'}
+                                </p>
                             </div>
-                            <p className="font-bold text-sm sm:text-base pt-1.5">
-                                ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : 'นายกเชษฐ์ กิ่งชนะ'})
-                            </p>
-                            <p className="text-[12px] font-semibold leading-relaxed pt-0.5 text-slate-800">
-                                {sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'}
-                            </p>
                         </div>
                     </div>
                 </div>
