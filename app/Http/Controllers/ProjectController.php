@@ -494,10 +494,8 @@ class ProjectController extends Controller
         $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
         
-        // Deduplicate approvals (prevent duplicate records from legacy submits)
-        $uniqueApprovals = $project->approvals->unique(function ($item) {
-            return $item->step_number . '_' . $item->status . '_' . $item->comments;
-        })->values();
+        // Deduplicate approvals and sort by step (latest record per step with signature details)
+        $uniqueApprovals = $project->approvals->sortByDesc('id')->unique('step_number')->sortBy('step_number')->values();
         $project->setRelation('approvals', $uniqueApprovals);
         
         // Load all strategy categories for display
@@ -805,7 +803,7 @@ class ProjectController extends Controller
     /**
      * Submit project to the approval workflow.
      */
-    public function submit(Project $project)
+    public function submit(Request $request, Project $project)
     {
         $user = auth()->user();
         if ($project->user_id !== $user->id && !$user->isAdmin()) {
@@ -815,6 +813,26 @@ class ProjectController extends Controller
         if (!in_array($project->status, ['draft', 'rejected', 'budget_approved', 'preliminary'])) {
             abort(403, 'เฉพาะโครงการที่เป็นแบบร่าง ได้รับจัดสรรงบแล้ว หรือส่งกลับแก้ไขเท่านั้นที่สามารถยื่นขออนุมัติได้');
         }
+
+        // Digital signature for Step 1 (ผู้เสนอโครงการ)
+        $signatureType = $request->input('signature_type', 'stored');
+        $signatureData = null;
+
+        if ($signatureType === 'stored') {
+            $signatureData = $user->signature_data;
+        } elseif (in_array($signatureType, ['live', 'upload'])) {
+            $signatureData = $request->input('signature_data');
+            if ($request->boolean('save_to_profile') && !empty($signatureData)) {
+                $user->signature_data = $signatureData;
+                $user->signature_updated_at = now();
+                $user->save();
+            }
+        }
+
+        $now = now();
+        $sigHash = $signatureData 
+            ? hash('sha256', $user->id . '|' . $project->id . '|1|' . $now->toIso8601String() . '|' . config('app.key'))
+            : null;
 
         $isHeadProposer = false;
         if ($project->user_position_id) {
@@ -831,13 +849,19 @@ class ProjectController extends Controller
         $project->current_approval_step = $isHeadProposer ? 3 : 2;
         $project->save();
 
-        // Create submission log
+        // Create submission log (Step 1: ผู้เสนอโครงการ)
         ProjectApproval::create([
             'project_id' => $project->id,
             'user_id' => auth()->id(),
             'step_number' => 1,
             'status' => 'submitted',
-            'comments' => 'ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ (Submitted for 6-Step Approval)',
+            'comments' => $request->input('comments', 'ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ (Submitted for 6-Step Approval)'),
+            'signature_data' => $signatureData,
+            'signature_type' => $signatureType,
+            'signature_hash' => $sigHash,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'signed_at' => $now,
         ]);
 
         if ($isHeadProposer) {
@@ -847,12 +871,18 @@ class ProjectController extends Controller
                 'step_number' => 2,
                 'status' => 'approved',
                 'comments' => 'เห็นชอบเสนอโครงการ (ผู้เสนอเป็นหัวหน้างาน/หัวหน้าสาขาวิชา)',
+                'signature_data' => $signatureData,
+                'signature_type' => $signatureType,
+                'signature_hash' => $signatureData ? hash('sha256', $user->id . '|' . $project->id . '|2|' . $now->toIso8601String() . '|' . config('app.key')) : null,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'signed_at' => $now,
             ]);
         }
 
         NotificationService::notifyProjectStep($project);
 
-        return redirect()->back()->with('success', 'ยื่นเสนอขออนุมัติเพื่อดำเนินงานโครงการต่อเรียบร้อยแล้ว');
+        return redirect()->back()->with('success', 'ลงนามและยื่นเสนอขออนุมัติโครงการเรียบร้อยแล้ว');
     }
 
     /**
@@ -889,6 +919,27 @@ class ProjectController extends Controller
             'comments' => 'nullable|string',
         ]);
 
+        // Digital signature for current step
+        $signatureType = $request->input('signature_type', 'stored');
+        $signatureData = null;
+
+        if ($signatureType === 'stored') {
+            // ผู้เป็นเจ้าของลายเซ็นต์เท่านั้นที่จะกดเพื่อลงนามได้ (ใช้ลายเซ็นตนเองที่บันทึกไว้)
+            $signatureData = $user->signature_data;
+        } elseif (in_array($signatureType, ['live', 'upload'])) {
+            $signatureData = $request->input('signature_data');
+            if ($request->boolean('save_to_profile') && !empty($signatureData)) {
+                $user->signature_data = $signatureData;
+                $user->signature_updated_at = now();
+                $user->save();
+            }
+        }
+
+        $now = now();
+        $sigHash = $signatureData 
+            ? hash('sha256', $user->id . '|' . $project->id . '|' . $project->current_approval_step . '|' . $now->toIso8601String() . '|' . config('app.key'))
+            : null;
+
         // Budget locking details check during Step 3 (Plan Head)
         if ($project->current_approval_step === 3) {
             $request->validate([
@@ -909,13 +960,19 @@ class ProjectController extends Controller
             );
         }
 
-        // Record approval log
+        // Record approval log with signature
         ProjectApproval::create([
             'project_id' => $project->id,
             'user_id' => auth()->id(),
             'step_number' => $project->current_approval_step,
             'status' => 'approved',
             'comments' => $request->input('comments', 'Approved'),
+            'signature_data' => $signatureData,
+            'signature_type' => $signatureType,
+            'signature_hash' => $sigHash,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'signed_at' => $now,
         ]);
 
         if ($project->current_approval_step >= 6) {
@@ -926,10 +983,7 @@ class ProjectController extends Controller
 
             NotificationService::notifyProjectResult($project, 'approved');
 
-            // PDF generation trigger (Stub / mock file creation)
-            // A read-only PDF file is prepared in real-time
-            // In Step 7, we integrate Browsershot/Puppeteer for actual generation
-            return redirect()->route('dashboard')->with('message', 'Project fully approved and locked.');
+            return redirect()->route('dashboard')->with('message', 'โครงการได้รับการลงนามอนุมัติครบถ้วนสมบูรณ์แล้ว');
         }
 
         // Advance to next step
@@ -940,7 +994,7 @@ class ProjectController extends Controller
         NotificationService::notifyProjectStep($project);
         NotificationService::notifyProjectResult($project, 'approved');
 
-        return redirect()->route('dashboard')->with('message', 'Project approved to next stage.');
+        return redirect()->route('dashboard')->with('message', 'ลงนามและอนุมัติส่งต่อไปยังขั้นตอนถัดไปเรียบร้อยแล้ว');
     }
 
     /**
@@ -954,6 +1008,7 @@ class ProjectController extends Controller
         }
 
         $mode = $request->input('mode', 'step'); // 'step' or 'full'
+        $adminSig = $user->signature_data;
 
         if ($mode === 'full') {
             $defaultFunding = \App\Models\FundingSource::first();
@@ -977,6 +1032,12 @@ class ProjectController extends Controller
                     'step_number' => $s,
                     'status' => 'approved',
                     'comments' => 'อนุมัติรวดเดียวผ่านสิทธิ์ผู้ดูแลระบบ (Admin Super Override)',
+                    'signature_data' => $adminSig,
+                    'signature_type' => 'admin',
+                    'signature_hash' => $adminSig ? hash('sha256', $user->id . '|' . $project->id . '|' . $s . '|' . now()->toIso8601String() . '|' . config('app.key')) : null,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'signed_at' => now(),
                 ]);
             }
 
@@ -1012,6 +1073,12 @@ class ProjectController extends Controller
             'step_number' => $project->current_approval_step,
             'status' => 'approved',
             'comments' => $request->input('comments', 'อนุมัติผ่านสิทธิ์ผู้ดูแลระบบ (Admin Step Override)'),
+            'signature_data' => $adminSig,
+            'signature_type' => 'admin',
+            'signature_hash' => $adminSig ? hash('sha256', $user->id . '|' . $project->id . '|' . $project->current_approval_step . '|' . now()->toIso8601String() . '|' . config('app.key')) : null,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'signed_at' => now(),
         ]);
 
         if ($project->current_approval_step >= 6) {
@@ -1121,6 +1188,8 @@ class ProjectController extends Controller
     public function print(Project $project)
     {
         $project->load(['user', 'department', 'approvals.user', 'budget.fundingSource']);
+        $latestApprovalsByStep = $project->approvals->sortByDesc('id')->unique('step_number')->sortBy('step_number')->values();
+        $project->setRelation('approvals', $latestApprovalsByStep);
         $allCategories = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->get();
 
         return Inertia::render('Projects/Print', [

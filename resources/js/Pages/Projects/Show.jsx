@@ -3,6 +3,7 @@ import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Swal from 'sweetalert2';
 import ProjectWorkflowStepper from '@/Components/ProjectWorkflowStepper';
+import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
 
 export default function Show({ project, strategyCategories = [], fundingSources = [], allUsers = [], canApprove }) {
     const { auth } = usePage().props;
@@ -345,25 +346,69 @@ ${itemsListText}
         return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(value || 0);
     };
 
+    // Digital Signature Modal State
+    const [signatureModalOpen, setSignatureModalOpen] = useState(false);
+    const [signatureModalStep, setSignatureModalStep] = useState(1);
+    const [signatureModalTitle, setSignatureModalTitle] = useState('');
+
+    const getStepTitle = (step) => {
+        switch (step) {
+            case 1: return 'ขั้นตอนที่ ๑: ลงนามผู้เสนอโครงการ (Proposer)';
+            case 2: return 'ขั้นตอนที่ ๒: หัวหน้าแผนกวิชา/หัวหน้างาน เห็นชอบโครงการ';
+            case 3: return 'ขั้นตอนที่ ๓: งานแผนงานและงบประมาณ ตรวจสอบความสอดคล้องและจัดสรรงบ';
+            case 4: return 'ขั้นตอนที่ ๔: รองผู้อำนวยการฝ่ายประจำแผนก พิจารณาให้ความเห็นชอบ';
+            case 5: return 'ขั้นตอนที่ ๕: รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ กลั่นกรองงบประมาณ';
+            case 6: return 'ขั้นตอนที่ ๖: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน อนุมัติโครงการ';
+            default: return `ขั้นตอนที่ ${step}: ลงนามพิจารณาอนุมัติ`;
+        }
+    };
+
     const handleApprove = (e) => {
-        e.preventDefault();
-        Swal.fire({
-            title: 'ยืนยันการอนุมัติโครงการ?',
-            text: `คุณต้องการอนุมัติโครงการในขั้นตอนที่ ${project.current_approval_step} หรือไม่?`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#059669',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonText: '✅ ยืนยันอนุมัติ',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                post(route('projects.approve', project.id), {
-                    onSuccess: () => {
-                        Swal.fire('อนุมัติเรียบร้อย!', 'โครงการได้รับการอนุมัติเรียบร้อยแล้ว', 'success');
-                    }
-                });
-            }
-        });
+        if (e) e.preventDefault();
+        const step = project.current_approval_step || 2;
+        setSignatureModalStep(step);
+        setSignatureModalTitle(getStepTitle(step));
+        setSignatureModalOpen(true);
+    };
+
+    const handleConfirmSignature = (payload) => {
+        if (signatureModalStep === 1) {
+            router.post(route('projects.submit', project.id), {
+                signature_data: payload.signature_data,
+                signature_type: payload.signature_type,
+                save_to_profile: payload.save_to_profile,
+                comments: payload.comments,
+            }, {
+                onSuccess: () => {
+                    setSignatureModalOpen(false);
+                    Swal.fire({
+                        title: 'ลงนามและยื่นเสนอสำเร็จ!',
+                        text: 'โครงการได้รับการลงนามอิเล็กทรอนิกส์และส่งต่อไปยังขั้นตอนที่ 2 เรียบร้อยแล้ว',
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed',
+                    });
+                }
+            });
+        } else {
+            router.post(route('projects.approve', project.id), {
+                signature_data: payload.signature_data,
+                signature_type: payload.signature_type,
+                save_to_profile: payload.save_to_profile,
+                comments: payload.comments,
+                funding_source_id: payload.funding_source_id || data.funding_source_id,
+                allocated_amount: payload.allocated_amount || data.allocated_amount,
+            }, {
+                onSuccess: () => {
+                    setSignatureModalOpen(false);
+                    Swal.fire({
+                        title: 'ลงนามอนุมัติสำเร็จ!',
+                        text: 'บันทึกการลงนามอิเล็กทรอนิกส์และส่งต่อไปยังขั้นตอนถัดไปเรียบร้อยแล้ว',
+                        icon: 'success',
+                        confirmButtonColor: '#059669',
+                    });
+                }
+            });
+        }
     };
 
     const handleReject = (e) => {
@@ -393,29 +438,9 @@ ${itemsListText}
     };
 
     const handleWorkflowSubmit = () => {
-        Swal.fire({
-            title: '🚀 ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ?',
-            text: 'ส่งเรื่องยื่นเสนอขออนุมัติโครงการนี้ให้คณะกรรมการและผู้บริหารอนุมัติเพื่อขอดำเนินงานและใช้งบประมาณต่อไป',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#10b981',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: '🚀 ยืนยันยื่นเสนอขออนุมัติ',
-            cancelButtonText: 'ยกเลิก'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.post(route('projects.submit', project.id), {}, {
-                    onSuccess: () => {
-                        Swal.fire({
-                            title: 'ยื่นเสนอขออนุมัติสำเร็จ!',
-                            text: 'โครงการถูกส่งต่อเข้าสู่กระบวนการพิจารณาอนุมัติ 6 ขั้นตอนเพื่อดำเนินงานเรียบร้อยแล้ว',
-                            icon: 'success',
-                            confirmButtonColor: '#7c3aed',
-                        });
-                    }
-                });
-            }
-        });
+        setSignatureModalStep(1);
+        setSignatureModalTitle('ขั้นตอนที่ ๑: ลงนามผู้เสนอโครงการ (Proposer Signature)');
+        setSignatureModalOpen(true);
     };
 
     const handleUploadAppendix = (e) => {
@@ -1032,6 +1057,115 @@ ${itemsListText}
                         <div>
                             <h4 className="text-sm font-extrabold">{currentOfficerInfo.title}</h4>
                             <p className="text-xs opacity-90 mt-0.5">{currentOfficerInfo.desc}</p>
+                        </div>
+                    </div>
+
+                    {/* 6-Step Digital Signatures & Approvals Card */}
+                    <div className="mb-6 rounded-3xl border border-purple-200/90 bg-linear-to-b from-white via-purple-50/20 to-white p-5 shadow-sm">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-purple-100 gap-2">
+                            <div className="flex items-center gap-2.5">
+                                <span className="p-2 rounded-2xl bg-purple-100 text-purple-900 text-lg">✍️</span>
+                                <div>
+                                    <h3 className="text-sm font-black text-purple-950">
+                                        สถานะการลงนามอนุมัติ ๖ ขั้นตอน (6-Step Digital Signatures)
+                                    </h3>
+                                    <p className="text-[11px] text-purple-700">
+                                        ลงนามผ่านอุปกรณ์มือถือ ไอแพด แท็บเล็ต หรือคอมพิวเตอร์ ด้วยลายมือชื่อดิจิทัลและรหัสตรวจสอบความปลอดภัย
+                                    </p>
+                                </div>
+                            </div>
+                            <span className="text-xs font-bold text-slate-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                                อนุมัติแล้ว {project.approvals?.filter(a => a.status === 'approved' || a.status === 'submitted')?.length || 0}/6 ขั้นตอน
+                            </span>
+                        </div>
+
+                        {/* 6 Steps Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {[
+                                { step: 1, title: '๑. ผู้เสนอโครงการ', role: 'ครูผู้สอน / ผู้รับผิดชอบโครงการ', officer: project.user?.name },
+                                { step: 2, title: '๒. หัวหน้าแผนก/สาขาวิชา/งาน', role: 'หัวหน้าแผนก/สาขาที่สังกัด', officer: 'หัวหน้าแผนกวิชา / หัวหน้างาน' },
+                                { step: 3, title: '๓. งานแผนงานและงบประมาณ', role: 'ตรวจสอบความสอดคล้อง & จัดสรรงบ', officer: 'หัวหน้างานแผนงานและความร่วมมือ' },
+                                { step: 4, title: '๔. รองผู้อำนวยการฝ่าย', role: 'รองผู้อำนวยการฝ่ายประจำแผนก', officer: 'รองผู้อำนวยการฝ่ายประจำแผนก' },
+                                { step: 5, title: '๕. รองฝ่ายแผนงานฯ', role: 'กลั่นกรองงบประมาณและแผนปฏิบัติราชการ', officer: 'รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ' },
+                                { step: 6, title: '๖. ผู้อำนวยการวิทยาลัย', role: 'อนุมัติโครงการขั้นสุดท้าย', officer: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน' },
+                            ].map(item => {
+                                const approval = project.approvals?.find(a => a.step_number === item.step);
+                                const isSigned = Boolean(approval && (approval.status === 'approved' || approval.status === 'submitted'));
+                                const isCurrent = (project.status === 'pending_approval' || project.status === 'submitted') && (project.current_approval_step === item.step);
+
+                                return (
+                                    <div 
+                                        key={item.step} 
+                                        className={`rounded-2xl p-4 border transition-all flex flex-col justify-between ${
+                                            isSigned
+                                                ? 'bg-linear-to-br from-emerald-50/70 to-teal-50/40 border-emerald-300 shadow-2xs'
+                                                : isCurrent
+                                                ? 'bg-linear-to-br from-purple-50 to-indigo-50/40 border-purple-300 ring-2 ring-purple-400/30 shadow-sm'
+                                                : 'bg-slate-50/50 border-slate-200/80 opacity-70'
+                                        }`}
+                                    >
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-black text-slate-800">{item.title}</span>
+                                                {isSigned ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                                                        <span>✓</span> ลงนามแล้ว
+                                                    </span>
+                                                ) : isCurrent ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 text-[10px] font-black animate-pulse">
+                                                        <span>⏳</span> รอพิจารณา
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-[10px] text-slate-400">ยังไม่ถึงขั้นตอน</span>
+                                                )}
+                                            </div>
+
+                                            <p className="text-[11px] text-slate-500 leading-tight">{item.role}</p>
+
+                                            {/* Signature Preview or Dotted Placeholder */}
+                                            <div className="h-16 my-2 bg-white rounded-xl border border-slate-200/80 flex items-center justify-center p-1 relative overflow-hidden">
+                                                {isSigned && approval?.signature_data ? (
+                                                    <img 
+                                                        src={approval.signature_data} 
+                                                        alt="Digital Signature" 
+                                                        className="max-h-full max-w-full object-contain filter drop-shadow-2xs"
+                                                    />
+                                                ) : isSigned ? (
+                                                    <div className="text-center text-[10px] text-emerald-700 font-bold">
+                                                        <span className="text-sm block">✍️</span>
+                                                        ประทับตรารับรองดิจิทัล
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-[10px] text-slate-300 border-b border-dashed border-slate-300 w-3/4 text-center pb-0.5">
+                                                        รอลายมือชื่อ
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-2 border-t border-slate-200/60 text-[10px] text-slate-600 space-y-0.5">
+                                            <div className="font-bold text-slate-800 truncate">
+                                                {approval?.user?.name || (item.step === 1 ? project.user?.name : item.officer)}
+                                            </div>
+                                            {isSigned && approval?.signed_at && (
+                                                <div className="text-slate-400 flex items-center justify-between">
+                                                    <span>{new Date(approval.signed_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                                                    {approval.signature_hash && (
+                                                        <span className="font-mono text-[9px] text-emerald-600" title={`Verification Hash: ${approval.signature_hash}`}>
+                                                            🔒 Hash: {approval.signature_hash.substring(0, 8)}...
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {approval?.comments && approval.comments !== 'Approved' && (
+                                                <p className="text-[10px] text-purple-900 bg-white/80 p-1.5 rounded-lg italic mt-1 border border-purple-100 line-clamp-2">
+                                                    "{approval.comments}"
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -2404,6 +2538,21 @@ ${itemsListText}
 
                 </div>
             </div>
+
+            {/* 6-Step Digital Signature Modal */}
+            <DigitalSignatureModal
+                isOpen={signatureModalOpen}
+                onClose={() => setSignatureModalOpen(false)}
+                onConfirm={handleConfirmSignature}
+                stepNumber={signatureModalStep}
+                stepTitle={signatureModalTitle}
+                projectTitle={project.title}
+                defaultComments={data.comments}
+                fundingSources={fundingSources}
+                fundingSourceId={data.funding_source_id}
+                allocatedAmount={data.allocated_amount}
+                processing={processing}
+            />
         </AuthenticatedLayout>
     );
 }

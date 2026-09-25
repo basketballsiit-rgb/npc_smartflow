@@ -14,7 +14,22 @@ class ProjectApproval extends Model
         'step_number',
         'status',
         'comments',
+        'signature_data',
+        'signature_type',
+        'signature_hash',
+        'ip_address',
+        'user_agent',
+        'signed_at',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'signature_data' => 'encrypted',
+            'signed_at' => 'datetime',
+            'step_number' => 'integer',
+        ];
+    }
 
     /**
      * Get the project being approved.

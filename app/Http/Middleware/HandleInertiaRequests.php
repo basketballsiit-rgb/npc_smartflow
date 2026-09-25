@@ -32,7 +32,8 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
 
         $citizenId = null;
-        $hasCitizenId = false;
+        $signatureData = null;
+        $hasSignature = false;
 
         if ($user) {
             try {
@@ -41,6 +42,14 @@ class HandleInertiaRequests extends Middleware
             } catch (\Throwable $e) {
                 $citizenId = null;
                 $hasCitizenId = false;
+            }
+
+            try {
+                $signatureData = $user->signature_data;
+                $hasSignature = !empty($signatureData);
+            } catch (\Throwable $e) {
+                $signatureData = null;
+                $hasSignature = false;
             }
         }
 
@@ -59,6 +68,8 @@ class HandleInertiaRequests extends Middleware
                     'position'        => $user->position,
                     'citizen_id'      => $citizenId,
                     'has_citizen_id'  => $hasCitizenId,
+                    'has_signature'   => $hasSignature,
+                    'signature_data'  => $signatureData,
                     'has_set_positions' => $user->userPositions()->exists(),
                     'department_name' => $user->department?->name,
                     'department_id'   => $user->department_id,

@@ -28,6 +28,8 @@ class User extends Authenticatable
         'position',
         'is_active',
         'line_user_id',
+        'signature_data',
+        'signature_updated_at',
     ];
 
     /**
@@ -52,6 +54,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'citizen_id' => 'encrypted',
+            'signature_data' => 'encrypted',
+            'signature_updated_at' => 'datetime',
         ];
     }
 

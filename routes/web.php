@@ -75,6 +75,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/positions', [ProfileController::class, 'savePositions'])->name('profile.positions.save');
     Route::post('/profile/citizen-id', [ProfileController::class, 'updateCitizenId'])->name('profile.update_citizen_id');
+    Route::post('/profile/signature', [ProfileController::class, 'updateSignature'])->name('profile.update_signature');
+    Route::delete('/profile/signature', [ProfileController::class, 'destroySignature'])->name('profile.destroy_signature');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // In-App Notifications

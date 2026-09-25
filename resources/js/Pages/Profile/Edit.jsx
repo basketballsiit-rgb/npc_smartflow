@@ -3,6 +3,7 @@ import { Head } from '@inertiajs/react';
 import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
+import UpdateSignatureForm from './Partials/UpdateSignatureForm';
 
 export default function Edit({ 
     mustVerifyEmail, 
@@ -35,6 +36,10 @@ export default function Edit({
                             availableDuties={availableDuties}
                             initialPositions={initialPositions}
                         />
+                    </div>
+
+                    <div className="bg-white p-6 shadow-sm border border-purple-100 sm:rounded-2xl dark:bg-gray-800">
+                        <UpdateSignatureForm />
                     </div>
 
                     <div className="bg-white p-4 shadow sm:rounded-lg sm:p-8 dark:bg-gray-800">

@@ -272,4 +272,66 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    /**
+     * Update the user's personal encrypted digital signature.
+     */
+    public function updateSignature(Request $request)
+    {
+        $request->validate([
+            'signature_data' => 'nullable|string',
+            'signature_file' => 'nullable|image|max:2048', // max 2MB
+        ]);
+
+        $user = $request->user();
+        $signatureData = null;
+
+        if ($request->hasFile('signature_file')) {
+            $file = $request->file('signature_file');
+            $signatureData = 'data:' . $file->getMimeType() . ';base64,' . base64_encode(file_get_contents($file->getRealPath()));
+        } elseif ($request->filled('signature_data')) {
+            $signatureData = $request->input('signature_data');
+        }
+
+        if (empty($signatureData)) {
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => 'ไม่พบข้อมูลลายมือชื่อ กรุณาวาดหรืออัปโหลดไฟล์ลายมือชื่อ'], 422);
+            }
+            return Redirect::back()->with('error', 'ไม่พบข้อมูลลายมือชื่อ กรุณาวาดหรืออัปโหลดไฟล์ลายมือชื่อ');
+        }
+
+        $user->signature_data = $signatureData;
+        $user->signature_updated_at = now();
+        $user->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'บันทึกลายมือชื่ออิเล็กทรอนิกส์ประจำตัวเรียบร้อยแล้ว (เข้ารหัสความปลอดภัย)',
+                'signature_data' => $signatureData,
+            ]);
+        }
+
+        return Redirect::back()->with('success', 'บันทึกลายมือชื่ออิเล็กทรอนิกส์ประจำตัวเรียบร้อยแล้ว (เข้ารหัสความปลอดภัย)');
+    }
+
+    /**
+     * Delete the user's personal signature.
+     */
+    public function destroySignature(Request $request)
+    {
+        $user = $request->user();
+        $user->signature_data = null;
+        $user->signature_updated_at = null;
+        $user->save();
+
+        if ($request->wantsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'ลบลายมือชื่อเรียบร้อยแล้ว',
+            ]);
+        }
+
+        return Redirect::back()->with('success', 'ลบลายมือชื่อเรียบร้อยแล้ว');
+    }
 }

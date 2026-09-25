@@ -81,6 +81,31 @@ export default function Print({ project, strategyCategories = [] }) {
 
     const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล');
 
+    const getApprovalByStep = (step) => {
+        return project.approvals?.find(a => a.step_number === step && (a.status === 'approved' || a.status === 'submitted'));
+    };
+
+    const formatThaiSignatureDate = (dateStr) => {
+        if (!dateStr) return null;
+        try {
+            const d = new Date(dateStr);
+            const day = d.getDate();
+            const months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            const month = months[d.getMonth()];
+            const year = d.getFullYear() + 543;
+            return `วันที่ ${toThaiNumerals(day)} เดือน ${month} พ.ศ. ${toThaiNumerals(year)}`;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const sig1 = getApprovalByStep(1);
+    const sig2 = getApprovalByStep(2);
+    const sig3 = getApprovalByStep(3);
+    const sig4 = getApprovalByStep(4);
+    const sig5 = getApprovalByStep(5);
+    const sig6 = getApprovalByStep(6);
+
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0">
             <Head>
@@ -647,37 +672,59 @@ export default function Print({ project, strategyCategories = [] }) {
                         <div className="grid grid-cols-2 gap-x-6 gap-y-6">
                             {/* Signature 1: ผู้เสนอโครงการ */}
                             <div className="flex flex-col items-center text-center font-sarabun">
-                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap">
+                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                     <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
-                                    <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                    <div className="relative inline-flex flex-col items-center">
+                                        {sig1?.signature_data ? (
+                                            <img 
+                                                src={sig1.signature_data} 
+                                                alt="ลายมือชื่อ" 
+                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                            />
+                                        ) : (
+                                            <div className="h-6"></div>
+                                        )}
+                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                    </div>
                                     <span className="shrink-0 ml-1 font-normal">ผู้เสนอโครงการ</span>
                                 </div>
                                 <p className="font-bold pt-2 text-xs sm:text-[13px]">
-                                    ({toThaiNumerals(cleanedResponsiblePerson)})
+                                    ({toThaiNumerals(sig1?.user?.name ? cleanPersonName(sig1.user.name) : cleanedResponsiblePerson)})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
                                     {toThaiNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}
                                 </p>
                                 <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                    {sig1?.signed_at ? formatThaiSignatureDate(sig1.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............'}
                                 </p>
                             </div>
 
                             {/* Signature 2: Head of Department */}
                             <div className="flex flex-col items-center text-center font-sarabun">
-                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap">
+                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                     <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
-                                    <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                    <div className="relative inline-flex flex-col items-center">
+                                        {sig2?.signature_data ? (
+                                            <img 
+                                                src={sig2.signature_data} 
+                                                alt="ลายมือชื่อ" 
+                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                            />
+                                        ) : (
+                                            <div className="h-6"></div>
+                                        )}
+                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                    </div>
                                     <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
                                 </div>
                                 <p className="font-bold pt-2 text-xs sm:text-[13px]">
-                                    (......................................................)
+                                    ({sig2?.user?.name ? toThaiNumerals(cleanPersonName(sig2.user.name)) : '......................................................'})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
                                     {toThaiNumerals(project.department?.name ? `หัวหน้า${project.department.name}` : 'หัวหน้าแผนกวิชา / หัวหน้างาน')}
                                 </p>
                                 <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                    {sig2?.signed_at ? formatThaiSignatureDate(sig2.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............'}
                                 </p>
                             </div>
                         </div>
@@ -686,56 +733,89 @@ export default function Print({ project, strategyCategories = [] }) {
                         <div className="grid grid-cols-2 gap-x-6 gap-y-6">
                             {/* Signature 3: Head of Planning */}
                             <div className="flex flex-col items-center text-center font-sarabun">
-                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap">
+                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                     <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
-                                    <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                    <div className="relative inline-flex flex-col items-center">
+                                        {sig3?.signature_data ? (
+                                            <img 
+                                                src={sig3.signature_data} 
+                                                alt="ลายมือชื่อ" 
+                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                            />
+                                        ) : (
+                                            <div className="h-6"></div>
+                                        )}
+                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                    </div>
                                     <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
                                 </div>
                                 <p className="font-bold pt-2 text-xs sm:text-[13px]">
-                                    (นายนิพนธ์ ร่องพืช)
+                                    ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : 'นายนิพนธ์ ร่องพืช'})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
                                     หัวหน้างานแผนงานและความร่วมมือ
                                 </p>
                                 <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                    {sig3?.signed_at ? formatThaiSignatureDate(sig3.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............'}
                                 </p>
                             </div>
 
                             {/* Signature 4: Deputy Director */}
                             <div className="flex flex-col items-center text-center font-sarabun">
-                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap">
+                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                     <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
-                                    <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                    <div className="relative inline-flex flex-col items-center">
+                                        {sig4?.signature_data ? (
+                                            <img 
+                                                src={sig4.signature_data} 
+                                                alt="ลายมือชื่อ" 
+                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                            />
+                                        ) : (
+                                            <div className="h-6"></div>
+                                        )}
+                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                    </div>
                                     <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
                                 </div>
                                 <p className="font-bold pt-2 text-xs sm:text-[13px]">
-                                    (นายจักรพงศ์ พรหมสกุลปัญญา)
+                                    ({sig4?.user?.name ? toThaiNumerals(cleanPersonName(sig4.user.name)) : (sig5?.user?.name ? toThaiNumerals(cleanPersonName(sig5.user.name)) : 'นายจักรพงศ์ พรหมสกุลปัญญา')})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
                                     รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ
                                 </p>
                                 <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                    วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                    {sig4?.signed_at ? formatThaiSignatureDate(sig4.signed_at) : (sig5?.signed_at ? formatThaiSignatureDate(sig5.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............')}
                                 </p>
                             </div>
                         </div>
 
                         {/* Row 3: Final Director Approval */}
                         <div className="pt-2 flex flex-col items-center text-center font-sarabun max-w-sm mx-auto">
-                            <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap">
+                            <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                 <span className="shrink-0 mr-1.5 font-normal">ลงชื่อ</span>
-                                <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                                <div className="relative inline-flex flex-col items-center">
+                                    {sig6?.signature_data ? (
+                                        <img 
+                                            src={sig6.signature_data} 
+                                            alt="ลายมือชื่อ" 
+                                            className="h-12 max-w-[150px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                        />
+                                    ) : (
+                                        <div className="h-7"></div>
+                                    )}
+                                    <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                                </div>
                                 <span className="shrink-0 ml-1.5 font-normal">ผู้อนุมัติโครงการ</span>
                             </div>
                             <p className="font-bold text-sm sm:text-base pt-2">
-                                (นายกเชษฐ์ กิ่งชนะ)
+                                ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : 'นายกเชษฐ์ กิ่งชนะ'})
                             </p>
                             <p className="text-[12px] font-semibold leading-relaxed pt-0.5 text-slate-800">
                                 ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
                             </p>
                             <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                วันที่ ....... เดือน ............................ พ.ศ. ...............
+                                {sig6?.signed_at ? formatThaiSignatureDate(sig6.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............'}
                             </p>
                         </div>
                     </div>
