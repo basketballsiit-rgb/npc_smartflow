@@ -11090,9 +11090,9 @@ ${itemsListText}
                                                                 <a
                                                                     href={route('projects.show', p.id)}
                                                                     className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs hover:scale-105 transition cursor-pointer"
-                                                                    title="เปิดดูรายละเอียดโครงการ"
+                                                                    title="พิจารณาอนุมัติโครงการ"
                                                                 >
-                                                                    เปิดดู ➔
+                                                                    พิจารณาอนุมัติ ➔
                                                                 </a>
                                                                 <a
                                                                     href={route('projects.print', p.id)}

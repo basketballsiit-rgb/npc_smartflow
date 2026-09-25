@@ -861,11 +861,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'reviews' })}
                                     className={getSubLinkClass(url.includes('tab=reviews'))}
-                                    title="ตรวจสอบแผน & พิจารณาอนุมัติโครงการ (ขั้น 3)"
+                                    title="ตรวจสอบแผน & พิจารณาอนุมัติโครงการ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=reviews'), 'text-amber-300')}>└─</span>
                                     <span className="text-sm">🔍</span>
-                                    {isSidebarOpen && <span>ตรวจสอบแผน & อนุมัติ (ขั้น 3)</span>}
+                                    {isSidebarOpen && <span>ตรวจสอบแผน & อนุมัติ</span>}
                                 </Link>
                                 <Link
                                     href={`${route('admin.routine_budgets.index')}?tab=create_plan`}
@@ -1263,7 +1263,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                             <span>💰</span> งบสถานศึกษา & ประมาณการ
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>🔍</span> ตรวจสอบแผน (ขั้น 3)
+                                            <span>🔍</span> ตรวจสอบแผน & อนุมัติ
                                         </Link>
                                         <Link href={route('admin.routine_budgets.index')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📋</span> ตารางจัดสรรงบประจำปี
