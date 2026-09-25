@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
+import NotificationBell from '@/Components/NotificationBell';
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
@@ -374,6 +375,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                         {/* Topbar Right: User Profile Info Block (Normal Font Weight) */}
                         <div className="flex items-center gap-x-3">
+                            <NotificationBell />
                             <Dropdown>
                                 <Dropdown.Trigger>
                                     <button

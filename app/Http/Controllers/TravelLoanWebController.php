@@ -40,6 +40,8 @@ class TravelLoanWebController extends Controller
             'loan_status' => 'plan_cut',
         ]);
 
+        \App\Services\NotificationService::notifyFinanceDisbursementNeeded($travelLoan);
+
         return redirect()->back()->with('success', "แผนงานตัดยอดงบประมาณสัญญายืมเงินสำเร็จ เลขที่เอกสาร: {$docNumber}");
     }
 

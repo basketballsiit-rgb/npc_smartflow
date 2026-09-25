@@ -16,6 +16,7 @@ use App\Http\Controllers\RoutineBudgetController;
 use App\Http\Controllers\CentralAllocationController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\TravelLoanWebController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Auth\KeycloakController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -75,6 +76,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/positions', [ProfileController::class, 'savePositions'])->name('profile.positions.save');
     Route::post('/profile/citizen-id', [ProfileController::class, 'updateCitizenId'])->name('profile.update_citizen_id');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // In-App Notifications
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark_all_read');
 
     // Vendor Directory Routes
     Route::get('/vendors', [VendorController::class, 'index'])->name('vendors.index');

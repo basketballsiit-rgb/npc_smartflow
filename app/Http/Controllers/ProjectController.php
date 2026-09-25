@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use App\Services\NotificationService;
 
 class ProjectController extends Controller
 {
@@ -746,6 +747,8 @@ class ProjectController extends Controller
                 'comments' => 'จัดทำโครงการฉบับเต็มและยื่นขออนุมัติตามกระบวนการ 6 ขั้นตอน',
             ]);
 
+            NotificationService::notifyProjectStep($project);
+
             return redirect()->route('projects.show', $project->id)->with('success', 'จัดทำรายละเอียดโครงการฉบับเต็มและยื่นขออนุมัติโครงการสำเร็จ ระบบได้ส่งต่อให้หัวหน้าแผนก/หัวหน้างานพิจารณา (ขั้นตอนที่ 2)');
         }
 
@@ -847,6 +850,8 @@ class ProjectController extends Controller
             ]);
         }
 
+        NotificationService::notifyProjectStep($project);
+
         return redirect()->back()->with('success', 'ยื่นเสนอขออนุมัติเพื่อดำเนินงานโครงการต่อเรียบร้อยแล้ว');
     }
 
@@ -919,6 +924,8 @@ class ProjectController extends Controller
             $project->approved_at = now();
             $project->save();
 
+            NotificationService::notifyProjectResult($project, 'approved');
+
             // PDF generation trigger (Stub / mock file creation)
             // A read-only PDF file is prepared in real-time
             // In Step 7, we integrate Browsershot/Puppeteer for actual generation
@@ -929,6 +936,9 @@ class ProjectController extends Controller
         $project->current_approval_step += 1;
         $project->status = 'pending_approval';
         $project->save();
+
+        NotificationService::notifyProjectStep($project);
+        NotificationService::notifyProjectResult($project, 'approved');
 
         return redirect()->route('dashboard')->with('message', 'Project approved to next stage.');
     }
@@ -1082,6 +1092,8 @@ class ProjectController extends Controller
         $project->status = 'rejected';
         $project->current_approval_step = 1;
         $project->save();
+
+        NotificationService::notifyProjectResult($project, 'rejected', $request->input('comments'));
 
         return redirect()->route('dashboard')->with('message', 'Project rejected and referred back to author.');
     }
