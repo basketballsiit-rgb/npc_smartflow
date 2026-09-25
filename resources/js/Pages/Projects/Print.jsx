@@ -298,16 +298,6 @@ export default function Print({ project, strategyCategories = [] }) {
                         </button>
                     </div>
 
-                    <a
-                        href={route('projects.chapter2.print', project.id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 transition shadow-2xs"
-                        title="ดูรายงานผลโครงการ บทที่ ๒ เอกสารและงานวิจัยที่เกี่ยวข้อง"
-                    >
-                        📖 พิมพ์บทที่ ๒ (งานวิจัย & สอศ.)
-                    </a>
-
                     <button
                         onClick={() => window.close()}
                         className="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs"
