@@ -1187,7 +1187,7 @@ class ProjectController extends Controller
      */
     public function print(Project $project)
     {
-        $project->load(['user', 'department', 'approvals.user', 'budget.fundingSource']);
+        $project->load(['user', 'department.parent', 'approvals.user', 'budget.fundingSource']);
         $latestApprovalsByStep = $project->approvals->sortByDesc('id')->unique('step_number')->sortBy('step_number')->values();
         $project->setRelation('approvals', $latestApprovalsByStep);
         $allCategories = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->get();

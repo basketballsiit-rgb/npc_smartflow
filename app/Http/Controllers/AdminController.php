@@ -657,6 +657,8 @@ class AdminController extends Controller
             'name' => 'required|string|max:255|unique:departments,name',
             'code' => 'nullable|string|max:50',
             'parent_id' => 'nullable|exists:departments,id',
+            'deputy_director_name' => 'nullable|string|max:255',
+            'deputy_director_position' => 'nullable|string|max:255',
         ]);
 
         Department::create($validated);
@@ -677,6 +679,8 @@ class AdminController extends Controller
             'name' => ['required', 'string', 'max:255', Rule::unique('departments', 'name')->ignore($department->id)],
             'code' => 'nullable|string|max:50',
             'parent_id' => 'nullable|exists:departments,id',
+            'deputy_director_name' => 'nullable|string|max:255',
+            'deputy_director_position' => 'nullable|string|max:255',
         ]);
 
         $department->update($validated);

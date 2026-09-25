@@ -779,10 +779,19 @@ export default function Print({ project, strategyCategories = [] }) {
                                     <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
                                 </div>
                                 <p className="font-bold pt-2 text-xs sm:text-[13px]">
-                                    ({sig4?.user?.name ? toThaiNumerals(cleanPersonName(sig4.user.name)) : (sig5?.user?.name ? toThaiNumerals(cleanPersonName(sig5.user.name)) : 'นายจักรพงศ์ พรหมสกุลปัญญา')})
+                                    ({sig4?.user?.name 
+                                        ? toThaiNumerals(cleanPersonName(sig4.user.name)) 
+                                        : (sig5?.user?.name 
+                                            ? toThaiNumerals(cleanPersonName(sig5.user.name)) 
+                                            : ((project.department?.deputy_director_name || project.department?.parent?.deputy_director_name) 
+                                                ? toThaiNumerals(cleanPersonName(project.department?.deputy_director_name || project.department?.parent?.deputy_director_name)) 
+                                                : 'นายจักรพงศ์ พรหมสกุลปัญญา'))})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
-                                    รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ
+                                    {sig4?.user?.position_level 
+                                        || project.department?.deputy_director_position 
+                                        || project.department?.parent?.deputy_director_position 
+                                        || 'รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ'}
                                 </p>
                                 <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
                                     {sig4?.signed_at ? formatThaiSignatureDate(sig4.signed_at) : (sig5?.signed_at ? formatThaiSignatureDate(sig5.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............')}

@@ -1503,19 +1503,44 @@ export default function Dashboard({
     const handleAddMainDivision = () => {
         Swal.fire({
             title: '🏛️ เพิ่มฝ่ายหลักใหม่',
-            input: 'text',
-            inputLabel: 'ชื่อฝ่ายหลัก *',
-            inputPlaceholder: 'เช่น ฝ่ายบริหารจัดการ...',
+            html: `
+                <div class="space-y-3 text-left">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อฝ่ายหลัก <span class="text-rose-500">*</span></label>
+                        <input id="swal-dept-name" class="swal2-input !m-0 !w-full !text-sm" placeholder="เช่น ฝ่ายบริหารทรัพยากร">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อ-สกุล รองผู้อำนวยการฝ่าย (ถ้ามี)</label>
+                        <input id="swal-deputy-name" class="swal2-input !m-0 !w-full !text-sm" placeholder="เช่น นายสมชาย ใจดี">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อตำแหน่งรองผู้อำนวยการฝ่าย</label>
+                        <input id="swal-deputy-pos" class="swal2-input !m-0 !w-full !text-sm" placeholder="เช่น รองผู้อำนวยการฝ่ายบริหารทรัพยากร">
+                    </div>
+                </div>
+            `,
             showCancelButton: true,
             confirmButtonText: 'บันทึก',
             cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#7c3aed',
-            inputValidator: (value) => {
-                if (!value) return 'กรุณาระบุชื่อฝ่ายหลัก';
+            preConfirm: () => {
+                const name = document.getElementById('swal-dept-name')?.value?.trim();
+                const deputy_director_name = document.getElementById('swal-deputy-name')?.value?.trim() || null;
+                const deputy_director_position = document.getElementById('swal-deputy-pos')?.value?.trim() || null;
+                if (!name) {
+                    Swal.showValidationMessage('กรุณาระบุชื่อฝ่ายหลัก');
+                    return false;
+                }
+                return { name, deputy_director_name, deputy_director_position };
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                router.post(route('admin.departments.store'), { name: result.value, parent_id: null }, {
+                router.post(route('admin.departments.store'), { 
+                    name: result.value.name, 
+                    deputy_director_name: result.value.deputy_director_name,
+                    deputy_director_position: result.value.deputy_director_position,
+                    parent_id: null 
+                }, {
                     onSuccess: () => Swal.fire('สำเร็จ', 'เพิ่มฝ่ายหลักใหม่เรียบร้อยแล้ว', 'success')
                 });
             }
@@ -1526,8 +1551,8 @@ export default function Dashboard({
         Swal.fire({
             title: `➕ เพิ่มงานย่อย / แผนกวิชาในสังกัด`,
             html: `
-                <div className="text-left space-y-2">
-                    <p className="text-xs text-purple-700 font-bold">สังกัดฝ่ายหลัก: ${parentDept.name}</p>
+                <div class="text-left space-y-2">
+                    <p class="text-xs text-purple-700 font-bold">สังกัดฝ่ายหลัก: ${parentDept.name}</p>
                 </div>
             `,
             input: 'text',
@@ -1553,25 +1578,73 @@ export default function Dashboard({
     };
 
     const handleEditDepartment = (dept) => {
-        Swal.fire({
-            title: '✏️ แก้ไขข้อมูลฝ่าย / สังกัดแผนก',
-            input: 'text',
-            inputValue: dept.name,
-            inputLabel: 'ชื่อฝ่าย หรือ สังกัดแผนกวิชา *',
-            showCancelButton: true,
-            confirmButtonText: 'บันทึกการแก้ไข',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonColor: '#7c3aed',
-            inputValidator: (value) => {
-                if (!value) return 'กรุณาระบุชื่อฝ่ายหรือสังกัดแผนก';
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.put(route('admin.departments.update', dept.id), { name: result.value }, {
-                    onSuccess: () => Swal.fire('สำเร็จ', 'อัปเดตข้อมูลฝ่าย/สังกัดแผนกเรียบร้อยแล้ว', 'success')
-                });
-            }
-        });
+        const isMainDivision = !dept.parent_id;
+        if (isMainDivision) {
+            Swal.fire({
+                title: '✏️ ตั้งค่าฝ่ายและชื่อรองผู้อำนวยการ',
+                html: `
+                    <div class="space-y-3 text-left">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อฝ่ายหลัก <span class="text-rose-500">*</span></label>
+                            <input id="swal-dept-name" class="swal2-input !m-0 !w-full !text-sm" value="${dept.name || ''}" placeholder="เช่น ฝ่ายยุทธศาสตร์และแผนงาน">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อ-สกุล รองผู้อำนวยการฝ่าย</label>
+                            <input id="swal-deputy-name" class="swal2-input !m-0 !w-full !text-sm" value="${dept.deputy_director_name || ''}" placeholder="เช่น นายจักรพงศ์ พรหมสกุลปัญญา">
+                            <p class="text-[11px] text-slate-500 mt-1">💡 ชื่อนี้จะแสดงในเอกสารโครงการ และหน้าลงนามของฝ่ายนี้โดยอัตโนมัติ</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อตำแหน่งรองผู้อำนวยการฝ่าย</label>
+                            <input id="swal-deputy-pos" class="swal2-input !m-0 !w-full !text-sm" value="${dept.deputy_director_position || ''}" placeholder="เช่น รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ">
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'บันทึกการแก้ไข',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#7c3aed',
+                preConfirm: () => {
+                    const name = document.getElementById('swal-dept-name')?.value?.trim();
+                    const deputy_director_name = document.getElementById('swal-deputy-name')?.value?.trim() || null;
+                    const deputy_director_position = document.getElementById('swal-deputy-pos')?.value?.trim() || null;
+                    if (!name) {
+                        Swal.showValidationMessage('กรุณาระบุชื่อฝ่าย');
+                        return false;
+                    }
+                    return { name, deputy_director_name, deputy_director_position };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    router.put(route('admin.departments.update', dept.id), { 
+                        name: result.value.name,
+                        deputy_director_name: result.value.deputy_director_name,
+                        deputy_director_position: result.value.deputy_director_position,
+                    }, {
+                        onSuccess: () => Swal.fire('สำเร็จ', 'อัปเดตข้อมูลฝ่ายและรองผู้อำนวยการฝ่ายเรียบร้อยแล้ว', 'success')
+                    });
+                }
+            });
+        } else {
+            Swal.fire({
+                title: '✏️ แก้ไขชื่องานย่อย / สาขาวิชา',
+                input: 'text',
+                inputValue: dept.name,
+                inputLabel: 'ชื่องานย่อย หรือ สาขาวิชา *',
+                showCancelButton: true,
+                confirmButtonText: 'บันทึกการแก้ไข',
+                cancelButtonText: 'ยกเลิก',
+                confirmButtonColor: '#7c3aed',
+                inputValidator: (value) => {
+                    if (!value) return 'กรุณาระบุชื่องานย่อยหรือสาขาวิชา';
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    router.put(route('admin.departments.update', dept.id), { name: result.value }, {
+                        onSuccess: () => Swal.fire('สำเร็จ', 'อัปเดตข้อมูลสังกัดงานย่อยเรียบร้อยแล้ว', 'success')
+                    });
+                }
+            });
+        }
     };
 
     const handleDeleteDepartment = (dept) => {
@@ -2064,7 +2137,18 @@ export default function Dashboard({
                                         <span className="text-lg">🏛️</span>
                                         <div>
                                             <h4 className="font-bold text-base">{idx + 1}. {mainDept.name}</h4>
-                                            <p className="text-xs text-purple-200">บุคลากรในสังกัดรวม: {totalUsersInMain} คน | งานย่อย: {subDepts.length} งาน</p>
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5 text-xs text-purple-200">
+                                                <span>บุคลากรในสังกัดรวม: {totalUsersInMain} คน | งานย่อย: {subDepts.length} งาน</span>
+                                                {mainDept.deputy_director_name ? (
+                                                    <span className="inline-flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded-md text-amber-200 font-medium">
+                                                        <span>👤</span> รองฝ่าย: {mainDept.deputy_director_name} ({mainDept.deputy_director_position || 'รองผู้อำนวยการฝ่าย'})
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 bg-white/10 text-white/60 px-2 py-0.5 rounded-md text-[11px]">
+                                                        <span>⚠️</span> ยังไม่ระบุชื่อรองผู้อำนวยการฝ่าย
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -2077,8 +2161,9 @@ export default function Dashboard({
                                         <button
                                             onClick={() => handleEditDepartment(mainDept)}
                                             className="inline-flex items-center gap-1 rounded-xl bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 text-xs font-bold transition-all border border-white/30"
+                                            title="ตั้งค่าชื่อฝ่ายและกำหนดชื่อรองผู้อำนวยการฝ่าย"
                                         >
-                                            ✏️ แก้ไขชื่อฝ่าย
+                                            ✏️ ตั้งค่า / แก้ไขฝ่าย
                                         </button>
                                         <button
                                             onClick={() => handleDeleteDepartment(mainDept)}

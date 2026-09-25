@@ -6,7 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class Department extends Model
 {
-    protected $fillable = ['name', 'code', 'parent_id'];
+    protected $fillable = [
+        'name',
+        'code',
+        'parent_id',
+        'deputy_director_name',
+        'deputy_director_position',
+    ];
 
     /**
      * Parent main division.
