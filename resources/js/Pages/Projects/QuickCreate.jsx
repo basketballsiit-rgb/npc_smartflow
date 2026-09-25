@@ -17,6 +17,15 @@ export default function QuickCreate({
     const allPositions = auth.user.all_positions || [];
     const defaultPosition = allPositions.find(p => p.is_primary) || allPositions[0] || null;
 
+    const toArabic = (str) => {
+        if (!str || typeof str !== 'string') return str;
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return str.replace(/[๐-๙]/g, c => {
+            const idx = thaiDigits.indexOf(c);
+            return idx !== -1 ? String(idx) : c;
+        });
+    };
+
     // Initialize initial selections for dynamic strategy categories
     const initialSelections = {};
     strategyCategories.forEach(cat => {
@@ -594,10 +603,10 @@ export default function QuickCreate({
                                                  <div key={cat.id} className="rounded-xl border border-sky-200 bg-white p-4 shadow-2xs space-y-3">
                                                      <div>
                                                          <h5 className="text-xs font-bold text-sky-950 flex items-center gap-2">
-                                                             <span>🚩</span> {cat.name}
+                                                             <span>🚩</span> {toArabic(cat.name)}
                                                          </h5>
                                                          {cat.description && (
-                                                             <p className="text-[11px] text-slate-500 mt-0.5">{cat.description}</p>
+                                                             <p className="text-[11px] text-slate-500 mt-0.5">{toArabic(cat.description)}</p>
                                                          )}
                                                      </div>
 
@@ -607,7 +616,7 @@ export default function QuickCreate({
                                                                  {group.name ? (
                                                                      <div className="text-xs font-bold text-sky-900 bg-sky-50 px-2.5 py-1 rounded-md flex items-center gap-1.5 border border-sky-100">
                                                                          <span>📂</span>
-                                                                         <span>{group.name}</span>
+                                                                         <span>{toArabic(group.name)}</span>
                                                                      </div>
                                                                  ) : null}
                                                                  <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 ${group.name ? 'pl-2' : ''}`}>
@@ -628,7 +637,7 @@ export default function QuickCreate({
                                                                                      onChange={() => handleCategoryItemToggle(cat.id, item.id)}
                                                                                      className="mt-0.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
                                                                                  />
-                                                                                 <span>{item.name}</span>
+                                                                                 <span>{toArabic(item.name)}</span>
                                                                              </label>
                                                                          );
                                                                      })}

@@ -363,6 +363,17 @@ class AdminController extends Controller
      * Delete a Provincial Strategy.
      */
     /**
+     * Convert Thai numerals (๐-๙) to Arabic numerals (0-9).
+     */
+    private function convertThaiToArabicNumerals(?string $text): ?string
+    {
+        if ($text === null) return null;
+        $thai = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        $arabic = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        return str_replace($thai, $arabic, $text);
+    }
+
+    /**
      * Store a new dynamic Strategy Category.
      */
     public function storeStrategyCategory(Request $request)
@@ -377,8 +388,8 @@ class AdminController extends Controller
         ]);
 
         \App\Models\StrategyCategory::create([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
+            'name' => $this->convertThaiToArabicNumerals($validated['name']),
+            'description' => $this->convertThaiToArabicNumerals($validated['description'] ?? null),
             'is_active' => true,
             'order_index' => \App\Models\StrategyCategory::max('order_index') + 1,
         ]);
@@ -400,7 +411,10 @@ class AdminController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        $category->update($validated);
+        $category->update([
+            'name' => $this->convertThaiToArabicNumerals($validated['name']),
+            'description' => $this->convertThaiToArabicNumerals($validated['description'] ?? null),
+        ]);
 
         return redirect()->back()->with('success', 'อัปเดตหมวดหมู่อยุทธศาสตร์เรียบร้อยแล้ว');
     }
@@ -451,8 +465,8 @@ class AdminController extends Controller
             'name' => 'required|string|max:500',
         ]);
 
-        $groupName = !empty($validated['group_name']) ? trim($validated['group_name']) : null;
-        $name = trim($validated['name']);
+        $groupName = !empty($validated['group_name']) ? $this->convertThaiToArabicNumerals(trim($validated['group_name'])) : null;
+        $name = $this->convertThaiToArabicNumerals(trim($validated['name']));
 
         // Check if there is an existing standalone placeholder item where name equals $groupName
         if ($groupName) {
@@ -502,8 +516,8 @@ class AdminController extends Controller
         ]);
 
         $item->update([
-            'group_name' => !empty($validated['group_name']) ? trim($validated['group_name']) : null,
-            'name' => $validated['name'],
+            'group_name' => !empty($validated['group_name']) ? $this->convertThaiToArabicNumerals(trim($validated['group_name'])) : null,
+            'name' => $this->convertThaiToArabicNumerals(trim($validated['name'])),
         ]);
 
         return redirect()->back()->with('success', 'อัปเดตตัวเลือกยุทธศาสตร์เรียบร้อยแล้ว');
@@ -554,9 +568,11 @@ class AdminController extends Controller
             'new_group_name' => 'required|string|max:255',
         ]);
 
+        $newGroupName = $this->convertThaiToArabicNumerals(trim($validated['new_group_name']));
+
         \App\Models\StrategyItem::where('strategy_category_id', $validated['strategy_category_id'])
-            ->where('group_name', $validated['old_group_name'])
-            ->update(['group_name' => trim($validated['new_group_name'])]);
+            ->where('group_name', trim($validated['old_group_name']))
+            ->update(['group_name' => $newGroupName]);
 
         return redirect()->back()->with('success', 'เปลี่ยนชื่อหัวข้อหลักเรียบร้อยแล้ว');
     }
@@ -580,6 +596,52 @@ class AdminController extends Controller
             ->delete();
 
         return redirect()->back()->with('success', 'ลบหัวข้อหลักและรายการย่อยทั้งหมดเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Batch convert all Thai numerals to Arabic numerals across all strategies.
+     */
+    public function convertStrategyNumeralsToArabic()
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead() && !auth()->user()->isPlanStaff()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
+        }
+
+        $thai = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        $arabic = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+        foreach (\App\Models\StrategyCategory::all() as $cat) {
+            $cat->update([
+                'name' => str_replace($thai, $arabic, $cat->name),
+                'description' => $cat->description ? str_replace($thai, $arabic, $cat->description) : null,
+            ]);
+        }
+
+        foreach (\App\Models\StrategyItem::all() as $item) {
+            $item->update([
+                'group_name' => $item->group_name ? str_replace($thai, $arabic, $item->group_name) : null,
+                'name' => str_replace($thai, $arabic, $item->name),
+            ]);
+        }
+
+        foreach (\App\Models\IqaStrategy::all() as $item) {
+            $item->update(['name' => str_replace($thai, $arabic, $item->name)]);
+        }
+        foreach (\App\Models\OvecStrategy::all() as $item) {
+            $item->update(['name' => str_replace($thai, $arabic, $item->name)]);
+        }
+        if (class_exists(\App\Models\NationalStrategy::class)) {
+            foreach (\App\Models\NationalStrategy::all() as $item) {
+                $item->update(['name' => str_replace($thai, $arabic, $item->name)]);
+            }
+        }
+        if (class_exists(\App\Models\ProvincialStrategy::class)) {
+            foreach (\App\Models\ProvincialStrategy::all() as $item) {
+                $item->update(['name' => str_replace($thai, $arabic, $item->name)]);
+            }
+        }
+
+        return redirect()->back()->with('success', 'แปลงตัวเลขไทยในยุทธศาสตร์ทั้งหมดเป็นเลขอารบิกเรียบร้อยแล้ว');
     }
 
     /**

@@ -2469,6 +2469,34 @@ export default function Dashboard({
         );
     };
 
+    // Helper to convert Thai numerals to Arabic numerals
+    const toArabicNumerals = (str) => {
+        if (!str || typeof str !== 'string') return str;
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return str.replace(/[๐-๙]/g, char => {
+            const idx = thaiDigits.indexOf(char);
+            return idx !== -1 ? String(idx) : char;
+        });
+    };
+
+    const handleConvertThaiToArabic = () => {
+        Swal.fire({
+            title: 'แปลงตัวเลขไทยเป็นเลขอารบิก?',
+            text: 'ระบบจะแปลงตัวเลขไทย (เช่น ๑, ๒, ๓) ในหมวดหมู่ หัวข้อหลัก และรายการย่อยทั้งหมดให้เป็นเลขอารบิก (1, 2, 3) โดยอัตโนมัติ',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันแปลงเป็นเลขอารบิก',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#7c3aed',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('admin.strategies.convert_arabic'), {}, {
+                    onSuccess: () => Swal.fire('สำเร็จ', 'แปลงตัวเลขไทยในยุทธศาสตร์ทั้งหมดเป็นเลขอารบิกเรียบร้อยแล้ว', 'success')
+                });
+            }
+        });
+    };
+
     // Dynamic Strategy Category Handlers
     const handleAddCategory = () => {
         Swal.fire({
@@ -2492,7 +2520,10 @@ export default function Dashboard({
                     Swal.showValidationMessage('กรุณาระบุชื่อหมวดหมู่อยุทธศาสตร์');
                     return false;
                 }
-                return { name, description: desc };
+                return { 
+                    name: toArabicNumerals(name.trim()), 
+                    description: desc ? toArabicNumerals(desc.trim()) : null 
+                };
             }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -2509,9 +2540,9 @@ export default function Dashboard({
             html: `
                 <div className="space-y-3 text-left">
                     <label className="block text-xs font-bold text-slate-700">ชื่อหมวดหมู่อยุทธศาสตร์ *</label>
-                    <input id="swal-edit-cat-name" class="swal2-input text-sm" value="${cat.name}" placeholder="ชื่อหมวดหมู่อยุทธศาสตร์" style="margin: 0; width: 100%;">
+                    <input id="swal-edit-cat-name" class="swal2-input text-sm" value="${toArabicNumerals(cat.name)}" placeholder="ชื่อหมวดหมู่อยุทธศาสตร์" style="margin: 0; width: 100%;">
                     <label className="block text-xs font-bold text-slate-700 mt-2">คำอธิบายเพิ่มเติม</label>
-                    <input id="swal-edit-cat-desc" class="swal2-input text-sm" value="${cat.description || ''}" placeholder="คำอธิบายเพิ่มเติม" style="margin: 0; width: 100%;">
+                    <input id="swal-edit-cat-desc" class="swal2-input text-sm" value="${toArabicNumerals(cat.description || '')}" placeholder="คำอธิบายเพิ่มเติม" style="margin: 0; width: 100%;">
                 </div>
             `,
             showCancelButton: true,
@@ -2525,7 +2556,10 @@ export default function Dashboard({
                     Swal.showValidationMessage('กรุณาระบุชื่อหมวดหมู่อยุทธศาสตร์');
                     return false;
                 }
-                return { name, description: desc };
+                return { 
+                    name: toArabicNumerals(name.trim()), 
+                    description: desc ? toArabicNumerals(desc.trim()) : null 
+                };
             }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -2575,7 +2609,7 @@ export default function Dashboard({
 
     const handleAddMainTopic = (cat) => {
         Swal.fire({
-            title: `📁 เพิ่มหัวข้อหลักใหม่ (${cat.name})`,
+            title: `📁 เพิ่มหัวข้อหลักใหม่ (${toArabicNumerals(cat.name)})`,
             html: `
                 <div class="text-left space-y-3 font-sans text-xs">
                     <div>
@@ -2609,7 +2643,10 @@ export default function Dashboard({
                     Swal.showValidationMessage('กรุณาระบุรายการย่อยข้อแรก');
                     return false;
                 }
-                return { group_name: groupName, name: itemName };
+                return { 
+                    group_name: toArabicNumerals(groupName), 
+                    name: toArabicNumerals(itemName) 
+                };
             }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -2628,8 +2665,8 @@ export default function Dashboard({
         Swal.fire({
             title: '✏️ แก้ไขชื่อหัวข้อหลัก',
             input: 'text',
-            inputValue: oldGroupName,
-            inputLabel: `ชื่อหัวข้อหลักในหมวด: ${cat.name}`,
+            inputValue: toArabicNumerals(oldGroupName),
+            inputLabel: `ชื่อหัวข้อหลักในหมวด: ${toArabicNumerals(cat.name)}`,
             inputPlaceholder: 'ระบุชื่อหัวข้อหลักใหม่...',
             showCancelButton: true,
             confirmButtonText: '💾 อัปเดตชื่อ',
@@ -2643,7 +2680,7 @@ export default function Dashboard({
                 router.put(route('admin.groups.update'), {
                     strategy_category_id: cat.id,
                     old_group_name: oldGroupName,
-                    new_group_name: result.value.trim(),
+                    new_group_name: toArabicNumerals(result.value.trim()),
                 }, {
                     onSuccess: () => Swal.fire('สำเร็จ', 'เปลี่ยนชื่อหัวข้อหลักเรียบร้อยแล้ว', 'success')
                 });
@@ -2678,23 +2715,23 @@ export default function Dashboard({
         
         // Collect existing groups
         const existingGroups = (cat?.items || [])
-            .map(i => (i.group_name || '').trim())
+            .map(i => toArabicNumerals((i.group_name || '').trim()))
             .filter(Boolean);
             
         // Collect standalone items that don't have a group_name (e.g. OVEC 1..5, National Strategy 1..6, etc.)
         const standaloneNames = (cat?.items || [])
             .filter(i => !i.group_name)
-            .map(i => (i.name || '').trim())
+            .map(i => toArabicNumerals((i.name || '').trim()))
             .filter(Boolean);
 
         // Combine into unique list of all main topics
         const allMainTopics = Array.from(new Set([...existingGroups, ...standaloneNames]));
-        const trimmedDefaultGroup = (defaultGroup || '').trim();
+        const trimmedDefaultGroup = toArabicNumerals((defaultGroup || '').trim());
         if (trimmedDefaultGroup && !allMainTopics.includes(trimmedDefaultGroup)) {
             allMainTopics.unshift(trimmedDefaultGroup);
         }
 
-        const catName = cat?.name || 'ยุทธศาสตร์';
+        const catName = toArabicNumerals(cat?.name || 'ยุทธศาสตร์');
 
         Swal.fire({
             title: `➕ เพิ่มรายการย่อย (${catName})`,
@@ -2778,7 +2815,10 @@ export default function Dashboard({
                     Swal.showValidationMessage('กรุณาระบุชื่อรายการย่อย / กลยุทธ์');
                     return false;
                 }
-                return { group_name: groupName, name: itemName };
+                return { 
+                    group_name: groupName ? toArabicNumerals(groupName) : null, 
+                    name: toArabicNumerals(itemName) 
+                };
             }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -2796,20 +2836,20 @@ export default function Dashboard({
     const handleEditStrategyItem = (item) => {
         const cat = (adminData.strategyCategories || []).find(c => c.id === item.strategy_category_id);
         const existingGroups = (cat?.items || [])
-            .map(i => (i.group_name || '').trim())
+            .map(i => toArabicNumerals((i.group_name || '').trim()))
             .filter(Boolean);
         const standaloneNames = (cat?.items || [])
             .filter(i => !i.group_name)
-            .map(i => (i.name || '').trim())
+            .map(i => toArabicNumerals((i.name || '').trim()))
             .filter(Boolean);
         const allMainTopics = Array.from(new Set([...existingGroups, ...standaloneNames]));
         
-        const currentGroup = (item.group_name || '').trim();
+        const currentGroup = toArabicNumerals((item.group_name || '').trim());
         if (currentGroup && !allMainTopics.includes(currentGroup)) {
             allMainTopics.unshift(currentGroup);
         }
 
-        const safeName = (item.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const safeName = toArabicNumerals(item.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         Swal.fire({
             title: '✏️ แก้ไขรายการย่อย / ตัวเลือกยุทธศาสตร์',
@@ -2883,7 +2923,10 @@ export default function Dashboard({
                     Swal.showValidationMessage('กรุณาระบุชื่อรายการย่อย / กลยุทธ์');
                     return false;
                 }
-                return { group_name: groupName, name: itemName };
+                return { 
+                    group_name: groupName ? toArabicNumerals(groupName) : null, 
+                    name: toArabicNumerals(itemName) 
+                };
             }
         }).then((result) => {
             if (result.isConfirmed) {
@@ -2933,12 +2976,21 @@ export default function Dashboard({
                             รองรับการเพิ่มหัวข้อย่อยได้ในทุก ๆ ยุทธศาสตร์ (เช่น ยุทธศาสตร์ประกันคุณภาพ, ยุทธศาสตร์ สอศ., ยุทธศาสตร์ชาติ, ยุทธศาสตร์จังหวัด หรือยุทธศาสตร์ใหม่ใด ๆ ที่เพิ่มขึ้นมา)
                         </p>
                     </div>
-                    <button
-                        onClick={handleAddCategory}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-600/20 hover:scale-105 transition-all shrink-0"
-                    >
-                        ➕ เพิ่มหมวดหมู่อยุทธศาสตร์ใหม่
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            onClick={handleConvertThaiToArabic}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100/80 hover:bg-purple-200/80 text-purple-900 border border-purple-200 px-3.5 py-2.5 text-xs font-bold transition-all shadow-2xs hover:scale-105 shrink-0"
+                            title="ปรับเปลี่ยนตัวเลขไทยในหมวดหมู่ หัวข้อหลัก และรายการย่อยทั้งหมดให้เป็นเลขอารบิก"
+                        >
+                            <span>🔢</span> ปรับตัวเลขไทยเป็นอารบิกทั้งหมด
+                        </button>
+                        <button
+                            onClick={handleAddCategory}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-600/20 hover:scale-105 transition-all shrink-0"
+                        >
+                            ➕ เพิ่มหมวดหมู่อยุทธศาสตร์ใหม่
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2966,7 +3018,7 @@ export default function Dashboard({
                                 <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex justify-between items-start gap-x-2">
                                     <div>
                                         <div className="flex items-center gap-x-2">
-                                            <h3 className="text-base font-bold text-slate-900">{catIdx + 1}. {cat.name}</h3>
+                                            <h3 className="text-base font-bold text-slate-900">{catIdx + 1}. {toArabicNumerals(cat.name)}</h3>
                                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                                 cat.is_active
                                                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
@@ -2975,7 +3027,7 @@ export default function Dashboard({
                                                 {cat.is_active ? '🟢 เปิดใช้งาน' : '🔴 ปิดใช้งาน'}
                                             </span>
                                         </div>
-                                        <p className="text-xs text-slate-500 mt-0.5">{cat.description || 'ตัวเลือกยุทธศาสตร์ประจำระบบ'}</p>
+                                        <p className="text-xs text-slate-500 mt-0.5">{toArabicNumerals(cat.description) || 'ตัวเลือกยุทธศาสตร์ประจำระบบ'}</p>
                                     </div>
                                     <div className="flex gap-x-1.5 flex-wrap justify-end">
                                         <button
@@ -3039,7 +3091,7 @@ export default function Dashboard({
                                                         <div className="flex justify-between items-center bg-white px-3 py-1.5 rounded-lg border border-purple-100 shadow-2xs">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-xs">📂</span>
-                                                                <span className="font-bold text-xs text-purple-950">{group.name}</span>
+                                                                <span className="font-bold text-xs text-purple-950">{toArabicNumerals(group.name)}</span>
                                                                 <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-bold">
                                                                     {group.items.length} รายการ
                                                                 </span>
@@ -3073,7 +3125,7 @@ export default function Dashboard({
                                                                 <li key={item.id} className="py-2 flex justify-between items-center hover:bg-white/80 px-2 rounded-lg transition-colors">
                                                                     <div className="flex items-start gap-x-2 max-w-[75%]">
                                                                         <span className="text-purple-400 font-mono text-xs mt-0.5">└─</span>
-                                                                        <span className="text-xs text-slate-800 font-medium leading-relaxed">{item.name}</span>
+                                                                        <span className="text-xs text-slate-800 font-medium leading-relaxed">{toArabicNumerals(item.name)}</span>
                                                                     </div>
                                                                     <div className="flex gap-x-1.5 whitespace-nowrap ml-2">
                                                                         <button
@@ -3107,7 +3159,7 @@ export default function Dashboard({
                                                                 <li key={item.id} className="py-2.5 flex justify-between items-center hover:bg-purple-50/20 px-2 rounded-lg">
                                                                     <div className="flex items-start gap-x-2 max-w-[75%]">
                                                                         <span className="font-bold text-purple-700">{idx + 1}.</span>
-                                                                        <span className="leading-relaxed">{item.name}</span>
+                                                                        <span className="leading-relaxed">{toArabicNumerals(item.name)}</span>
                                                                     </div>
                                                                     <div className="flex gap-x-1.5 whitespace-nowrap ml-2">
                                                                         <button

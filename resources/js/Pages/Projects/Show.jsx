@@ -13,6 +13,15 @@ export default function Show({ project, strategyCategories = [], fundingSources 
         is_advance_payment: project.budget?.is_advance_payment || false,
     });
 
+    const toArabic = (str) => {
+        if (!str || typeof str !== 'string') return str;
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return str.replace(/[๐-๙]/g, c => {
+            const idx = thaiDigits.indexOf(c);
+            return idx !== -1 ? String(idx) : c;
+        });
+    };
+
     const [activeTab, setActiveTab] = useState('plan');
     const [appendixTitle, setAppendixTitle] = useState('');
     const [appendixFile, setAppendixFile] = useState(null);
@@ -1173,13 +1182,13 @@ ${itemsListText}
                                                 return (
                                                     <div key={cat.id} className="bg-purple-50/30 p-3 rounded-xl border border-purple-100">
                                                         <h5 className="text-xs font-bold text-slate-800 mb-1">
-                                                            {catIdx + 1}. {cat.name}
+                                                            {catIdx + 1}. {toArabic(cat.name)}
                                                         </h5>
                                                         <ul className="list-disc pl-4 text-xs text-slate-700 space-y-1">
                                                             {displayList.map((item, i) => (
                                                                 <li key={i}>
-                                                                    {item.group_name ? <span className="font-semibold text-purple-950">{item.group_name} : </span> : null}
-                                                                    <span>{item.name}</span>
+                                                                    {item.group_name ? <span className="font-semibold text-purple-950">{toArabic(item.group_name)} : </span> : null}
+                                                                    <span>{toArabic(item.name)}</span>
                                                                 </li>
                                                             ))}
                                                             {displayList.length === 0 && <li className="list-none text-slate-400">-</li>}

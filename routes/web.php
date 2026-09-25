@@ -137,6 +137,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/admin/strategy-items/{item}', [AdminController::class, 'deleteStrategyItem'])->name('admin.items.delete');
     Route::put('/admin/strategy-groups/update', [AdminController::class, 'updateStrategyGroup'])->name('admin.groups.update');
     Route::delete('/admin/strategy-groups/delete', [AdminController::class, 'deleteStrategyGroup'])->name('admin.groups.delete');
+    Route::post('/admin/strategies/convert-arabic', [AdminController::class, 'convertStrategyNumeralsToArabic'])->name('admin.strategies.convert_arabic');
     
     // Strategic Alignment Dashboard & Filtering
     Route::get('/strategies/dashboard', [\App\Http\Controllers\StrategyDashboardController::class, 'index'])->name('strategies.dashboard');

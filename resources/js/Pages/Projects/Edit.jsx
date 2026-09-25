@@ -66,6 +66,15 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         }
     };
 
+    const toArabic = (text) => {
+        if (!text) return '';
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return String(text).replace(/[๐-๙]/g, (ch) => {
+            const idx = thaiDigits.indexOf(ch);
+            return idx !== -1 ? idx : ch;
+        });
+    };
+
     const defaultActionPlan = [
         { step_name: '1. ประชุมวางแผน จัดทำและเสนอโครงการเพื่อขออนุมัติ', q1: true, q2: false, q3: false, q4: false, target_count: '1 โครงการ', location_name: 'วช.น่าน', budget_operating: 0 },
         { step_name: '2. แต่งตั้งคณะกรรมการ เตรียมการจัดซื้อจัดจ้างและประสานงาน', q1: false, q2: true, q3: false, q4: false, target_count: '1 ครั้ง', location_name: 'วช.น่าน', budget_operating: 0 },
@@ -803,7 +812,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 <div key={cat.id} className="space-y-2 bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs">
                                                     <div className="flex justify-between items-center mb-1">
                                                         <label className="block text-xs font-bold text-purple-950">
-                                                            {catIdx + 1}. {cat.name}
+                                                            {catIdx + 1}. {toArabic(cat.name)}
                                                         </label>
                                                         <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">
                                                             เลือก {selectedIds.length} ข้อ
@@ -815,7 +824,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                                 {group.name ? (
                                                                     <div className="text-[11px] font-bold text-purple-900 bg-purple-50/80 px-2.5 py-1 rounded-md mt-1 flex items-center gap-1.5 border border-purple-100/60">
                                                                         <span>📂</span>
-                                                                        <span>{group.name}</span>
+                                                                        <span>{toArabic(group.name)}</span>
                                                                     </div>
                                                                 ) : null}
                                                                 <div className={`space-y-1 ${group.name ? 'pl-2' : ''}`}>
@@ -836,7 +845,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                                                     onChange={() => toggleDynamicStrategy(cat.id, item.id)}
                                                                                     className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-3.5 w-3.5"
                                                                                 />
-                                                                                <span>{item.name}</span>
+                                                                                <span>{toArabic(item.name)}</span>
                                                                             </label>
                                                                         );
                                                                     })}

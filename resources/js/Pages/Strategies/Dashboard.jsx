@@ -41,8 +41,16 @@ export default function Dashboard({
     const [selectedDepartment, setSelectedDepartment] = useState(filters.department_id || 'all');
     const [selectedStatus, setSelectedStatus] = useState(filters.status || 'all');
     const [selectedCoverage, setSelectedCoverage] = useState(filters.coverage || 'all');
-    const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [activeCategoryTab, setActiveCategoryTab] = useState(filters.category_id || 'all');
+
+    const toArabic = (str) => {
+        if (!str || typeof str !== 'string') return str;
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return str.replace(/[๐-๙]/g, c => {
+            const idx = thaiDigits.indexOf(c);
+            return idx !== -1 ? String(idx) : c;
+        });
+    };
 
     // Chart display states
     const [showCharts, setShowCharts] = useState(true);
@@ -886,7 +894,7 @@ export default function Dashboard({
                                     }`}
                                 >
                                     <span>🚩</span>
-                                    <span>{cat.name}</span>
+                                    <span>{toArabic(cat.name)}</span>
                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
                                         isActive ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-700'
                                     }`}>
@@ -950,11 +958,11 @@ export default function Dashboard({
                                             )}
                                         </div>
                                         <h3 className="text-lg md:text-xl font-black mt-1 flex items-center gap-2">
-                                            <span>🚩</span> {category.name}
+                                            <span>🚩</span> {toArabic(category.name)}
                                         </h3>
                                         {category.description && (
                                             <p className="text-xs text-purple-100/90 mt-1 max-w-3xl leading-relaxed">
-                                                {category.description}
+                                                {toArabic(category.description)}
                                             </p>
                                         )}
                                     </div>
@@ -997,7 +1005,7 @@ export default function Dashboard({
                                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-gradient-to-r from-purple-100/90 via-purple-50/60 to-white p-3 rounded-xl border border-purple-200 shadow-2xs mt-2">
                                                         <div className="flex items-center gap-2">
                                                             <span className="text-base">📁</span>
-                                                            <span className="font-extrabold text-sm text-purple-950">{group.name}</span>
+                                                            <span className="font-extrabold text-sm text-purple-950">{toArabic(group.name)}</span>
                                                             <span className="text-[10px] bg-purple-200/80 text-purple-900 px-2 py-0.5 rounded-full font-bold">
                                                                 {group.items.length} รายการย่อย
                                                             </span>
@@ -1051,11 +1059,11 @@ export default function Dashboard({
                                                                 <div className="flex flex-wrap items-center gap-2">
                                                                     {item.group_name && (
                                                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-purple-100 text-purple-900 border border-purple-200">
-                                                                            <span>📁</span> {item.group_name}
+                                                                            <span>📁</span> {toArabic(item.group_name)}
                                                                         </span>
                                                                     )}
                                                                     <h4 className="text-sm font-bold text-slate-900">
-                                                                        {item.name}
+                                                                        {toArabic(item.name)}
                                                                     </h4>
                                                                     {item.code && (
                                                                         <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-100 text-slate-600">
@@ -1066,7 +1074,7 @@ export default function Dashboard({
 
                                                                 {item.description && (
                                                                     <p className="text-xs text-slate-500 mt-0.5 max-w-2xl leading-relaxed">
-                                                                        {item.description}
+                                                                        {toArabic(item.description)}
                                                                     </p>
                                                                 )}
                                                             </div>
