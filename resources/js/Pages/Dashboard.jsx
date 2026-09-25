@@ -11041,12 +11041,12 @@ ${itemsListText}
                                                             <div className="flex items-start gap-2">
                                                                 <span className="text-slate-400 font-mono text-xs mt-0.5 shrink-0">└─ #{pIdx + 1}</span>
                                                                 <div>
-                                                                    <Link
+                                                                    <a
                                                                         href={route('projects.show', p.id)}
-                                                                        className="font-black text-xs sm:text-sm text-purple-950 hover:text-purple-700 transition leading-snug block"
+                                                                        className="font-black text-xs sm:text-sm text-purple-950 hover:text-purple-700 transition leading-snug block hover:underline cursor-pointer"
                                                                     >
                                                                         {p.title}
-                                                                    </Link>
+                                                                    </a>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -11087,29 +11087,30 @@ ${itemsListText}
                                                         {/* CRUD Action Buttons */}
                                                         <td className="px-4 py-3 text-right align-top whitespace-nowrap">
                                                             <div className="flex items-center justify-end gap-1.5">
-                                                                <Link
+                                                                <a
                                                                     href={route('projects.show', p.id)}
-                                                                    className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs hover:scale-105 transition"
+                                                                    className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs hover:scale-105 transition cursor-pointer"
                                                                     title="เปิดดูรายละเอียดโครงการ"
                                                                 >
                                                                     เปิดดู ➔
-                                                                </Link>
-                                                                <Link
+                                                                </a>
+                                                                <a
                                                                     href={route('projects.print', p.id)}
                                                                     target="_blank"
-                                                                    className="px-2.5 py-1 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs border border-purple-200 transition"
+                                                                    rel="noopener noreferrer"
+                                                                    className="px-2.5 py-1 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 font-bold text-xs border border-purple-200 transition cursor-pointer"
                                                                     title="พิมพ์เอกสารโครงการ (PDF)"
                                                                 >
                                                                     🖨️ PDF
-                                                                </Link>
+                                                                </a>
                                                                 {p.status !== 'approved' && p.status !== 'completed' && (
-                                                                    <Link
+                                                                    <a
                                                                         href={route('projects.edit', p.id)}
-                                                                        className="px-2 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition"
+                                                                        className="px-2 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition cursor-pointer"
                                                                         title="แก้ไขโครงการ"
                                                                     >
                                                                         ✏️
-                                                                    </Link>
+                                                                    </a>
                                                                 )}
                                                                 {(role === 'admin' || auth.user.is_admin) && (
                                                                     <button
