@@ -111,6 +111,8 @@ export default function Print({ project, strategyCategories = [] }) {
         large: { docSize: '16.5px', lineHeight: '1.5', tableSize: '14px', titleSize: '17.5px' },
     }[fontSizePreset];
 
+    const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล');
+
     const formatProjectTitleForApproval = (title) => {
         if (!title) return '';
         let clean = title.trim();
