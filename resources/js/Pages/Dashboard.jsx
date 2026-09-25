@@ -1176,11 +1176,12 @@ export default function Dashboard({
         setSelectedProjectForAllocation(p);
         const defaultSource = p.funding_source_id || (p.budget?.funding_source_id || planHeadData?.fundingSources?.[0]?.id || '1');
         let defaultCat = p.report_category;
+        const deptText = p.department?.name || p.department_name || '';
         if (!defaultCat) {
-            if (p.department?.name?.includes('วิชาการ')) defaultCat = '6.1';
-            else if (p.department?.name?.includes('พัฒนากิจการ') || p.department?.name?.includes('นักเรียน')) defaultCat = '6.2';
-            else if (p.department?.name?.includes('บริหาร') || p.department?.name?.includes('พัสดุ') || p.department?.name?.includes('ทรัพยากร')) defaultCat = '6.3';
-            else if (p.department?.name?.includes('แผน')) defaultCat = '6.4';
+            if (deptText.includes('วิชาการ')) defaultCat = '6.1';
+            else if (deptText.includes('พัฒนากิจการ') || deptText.includes('นักเรียน')) defaultCat = '6.2';
+            else if (deptText.includes('บริหาร') || deptText.includes('พัสดุ') || deptText.includes('ทรัพยากร')) defaultCat = '6.3';
+            else if (deptText.includes('แผน')) defaultCat = '6.4';
             else defaultCat = '6.1';
         }
         setCommitteeForm({
@@ -11087,13 +11088,14 @@ ${itemsListText}
                                                         {/* CRUD Action Buttons */}
                                                         <td className="px-4 py-3 text-right align-top whitespace-nowrap">
                                                             <div className="flex items-center justify-end gap-1.5">
-                                                                <a
-                                                                    href={route('projects.show', p.id)}
-                                                                    className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs hover:scale-105 transition cursor-pointer"
-                                                                    title="พิจารณาอนุมัติโครงการ"
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => openCommitteeModal(p)}
+                                                                    className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    title="พิจารณาอนุมัติจัดสรรงบประมาณโครงการนี้"
                                                                 >
                                                                     พิจารณาอนุมัติ ➔
-                                                                </a>
+                                                                </button>
                                                                 <a
                                                                     href={route('projects.print', p.id)}
                                                                     target="_blank"
@@ -13892,9 +13894,9 @@ return (
                                         📌 {selectedProjectForAllocation.title}
                                     </div>
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-600 pt-1">
-                                        <span>🏢 ฝ่าย: <strong className="text-slate-800">{selectedProjectForAllocation.department?.name || 'ไม่ระบุ'}</strong></span>
-                                        <span>👤 ผู้เสนอ: <strong className="text-slate-800">{selectedProjectForAllocation.user?.name || selectedProjectForAllocation.responsible_person || 'ไม่ระบุ'}</strong></span>
-                                        <span>📅 ปีงบประมาณ: <strong className="text-purple-900">{selectedProjectForAllocation.academic_year}</strong></span>
+                                        <span>🏢 ฝ่าย: <strong className="text-slate-800">{selectedProjectForAllocation.department?.name || selectedProjectForAllocation.department_name || 'ไม่ระบุ'}</strong></span>
+                                        <span>👤 ผู้เสนอ: <strong className="text-slate-800">{selectedProjectForAllocation.user?.name || selectedProjectForAllocation.proposer_name || selectedProjectForAllocation.responsible_person || 'ไม่ระบุ'}</strong></span>
+                                        <span>📅 ปีงบประมาณ: <strong className="text-purple-900">{selectedProjectForAllocation.academic_year || selectedProjectForAllocation.fiscal_year || fiscalYear}</strong></span>
                                     </div>
                                     <div className="text-slate-700 pt-1">
                                         💰 วงเงินงบประมาณที่ขอเสนอ: <strong className="text-base text-purple-900 font-extrabold">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(selectedProjectForAllocation.proposed_budget || selectedProjectForAllocation.estimated_budget)}</strong>
