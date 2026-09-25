@@ -62,19 +62,73 @@ export default function AuthenticatedLayout({ header, children }) {
         admin_console: false,
     };
 
+    const isUrlBelongsToSection = (sectionKey, currentUrl) => {
+        if (!currentUrl) return false;
+        switch (sectionKey) {
+            case 'proposal':
+                return currentUrl.includes('tab=proposals') ||
+                       (currentUrl.includes('tab=reviews') && !isPlanStaff && !isExecutive && !isAdmin) ||
+                       (currentUrl.includes('tab=document_tracking') && !isPlanStaff && !isAdmin) ||
+                       (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')));
+            case 'five_chapters':
+                return currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2');
+            case 'procurement_loan':
+                return (currentUrl.includes('routine-budgets') && !isPlanStaff && !isAdmin) ||
+                       (currentUrl.includes('tab=clearings') && !isFinanceStaff && !isAdmin);
+            case 'procurement_hub':
+                return currentUrl.includes('tab=procurement') || currentUrl.includes('vendors');
+            case 'finance_hub':
+                return currentUrl.includes('tab=central_budgets') || (currentUrl.includes('tab=clearings') && (isFinanceStaff || isAdmin));
+            case 'plan_hub':
+                return currentUrl.includes('tab=annual_budget_requests') ||
+                       currentUrl.includes('tab=budgets') ||
+                       currentUrl.includes('tab=reviews') ||
+                       currentUrl.includes('routine-budgets') ||
+                       currentUrl.includes('tab=document_tracking') ||
+                       currentUrl.includes('tab=action_plan_report') ||
+                       currentUrl.includes('tab=all_projects') ||
+                       currentUrl.includes('tab=admin_strategies') ||
+                       currentUrl.includes('strategies/dashboard') ||
+                       (typeof route !== 'undefined' && route().current('strategies.dashboard'));
+            case 'executive_hub':
+                return currentUrl.includes('tab=executive_overview') ||
+                       currentUrl.includes('tab=annual_budget_requests') ||
+                       currentUrl.includes('tab=budgets') ||
+                       currentUrl.includes('tab=action_plan_report') ||
+                       currentUrl.includes('tab=reviews') ||
+                       currentUrl.includes('strategies/dashboard') ||
+                       (typeof route !== 'undefined' && route().current('strategies.dashboard'));
+            case 'admin_console':
+                return currentUrl.includes('tab=admin_users') ||
+                       currentUrl.includes('tab=admin_settings') ||
+                       currentUrl.includes('tab=admin_strategies') ||
+                       currentUrl.includes('tab=all_projects');
+            default:
+                return false;
+        }
+    };
+
     const getActiveSectionForUrl = (currentUrl) => {
         if (!currentUrl) return null;
         if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2')) {
             return 'five_chapters';
         }
-        if (currentUrl.includes('tab=admin_') || (currentUrl.includes('tab=all_projects') && isAdmin)) {
+        if (currentUrl.includes('tab=admin_users') || currentUrl.includes('tab=admin_settings')) {
             return 'admin_console';
         }
-        if (currentUrl.includes('tab=executive_overview') || (isExecutive && (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard'))))) {
+        if (currentUrl.includes('tab=executive_overview')) {
             return 'executive_hub';
         }
-        if (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || (currentUrl.includes('tab=reviews') && isPlanStaff) || (isPlanStaff && currentUrl.includes('routine-budgets')) || currentUrl.includes('tab=action_plan_report') || (currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
+        // Pure executive role (not admin, not plan staff)
+        const isPureExecutive = Boolean((user?.is_executive || userRoleName === 'executive') && !isAdmin && !isPlanStaff);
+        if (isPureExecutive && (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || currentUrl.includes('tab=action_plan_report') || currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
+            return 'executive_hub';
+        }
+        if (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) || ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets')) || currentUrl.includes('tab=action_plan_report') || (currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
             return 'plan_hub';
+        }
+        if (currentUrl.includes('tab=admin_') || (currentUrl.includes('tab=all_projects') && isAdmin)) {
+            return 'admin_console';
         }
         if (currentUrl.includes('tab=procurement') || (currentUrl.includes('vendors') && isProcurementStaff)) {
             return 'procurement_hub';
@@ -95,7 +149,13 @@ export default function AuthenticatedLayout({ header, children }) {
     const [openSections, setOpenSections] = useState(() => {
         const saved = localStorage.getItem('sidebar-open-sections-v3');
         if (saved) {
-            try { return JSON.parse(saved); } catch (e) {}
+            try { 
+                const parsed = JSON.parse(saved);
+                const savedKey = Object.keys(parsed).find(k => parsed[k]);
+                if (savedKey && isUrlBelongsToSection(savedKey, url || '')) {
+                    return { ...allClosedSections, [savedKey]: true };
+                }
+            } catch (e) {}
         }
         const initialActive = getActiveSectionForUrl(url || '');
         return initialActive ? { ...allClosedSections, [initialActive]: true } : { ...allClosedSections };
@@ -206,12 +266,20 @@ export default function AuthenticatedLayout({ header, children }) {
 
     // Auto-open ONLY the section that contains the currently active URL/page
     useEffect(() => {
-        const activeKey = getActiveSectionForUrl(url);
-        if (activeKey) {
-            const next = { ...allClosedSections, [activeKey]: true };
-            setOpenSections(next);
-            localStorage.setItem('sidebar-open-sections-v3', JSON.stringify(next));
-        }
+        // If the user already has a section open and it legitimately contains the current URL/tab, do NOT jump!
+        setOpenSections(prev => {
+            const currentOpenKey = Object.keys(prev).find(k => prev[k]);
+            if (currentOpenKey && isUrlBelongsToSection(currentOpenKey, url)) {
+                return prev;
+            }
+            const activeKey = getActiveSectionForUrl(url);
+            if (activeKey) {
+                const next = { ...allClosedSections, [activeKey]: true };
+                localStorage.setItem('sidebar-open-sections-v3', JSON.stringify(next));
+                return next;
+            }
+            return prev;
+        });
     }, [url]);
 
     const isAnySectionOpen = Object.values(openSections).some(Boolean);
