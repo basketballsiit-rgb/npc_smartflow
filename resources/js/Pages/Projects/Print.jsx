@@ -66,12 +66,44 @@ export default function Print({ project, strategyCategories = [] }) {
     const expected_benefits = Array.isArray(project.expected_benefits) ? project.expected_benefits : [];
     const action_plan = Array.isArray(project.action_plan) ? project.action_plan : [];
 
-    const defaultActionPlan = action_plan.length > 0 ? action_plan : [
-        { step_name: '๑. เสนอโครงการเพื่อขออนุมัติ', q1: true, q2: false, q3: false, q4: false, target_count: '๑ โครงการ', location_name: 'วช.น่าน', budget_operating: 0 },
-        { step_name: '๒. แต่งตั้งคณะทำงาน และเตรียมการดำเนินกิจกรรม', q1: false, q2: true, q3: false, q4: false, target_count: '๑ ครั้ง', location_name: 'วช.น่าน', budget_operating: 0 },
-        { step_name: '๓. ดำเนินการจัดกิจกรรม/โครงการตามแผน', q1: false, q2: false, q3: true, q4: false, target_count: '๕๐ คน', location_name: 'วช.น่าน', budget_operating: project.estimated_budget || 0 },
-        { step_name: '๔. สรุปผลและประเมินผลโครงการ', q1: false, q2: false, q3: false, q4: true, target_count: '๑ เล่ม', location_name: 'วช.น่าน', budget_operating: 0 },
+    const defaultStandardSteps = [
+        { 
+            step_name: '๑.ประชุมวางแผนเพื่อจัดทำโครงการ', 
+            q1: true, q2: false, q3: false, q4: false, 
+            target_count: '', 
+            location_name: '', 
+            budget_operating: 0, budget_investment: 0, budget_other: 0, budget_subsidy: 0 
+        },
+        { 
+            step_name: '๒.ดำเนินการเขียนโครงการเพื่อของบประมาณ ออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวันและสถานที่', 
+            q1: true, q2: false, q3: false, q4: false, 
+            target_count: '', 
+            location_name: '', 
+            budget_operating: 0, budget_investment: 0, budget_other: 0, budget_subsidy: 0 
+        },
+        { 
+            step_name: '๓.ดำเนินการตามโครงการ', 
+            q1: false, q2: true, q3: false, q4: false, 
+            target_count: '', 
+            location_name: '', 
+            budget_operating: project.estimated_budget || 0, budget_investment: 0, budget_other: 0, budget_subsidy: 0 
+        },
+        { 
+            step_name: '๔.สรุปประเมินโครงการและรายงานผล ปัญหา อุปสรรค โครงการให้กับคณะผู้บริหาร', 
+            q1: false, q2: false, q3: false, q4: true, 
+            target_count: '', 
+            location_name: '', 
+            budget_operating: 0, budget_investment: 0, budget_other: 0, budget_subsidy: 0 
+        },
     ];
+
+    const defaultActionPlan = action_plan.length >= 4 ? action_plan : defaultStandardSteps;
+
+    const totalOperating = defaultActionPlan.reduce((s, r) => s + (parseFloat(r.budget_operating) || 0), 0);
+    const totalInvestment = defaultActionPlan.reduce((s, r) => s + (parseFloat(r.budget_investment) || 0), 0);
+    const totalOther = defaultActionPlan.reduce((s, r) => s + (parseFloat(r.budget_other) || 0), 0);
+    const totalSubsidy = defaultActionPlan.reduce((s, r) => s + (parseFloat(r.budget_subsidy) || 0), 0);
+    const grandTotalActionPlan = totalOperating + totalInvestment + totalOther + totalSubsidy;
 
     const fontStyles = {
         compact: { docSize: '14px', lineHeight: '1.4', tableSize: '12px', titleSize: '15px' },
@@ -611,67 +643,119 @@ export default function Print({ project, strategyCategories = [] }) {
 
                 {/* Section 11: Action Plan & Budget Table */}
                 <div className="pt-4 print-break-inside-avoid">
-                    <p className="print-title font-bold text-slate-900 mb-1.5">๑๑. สรุปขั้นตอน/วิธีดำเนินการและเงินที่ใช้</p>
-                    <table className="print-table w-full border-collapse border border-slate-900 text-xs font-sarabun text-center">
+                    <p className="print-title font-bold text-slate-900 mb-2">๑๑. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</p>
+                    <table className="print-table w-full border-collapse border border-black text-xs font-sarabun text-center">
                         <thead>
-                            <tr className="bg-slate-50 font-bold border-b border-slate-900 text-xs">
-                                <th rowSpan="2" className="border-r border-slate-900 p-1 text-left">ขั้นตอน/<br />วิธีดำเนิน</th>
-                                <th colSpan="4" className="border-r border-slate-900 p-0.5">ดำเนินการ<br />ในไตรมาส (✓)</th>
-                                <th rowSpan="2" className="border-r border-slate-900 p-1 w-14">เป้าหมาย</th>
-                                <th rowSpan="2" className="border-r border-slate-900 p-1 w-16">พื้นที่<br />ดำเนินการ</th>
-                                <th colSpan="4" className="p-0.5">หมวดเงิน<br />(ระบุจำนวนเงิน:บาท)</th>
+                            <tr className="bg-slate-50 font-bold border-b border-black text-xs">
+                                <th rowSpan="2" className="border border-black p-2 text-center w-[30%] font-bold">
+                                    ขั้นตอน/วิธีดำเนินการ
+                                </th>
+                                <th colSpan="4" className="border border-black p-1 text-center font-bold">
+                                    ดำเนินการ<br />ในไตรมาส<br />(✓)
+                                </th>
+                                <th rowSpan="2" className="border border-black p-1.5 text-center w-[16%] font-bold">
+                                    เป้าหมาย<br />
+                                    <span className="font-normal text-[11px] leading-tight block mt-0.5">(เช่น ใคร จำนวน ครั้ง เรื่อง ฯลฯ)</span>
+                                </th>
+                                <th rowSpan="2" className="border border-black p-1.5 text-center w-[16%] font-bold">
+                                    พื้นที่ดำเนินการ<br />
+                                    <span className="font-normal text-[11px] leading-tight block mt-0.5">ระบุ ตำบล/อำเภอ</span>
+                                </th>
+                                <th colSpan="4" className="border border-black p-1 text-center font-bold">
+                                    หมวดเงิน<br />
+                                    <span className="font-normal text-[11px] block mt-0.5">(ระบุจำนวนเงิน : บาท)</span>
+                                </th>
                             </tr>
-                            <tr className="bg-slate-50 font-bold border-b border-slate-900 text-xs">
-                                <th className="border-r border-slate-900 p-0.5 w-5">๑</th>
-                                <th className="border-r border-slate-900 p-0.5 w-5">๒</th>
-                                <th className="border-r border-slate-900 p-0.5 w-5">๓</th>
-                                <th className="border-r border-slate-900 p-0.5 w-5">๔</th>
-                                <th className="border-r border-slate-900 p-1 w-14">งบดำเนินงาน</th>
-                                <th className="border-r border-slate-900 p-1 w-12">งบลงทุน</th>
-                                <th className="border-r border-slate-900 p-1 w-12">งบเฉพาะฯ</th>
-                                <th className="p-1 w-12">งบอุดหนุน</th>
+                            <tr className="bg-slate-50 font-bold border-b border-black text-xs">
+                                <th className="border border-black p-1 text-center font-bold w-6">๑</th>
+                                <th className="border border-black p-1 text-center font-bold w-6">๒</th>
+                                <th className="border border-black p-1 text-center font-bold w-6">๓</th>
+                                <th className="border border-black p-1 text-center font-bold w-6">๔</th>
+                                <th className="border border-black p-1 text-center font-bold w-16">งบดำเนินงาน</th>
+                                <th className="border border-black p-1 text-center font-bold w-14">งบลงทุน</th>
+                                <th className="border border-black p-1 text-center font-bold w-16">งบรายจ่ายอื่น</th>
+                                <th className="border border-black p-1 text-center font-bold w-14">งบอุดหนุน</th>
                             </tr>
                         </thead>
                         <tbody>
                             {defaultActionPlan.map((row, idx) => (
-                                <tr key={idx} className="border-b border-slate-900">
-                                    <td className="border-r border-slate-900 p-1.5 text-left font-medium">{toThaiNumerals(row.step_name)}</td>
-                                    <td className="border-r border-slate-900 p-0.5 font-bold">{row.q1 ? '✓' : ''}</td>
-                                    <td className="border-r border-slate-900 p-0.5 font-bold">{row.q2 ? '✓' : ''}</td>
-                                    <td className="border-r border-slate-900 p-0.5 font-bold">{row.q3 ? '✓' : ''}</td>
-                                    <td className="border-r border-slate-900 p-0.5 font-bold">{row.q4 ? '✓' : ''}</td>
-                                    <td className="border-r border-slate-900 p-1 font-bold">{toThaiNumerals(row.target_count || '-')}</td>
-                                    <td className="border-r border-slate-900 p-1 font-bold">{toThaiNumerals(row.location_name || 'วช.น่าน')}</td>
-                                    <td className="border-r border-slate-900 p-1 text-right font-bold">{row.budget_operating > 0 ? formatCurrencyThai(row.budget_operating) : ''}</td>
-                                    <td className="border-r border-slate-900 p-1"></td>
-                                    <td className="border-r border-slate-900 p-1"></td>
-                                    <td className="p-1"></td>
+                                <tr key={idx} className="border-b border-black">
+                                    <td className="border border-black p-2 text-left font-medium leading-relaxed align-top">
+                                        {toThaiNumerals(row.step_name)}
+                                    </td>
+                                    <td className="border border-black p-0.5 text-center font-bold align-middle">
+                                        {row.q1 ? '✓' : ''}
+                                    </td>
+                                    <td className="border border-black p-0.5 text-center font-bold align-middle">
+                                        {row.q2 ? '✓' : ''}
+                                    </td>
+                                    <td className="border border-black p-0.5 text-center font-bold align-middle">
+                                        {row.q3 ? '✓' : ''}
+                                    </td>
+                                    <td className="border border-black p-0.5 text-center font-bold align-middle">
+                                        {row.q4 ? '✓' : ''}
+                                    </td>
+                                    <td className="border border-black p-1.5 text-center align-middle font-medium">
+                                        {toThaiNumerals(row.target_count || '')}
+                                    </td>
+                                    <td className="border border-black p-1.5 text-center align-middle font-medium">
+                                        {toThaiNumerals(row.location_name || '')}
+                                    </td>
+                                    <td className="border border-black p-1.5 text-right font-medium align-middle">
+                                        {row.budget_operating > 0 ? formatCurrencyThai(row.budget_operating) : (idx === 2 && grandTotalActionPlan === 0 && project.estimated_budget ? formatCurrencyThai(project.estimated_budget) : '')}
+                                    </td>
+                                    <td className="border border-black p-1.5 text-right font-medium align-middle">
+                                        {row.budget_investment > 0 ? formatCurrencyThai(row.budget_investment) : ''}
+                                    </td>
+                                    <td className="border border-black p-1.5 text-right font-medium align-middle">
+                                        {row.budget_other > 0 ? formatCurrencyThai(row.budget_other) : ''}
+                                    </td>
+                                    <td className="border border-black p-1.5 text-right font-medium align-middle">
+                                        {row.budget_subsidy > 0 ? formatCurrencyThai(row.budget_subsidy) : ''}
+                                    </td>
                                 </tr>
                             ))}
-                            <tr className="font-bold border-b border-slate-900 bg-slate-50 text-xs">
-                                <td colSpan="7" className="border-r border-slate-900 p-1 text-right">รวมเงิน</td>
-                                <td className="border-r border-slate-900 p-1 text-right font-bold">{formatCurrencyThai(project.estimated_budget)}</td>
-                                <td className="border-r border-slate-900 p-1"></td>
-                                <td className="border-r border-slate-900 p-1"></td>
-                                <td className="p-1"></td>
+                            {/* Row 5: รวมเงิน */}
+                            <tr className="font-bold border-b border-black bg-slate-50/50">
+                                <td colSpan="7" className="border border-black p-1.5 text-center font-bold">
+                                    รวมเงิน
+                                </td>
+                                <td className="border border-black p-1.5 text-right font-bold">
+                                    {totalOperating > 0 ? formatCurrencyThai(totalOperating) : (grandTotalActionPlan === 0 && project.estimated_budget ? formatCurrencyThai(project.estimated_budget) : '')}
+                                </td>
+                                <td className="border border-black p-1.5 text-right font-bold">
+                                    {totalInvestment > 0 ? formatCurrencyThai(totalInvestment) : ''}
+                                </td>
+                                <td className="border border-black p-1.5 text-right font-bold">
+                                    {totalOther > 0 ? formatCurrencyThai(totalOther) : ''}
+                                </td>
+                                <td className="border border-black p-1.5 text-right font-bold">
+                                    {totalSubsidy > 0 ? formatCurrencyThai(totalSubsidy) : ''}
+                                </td>
                             </tr>
-                            <tr className="font-bold bg-slate-100 text-xs sm:text-sm">
-                                <td colSpan="7" className="border-r border-slate-900 p-1.5 text-right">งบประมาณรวมทั้งโครงการ</td>
-                                <td colSpan="4" className="p-1.5 text-center font-bold">{formatCurrencyThai(project.estimated_budget)} บาท</td>
+                            {/* Row 6: งบประมาณรวมทั้งโครงการ */}
+                            <tr className="font-bold border-b border-black bg-slate-50/80">
+                                <td colSpan="7" className="border border-black p-1.5 text-center font-bold">
+                                    งบประมาณรวมทั้งโครงการ
+                                </td>
+                                <td colSpan="4" className="border border-black p-1.5 text-center font-bold">
+                                    {formatCurrencyThai(grandTotalActionPlan > 0 ? grandTotalActionPlan : project.estimated_budget)}
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                {/* Section 12: Approvers Block */}
-                <div className="pt-6 print-break-inside-avoid font-sarabun">
-                    <p className="print-title font-bold text-slate-900 mb-6">๑๒. ผู้เห็นชอบและผู้อนุมัติโครงการ{toThaiNumerals(project.title)}</p>
+                {/* Section 12: การอนุมัติโครงการ */}
+                <div className="pt-8 print-break-inside-avoid font-sarabun">
+                    <p className="print-title font-bold text-slate-900 mb-8">
+                        ๑๒. การอนุมัติโครงการ......................................................
+                    </p>
                     
-                    <div className="space-y-8 text-xs sm:text-sm">
-                        {/* Row 1: Proposer & Head of Department */}
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-6">
-                            {/* Signature 1: ผู้เสนอโครงการ */}
-                            <div className="flex flex-col items-center text-center font-sarabun">
+                    <div className="space-y-12 text-xs sm:text-sm">
+                        {/* Row 1: ผู้เสนอโครงการ (จัดวางชิดขวาตาม Image 2) */}
+                        <div className="flex justify-end pr-4 sm:pr-10">
+                            <div className="flex flex-col items-center text-center font-sarabun w-80">
                                 <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                     <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
                                     <div className="relative inline-flex flex-col items-center">
@@ -684,54 +768,26 @@ export default function Print({ project, strategyCategories = [] }) {
                                         ) : (
                                             <div className="h-6"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
                                     </div>
                                     <span className="shrink-0 ml-1 font-normal">ผู้เสนอโครงการ</span>
                                 </div>
-                                <p className="font-bold pt-2 text-xs sm:text-[13px]">
-                                    ({toThaiNumerals(sig1?.user?.name ? cleanPersonName(sig1.user.name) : cleanedResponsiblePerson)})
+                                <p className="font-bold pt-1.5 text-xs sm:text-[13px]">
+                                    ({toThaiNumerals(sig1?.user?.name ? cleanPersonName(sig1.user.name) : (cleanedResponsiblePerson || '...............................................'))})
                                 </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
-                                    {toThaiNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}
-                                </p>
-                                <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                    {sig1?.signed_at ? formatThaiSignatureDate(sig1.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............'}
-                                </p>
-                            </div>
-
-                            {/* Signature 2: Head of Department */}
-                            <div className="flex flex-col items-center text-center font-sarabun">
-                                <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
-                                    <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
-                                    <div className="relative inline-flex flex-col items-center">
-                                        {sig2?.signature_data ? (
-                                            <img 
-                                                src={sig2.signature_data} 
-                                                alt="ลายมือชื่อ" 
-                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
-                                            />
-                                        ) : (
-                                            <div className="h-6"></div>
-                                        )}
-                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
-                                    </div>
-                                    <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
-                                </div>
-                                <p className="font-bold pt-2 text-xs sm:text-[13px]">
-                                    ({sig2?.user?.name ? toThaiNumerals(cleanPersonName(sig2.user.name)) : '......................................................'})
-                                </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
-                                    {toThaiNumerals(project.department?.name ? `หัวหน้า${project.department.name}` : 'หัวหน้าแผนกวิชา / หัวหน้างาน')}
-                                </p>
-                                <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                    {sig2?.signed_at ? formatThaiSignatureDate(sig2.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............'}
+                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[220px] text-slate-800">
+                                    {project.position 
+                                        ? toThaiNumerals(project.position) 
+                                        : (project.department?.name 
+                                            ? toThaiNumerals(`หัวหน้างาน${project.department.name.replace(/^งาน/, '')}`) 
+                                            : 'หัวหน้างาน................................................')}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Row 2: Planning Head & Deputy Director */}
-                        <div className="grid grid-cols-2 gap-x-6 gap-y-6">
-                            {/* Signature 3: Head of Planning */}
+                        {/* Row 2: ผู้ตรวจสอบโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ (ขวา) */}
+                        <div className="grid grid-cols-2 gap-x-6">
+                            {/* ซ้าย: ผู้ตรวจสอบโครงการ (นายพิพัฒน์ สีมา) */}
                             <div className="flex flex-col items-center text-center font-sarabun">
                                 <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                     <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
@@ -745,22 +801,19 @@ export default function Print({ project, strategyCategories = [] }) {
                                         ) : (
                                             <div className="h-6"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
                                     </div>
-                                    <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
+                                    <span className="shrink-0 ml-1 font-normal">ผู้ตรวจสอบโครงการ</span>
                                 </div>
-                                <p className="font-bold pt-2 text-xs sm:text-[13px]">
-                                    ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : 'นายนิพนธ์ ร่องพืช'})
+                                <p className="font-bold pt-1.5 text-xs sm:text-[13px]">
+                                    ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : 'นายพิพัฒน์ สีมา'})
                                 </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
-                                    หัวหน้างานแผนงานและความร่วมมือ
-                                </p>
-                                <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                    {sig3?.signed_at ? formatThaiSignatureDate(sig3.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............'}
+                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[220px] text-slate-800">
+                                    {sig3?.user?.position_level ? toThaiNumerals(sig3.user.position_level) : 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ'}
                                 </p>
                             </div>
 
-                            {/* Signature 4: Deputy Director */}
+                            {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่าย...) */}
                             <div className="flex flex-col items-center text-center font-sarabun">
                                 <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                     <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
@@ -774,33 +827,56 @@ export default function Print({ project, strategyCategories = [] }) {
                                         ) : (
                                             <div className="h-6"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-36 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
                                     </div>
                                     <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
                                 </div>
-                                <p className="font-bold pt-2 text-xs sm:text-[13px]">
+                                <p className="font-bold pt-1.5 text-xs sm:text-[13px]">
                                     ({sig4?.user?.name 
                                         ? toThaiNumerals(cleanPersonName(sig4.user.name)) 
-                                        : (sig5?.user?.name 
-                                            ? toThaiNumerals(cleanPersonName(sig5.user.name)) 
-                                            : ((project.department?.deputy_director_name || project.department?.parent?.deputy_director_name) 
-                                                ? toThaiNumerals(cleanPersonName(project.department?.deputy_director_name || project.department?.parent?.deputy_director_name)) 
-                                                : 'นายจักรพงศ์ พรหมสกุลปัญญา'))})
+                                        : (project.department?.deputy_director_name 
+                                            ? toThaiNumerals(cleanPersonName(project.department.deputy_director_name)) 
+                                            : (project.department?.parent?.deputy_director_name 
+                                                ? toThaiNumerals(cleanPersonName(project.department.parent.deputy_director_name)) 
+                                                : '...............................................'))})
                                 </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[200px] text-slate-800">
+                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[220px] text-slate-800">
                                     {sig4?.user?.position_level 
                                         || project.department?.deputy_director_position 
                                         || project.department?.parent?.deputy_director_position 
-                                        || 'รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ'}
-                                </p>
-                                <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                    {sig4?.signed_at ? formatThaiSignatureDate(sig4.signed_at) : (sig5?.signed_at ? formatThaiSignatureDate(sig5.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............')}
+                                        || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................'))}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Row 3: Final Director Approval */}
-                        <div className="pt-2 flex flex-col items-center text-center font-sarabun max-w-sm mx-auto">
+                        {/* Row 3: ผู้เห็นชอบโครงการ (นายนิพนธ์ ร่องพืช / รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน - ตรงกลาง) */}
+                        <div className="flex flex-col items-center text-center font-sarabun max-w-sm mx-auto">
+                            <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
+                                <span className="shrink-0 mr-1 font-normal">ลงชื่อ</span>
+                                <div className="relative inline-flex flex-col items-center">
+                                    {sig5?.signature_data ? (
+                                        <img 
+                                            src={sig5.signature_data} 
+                                            alt="ลายมือชื่อ" 
+                                            className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                        />
+                                    ) : (
+                                        <div className="h-6"></div>
+                                    )}
+                                    <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                                </div>
+                                <span className="shrink-0 ml-1 font-normal">ผู้เห็นชอบโครงการ</span>
+                            </div>
+                            <p className="font-bold pt-1.5 text-xs sm:text-[13px]">
+                                ({sig5?.user?.name ? toThaiNumerals(cleanPersonName(sig5.user.name)) : 'นายนิพนธ์ ร่องพืช'})
+                            </p>
+                            <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[240px] text-slate-800">
+                                {sig5?.user?.position_level ? toThaiNumerals(sig5.user.position_level) : 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'}
+                            </p>
+                        </div>
+
+                        {/* Row 4: ผู้อนุมัติโครงการ (นายกเชษฐ์ กิ่งชนะ / ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน - ตรงกลาง) */}
+                        <div className="flex flex-col items-center text-center font-sarabun max-w-sm mx-auto">
                             <div className="flex items-baseline justify-center w-full text-xs sm:text-[13px] whitespace-nowrap relative">
                                 <span className="shrink-0 mr-1.5 font-normal">ลงชื่อ</span>
                                 <div className="relative inline-flex flex-col items-center">
@@ -817,14 +893,11 @@ export default function Print({ project, strategyCategories = [] }) {
                                 </div>
                                 <span className="shrink-0 ml-1.5 font-normal">ผู้อนุมัติโครงการ</span>
                             </div>
-                            <p className="font-bold text-sm sm:text-base pt-2">
+                            <p className="font-bold text-sm sm:text-base pt-1.5">
                                 ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : 'นายกเชษฐ์ กิ่งชนะ'})
                             </p>
                             <p className="text-[12px] font-semibold leading-relaxed pt-0.5 text-slate-800">
-                                ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
-                            </p>
-                            <p className="text-[11px] pt-1 font-normal text-slate-700 whitespace-nowrap">
-                                {sig6?.signed_at ? formatThaiSignatureDate(sig6.signed_at) : 'วันที่ ....... เดือน ............................ พ.ศ. ...............'}
+                                {sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'}
                             </p>
                         </div>
                     </div>

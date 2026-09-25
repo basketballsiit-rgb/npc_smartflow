@@ -1429,11 +1429,12 @@ class ProjectController extends Controller
         }
 
         if ($type === 'action_plan') {
+            $budget = (float)$request->input('budget', 0);
             $action_plan = [
-                ['step_name' => '1. ประชุมวางแผน จัดทำและเสนอโครงการเพื่อขออนุมัติ', 'q1' => true, 'q2' => false, 'q3' => false, 'q4' => false, 'target_count' => '1 โครงการ', 'location_name' => 'วช.น่าน', 'budget_operating' => 0],
-                ['step_name' => '2. แต่งตั้งคณะกรรมการ เตรียมการจัดซื้อจัดจ้างและประสานงาน', 'q1' => false, 'q2' => true, 'q3' => false, 'q4' => false, 'target_count' => '1 ครั้ง', 'location_name' => 'วช.น่าน', 'budget_operating' => 0],
-                ['step_name' => '3. ดำเนินการจัดกิจกรรม/โครงการตามแผนที่กำหนด', 'q1' => false, 'q2' => false, 'q3' => true, 'q4' => false, 'target_count' => '50 คน', 'location_name' => 'วช.น่าน', 'budget_operating' => (float)$request->input('budget', 0)],
-                ['step_name' => '4. สรุปผลการประเมินความพึงพอใจและจัดทำรายงานฉบับสมบูรณ์', 'q1' => false, 'q2' => false, 'q3' => false, 'q4' => true, 'target_count' => '1 เล่ม', 'location_name' => 'วช.น่าน', 'budget_operating' => 0],
+                ['step_name' => '๑.ประชุมวางแผนเพื่อจัดทำโครงการ', 'q1' => true, 'q2' => false, 'q3' => false, 'q4' => false, 'target_count' => 'คณะทำงาน ๑ ชุด', 'location_name' => 'ต.ในเวียง อ.เมืองน่าน', 'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0],
+                ['step_name' => '๒.ดำเนินการเขียนโครงการเพื่อของบประมาณ ออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวันและสถานที่', 'q1' => true, 'q2' => false, 'q3' => false, 'q4' => false, 'target_count' => '๑ ครั้ง', 'location_name' => 'ต.ในเวียง อ.เมืองน่าน', 'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0],
+                ['step_name' => '๓.ดำเนินการตามโครงการ', 'q1' => false, 'q2' => true, 'q3' => false, 'q4' => false, 'target_count' => 'ผู้เข้าร่วม ๕๐ คน', 'location_name' => 'ต.ในเวียง อ.เมืองน่าน', 'budget_operating' => $budget, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0],
+                ['step_name' => '๔.สรุปประเมินโครงการและรายงานผล ปัญหา อุปสรรค โครงการให้กับคณะผู้บริหาร', 'q1' => false, 'q2' => false, 'q3' => false, 'q4' => true, 'target_count' => 'รายงาน ๑ เล่ม', 'location_name' => 'ต.ในเวียง อ.เมืองน่าน', 'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0],
             ];
             return response()->json(['success' => true, 'action_plan' => $action_plan]);
         }

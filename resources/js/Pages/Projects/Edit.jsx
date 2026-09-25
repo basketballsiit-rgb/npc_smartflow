@@ -76,10 +76,46 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     };
 
     const defaultActionPlan = [
-        { step_name: '1. ประชุมวางแผน จัดทำและเสนอโครงการเพื่อขออนุมัติ', q1: true, q2: false, q3: false, q4: false, target_count: '1 โครงการ', location_name: 'วช.น่าน', budget_operating: 0 },
-        { step_name: '2. แต่งตั้งคณะกรรมการ เตรียมการจัดซื้อจัดจ้างและประสานงาน', q1: false, q2: true, q3: false, q4: false, target_count: '1 ครั้ง', location_name: 'วช.น่าน', budget_operating: 0 },
-        { step_name: '3. ดำเนินการจัดกิจกรรม/โครงการตามแผนที่กำหนด', q1: false, q2: false, q3: true, q4: false, target_count: '50 คน', location_name: 'วช.น่าน', budget_operating: project?.estimated_budget || 0 },
-        { step_name: '4. สรุปผลการประเมินความพึงพอใจและจัดทำรายงานฉบับสมบูรณ์', q1: false, q2: false, q3: false, q4: true, target_count: '1 เล่ม', location_name: 'วช.น่าน', budget_operating: 0 },
+        { 
+            step_name: '๑.ประชุมวางแผนเพื่อจัดทำโครงการ', 
+            q1: true, q2: false, q3: false, q4: false, 
+            target_count: 'คณะทำงาน ๑ ชุด', 
+            location_name: 'ต.ในเวียง อ.เมืองน่าน', 
+            budget_operating: 0, 
+            budget_investment: 0, 
+            budget_other: 0, 
+            budget_subsidy: 0 
+        },
+        { 
+            step_name: '๒.ดำเนินการเขียนโครงการเพื่อของบประมาณ ออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวันและสถานที่', 
+            q1: true, q2: false, q3: false, q4: false, 
+            target_count: '๑ ครั้ง', 
+            location_name: 'ต.ในเวียง อ.เมืองน่าน', 
+            budget_operating: 0, 
+            budget_investment: 0, 
+            budget_other: 0, 
+            budget_subsidy: 0 
+        },
+        { 
+            step_name: '๓.ดำเนินการตามโครงการ', 
+            q1: false, q2: true, q3: false, q4: false, 
+            target_count: 'ผู้เข้าร่วม ๕๐ คน', 
+            location_name: 'ต.ในเวียง อ.เมืองน่าน', 
+            budget_operating: parseFloat(project?.estimated_budget) || 0, 
+            budget_investment: 0, 
+            budget_other: 0, 
+            budget_subsidy: 0 
+        },
+        { 
+            step_name: '๔.สรุปประเมินโครงการและรายงานผล ปัญหา อุปสรรค โครงการให้กับคณะผู้บริหาร', 
+            q1: false, q2: false, q3: false, q4: true, 
+            target_count: 'รายงาน ๑ เล่ม', 
+            location_name: 'ต.ในเวียง อ.เมืองน่าน', 
+            budget_operating: 0, 
+            budget_investment: 0, 
+            budget_other: 0, 
+            budget_subsidy: 0 
+        },
     ];
 
     // Multi-Activity Default Structure
@@ -138,7 +174,21 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         },
         expected_benefits: project?.expected_benefits && project.expected_benefits.length > 0 ? project.expected_benefits : defaultExpectedBenefits,
         indicators: project?.indicators || defaultIndicators,
-        action_plan: project?.action_plan && project.action_plan.length > 0 ? project.action_plan : defaultActionPlan,
+        action_plan: Array.isArray(project?.action_plan) && project.action_plan.length >= 4 
+            ? project.action_plan.map(row => ({
+                step_name: row.step_name || '',
+                q1: !!row.q1,
+                q2: !!row.q2,
+                q3: !!row.q3,
+                q4: !!row.q4,
+                target_count: row.target_count || '',
+                location_name: row.location_name || '',
+                budget_operating: row.budget_operating !== undefined ? row.budget_operating : 0,
+                budget_investment: row.budget_investment !== undefined ? row.budget_investment : 0,
+                budget_other: row.budget_other !== undefined ? row.budget_other : 0,
+                budget_subsidy: row.budget_subsidy !== undefined ? row.budget_subsidy : 0,
+            })) 
+            : defaultActionPlan,
         activities: initialActivities,
         strategy_selections: initialSelections,
         iqa_strategy_ids: project?.iqa_strategy_ids || [],
@@ -254,11 +304,18 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                 q2: false,
                 q3: false,
                 q4: false,
-                target_count: '50 คน',
-                location_name: 'วช.น่าน',
-                budget_operating: 0
+                target_count: '',
+                location_name: 'ต.ในเวียง อ.เมืองน่าน',
+                budget_operating: 0,
+                budget_investment: 0,
+                budget_other: 0,
+                budget_subsidy: 0
             }
         ]);
+    };
+
+    const resetToStandardActionPlan = () => {
+        setData('action_plan', defaultActionPlan);
     };
 
     const removeActionPlanRow = (index) => {
@@ -1303,115 +1360,213 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
                             {/* Section 11: ปฏิทินปฏิบัติงาน & แผนดำเนินงาน (Action Plan Table) */}
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
-                                <div className="flex justify-between items-center border-b border-purple-100 pb-2">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-2">
                                     <div>
                                         <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๕ : แผนการปฏิบัติงาน</span>
-                                        <h3 className="text-base font-bold text-purple-950">๑๑. สรุปขั้นตอน/วิธีดำเนินการและปฏิทินปฏิบัติงาน (Action Plan)</h3>
+                                        <h3 className="text-base font-bold text-purple-950">๑๑. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</h3>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleGenerateAi('action_plan', 'สร้างปฏิทินปฏิบัติงาน 4 ขั้นตอนมาตรฐานเรียบร้อยแล้ว')}
-                                        className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs"
-                                    >
-                                        ✨ ให้ AI สร้างปฏิทินปฏิบัติงาน
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={resetToStandardActionPlan}
+                                            className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-300 shadow-2xs"
+                                            title="รีเซ็ตเป็น 4 ขั้นตอนมาตรฐานตามแบบฟอร์มวิทยาลัย"
+                                        >
+                                            📋 คืนค่า ๔ ขั้นตอนมาตรฐาน
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleGenerateAi('action_plan', 'สร้างปฏิทินปฏิบัติงาน 4 ขั้นตอนมาตรฐานเรียบร้อยแล้ว')}
+                                            className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs"
+                                        >
+                                            ✨ ให้ AI ช่วยสร้างแผน
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-xs text-slate-800 border-collapse">
+                                    <table className="w-full text-xs text-slate-800 border-collapse border border-purple-200">
                                         <thead>
-                                            <tr className="bg-purple-100/70 text-purple-950 font-bold border border-purple-200">
-                                                <th className="p-2.5 text-left min-w-[220px]">กิจกรรม / ขั้นตอนการดำเนินงาน</th>
-                                                <th className="p-2 text-center w-12">Q1<br/><span className="text-[10px] font-normal text-slate-500">ต.ค.-ธ.ค.</span></th>
-                                                <th className="p-2 text-center w-12">Q2<br/><span className="text-[10px] font-normal text-slate-500">ม.ค.-มี.ค.</span></th>
-                                                <th className="p-2 text-center w-12">Q3<br/><span className="text-[10px] font-normal text-slate-500">เม.ย.-มิ.ย.</span></th>
-                                                <th className="p-2 text-center w-12">Q4<br/><span className="text-[10px] font-normal text-slate-500">ก.ค.-ก.ย.</span></th>
-                                                <th className="p-2 text-left w-24">กลุ่มเป้าหมาย</th>
-                                                <th className="p-2 text-left w-20">สถานที่</th>
-                                                <th className="p-2 text-right w-28">งบประมาณ (บาท)</th>
-                                                <th className="p-2 text-center w-8">ลบ</th>
+                                            <tr className="bg-purple-100/80 text-purple-950 font-bold border-b border-purple-200 text-center">
+                                                <th rowSpan="2" className="p-2.5 text-left border-r border-purple-200 min-w-[260px]">
+                                                    ขั้นตอน/วิธีดำเนินการ
+                                                </th>
+                                                <th colSpan="4" className="p-1.5 border-r border-purple-200 text-center font-bold">
+                                                    ดำเนินการในไตรมาส (✓)
+                                                </th>
+                                                <th rowSpan="2" className="p-2 text-center border-r border-purple-200 min-w-[150px]">
+                                                    เป้าหมาย<br />
+                                                    <span className="text-[10px] font-normal text-slate-600">(เช่น ใคร จำนวน ครั้ง เรื่อง ฯลฯ)</span>
+                                                </th>
+                                                <th rowSpan="2" className="p-2 text-center border-r border-purple-200 min-w-[140px]">
+                                                    พื้นที่ดำเนินการ<br />
+                                                    <span className="text-[10px] font-normal text-slate-600">ระบุ ตำบล/อำเภอ</span>
+                                                </th>
+                                                <th colSpan="4" className="p-1.5 border-r border-purple-200 text-center font-bold">
+                                                    หมวดเงิน (ระบุจำนวนเงิน : บาท)
+                                                </th>
+                                                <th rowSpan="2" className="p-2 text-center w-8">
+                                                    ลบ
+                                                </th>
+                                            </tr>
+                                            <tr className="bg-purple-50 text-purple-900 font-bold border-b border-purple-200 text-[11px] text-center">
+                                                <th className="p-1 w-9 border-r border-purple-200">๑</th>
+                                                <th className="p-1 w-9 border-r border-purple-200">๒</th>
+                                                <th className="p-1 w-9 border-r border-purple-200">๓</th>
+                                                <th className="p-1 w-9 border-r border-purple-200">๔</th>
+                                                <th className="p-1 w-24 border-r border-purple-200 text-right pr-2">งบดำเนินงาน</th>
+                                                <th className="p-1 w-24 border-r border-purple-200 text-right pr-2">งบลงทุน</th>
+                                                <th className="p-1 w-24 border-r border-purple-200 text-right pr-2">งบรายจ่ายอื่น</th>
+                                                <th className="p-1 w-24 border-r border-purple-200 text-right pr-2">งบอุดหนุน</th>
                                             </tr>
                                         </thead>
-                                        <tbody>
+                                        <tbody className="divide-y divide-purple-100">
                                             {(data.action_plan || []).map((row, rIdx) => (
-                                                <tr key={rIdx} className="border-b border-purple-100 hover:bg-purple-50/50">
-                                                    <td className="p-2">
-                                                        <input
-                                                            type="text"
-                                                            value={row.step_name}
+                                                <tr key={rIdx} className="hover:bg-purple-50/40">
+                                                    <td className="p-2 border-r border-purple-100">
+                                                        <textarea
+                                                            rows={2}
+                                                            value={row.step_name || ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'step_name', e.target.value)}
-                                                            className="w-full rounded-lg border-purple-200 px-2.5 py-1 text-xs focus:border-purple-500"
+                                                            className="w-full rounded-lg border-purple-200 p-2 text-xs focus:border-purple-500 font-medium"
+                                                            placeholder="ระบุขั้นตอนการดำเนินงาน..."
                                                         />
                                                     </td>
-                                                    <td className="p-2 text-center">
+                                                    <td className="p-1 text-center border-r border-purple-100">
                                                         <input
                                                             type="checkbox"
                                                             checked={!!row.q1}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'q1', e.target.checked)}
-                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
                                                         />
                                                     </td>
-                                                    <td className="p-2 text-center">
+                                                    <td className="p-1 text-center border-r border-purple-100">
                                                         <input
                                                             type="checkbox"
                                                             checked={!!row.q2}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'q2', e.target.checked)}
-                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
                                                         />
                                                     </td>
-                                                    <td className="p-2 text-center">
+                                                    <td className="p-1 text-center border-r border-purple-100">
                                                         <input
                                                             type="checkbox"
                                                             checked={!!row.q3}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'q3', e.target.checked)}
-                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
                                                         />
                                                     </td>
-                                                    <td className="p-2 text-center">
+                                                    <td className="p-1 text-center border-r border-purple-100">
                                                         <input
                                                             type="checkbox"
                                                             checked={!!row.q4}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'q4', e.target.checked)}
-                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500"
+                                                            className="rounded border-purple-300 text-purple-600 focus:ring-purple-500 w-4 h-4 cursor-pointer"
                                                         />
                                                     </td>
-                                                    <td className="p-2">
+                                                    <td className="p-2 border-r border-purple-100">
                                                         <input
                                                             type="text"
-                                                            value={row.target_count}
+                                                            value={row.target_count || ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'target_count', e.target.value)}
-                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs"
-                                                            placeholder="50 คน"
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1.5 text-xs focus:border-purple-500"
+                                                            placeholder="เช่น ผู้เข้าร่วม ๕๐ คน"
                                                         />
                                                     </td>
-                                                    <td className="p-2">
+                                                    <td className="p-2 border-r border-purple-100">
                                                         <input
                                                             type="text"
-                                                            value={row.location_name}
+                                                            value={row.location_name || ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'location_name', e.target.value)}
-                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs"
-                                                            placeholder="วช.น่าน"
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1.5 text-xs focus:border-purple-500"
+                                                            placeholder="เช่น ต.ในเวียง อ.เมืองน่าน"
                                                         />
                                                     </td>
-                                                    <td className="p-2">
+                                                    <td className="p-1.5 border-r border-purple-100">
                                                         <input
                                                             type="number"
-                                                            value={row.budget_operating}
+                                                            min="0"
+                                                            step="any"
+                                                            value={row.budget_operating ?? ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'budget_operating', parseFloat(e.target.value) || 0)}
-                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-bold"
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-medium focus:border-purple-500"
+                                                            placeholder="0"
+                                                        />
+                                                    </td>
+                                                    <td className="p-1.5 border-r border-purple-100">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="any"
+                                                            value={row.budget_investment ?? ''}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'budget_investment', parseFloat(e.target.value) || 0)}
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-medium focus:border-purple-500"
+                                                            placeholder="0"
+                                                        />
+                                                    </td>
+                                                    <td className="p-1.5 border-r border-purple-100">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="any"
+                                                            value={row.budget_other ?? ''}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'budget_other', parseFloat(e.target.value) || 0)}
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-medium focus:border-purple-500"
+                                                            placeholder="0"
+                                                        />
+                                                    </td>
+                                                    <td className="p-1.5 border-r border-purple-100">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="any"
+                                                            value={row.budget_subsidy ?? ''}
+                                                            onChange={(e) => handleActionPlanChange(rIdx, 'budget_subsidy', parseFloat(e.target.value) || 0)}
+                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-medium focus:border-purple-500"
+                                                            placeholder="0"
                                                         />
                                                     </td>
                                                     <td className="p-2 text-center">
                                                         <button
                                                             type="button"
                                                             onClick={() => removeActionPlanRow(rIdx)}
-                                                            className="text-rose-500 hover:text-rose-700 font-bold"
+                                                            className="text-rose-400 hover:text-rose-600 font-bold p-1 rounded hover:bg-rose-50"
+                                                            title="ลบแถวนี้"
                                                         >
                                                             ✕
                                                         </button>
                                                     </td>
                                                 </tr>
                                             ))}
+                                            {/* Summary Row: รวมเงินตามหมวด */}
+                                            <tr className="bg-purple-100/70 font-bold text-purple-950 border-t-2 border-purple-300">
+                                                <td colSpan="7" className="p-2 text-center border-r border-purple-200">
+                                                    รวมเงิน
+                                                </td>
+                                                <td className="p-2 text-right border-r border-purple-200 font-bold">
+                                                    {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_operating) || 0), 0).toLocaleString()}
+                                                </td>
+                                                <td className="p-2 text-right border-r border-purple-200 font-bold">
+                                                    {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_investment) || 0), 0).toLocaleString()}
+                                                </td>
+                                                <td className="p-2 text-right border-r border-purple-200 font-bold">
+                                                    {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_other) || 0), 0).toLocaleString()}
+                                                </td>
+                                                <td className="p-2 text-right border-r border-purple-200 font-bold">
+                                                    {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_subsidy) || 0), 0).toLocaleString()}
+                                                </td>
+                                                <td></td>
+                                            </tr>
+                                            {/* Summary Row: งบประมาณรวมทั้งโครงการ */}
+                                            <tr className="bg-purple-200/60 font-black text-purple-950 border-t border-purple-300">
+                                                <td colSpan="7" className="p-2 text-center border-r border-purple-200">
+                                                    งบประมาณรวมทั้งโครงการ
+                                                </td>
+                                                <td colSpan="4" className="p-2 text-center text-sm font-black text-purple-900">
+                                                    {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_operating) || 0) + (parseFloat(r.budget_investment) || 0) + (parseFloat(r.budget_other) || 0) + (parseFloat(r.budget_subsidy) || 0), 0).toLocaleString()} บาท
+                                                </td>
+                                                <td></td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -1420,7 +1575,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     onClick={addActionPlanRow}
                                     className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block"
                                 >
-                                    + เพิ่มแถวกิจกรรมในปฏิทินปฏิบัติงาน
+                                    + เพิ่มขั้นตอน/วิธีดำเนินการเพิ่มเติม
                                 </button>
                             </div>
 
