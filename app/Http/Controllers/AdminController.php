@@ -451,10 +451,35 @@ class AdminController extends Controller
             'name' => 'required|string|max:500',
         ]);
 
+        $groupName = !empty($validated['group_name']) ? trim($validated['group_name']) : null;
+        $name = trim($validated['name']);
+
+        // Check if there is an existing standalone placeholder item where name equals $groupName
+        if ($groupName) {
+            $standalonePlaceholder = \App\Models\StrategyItem::where('strategy_category_id', $validated['strategy_category_id'])
+                ->where('name', $groupName)
+                ->whereNull('group_name')
+                ->first();
+
+            $existingGroupCount = \App\Models\StrategyItem::where('strategy_category_id', $validated['strategy_category_id'])
+                ->where('group_name', $groupName)
+                ->count();
+
+            // If this is the very first sub-item under this main topic, promote the placeholder item!
+            if ($standalonePlaceholder && $existingGroupCount === 0) {
+                $standalonePlaceholder->update([
+                    'group_name' => $groupName,
+                    'name' => $name,
+                ]);
+
+                return redirect()->back()->with('success', 'เพิ่มหัวข้อย่อยเรียบร้อยแล้ว');
+            }
+        }
+
         \App\Models\StrategyItem::create([
             'strategy_category_id' => $validated['strategy_category_id'],
-            'group_name' => !empty($validated['group_name']) ? trim($validated['group_name']) : null,
-            'name' => $validated['name'],
+            'group_name' => $groupName,
+            'name' => $name,
             'is_active' => true,
             'order_index' => \App\Models\StrategyItem::where('strategy_category_id', $validated['strategy_category_id'])->max('order_index') + 1,
         ]);

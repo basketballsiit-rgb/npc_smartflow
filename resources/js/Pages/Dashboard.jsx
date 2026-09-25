@@ -2675,9 +2675,25 @@ export default function Dashboard({
 
     const handleAddStrategyItem = (catId, defaultGroup = '') => {
         const cat = (adminData.strategyCategories || []).find(c => c.id === catId);
-        const existingGroups = Array.from(new Set((cat?.items || []).map(i => (i.group_name || '').trim()).filter(Boolean)));
-        const datalistOptions = existingGroups.map(g => `<option value="${g.replace(/"/g, '&quot;')}">`).join('');
-        const safeDefaultGroup = (defaultGroup || '').replace(/"/g, '&quot;');
+        
+        // Collect existing groups
+        const existingGroups = (cat?.items || [])
+            .map(i => (i.group_name || '').trim())
+            .filter(Boolean);
+            
+        // Collect standalone items that don't have a group_name (e.g. OVEC 1..5, National Strategy 1..6, etc.)
+        const standaloneNames = (cat?.items || [])
+            .filter(i => !i.group_name)
+            .map(i => (i.name || '').trim())
+            .filter(Boolean);
+
+        // Combine into unique list of all main topics
+        const allMainTopics = Array.from(new Set([...existingGroups, ...standaloneNames]));
+        const trimmedDefaultGroup = (defaultGroup || '').trim();
+        if (trimmedDefaultGroup && !allMainTopics.includes(trimmedDefaultGroup)) {
+            allMainTopics.unshift(trimmedDefaultGroup);
+        }
+
         const catName = cat?.name || 'ยุทธศาสตร์';
 
         Swal.fire({
@@ -2686,19 +2702,31 @@ export default function Dashboard({
                 <div class="text-left space-y-3 font-sans text-xs">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">
-                            หัวข้อหลัก / ยุทธศาสตร์หลัก / นโยบายหลัก (เลือกจากเดิมหรือพิมพ์ใหม่ได้ไม่จำกัด):
+                            หัวข้อหลัก / ยุทธศาสตร์หลัก / นโยบายหลัก <span class="text-rose-500">*</span>:
                         </label>
-                        <input id="swal-group-name" list="swal-group-list" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เลือกหัวข้อหลักเดิม หรือพิมพ์หัวข้อหลักใหม่ (เว้นว่างได้ถ้าเป็นรายการทั่วไป)" value="${safeDefaultGroup}">
-                        <datalist id="swal-group-list">
-                            ${datalistOptions}
-                        </datalist>
-                        <p class="text-[11px] text-slate-500 mt-1">💡 หากต้องการจัดเข้ากลุ่มหัวข้อหลัก ให้พิมพ์หรือเลือกหัวข้อหลักที่นี่</p>
+                        <select id="swal-group-select" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none bg-white font-medium text-slate-800">
+                            ${!trimmedDefaultGroup ? '<option value="" disabled selected>-- กรุณาเลือกหัวข้อหลักที่ต้องการเพิ่มรายการย่อย --</option>' : ''}
+                            ${allMainTopics.map(topic => `
+                                <option value="${topic.replace(/"/g, '&quot;')}" ${trimmedDefaultGroup === topic ? 'selected' : ''}>
+                                    📁 ${topic.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                                </option>
+                            `).join('')}
+                            <option value="__NEW__">➕ [สร้าง / พิมพ์ชื่อหัวข้อหลักใหม่...]</option>
+                            <option value="__NONE__">⚪ [ไม่มีหัวข้อหลัก - รายการทั่วไป]</option>
+                        </select>
+                        <div id="swal-new-group-div" style="display: none;" class="mt-2.5 p-2.5 bg-purple-50/60 rounded-lg border border-purple-100">
+                            <label class="block font-semibold text-purple-900 mb-1">
+                                ระบุชื่อหัวข้อหลักใหม่ <span class="text-rose-500">*</span>:
+                            </label>
+                            <input id="swal-custom-group" class="w-full text-xs rounded-lg border-purple-200 p-2 border focus:border-purple-500 focus:outline-none bg-white" placeholder="เช่น ยุทธศาสตร์ที่ 1... / พันธกิจที่ 1... / นโยบายที่ 1...">
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-1">💡 เลือกหัวข้อหลักที่มีอยู่ เพื่อบรรจุรายการย่อยเข้ากลุ่ม หรือสร้างหัวข้อใหม่ได้ไม่จำกัด</p>
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">
                             รายการย่อย / กลยุทธ์ / ข้อย่อย <span class="text-rose-500">*</span>:
                         </label>
-                        <textarea id="swal-item-name" rows="3" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น กลยุทธ์ที่ 1... / ตัวเลือกยุทธศาสตร์ข้อนี้..."></textarea>
+                        <textarea id="swal-item-name" rows="3" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น กลยุทธ์ที่ 1.1... / ตัวเลือกยุทธศาสตร์ข้อนี้..."></textarea>
                     </div>
                 </div>
             `,
@@ -2707,8 +2735,44 @@ export default function Dashboard({
             confirmButtonText: '💾 บันทึก',
             cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#7c3aed',
+            didOpen: () => {
+                const groupSelect = document.getElementById('swal-group-select');
+                const newGroupDiv = document.getElementById('swal-new-group-div');
+                const customGroupInput = document.getElementById('swal-custom-group');
+                if (groupSelect && newGroupDiv) {
+                    groupSelect.addEventListener('change', (e) => {
+                        if (e.target.value === '__NEW__') {
+                            newGroupDiv.style.display = 'block';
+                            customGroupInput?.focus();
+                        } else {
+                            newGroupDiv.style.display = 'none';
+                        }
+                    });
+                    if (groupSelect.value === '__NEW__') {
+                        newGroupDiv.style.display = 'block';
+                    }
+                }
+            },
             preConfirm: () => {
-                const groupName = document.getElementById('swal-group-name').value.trim();
+                const groupSelect = document.getElementById('swal-group-select');
+                const selectVal = groupSelect ? groupSelect.value : '';
+                let groupName = selectVal;
+
+                if (!selectVal) {
+                    Swal.showValidationMessage('กรุณาเลือกหัวข้อหลัก');
+                    return false;
+                }
+
+                if (selectVal === '__NEW__') {
+                    groupName = document.getElementById('swal-custom-group')?.value.trim();
+                    if (!groupName) {
+                        Swal.showValidationMessage('กรุณาระบุชื่อหัวข้อหลักใหม่');
+                        return false;
+                    }
+                } else if (selectVal === '__NONE__') {
+                    groupName = '';
+                }
+
                 const itemName = document.getElementById('swal-item-name').value.trim();
                 if (!itemName) {
                     Swal.showValidationMessage('กรุณาระบุชื่อรายการย่อย / กลยุทธ์');
@@ -2731,9 +2795,20 @@ export default function Dashboard({
 
     const handleEditStrategyItem = (item) => {
         const cat = (adminData.strategyCategories || []).find(c => c.id === item.strategy_category_id);
-        const existingGroups = Array.from(new Set((cat?.items || []).map(i => (i.group_name || '').trim()).filter(Boolean)));
-        const datalistOptions = existingGroups.map(g => `<option value="${g.replace(/"/g, '&quot;')}">`).join('');
-        const safeGroup = (item.group_name || '').replace(/"/g, '&quot;');
+        const existingGroups = (cat?.items || [])
+            .map(i => (i.group_name || '').trim())
+            .filter(Boolean);
+        const standaloneNames = (cat?.items || [])
+            .filter(i => !i.group_name)
+            .map(i => (i.name || '').trim())
+            .filter(Boolean);
+        const allMainTopics = Array.from(new Set([...existingGroups, ...standaloneNames]));
+        
+        const currentGroup = (item.group_name || '').trim();
+        if (currentGroup && !allMainTopics.includes(currentGroup)) {
+            allMainTopics.unshift(currentGroup);
+        }
+
         const safeName = (item.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
         Swal.fire({
@@ -2742,12 +2817,23 @@ export default function Dashboard({
                 <div class="text-left space-y-3 font-sans text-xs">
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">
-                            หัวข้อหลัก / ยุทธศาสตร์หลัก / นโยบายหลัก (ถ้ามี):
+                            หัวข้อหลัก / ยุทธศาสตร์หลัก / นโยบายหลัก:
                         </label>
-                        <input id="swal-group-name" list="swal-group-list" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เลือกหัวข้อหลัก หรือเว้นว่างถ้าเป็นรายการทั่วไป" value="${safeGroup}">
-                        <datalist id="swal-group-list">
-                            ${datalistOptions}
-                        </datalist>
+                        <select id="swal-group-select" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none bg-white font-medium text-slate-800">
+                            <option value="__NONE__" ${!currentGroup ? 'selected' : ''}>⚪ [ไม่มีหัวข้อหลัก - รายการทั่วไป]</option>
+                            ${allMainTopics.map(topic => `
+                                <option value="${topic.replace(/"/g, '&quot;')}" ${currentGroup === topic ? 'selected' : ''}>
+                                    📁 ${topic.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                                </option>
+                            `).join('')}
+                            <option value="__NEW__">➕ [สร้าง / พิมพ์ชื่อหัวข้อหลักใหม่...]</option>
+                        </select>
+                        <div id="swal-new-group-div" style="display: none;" class="mt-2.5 p-2.5 bg-purple-50/60 rounded-lg border border-purple-100">
+                            <label class="block font-semibold text-purple-900 mb-1">
+                                ระบุชื่อหัวข้อหลักใหม่ <span class="text-rose-500">*</span>:
+                            </label>
+                            <input id="swal-custom-group" class="w-full text-xs rounded-lg border-purple-200 p-2 border focus:border-purple-500 focus:outline-none bg-white" placeholder="เช่น ยุทธศาสตร์ที่ 1... / พันธกิจที่ 1... / นโยบายที่ 1...">
+                        </div>
                     </div>
                     <div>
                         <label class="block font-bold text-slate-700 mb-1">
@@ -2762,8 +2848,36 @@ export default function Dashboard({
             confirmButtonText: '💾 บันทึก',
             cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#7c3aed',
+            didOpen: () => {
+                const groupSelect = document.getElementById('swal-group-select');
+                const newGroupDiv = document.getElementById('swal-new-group-div');
+                const customGroupInput = document.getElementById('swal-custom-group');
+                if (groupSelect && newGroupDiv) {
+                    groupSelect.addEventListener('change', (e) => {
+                        if (e.target.value === '__NEW__') {
+                            newGroupDiv.style.display = 'block';
+                            customGroupInput?.focus();
+                        } else {
+                            newGroupDiv.style.display = 'none';
+                        }
+                    });
+                }
+            },
             preConfirm: () => {
-                const groupName = document.getElementById('swal-group-name').value.trim();
+                const groupSelect = document.getElementById('swal-group-select');
+                const selectVal = groupSelect ? groupSelect.value : '';
+                let groupName = selectVal;
+
+                if (selectVal === '__NEW__') {
+                    groupName = document.getElementById('swal-custom-group')?.value.trim();
+                    if (!groupName) {
+                        Swal.showValidationMessage('กรุณาระบุชื่อหัวข้อหลักใหม่');
+                        return false;
+                    }
+                } else if (selectVal === '__NONE__') {
+                    groupName = '';
+                }
+
                 const itemName = document.getElementById('swal-item-name').value.trim();
                 if (!itemName) {
                     Swal.showValidationMessage('กรุณาระบุชื่อรายการย่อย / กลยุทธ์');
@@ -2996,6 +3110,13 @@ export default function Dashboard({
                                                                         <span className="leading-relaxed">{item.name}</span>
                                                                     </div>
                                                                     <div className="flex gap-x-1.5 whitespace-nowrap ml-2">
+                                                                        <button
+                                                                            onClick={() => handleAddStrategyItem(cat.id, item.name)}
+                                                                            className="rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-100 flex items-center gap-1"
+                                                                            title="เพิ่มรายการย่อยภายใต้หัวข้อนี้"
+                                                                        >
+                                                                            <span>+</span> เพิ่มรายการย่อย
+                                                                        </button>
                                                                         <button
                                                                             onClick={() => handleEditStrategyItem(item)}
                                                                             className="rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-100"
