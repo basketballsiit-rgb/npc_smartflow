@@ -1006,6 +1006,11 @@ export default function Dashboard({
 
                                                             <div>
                                                                 <div className="flex flex-wrap items-center gap-2">
+                                                                    {item.group_name && (
+                                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-purple-100 text-purple-900 border border-purple-200">
+                                                                            <span>📁</span> {item.group_name}
+                                                                        </span>
+                                                                    )}
                                                                     <h4 className="text-sm font-bold text-slate-900">
                                                                         {item.name}
                                                                     </h4>

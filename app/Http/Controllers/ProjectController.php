@@ -540,17 +540,14 @@ class ProjectController extends Controller
      */
     public function edit(Project $project)
     {
-        if ($project->status === 'budget_rejected') {
+        $user = auth()->user();
+        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff();
+
+        if ($project->status === 'budget_rejected' && !$isPlanOrAdmin) {
             abort(403, 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถจัดทำรายละเอียดต่อได้');
         }
 
-        // Allowed statuses to view/edit
-        if (!in_array($project->status, ['draft', 'rejected', 'budget_approved', 'preliminary', 'approved', 'completed', 'submitted', 'pending_approval'])) {
-            abort(403, 'โครงการนี้ไม่สามารถเข้าถึงได้');
-        }
-
-        $user = auth()->user();
-        if ($project->user_id !== $user->id && !$user->isAdmin() && !$user->isPlanHead()) {
+        if ($project->user_id !== $user->id && !$isPlanOrAdmin) {
             abort(403, 'Unauthorized.');
         }
 
@@ -570,7 +567,7 @@ class ProjectController extends Controller
             'provincialStrategies' => \App\Models\ProvincialStrategy::all(),
             'departments' => Department::all(),
             'fundingSources' => \App\Models\FundingSource::all(),
-            'isApprovedLocked' => in_array($project->status, ['approved', 'completed']),
+            'isApprovedLocked' => false,
         ]);
     }
 
@@ -579,21 +576,15 @@ class ProjectController extends Controller
      */
     public function update(Request $request, Project $project)
     {
-        if (in_array($project->status, ['approved', 'completed'])) {
-            abort(403, 'โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ไม่สามารถดำเนินการแก้ไขใด ๆ ได้อีกต่อไป');
-        }
-
-        if ($project->status === 'budget_rejected') {
-            abort(403, 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถจัดทำรายละเอียดต่อได้');
-        }
-
-        if (!in_array($project->status, ['draft', 'rejected', 'budget_approved', 'preliminary'])) {
-            abort(403, 'Locked projects cannot be updated.');
-        }
-
         $user = auth()->user();
-        if ($project->user_id !== $user->id && !$user->isAdmin() && !$user->isPlanHead()) {
-            abort(403, 'Unauthorized.');
+        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff();
+
+        if ($project->user_id !== $user->id && !$isPlanOrAdmin) {
+            abort(403, 'คุณไม่มีสิทธิ์แก้ไขโครงการนี้');
+        }
+
+        if ($project->status === 'budget_rejected' && !$isPlanOrAdmin) {
+            abort(403, 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถจัดทำรายละเอียดต่อได้');
         }
 
         $validated = $request->validate([
@@ -758,6 +749,10 @@ class ProjectController extends Controller
             return redirect()->route('projects.show', $project->id)->with('success', 'จัดทำรายละเอียดโครงการฉบับเต็มและยื่นขออนุมัติโครงการสำเร็จ ระบบได้ส่งต่อให้หัวหน้าแผนก/หัวหน้างานพิจารณา (ขั้นตอนที่ 2)');
         }
 
+        if (in_array($project->status, ['approved', 'in_progress', 'completed'])) {
+            return redirect()->route('projects.show', $project->id)->with('success', 'บันทึกการแก้ไขและอัปเดตข้อมูลโครงการเรียบร้อยแล้ว');
+        }
+
         return redirect()->back()->with('success', 'บันทึกแบบร่างโครงการเรียบร้อยแล้ว ท่านสามารถแก้ไขต่อได้ตลอดเวลา');
     }
 
@@ -767,17 +762,35 @@ class ProjectController extends Controller
     public function destroy(Project $project)
     {
         $user = auth()->user();
+        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff();
         
-        // Admin can delete any project; regular user can only delete their own draft
-        if (!$user->isAdmin() && ($project->user_id !== $user->id || $project->status !== 'draft')) {
-            abort(403, 'คุณไม่มีสิทธิ์ลบโครงการนี้');
+        $isNotApproved = !in_array($project->status, ['approved', 'in_progress', 'completed']) 
+            || in_array($project->status, ['rejected', 'budget_rejected', 'draft', 'preliminary', 'pending_approval', 'submitted']);
+
+        $canDelete = false;
+        if ($user->isAdmin()) {
+            $canDelete = true;
+        } elseif ($isPlanOrAdmin && $isNotApproved) {
+            $canDelete = true;
+        } elseif ($project->user_id === $user->id && in_array($project->status, ['draft', 'rejected', 'preliminary', 'budget_rejected'])) {
+            $canDelete = true;
+        }
+
+        if (!$canDelete) {
+            abort(403, 'คุณไม่มีสิทธิ์ลบโครงการนี้ หรือโครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว');
         }
 
         // Clean up all related child records
         $project->approvals()->delete();
         if ($project->budget) $project->budget()->delete();
-        if ($project->procurement) $project->procurement()->delete();
-        if ($project->survey) $project->survey()->delete();
+        if ($project->procurement) {
+            $project->procurement->items()->delete();
+            $project->procurement()->delete();
+        }
+        if ($project->survey) {
+            $project->survey->responses()->delete();
+            $project->survey()->delete();
+        }
         $project->appendices()->delete();
         $project->photos()->delete();
 

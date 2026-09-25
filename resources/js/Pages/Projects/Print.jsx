@@ -305,9 +305,10 @@ export default function Print({ project, strategyCategories = [] }) {
                                                         itemName = itemName.replace(/^\[.*?\]\s*/, '');
                                                         // Remove IQA / OVEC prefix with numbers and colons
                                                         itemName = itemName.replace(/^(IQA|OVEC)\s*([0-9๑-๙]+)?\s*[:\.\-]?\s*/i, '');
+                                                        const fullDisplayName = item.group_name ? `${item.group_name} : ${itemName}` : itemName;
                                                         return (
                                                             <p key={item.id || itemIdx} className="pl-6 text-slate-800">
-                                                                <span className="font-bold pr-1">{toThaiNumerals(itemIdx + 1)})</span> {toThaiNumerals(itemName)}
+                                                                <span className="font-bold pr-1">{toThaiNumerals(itemIdx + 1)})</span> {toThaiNumerals(fullDisplayName)}
                                                             </p>
                                                         );
                                                     })}

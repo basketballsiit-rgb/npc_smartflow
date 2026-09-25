@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class StrategyItem extends Model
 {
-    protected $fillable = ['strategy_category_id', 'name', 'code', 'description', 'is_active', 'order_index'];
+    protected $fillable = ['strategy_category_id', 'group_name', 'name', 'code', 'description', 'is_active', 'order_index'];
 
     protected $casts = [
         'is_active' => 'boolean',

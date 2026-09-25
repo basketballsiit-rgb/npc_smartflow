@@ -2573,23 +2573,54 @@ export default function Dashboard({
         });
     };
 
-    const handleAddStrategyItem = (catId) => {
+    const handleAddStrategyItem = (catId, defaultGroup = '') => {
+        const cat = (adminData.strategyCategories || []).find(c => c.id === catId);
+        const existingGroups = Array.from(new Set((cat?.items || []).map(i => (i.group_name || '').trim()).filter(Boolean)));
+        const datalistOptions = existingGroups.map(g => `<option value="${g.replace(/"/g, '&quot;')}">`).join('');
+        const safeDefaultGroup = (defaultGroup || '').replace(/"/g, '&quot;');
+
         Swal.fire({
             title: '➕ เพิ่มตัวเลือกยุทธศาสตร์',
-            input: 'text',
-            inputPlaceholder: 'ระบุหัวข้อยุทธศาสตร์ย่อย...',
+            html: `
+                <div class="text-left space-y-3 font-sans text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">
+                            หัวข้อหลัก / พันธกิจ (ถ้ามี - เลือกจากเดิมหรือพิมพ์ใหม่ได้ไม่จำกัด):
+                        </label>
+                        <input id="swal-group-name" list="swal-group-list" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น พันธกิจที่ 1 ผลิตและพัฒนากำลังคน... (เว้นว่างได้ถ้าไม่มีหัวข้อหลัก)" value="${safeDefaultGroup}">
+                        <datalist id="swal-group-list">
+                            ${datalistOptions}
+                        </datalist>
+                        <p class="text-[11px] text-slate-500 mt-1">💡 หากมีหัวข้อย่อย ให้ระบุหัวข้อหลักที่นี่ (ระบบจะจัดกลุ่มให้อัตโนมัติ)</p>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">
+                            รายการย่อย / กลยุทธ์ / ตัวเลือกยุทธศาสตร์ <span class="text-rose-500">*</span>:
+                        </label>
+                        <textarea id="swal-item-name" rows="3" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น กลยุทธ์ที่ 1 ส่งเสริมและพัฒนาการจัดการศึกษา..."></textarea>
+                    </div>
+                </div>
+            `,
+            focusConfirm: false,
             showCancelButton: true,
-            confirmButtonText: 'บันทึก',
+            confirmButtonText: '💾 บันทึก',
             cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#7c3aed',
-            inputValidator: (value) => {
-                if (!value) return 'กรุณาระบุหัวข้อยุทธศาสตร์';
+            preConfirm: () => {
+                const groupName = document.getElementById('swal-group-name').value.trim();
+                const itemName = document.getElementById('swal-item-name').value.trim();
+                if (!itemName) {
+                    Swal.showValidationMessage('กรุณาระบุชื่อรายการย่อย / กลยุทธ์');
+                    return false;
+                }
+                return { group_name: groupName, name: itemName };
             }
         }).then((result) => {
             if (result.isConfirmed) {
                 router.post(route('admin.items.store'), {
                     strategy_category_id: catId,
-                    name: result.value,
+                    group_name: result.value.group_name || null,
+                    name: result.value.name,
                 }, {
                     onSuccess: () => Swal.fire('สำเร็จ', 'เพิ่มตัวเลือกยุทธศาสตร์เรียบร้อยแล้ว', 'success')
                 });
@@ -2598,20 +2629,53 @@ export default function Dashboard({
     };
 
     const handleEditStrategyItem = (item) => {
+        const cat = (adminData.strategyCategories || []).find(c => c.id === item.strategy_category_id);
+        const existingGroups = Array.from(new Set((cat?.items || []).map(i => (i.group_name || '').trim()).filter(Boolean)));
+        const datalistOptions = existingGroups.map(g => `<option value="${g.replace(/"/g, '&quot;')}">`).join('');
+        const safeGroup = (item.group_name || '').replace(/"/g, '&quot;');
+        const safeName = (item.name || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
         Swal.fire({
             title: '✏️ แก้ไขตัวเลือกยุทธศาสตร์',
-            input: 'text',
-            inputValue: item.name,
+            html: `
+                <div class="text-left space-y-3 font-sans text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">
+                            หัวข้อหลัก / พันธกิจ (ถ้ามี):
+                        </label>
+                        <input id="swal-group-name" list="swal-group-list" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none" placeholder="เช่น พันธกิจที่ 1 ผลิตและพัฒนากำลังคน... (เว้นว่างได้ถ้าไม่มีหัวข้อหลัก)" value="${safeGroup}">
+                        <datalist id="swal-group-list">
+                            ${datalistOptions}
+                        </datalist>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">
+                            รายการย่อย / กลยุทธ์ / ตัวเลือกยุทธศาสตร์ <span class="text-rose-500">*</span>:
+                        </label>
+                        <textarea id="swal-item-name" rows="3" class="w-full text-xs rounded-lg border-purple-200 p-2.5 border focus:border-purple-500 focus:outline-none">${safeName}</textarea>
+                    </div>
+                </div>
+            `,
+            focusConfirm: false,
             showCancelButton: true,
-            confirmButtonText: 'บันทึก',
+            confirmButtonText: '💾 บันทึก',
             cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#7c3aed',
-            inputValidator: (value) => {
-                if (!value) return 'กรุณาระบุหัวข้อยุทธศาสตร์';
+            preConfirm: () => {
+                const groupName = document.getElementById('swal-group-name').value.trim();
+                const itemName = document.getElementById('swal-item-name').value.trim();
+                if (!itemName) {
+                    Swal.showValidationMessage('กรุณาระบุชื่อรายการย่อย / กลยุทธ์');
+                    return false;
+                }
+                return { group_name: groupName, name: itemName };
             }
         }).then((result) => {
             if (result.isConfirmed) {
-                router.put(route('admin.items.update', item.id), { name: result.value }, {
+                router.put(route('admin.items.update', item.id), {
+                    group_name: result.value.group_name || null,
+                    name: result.value.name,
+                }, {
                     onSuccess: () => Swal.fire('สำเร็จ', 'อัปเดตตัวเลือกยุทธศาสตร์เรียบร้อยแล้ว', 'success')
                 });
             }
@@ -2644,114 +2708,196 @@ export default function Dashboard({
         return (
             <div className="space-y-6 font-sans">
                 {/* Header Action Bar */}
-                <div className="flex justify-between items-center bg-purple-50/70 p-4 rounded-2xl border border-purple-100">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-purple-50/70 p-5 rounded-2xl border border-purple-100 shadow-2xs">
                     <div>
-                        <h3 className="text-base font-bold text-purple-950">🎯 ระบบบริหารจัดการหมวดหมู่อยุทธศาสตร์การพัฒนา</h3>
-                        <p className="text-xs text-slate-600">สามารถเพิ่มหมวดหมู่ใหม่ แก้ไขชื่อ เปิด/ปิดการใช้งาน หรือลบหมวดหมู่ยุทธศาสตร์ได้อย่างอิสระ</p>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200 mb-1.5">
+                            <span>🎯</span> ระบบบริหารจัดการหมวดหมู่อยุทธศาสตร์
+                        </div>
+                        <h3 className="text-base sm:text-lg font-bold text-purple-950">กำหนดหมวดหมู่ หัวข้อหลัก (พันธกิจ) และรายการย่อย (กลยุทธ์) ได้ไม่จำกัด</h3>
+                        <p className="text-xs text-slate-600 mt-0.5">
+                            สามารถเพิ่มหัวข้อยุทธศาสตร์ได้เรื่อย ๆ อย่างอิสระ พร้อมระบบจัดกลุ่มหัวข้อหลักและรายการย่อยอัตโนมัติ
+                        </p>
                     </div>
                     <button
                         onClick={handleAddCategory}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-600/20 hover:scale-105 transition-all"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-purple-600/20 hover:scale-105 transition-all shrink-0"
                     >
                         ➕ เพิ่มหมวดหมู่อยุทธศาสตร์ใหม่
                     </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {categories.map((cat, catIdx) => (
-                        <div key={cat.id} className={`overflow-hidden rounded-2xl border transition-all ${
-                            cat.is_active
-                                ? 'border-purple-100 bg-white shadow-sm'
-                                : 'border-slate-200 bg-slate-50/70 opacity-75'
-                        }`}>
-                            {/* Category Header */}
-                            <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex justify-between items-start gap-x-2">
-                                <div>
-                                    <div className="flex items-center gap-x-2">
-                                        <h3 className="text-base font-bold text-slate-900">{catIdx + 1}. {cat.name}</h3>
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                            cat.is_active
-                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                                : 'bg-rose-100 text-rose-800 border border-rose-200'
-                                        }`}>
-                                            {cat.is_active ? '🟢 เปิดใช้งาน' : '🔴 ปิดใช้งาน'}
-                                        </span>
+                    {categories.map((cat, catIdx) => {
+                        // Group items by group_name
+                        const groupedItems = [];
+                        const groupMap = new Map();
+                        (cat.items || []).forEach(item => {
+                            const gName = (item.group_name || '').trim();
+                            if (!groupMap.has(gName)) {
+                                const groupObj = { name: gName, items: [] };
+                                groupMap.set(gName, groupObj);
+                                groupedItems.push(groupObj);
+                            }
+                            groupMap.get(gName).items.push(item);
+                        });
+
+                        return (
+                            <div key={cat.id} className={`overflow-hidden rounded-2xl border transition-all ${
+                                cat.is_active
+                                    ? 'border-purple-100 bg-white shadow-sm'
+                                    : 'border-slate-200 bg-slate-50/70 opacity-75'
+                            }`}>
+                                {/* Category Header */}
+                                <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex justify-between items-start gap-x-2">
+                                    <div>
+                                        <div className="flex items-center gap-x-2">
+                                            <h3 className="text-base font-bold text-slate-900">{catIdx + 1}. {cat.name}</h3>
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                cat.is_active
+                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                                    : 'bg-rose-100 text-rose-800 border border-rose-200'
+                                            }`}>
+                                                {cat.is_active ? '🟢 เปิดใช้งาน' : '🔴 ปิดใช้งาน'}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-0.5">{cat.description || 'ตัวเลือกยุทธศาสตร์ประจำระบบ'}</p>
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-0.5">{cat.description || 'ตัวเลือกยุทธศาสตร์ประจำระบบ'}</p>
-                                </div>
-                                <div className="flex gap-x-1.5 flex-wrap justify-end">
-                                    <button
-                                        onClick={() => handleToggleCategoryActive(cat)}
-                                        className={`rounded-lg px-2.5 py-1 text-[11px] font-bold border transition-all ${
-                                            cat.is_active
-                                                ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                                                : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
-                                        }`}
-                                        title={cat.is_active ? 'คลิกเพื่อปิดใช้งานหมวดนี้' : 'คลิกเพื่อเปิดใช้งานหมวดนี้'}
-                                    >
-                                        {cat.is_active ? '🙈 ปิดใช้งาน' : '👁️ เปิดใช้งาน'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleEditCategory(cat)}
-                                        className="rounded-lg bg-purple-50 px-2 py-1 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-100"
-                                        title="แก้ไขชื่อหมวดหมู่"
-                                    >
-                                        ✏️ แก้ไข
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteCategory(cat)}
-                                        className="rounded-lg bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700 border border-rose-200 hover:bg-rose-100"
-                                        title="ลบหมวดหมู่"
-                                    >
-                                        🗑️
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Category Items List */}
-                            <div className="p-4 space-y-3">
-                                <div className="flex justify-between items-center px-2">
-                                    <span className="text-xs font-bold text-purple-950">รายการตัวเลือกยุทธศาสตร์ ({cat.items?.length || 0} ข้อ)</span>
-                                    <button
-                                        onClick={() => handleAddStrategyItem(cat.id)}
-                                        className="text-xs font-bold text-purple-700 hover:text-purple-900"
-                                    >
-                                        + เพิ่มตัวเลือกในหมวดนี้
-                                    </button>
+                                    <div className="flex gap-x-1.5 flex-wrap justify-end">
+                                        <button
+                                            onClick={() => handleToggleCategoryActive(cat)}
+                                            className={`rounded-lg px-2.5 py-1 text-[11px] font-bold border transition-all ${
+                                                cat.is_active
+                                                    ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
+                                                    : 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100'
+                                            }`}
+                                            title={cat.is_active ? 'คลิกเพื่อปิดใช้งานหมวดนี้' : 'คลิกเพื่อเปิดใช้งานหมวดนี้'}
+                                        >
+                                            {cat.is_active ? '🙈 ปิดใช้งาน' : '👁️ เปิดใช้งาน'}
+                                        </button>
+                                        <button
+                                            onClick={() => handleEditCategory(cat)}
+                                            className="rounded-lg bg-purple-50 px-2 py-1 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-100"
+                                            title="แก้ไขชื่อหมวดหมู่"
+                                        >
+                                            ✏️ แก้ไข
+                                        </button>
+                                        <button
+                                            onClick={() => handleDeleteCategory(cat)}
+                                            className="rounded-lg bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700 border border-rose-200 hover:bg-rose-100"
+                                            title="ลบหมวดหมู่"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <ul className="divide-y divide-purple-100 text-xs font-semibold text-slate-800">
-                                    {(cat.items || []).map((item, idx) => (
-                                        <li key={item.id} className="py-2.5 flex justify-between items-center hover:bg-purple-50/20 px-2 rounded-lg">
-                                            <div className="flex items-start gap-x-2 max-w-[75%]">
-                                                <span className="font-bold text-purple-700">{idx + 1}.</span>
-                                                <span>{item.name}</span>
+                                {/* Category Items List */}
+                                <div className="p-4 space-y-3">
+                                    <div className="flex justify-between items-center px-1">
+                                        <span className="text-xs font-bold text-purple-950">
+                                            รายการตัวเลือกยุทธศาสตร์ ({cat.items?.length || 0} ข้อ)
+                                        </span>
+                                        <button
+                                            onClick={() => handleAddStrategyItem(cat.id)}
+                                            className="inline-flex items-center gap-1 text-xs font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition-all"
+                                        >
+                                            <span>➕</span> เพิ่มตัวเลือกในหมวดนี้
+                                        </button>
+                                    </div>
+
+                                    {/* Grouped or Flat Items */}
+                                    <div className="space-y-3">
+                                        {groupedItems.map((group, gIdx) => (
+                                            <div key={gIdx} className="space-y-1.5">
+                                                {group.name ? (
+                                                    <div className="rounded-xl border border-purple-200/80 bg-purple-50/30 p-2.5 space-y-2">
+                                                        <div className="flex justify-between items-center bg-white px-3 py-1.5 rounded-lg border border-purple-100 shadow-2xs">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xs">📂</span>
+                                                                <span className="font-bold text-xs text-purple-950">{group.name}</span>
+                                                                <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-bold">
+                                                                    {group.items.length} รายการ
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleAddStrategyItem(cat.id, group.name)}
+                                                                className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-md border border-purple-200 transition-all flex items-center gap-1"
+                                                                title="เพิ่มรายการย่อยในหัวข้อหลักนี้"
+                                                            >
+                                                                <span>+</span> เพิ่มรายการย่อย
+                                                            </button>
+                                                        </div>
+                                                        <ul className="divide-y divide-purple-100/60 pl-2">
+                                                            {group.items.map((item) => (
+                                                                <li key={item.id} className="py-2 flex justify-between items-center hover:bg-white/80 px-2 rounded-lg transition-colors">
+                                                                    <div className="flex items-start gap-x-2 max-w-[75%]">
+                                                                        <span className="text-purple-400 font-mono text-xs mt-0.5">└─</span>
+                                                                        <span className="text-xs text-slate-800 font-medium leading-relaxed">{item.name}</span>
+                                                                    </div>
+                                                                    <div className="flex gap-x-1.5 whitespace-nowrap ml-2">
+                                                                        <button
+                                                                            onClick={() => handleEditStrategyItem(item)}
+                                                                            className="rounded-md bg-white px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-50 shadow-2xs"
+                                                                        >
+                                                                            ✏️
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteStrategyItem(item)}
+                                                                            className="rounded-md bg-white px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200 hover:bg-rose-50 shadow-2xs"
+                                                                        >
+                                                                            🗑️
+                                                                        </button>
+                                                                    </div>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-1">
+                                                        {groupedItems.length > 1 && (
+                                                            <span className="text-[11px] font-bold text-slate-500 px-1 block mb-1">
+                                                                รายการทั่วไป (ไม่มีหัวข้อหลัก):
+                                                            </span>
+                                                        )}
+                                                        <ul className="divide-y divide-purple-100 text-xs font-semibold text-slate-800">
+                                                            {group.items.map((item, idx) => (
+                                                                <li key={item.id} className="py-2.5 flex justify-between items-center hover:bg-purple-50/20 px-2 rounded-lg">
+                                                                    <div className="flex items-start gap-x-2 max-w-[75%]">
+                                                                        <span className="font-bold text-purple-700">{idx + 1}.</span>
+                                                                        <span className="leading-relaxed">{item.name}</span>
+                                                                    </div>
+                                                                    <div className="flex gap-x-1.5 whitespace-nowrap ml-2">
+                                                                        <button
+                                                                            onClick={() => handleEditStrategyItem(item)}
+                                                                            className="rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-100"
+                                                                        >
+                                                                            ✏️
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteStrategyItem(item)}
+                                                                            className="rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200 hover:bg-rose-100"
+                                                                        >
+                                                                            🗑️
+                                                                        </button>
+                                                                    </div>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div className="flex gap-x-1.5 whitespace-nowrap">
-                                                <button
-                                                    onClick={() => handleEditStrategyItem(item)}
-                                                    className="rounded-md bg-purple-50 px-2 py-0.5 text-[11px] font-bold text-purple-700 border border-purple-200 hover:bg-purple-100"
-                                                >
-                                                    ✏️
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteStrategyItem(item)}
-                                                    className="rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700 border border-rose-200 hover:bg-rose-100"
-                                                >
-                                                    🗑️
-                                                </button>
+                                        ))}
+
+                                        {(!cat.items || cat.items.length === 0) && (
+                                            <div className="py-6 text-center text-slate-400 text-xs font-normal border border-dashed border-purple-100 rounded-xl">
+                                                ยังไม่มีตัวเลือกยุทธศาสตร์ในหมวดนี้ (กด + เพิ่มตัวเลือกเพื่อเริ่มต้น)
                                             </div>
-                                        </li>
-                                    ))}
-                                    {(!cat.items || cat.items.length === 0) && (
-                                        <li className="py-4 text-center text-slate-400 text-xs font-normal">
-                                            ยังไม่มีตัวเลือกยุทธศาสตร์ในหมวดนี้ (กด + เพิ่มตัวเลือกเพื่อเริ่มต้น)
-                                        </li>
-                                    )}
-                                </ul>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         );

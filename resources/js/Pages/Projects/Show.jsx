@@ -881,34 +881,49 @@ ${itemsListText}
                                 🚀 ยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2)
                             </button>
                         )}
+                        {/* Edit Button */}
                         {(project.status === 'approved' || project.status === 'completed') ? (
-                            <Link
-                                href={route('projects.edit', project.id)}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-700 transition-all whitespace-nowrap shrink-0"
-                                title="ดูแบบเสนอโครงการฉบับเต็ม (อ่านอย่างเดียว - ล็อคการแก้ไข)"
-                            >
-                                📄 ดูโครงการฉบับเต็ม (ล็อค)
-                            </Link>
+                            (auth.user?.is_admin || auth.user?.is_plan_head || auth.user?.is_plan_staff || project.user_id === auth.user?.id) && (
+                                <Link
+                                    href={route('projects.edit', project.id)}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/20 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                    title="แก้ไข/อัปเดตรายละเอียดโครงการที่อนุมัติแล้ว"
+                                >
+                                    ✏️ แก้ไข/อัปเดตโครงการ
+                                </Link>
+                            )
                         ) : (
-                            (auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft' || project.status === 'budget_approved' || project.status === 'rejected') && (
+                            (auth.user?.is_admin || auth.user?.is_plan_head || auth.user?.is_plan_staff || project.user_id === auth.user?.id || project.status === 'draft' || project.status === 'budget_approved' || project.status === 'rejected') && (
                                 <Link
                                     href={route('projects.edit', project.id)}
                                     className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                    title="แก้ไขรายละเอียดโครงการฉบับเต็ม"
+                                    title="จัดทำ/แก้ไขรายละเอียดโครงการ"
                                 >
                                     ✏️ จัดทำ/แก้ไขโครงการ
                                 </Link>
                             )
                         )}
-                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || project.status === 'draft' || project.status === 'preliminary') && (
-                            <button
-                                onClick={handleDeleteProject}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                title="ลบโครงการนี้ออกจากระบบ"
-                            >
-                                🗑️ ลบโครงการ
-                            </button>
-                        )}
+
+                        {/* Delete Button */}
+                        {(() => {
+                            const isPlanOrAdmin = Boolean(auth.user?.is_admin || auth.user?.role?.name === 'admin' || auth.user?.is_plan_head || auth.user?.is_plan_staff || (auth.user?.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN')));
+                            const isNotApproved = !['approved', 'in_progress', 'completed'].includes(project.status) || ['rejected', 'budget_rejected', 'pending_approval', 'submitted', 'draft', 'preliminary'].includes(project.status);
+                            const isOwnerDraft = project.user_id === auth.user?.id && ['draft', 'preliminary', 'rejected', 'budget_rejected'].includes(project.status);
+
+                            if (auth.user?.is_admin || (isPlanOrAdmin && isNotApproved) || isOwnerDraft) {
+                                return (
+                                    <button
+                                        type="button"
+                                        onClick={handleDeleteProject}
+                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                                        title="ลบโครงการนี้ออกจากระบบ"
+                                    >
+                                        🗑️ ลบโครงการ
+                                    </button>
+                                );
+                            }
+                            return null;
+                        })()}
                         <a
                             href={route('projects.print', project.id)}
                             target="_blank"
@@ -1162,7 +1177,10 @@ ${itemsListText}
                                                         </h5>
                                                         <ul className="list-disc pl-4 text-xs text-slate-700 space-y-1">
                                                             {displayList.map((item, i) => (
-                                                                <li key={i}>{item.name}</li>
+                                                                <li key={i}>
+                                                                    {item.group_name ? <span className="font-semibold text-purple-950">{item.group_name} : </span> : null}
+                                                                    <span>{item.name}</span>
+                                                                </li>
                                                             ))}
                                                             {displayList.length === 0 && <li className="list-none text-slate-400">-</li>}
                                                         </ul>

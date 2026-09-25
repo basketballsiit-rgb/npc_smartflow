@@ -441,17 +441,19 @@ class AdminController extends Controller
      */
     public function storeStrategyItem(Request $request)
     {
-        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead() && !auth()->user()->isPlanStaff()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $validated = $request->validate([
             'strategy_category_id' => 'required|exists:strategy_categories,id',
-            'name' => 'required|string|max:255',
+            'group_name' => 'nullable|string|max:255',
+            'name' => 'required|string|max:500',
         ]);
 
         \App\Models\StrategyItem::create([
             'strategy_category_id' => $validated['strategy_category_id'],
+            'group_name' => !empty($validated['group_name']) ? trim($validated['group_name']) : null,
             'name' => $validated['name'],
             'is_active' => true,
             'order_index' => \App\Models\StrategyItem::where('strategy_category_id', $validated['strategy_category_id'])->max('order_index') + 1,
@@ -465,15 +467,19 @@ class AdminController extends Controller
      */
     public function updateStrategyItem(Request $request, \App\Models\StrategyItem $item)
     {
-        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead()) {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanHead() && !auth()->user()->isPlanStaff()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'group_name' => 'nullable|string|max:255',
+            'name' => 'required|string|max:500',
         ]);
 
-        $item->update($validated);
+        $item->update([
+            'group_name' => !empty($validated['group_name']) ? trim($validated['group_name']) : null,
+            'name' => $validated['name'],
+        ]);
 
         return redirect()->back()->with('success', 'อัปเดตตัวเลือกยุทธศาสตร์เรียบร้อยแล้ว');
     }

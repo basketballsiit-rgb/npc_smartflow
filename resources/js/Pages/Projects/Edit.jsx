@@ -429,16 +429,12 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const handleSaveDraft = (e) => {
         if (e) e.preventDefault();
-        if (isApprovedOrCompleted) {
-            Swal.fire('ล็อคการแก้ไข', 'โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ไม่สามารถดำเนินการแก้ไขใด ๆ ได้อีกต่อไป', 'warning');
-            return;
-        }
         router.patch(route('projects.update', project.id), prepareSubmitData(false), {
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire({
-                    title: '💾 บันทึกแบบร่างสำเร็จ!',
-                    text: 'ระบบบันทึกข้อมูลเรียบร้อยแล้ว ท่านสามารถกรอกรายละเอียดเพิ่มเติมต่อได้ทันที',
+                    title: isApprovedOrCompleted ? '💾 อัปเดตข้อมูลโครงการสำเร็จ!' : '💾 บันทึกแบบร่างสำเร็จ!',
+                    text: isApprovedOrCompleted ? 'บันทึกการแก้ไขและอัปเดตข้อมูลโครงการที่อนุมัติแล้วเรียบร้อยแล้ว' : 'ระบบบันทึกข้อมูลเรียบร้อยแล้ว ท่านสามารถกรอกรายละเอียดเพิ่มเติมต่อได้ทันที',
                     icon: 'success',
                     timer: 2000,
                     showConfirmButton: false
@@ -517,13 +513,13 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                         {isApprovedOrCompleted && (
                             <div className="mb-6 p-5 rounded-3xl bg-emerald-50/95 border-2 border-emerald-400 text-xs text-emerald-950 font-bold flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
                                 <div className="flex items-center gap-3.5">
-                                    <span className="text-4xl p-2 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-200">🔒</span>
+                                    <span className="text-4xl p-2 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-200">✅</span>
                                     <div>
                                         <p className="font-black text-base text-emerald-950 flex items-center gap-2">
-                                            <span>✅</span> โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ({project.status === 'completed' ? 'ปิดโครงการแล้ว' : 'อนุมัติสมบูรณ์'})
+                                            <span>✨</span> โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ({project.status === 'completed' ? 'ปิดโครงการแล้ว' : 'อนุมัติสมบูรณ์'})
                                         </p>
                                         <p className="font-normal text-xs text-emerald-800 mt-1 leading-relaxed">
-                                            แบบเสนอโครงการฉบับเต็ม (๑๔ หัวข้อ) ผ่านการพิจารณาอนุมัติเรียบร้อยแล้ว ข้อมูลถูกล็อคตามระเบียบราชการ <strong className="font-bold underline">ไม่สามารถดำเนินการแก้ไข ปรับปรุง หรือเปลี่ยนแปลงข้อมูลใด ๆ ได้อีกต่อไป</strong>
+                                            ท่านสามารถดำเนินการแก้ไข ปรับปรุง และอัปเดตรายละเอียดข้อมูลโครงการนี้ได้ตลอดเวลา เมื่อทำการแก้ไขเสร็จแล้วสามารถกดปุ่ม <strong className="font-bold underline text-emerald-950">"💾 บันทึกและอัปเดตข้อมูลโครงการ"</strong> ด้านล่าง
                                         </p>
                                     </div>
                                 </div>
@@ -560,7 +556,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             </div>
                         )}
                         <form onSubmit={handleSubmit} className="space-y-8">
-                            <fieldset disabled={isApprovedOrCompleted} className="space-y-8 border-0 p-0 m-0 disabled:opacity-90">
+                            <fieldset className="space-y-8 border-0 p-0 m-0">
 
                             {/* Section 1: ข้อมูลพื้นฐาน & ผู้รับผิดชอบโครงการ */}
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
@@ -791,8 +787,20 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         {strategyCategories.map((cat, catIdx) => {
                                             const selectedIds = data.strategy_selections[cat.id] || [];
+                                            const groupedItems = [];
+                                            const groupMap = new Map();
+                                            (cat.items || []).forEach(item => {
+                                                const gName = (item.group_name || '').trim();
+                                                if (!groupMap.has(gName)) {
+                                                    const groupObj = { name: gName, items: [] };
+                                                    groupMap.set(gName, groupObj);
+                                                    groupedItems.push(groupObj);
+                                                }
+                                                groupMap.get(gName).items.push(item);
+                                            });
+
                                             return (
-                                                <div key={cat.id} className="space-y-2 bg-white p-3.5 rounded-xl border border-purple-100">
+                                                <div key={cat.id} className="space-y-2 bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs">
                                                     <div className="flex justify-between items-center mb-1">
                                                         <label className="block text-xs font-bold text-purple-950">
                                                             {catIdx + 1}. {cat.name}
@@ -801,28 +809,43 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                             เลือก {selectedIds.length} ข้อ
                                                         </span>
                                                     </div>
-                                                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                                                        {(cat.items || []).map(item => {
-                                                            const isChecked = selectedIds.includes(item.id);
-                                                            return (
-                                                                <label
-                                                                    key={item.id}
-                                                                    className={`flex items-start gap-x-2 p-2 rounded-lg border transition-all cursor-pointer text-xs ${
-                                                                        isChecked
-                                                                            ? 'bg-purple-100/80 border-purple-400 font-bold text-purple-950'
-                                                                            : 'bg-slate-50/50 border-purple-50 text-slate-700 hover:bg-purple-50'
-                                                                    }`}
-                                                                >
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={isChecked}
-                                                                        onChange={() => toggleDynamicStrategy(cat.id, item.id)}
-                                                                        className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-3.5 w-3.5"
-                                                                    />
-                                                                    <span>{item.name}</span>
-                                                                </label>
-                                                            );
-                                                        })}
+                                                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                                        {groupedItems.map((group, gIdx) => (
+                                                            <div key={gIdx} className="space-y-1">
+                                                                {group.name ? (
+                                                                    <div className="text-[11px] font-bold text-purple-900 bg-purple-50/80 px-2.5 py-1 rounded-md mt-1 flex items-center gap-1.5 border border-purple-100/60">
+                                                                        <span>📂</span>
+                                                                        <span>{group.name}</span>
+                                                                    </div>
+                                                                ) : null}
+                                                                <div className={`space-y-1 ${group.name ? 'pl-2' : ''}`}>
+                                                                    {group.items.map(item => {
+                                                                        const isChecked = selectedIds.includes(item.id);
+                                                                        return (
+                                                                            <label
+                                                                                key={item.id}
+                                                                                className={`flex items-start gap-x-2 p-2 rounded-lg border transition-all cursor-pointer text-xs ${
+                                                                                    isChecked
+                                                                                        ? 'bg-purple-100/80 border-purple-400 font-bold text-purple-950'
+                                                                                        : 'bg-slate-50/50 border-purple-50 text-slate-700 hover:bg-purple-50'
+                                                                                }`}
+                                                                            >
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={isChecked}
+                                                                                    onChange={() => toggleDynamicStrategy(cat.id, item.id)}
+                                                                                    className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-3.5 w-3.5"
+                                                                                />
+                                                                                <span>{item.name}</span>
+                                                                            </label>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {(!cat.items || cat.items.length === 0) && (
+                                                            <p className="text-slate-400 text-xs italic py-2 text-center">ไม่มีตัวเลือกในหมวดนี้</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             );
@@ -1942,8 +1965,15 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     ← กลับหน้ารายละเอียดโครงการ
                                 </Link>
                                 {isApprovedOrCompleted ? (
-                                    <div className="p-3.5 bg-emerald-50 border-2 border-emerald-400 rounded-2xl text-emerald-950 text-xs font-black flex items-center gap-2 shadow-2xs">
-                                        <span className="text-xl">🔒</span> โครงการได้รับการอนุมัติแล้ว ข้อมูลถูกล็อคสำหรับการตรวจสอบเท่านั้น (ไม่สามารถแก้ไขได้)
+                                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveDraft}
+                                            disabled={processing || isSubmitting}
+                                            className="rounded-xl px-6 py-2.5 text-sm font-extrabold transition-all flex items-center gap-2 shadow-md cursor-pointer bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white shadow-emerald-600/25 hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                                        >
+                                            <span>💾</span> บันทึกและอัปเดตข้อมูลโครงการ (Update Project)
+                                        </button>
                                     </div>
                                 ) : (
                                     <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">

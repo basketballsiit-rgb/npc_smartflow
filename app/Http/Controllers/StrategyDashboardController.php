@@ -175,6 +175,7 @@ class StrategyDashboardController extends Controller
 
                 $catItemsData[] = [
                     'id' => $item->id,
+                    'group_name' => $item->group_name,
                     'name' => $item->name,
                     'code' => $item->code,
                     'description' => $item->description,

@@ -577,39 +577,68 @@ export default function QuickCreate({
                                 {/* Dynamic Strategy Categories */}
                                 {strategyCategories && strategyCategories.length > 0 ? (
                                     <div className="space-y-4">
-                                        {strategyCategories.map(cat => (
-                                            <div key={cat.id} className="rounded-xl border border-sky-200 bg-white p-4 shadow-2xs">
-                                                <h5 className="text-xs font-bold text-sky-950 flex items-center gap-2 mb-2">
-                                                    <span>🚩</span> {cat.name}
-                                                </h5>
-                                                {cat.description && (
-                                                    <p className="text-[11px] text-slate-500 mb-2.5">{cat.description}</p>
-                                                )}
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                    {(cat.items || []).map(item => {
-                                                        const isSelected = (data.strategy_selections[cat.id] || []).includes(item.id);
-                                                        return (
-                                                            <label
-                                                                key={item.id}
-                                                                className={`flex items-start gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition-all ${
-                                                                    isSelected
-                                                                        ? 'border-sky-500 bg-sky-50 text-sky-950 font-bold shadow-2xs'
-                                                                        : 'border-slate-200 bg-slate-50/50 text-slate-700 hover:bg-slate-100'
-                                                                }`}
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={isSelected}
-                                                                    onChange={() => handleCategoryItemToggle(cat.id, item.id)}
-                                                                    className="mt-0.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
-                                                                />
-                                                                <span>{item.name}</span>
-                                                            </label>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        ))}
+                                         {strategyCategories.map(cat => {
+                                             const groupedItems = [];
+                                             const groupMap = new Map();
+                                             (cat.items || []).forEach(item => {
+                                                 const gName = (item.group_name || '').trim();
+                                                 if (!groupMap.has(gName)) {
+                                                     const groupObj = { name: gName, items: [] };
+                                                     groupMap.set(gName, groupObj);
+                                                     groupedItems.push(groupObj);
+                                                 }
+                                                 groupMap.get(gName).items.push(item);
+                                             });
+
+                                             return (
+                                                 <div key={cat.id} className="rounded-xl border border-sky-200 bg-white p-4 shadow-2xs space-y-3">
+                                                     <div>
+                                                         <h5 className="text-xs font-bold text-sky-950 flex items-center gap-2">
+                                                             <span>🚩</span> {cat.name}
+                                                         </h5>
+                                                         {cat.description && (
+                                                             <p className="text-[11px] text-slate-500 mt-0.5">{cat.description}</p>
+                                                         )}
+                                                     </div>
+
+                                                     <div className="space-y-3">
+                                                         {groupedItems.map((group, gIdx) => (
+                                                             <div key={gIdx} className="space-y-1.5">
+                                                                 {group.name ? (
+                                                                     <div className="text-xs font-bold text-sky-900 bg-sky-50 px-2.5 py-1 rounded-md flex items-center gap-1.5 border border-sky-100">
+                                                                         <span>📂</span>
+                                                                         <span>{group.name}</span>
+                                                                     </div>
+                                                                 ) : null}
+                                                                 <div className={`grid grid-cols-1 sm:grid-cols-2 gap-2 ${group.name ? 'pl-2' : ''}`}>
+                                                                     {group.items.map(item => {
+                                                                         const isSelected = (data.strategy_selections[cat.id] || []).includes(item.id);
+                                                                         return (
+                                                                             <label
+                                                                                 key={item.id}
+                                                                                 className={`flex items-start gap-2.5 p-2.5 rounded-lg border text-xs cursor-pointer transition-all ${
+                                                                                     isSelected
+                                                                                         ? 'border-sky-500 bg-sky-50 text-sky-950 font-bold shadow-2xs'
+                                                                                         : 'border-slate-200 bg-slate-50/50 text-slate-700 hover:bg-slate-100'
+                                                                                 }`}
+                                                                             >
+                                                                                 <input
+                                                                                     type="checkbox"
+                                                                                     checked={isSelected}
+                                                                                     onChange={() => handleCategoryItemToggle(cat.id, item.id)}
+                                                                                     className="mt-0.5 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+                                                                                 />
+                                                                                 <span>{item.name}</span>
+                                                                             </label>
+                                                                         );
+                                                                     })}
+                                                                 </div>
+                                                             </div>
+                                                         ))}
+                                                     </div>
+                                                 </div>
+                                             );
+                                         })}
                                     </div>
                                 ) : (
                                     /* Fallback Pre-defined Strategies if Dynamic Categories Empty */
