@@ -10782,22 +10782,38 @@ ${itemsListText}
                                         </tr>
 
                                         {/* Sub-work units under this main division */}
-                                        {mainDiv.children && mainDiv.children.map((sub) => (
-                                            <tr key={`sub-${sub.id}`} className="hover:bg-purple-50/40 text-slate-800">
-                                                <td className="px-6 py-3 pl-12 font-medium flex items-center gap-2">
-                                                    <span className="text-purple-400 font-mono">└─</span>
-                                                    <span>{sub.name}</span>
-                                                </td>
-                                                <td className="px-6 py-3 text-slate-700">{sub.total_projects} โครงการ</td>
-                                                <td className="px-6 py-3 text-emerald-700 font-medium">{sub.approved_projects} โครงการ</td>
-                                                <td className="px-6 py-3 font-medium text-slate-900">
-                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_estimated_budget)}
-                                                </td>
-                                                <td className="px-6 py-3 font-medium text-emerald-700">
-                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_spent_budget)}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {mainDiv.children && mainDiv.children.map((sub) => {
+                                            const isOffice = String(sub.id).includes('main');
+                                            const hasProjects = (sub.total_projects || 0) > 0;
+                                            return (
+                                                <tr key={`sub-${sub.id}`} className={`transition-colors ${hasProjects ? 'bg-purple-50/20 hover:bg-purple-50/50' : 'hover:bg-slate-50/50'} text-slate-800`}>
+                                                    <td className="px-6 py-3 pl-12 font-medium flex items-center gap-2">
+                                                        <span className="text-purple-400 font-mono text-xs">└─</span>
+                                                        {isOffice && <span className="text-sm">🏢</span>}
+                                                        <span className={hasProjects ? 'font-bold text-purple-950' : 'text-slate-700'}>
+                                                            {sub.name}
+                                                        </span>
+                                                        {isOffice && (
+                                                            <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-bold">
+                                                                ระดับฝ่าย
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className={`px-6 py-3 ${hasProjects ? 'font-black text-purple-950' : 'text-slate-500'}`}>
+                                                        {sub.total_projects} โครงการ
+                                                    </td>
+                                                    <td className={`px-6 py-3 ${sub.approved_projects > 0 ? 'font-bold text-emerald-700' : 'text-slate-400'}`}>
+                                                        {sub.approved_projects} โครงการ
+                                                    </td>
+                                                    <td className={`px-6 py-3 ${sub.total_estimated_budget > 0 ? 'font-mono font-bold text-slate-900' : 'font-mono text-slate-400'}`}>
+                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_estimated_budget)}
+                                                    </td>
+                                                    <td className={`px-6 py-3 ${sub.total_spent_budget > 0 ? 'font-mono font-bold text-emerald-700' : 'font-mono text-slate-400'}`}>
+                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_spent_budget)}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </div>
                                 ))}
                             </tbody>

@@ -321,36 +321,96 @@ class DashboardController extends Controller
 
         // 4. Executive Dashboard Data
         if ($user->isExecutive() || $user->isAdmin()) {
-            $mainDivisions = Department::whereNull('parent_id')->with('children')->get();
+            // Self-heal: Ensure subject departments (แผนก/สาขา) are linked to Academic Division (parent_id)
+            $acadDept = Department::whereNull('parent_id')
+                ->where('name', 'like', '%วิชาการ%')
+                ->first();
+            if ($acadDept) {
+                Department::whereNull('parent_id')
+                    ->where('id', '!=', $acadDept->id)
+                    ->where(function ($q) {
+                        $q->where('name', 'like', '%แผนก%')
+                          ->orWhere('name', 'like', '%สาขา%')
+                          ->orWhere('name', 'like', '%ช่าง%')
+                          ->orWhere('name', 'like', '%การตลาด%')
+                          ->orWhere('name', 'like', '%สารสนเทศ%');
+                    })
+                    ->update(['parent_id' => $acadDept->id]);
+            }
+
+            $isApprovedClosure = function ($p) {
+                return in_array($p->status, ['approved', 'budget_approved', 'completed', 'in_progress']) || ($p->current_approval_step >= 6);
+            };
+
+            // Retrieve the 4 canonical main divisions
+            $mainDivisions = Department::whereNull('parent_id')
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%บริหารทรัพยากร%')
+                      ->orWhere('name', 'like', '%วิชาการ%')
+                      ->orWhere('name', 'like', '%กิจการนักเรียน%')
+                      ->orWhere('name', 'like', '%พัฒนากิจการ%')
+                      ->orWhere('name', 'like', '%ยุทธศาสตร์%')
+                      ->orWhere('name', 'like', '%แผนงาน%');
+                })
+                ->with('children')
+                ->get();
+
+            if ($mainDivisions->isEmpty()) {
+                $mainDivisions = Department::whereNull('parent_id')->with('children')->get();
+            }
+
             $divisionTreeMetrics = [];
 
             foreach ($mainDivisions as $mainDept) {
-                $childIds = $mainDept->children->pluck('id')->toArray();
+                $children = $mainDept->children ?? collect();
+                $childIds = $children->pluck('id')->toArray();
                 $allIds = array_merge([$mainDept->id], $childIds);
 
-                $totalProjects = Project::whereIn('department_id', $allIds)->count();
-                $approvedProjects = Project::whereIn('department_id', $allIds)->where('status', 'approved')->count();
-                $totalEstimated = Project::whereIn('department_id', $allIds)->sum('estimated_budget');
-                $totalSpent = Budget::whereHas('project', function ($q) use ($allIds) {
+                $allDivProjects = Project::whereIn('department_id', $allIds)->get();
+                $totalProjects = $allDivProjects->count();
+                $approvedProjects = $allDivProjects->filter($isApprovedClosure)->count();
+                $totalEstimated = (float)$allDivProjects->sum('estimated_budget');
+                $totalSpent = (float)Budget::whereHas('project', function ($q) use ($allIds) {
                     $q->whereIn('department_id', $allIds);
                 })->sum('spent_amount');
 
                 $childrenMetrics = [];
-                foreach ($mainDept->children as $child) {
-                    $cProjects = Project::where('department_id', $child->id)->count();
-                    $cApproved = Project::where('department_id', $child->id)->where('status', 'approved')->count();
-                    $cEstimated = Project::where('department_id', $child->id)->sum('estimated_budget');
-                    $cSpent = Budget::whereHas('project', function ($q) use ($child) {
+
+                // 1. Projects proposed directly under the main division itself (e.g. สำนักงานฝ่าย / โครงการระดับฝ่าย)
+                $directProjects = $allDivProjects->where('department_id', $mainDept->id);
+                if ($directProjects->count() > 0) {
+                    $dApproved = $directProjects->filter($isApprovedClosure)->count();
+                    $dEstimated = (float)$directProjects->sum('estimated_budget');
+                    $dSpent = (float)Budget::whereHas('project', function ($q) use ($mainDept) {
+                        $q->where('department_id', $mainDept->id);
+                    })->sum('spent_amount');
+
+                    $childrenMetrics[] = [
+                        'id' => $mainDept->id . '_main',
+                        'name' => 'โครงการระดับฝ่าย / สำนักงาน' . $mainDept->name,
+                        'total_projects' => $directProjects->count(),
+                        'approved_projects' => $dApproved,
+                        'total_estimated_budget' => $dEstimated,
+                        'total_spent_budget' => $dSpent,
+                    ];
+                }
+
+                // 2. Sub-work units under this main division
+                foreach ($children as $child) {
+                    $cProjects = $allDivProjects->where('department_id', $child->id);
+                    $cApproved = $cProjects->filter($isApprovedClosure)->count();
+                    $cEstimated = (float)$cProjects->sum('estimated_budget');
+                    $cSpent = (float)Budget::whereHas('project', function ($q) use ($child) {
                         $q->where('department_id', $child->id);
                     })->sum('spent_amount');
 
                     $childrenMetrics[] = [
                         'id' => $child->id,
                         'name' => $child->name,
-                        'total_projects' => $cProjects,
+                        'total_projects' => $cProjects->count(),
                         'approved_projects' => $cApproved,
-                        'total_estimated_budget' => (float)$cEstimated,
-                        'total_spent_budget' => (float)$cSpent,
+                        'total_estimated_budget' => $cEstimated,
+                        'total_spent_budget' => $cSpent,
                     ];
                 }
 
@@ -360,21 +420,22 @@ class DashboardController extends Controller
                     'code' => $mainDept->code ?? 'DIV',
                     'total_projects' => $totalProjects,
                     'approved_projects' => $approvedProjects,
-                    'total_estimated_budget' => (float)$totalEstimated,
-                    'total_spent_budget' => (float)$totalSpent,
+                    'total_estimated_budget' => $totalEstimated,
+                    'total_spent_budget' => $totalSpent,
                     'children' => $childrenMetrics,
                 ];
             }
 
             $flatDepartmentMetrics = [];
             foreach (Department::all() as $dept) {
+                $deptProjects = Project::where('department_id', $dept->id)->get();
                 $flatDepartmentMetrics[] = [
                     'id' => $dept->id,
                     'name' => $dept->name,
                     'parent_id' => $dept->parent_id,
-                    'total_projects' => Project::where('department_id', $dept->id)->count(),
-                    'approved_projects' => Project::where('department_id', $dept->id)->where('status', 'approved')->count(),
-                    'total_estimated_budget' => (float)Project::where('department_id', $dept->id)->sum('estimated_budget'),
+                    'total_projects' => $deptProjects->count(),
+                    'approved_projects' => $deptProjects->filter($isApprovedClosure)->count(),
+                    'total_estimated_budget' => (float)$deptProjects->sum('estimated_budget'),
                     'total_spent_budget' => (float)Budget::whereHas('project', function ($q) use ($dept) { $q->where('department_id', $dept->id); })->sum('spent_amount'),
                 ];
             }
@@ -429,7 +490,9 @@ class DashboardController extends Controller
                 $preliminaryCount = $divProjects->where('status', 'preliminary')->count();
                 $fullProposalsCount = $divProjects->where('status', '!=', 'preliminary')->count();
                 $pendingApprovalCount = $divProjects->whereIn('status', ['preliminary', 'pending_approval', 'submitted'])->count();
-                $approvedCount = $divProjects->whereIn('status', ['approved', 'in_progress', 'completed'])->count();
+                $approvedCount = $divProjects->filter(function ($p) {
+                    return in_array($p->status, ['approved', 'budget_approved', 'completed', 'in_progress']) || ($p->current_approval_step >= 6);
+                })->count();
 
                 $totalProposed = (float)$divProjects->sum(function ($p) {
                     return (float)($p->proposed_budget ?: $p->estimated_budget);
