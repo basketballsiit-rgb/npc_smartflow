@@ -23,6 +23,15 @@ class UserPosition extends Model
         'job_level'  => 'integer',
     ];
 
+    protected static function booted()
+    {
+        static::saving(function ($model) {
+            if (empty($model->position)) {
+                $model->position = $model->formatPositionTitle();
+            }
+        });
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -43,16 +52,18 @@ class UserPosition extends Model
      */
     public function formatPositionTitle(): string
     {
-        $deptName = $this->department?->name ?? '';
-        $subName = $this->subDepartment?->name ?? ($this->major ? "สาขาวิชา{$this->major}" : '');
+        $dept = $this->department ?: ($this->department_id ? Department::find($this->department_id) : null);
+        $subDept = $this->subDepartment ?: ($this->sub_department_id ? Department::find($this->sub_department_id) : null);
+
+        $deptName = $dept?->name ?? '';
         $duty = $this->duty ?? '';
 
         if (empty($duty)) {
-            return $this->position ?: 'บุคลากร';
+            return !empty($this->position) ? $this->position : 'บุคลากร';
         }
 
         if (in_array($duty, ['หัวหน้าสาขาวิชา', 'ครูผู้สอน'])) {
-            $majorName = $this->major ?: ($this->subDepartment ? str_replace('สาขาวิชา', '', $this->subDepartment->name) : '');
+            $majorName = $this->major ?: ($subDept ? str_replace('สาขาวิชา', '', $subDept->name) : '');
             $title = "{$duty} - สาขาวิชา{$majorName}";
             if ($deptName) {
                 $title .= " ({$deptName})";
@@ -61,7 +72,7 @@ class UserPosition extends Model
         }
 
         if (in_array($duty, ['หัวหน้างาน', 'เจ้าหน้าที่'])) {
-            $workName = $this->subDepartment ? $this->subDepartment->name : '';
+            $workName = $subDept ? $subDept->name : '';
             if ($workName) {
                 $title = "{$duty}{$workName}";
             } else {
@@ -73,6 +84,6 @@ class UserPosition extends Model
             return $title;
         }
 
-        return $this->position ?: $duty;
+        return !empty($this->position) ? $this->position : ($duty ?: 'บุคลากร');
     }
 }

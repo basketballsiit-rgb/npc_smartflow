@@ -138,9 +138,6 @@ class ProfileController extends Controller
             $pos->sub_department_id = $subDeptId;
             $pos->major = $major;
             $pos->is_primary = $isPrimary;
-            $pos->save();
-
-            // Refresh formatted title and persist
             $pos->position = $pos->formatPositionTitle();
             $pos->save();
 
