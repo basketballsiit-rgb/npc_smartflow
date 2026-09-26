@@ -137,7 +137,7 @@ class StrategyDashboardController extends Controller
                             'responsible_person' => $project->responsible_person ?: ($project->user?->name ?? 'ไม่ระบุ'),
                             'position' => $project->position,
                             'budget_amount' => $budgetAmt,
-                            'funding_source' => $project->budget?->fundingSource?->name ?: ($project->fundingSource?->name ?: 'งบประมาณสถานศึกษา'),
+                            'funding_source' => $project->budget?->fundingSource?->name ?: ($project->fundingSource?->name ?: 'บกศ.'),
                             'updated_at' => $project->updated_at ? $project->updated_at->format('d/m/Y') : null,
                         ];
 

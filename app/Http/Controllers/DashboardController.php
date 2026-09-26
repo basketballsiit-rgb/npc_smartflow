@@ -54,7 +54,7 @@ class DashboardController extends Controller
         $data['nextUnifiedDocNumber'] = DocumentNumberService::previewNext();
         $data['allUsers'] = User::where('is_active', true)->orderBy('name', 'asc')->get();
         $data['allVendors'] = \App\Models\Vendor::orderBy('name', 'asc')->get();
-        $data['allFundingSources'] = FundingSource::orderBy('fiscal_year', 'desc')->orderBy('name', 'asc')->get();
+        $data['allFundingSources'] = FundingSource::orderBy('id', 'asc')->get();
 
         // Fetch routine budget plans based on permissions
         if ($user->isAdmin() || $user->isPlanHead()) {
@@ -75,7 +75,7 @@ class DashboardController extends Controller
         }
 
         // Global Funding Sources & Channel Progress for Plan Head & Finance
-        $fundingSources = FundingSource::orderBy('fiscal_year', 'desc')->orderBy('name', 'asc')->get();
+        $fundingSources = FundingSource::orderBy('id', 'asc')->get();
         $fundingChannelProgress = [];
         foreach ($fundingSources as $source) {
             $centralSum = (float)\App\Models\CentralAllocation::where('funding_source_id', $source->id)->sum('amount');

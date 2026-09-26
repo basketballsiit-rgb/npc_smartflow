@@ -528,7 +528,7 @@ class ProjectController extends Controller
         return Inertia::render('Projects/Show', [
             'project' => $project,
             'strategyCategories' => $allCategories,
-            'fundingSources' => \App\Models\FundingSource::all(),
+            'fundingSources' => \App\Models\FundingSource::orderBy('id', 'asc')->get(),
             'allUsers' => \App\Models\User::orderBy('name')->get(['id', 'name', 'email']),
             'canApprove' => $canApprove,
         ]);
@@ -565,7 +565,7 @@ class ProjectController extends Controller
             'nationalStrategies' => \App\Models\NationalStrategy::all(),
             'provincialStrategies' => \App\Models\ProvincialStrategy::all(),
             'departments' => Department::all(),
-            'fundingSources' => \App\Models\FundingSource::all(),
+            'fundingSources' => \App\Models\FundingSource::orderBy('id', 'asc')->get(),
             'isApprovedLocked' => false,
         ]);
     }

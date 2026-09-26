@@ -31,7 +31,7 @@ class RoutineBudgetController extends Controller
         return Inertia::render('RoutineBudgets/Index', [
             'routinePlans' => $routinePlans,
             'departments' => Department::orderBy('name', 'asc')->get(),
-            'fundingSources' => \App\Models\FundingSource::orderBy('name', 'asc')->get(),
+            'fundingSources' => \App\Models\FundingSource::orderBy('id', 'asc')->get(),
             'currentFiscalYear' => $fiscalYear,
             'allUsers' => \App\Models\User::where('is_active', true)->orderBy('name', 'asc')->get(),
             'initialTab' => $request->query('tab', 'dashboard'),

@@ -359,11 +359,14 @@ export default function DigitalSignatureModal({
                                         onChange={(e) => setSelectedFundingId(e.target.value)}
                                         className="w-full rounded-xl border-purple-200 text-xs font-medium focus:ring-purple-500 focus:border-purple-500"
                                     >
-                                        {fundingSources.map((fs) => (
-                                            <option key={fs.id} value={fs.id}>
-                                                {fs.name} (คงเหลือ {new Intl.NumberFormat('th-TH').format((fs.total_budget || 0) - (fs.encumbered_budget || 0))} บาท)
-                                            </option>
-                                        ))}
+                                        {fundingSources.map((fs) => {
+                                            const displayName = (fs.name?.includes('สถานศึกษา') || fs.name?.includes('Revenue') || fs.name?.includes('บำรุงการศึกษา') || fs.name?.includes('บกศ')) ? 'บกศ.' : fs.name;
+                                            return (
+                                                <option key={fs.id} value={fs.id}>
+                                                    {displayName} (คงเหลือ {new Intl.NumberFormat('th-TH').format((fs.total_budget || 0) - (fs.encumbered_budget || 0))} บาท)
+                                                </option>
+                                            );
+                                        })}
                                     </select>
                                 </div>
                                 <div>

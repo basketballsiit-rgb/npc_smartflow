@@ -6055,7 +6055,8 @@ ${itemsListText}
 
                                                 {/* Project items under department */}
                                                 {isExpanded && dept.projects.map((p) => {
-                                                    const fundingName = p.funding_source?.name || p.budget?.funding_source?.name || 'ยังไม่ระบุ';
+                                                    let rawFundingName = p.funding_source?.name || p.budget?.funding_source?.name || 'ยังไม่ระบุ';
+                                                    const fundingName = (rawFundingName.includes('สถานศึกษา') || rawFundingName.includes('Revenue') || rawFundingName.includes('บำรุงการศึกษา') || rawFundingName.includes('บกศ')) ? 'บกศ.' : rawFundingName;
                                                     return (
                                                         <tr key={p.id} className="hover:bg-amber-50/20 transition-all bg-white">
                                                             <td className="px-3.5 py-2.5 align-top pl-7">
@@ -7727,6 +7728,9 @@ ${itemsListText}
 
         const formatBudgetCategoryName = (name) => {
             if (!name) return '';
+            if (name.includes('สถานศึกษา') || name.includes('Revenue') || name.includes('บกศ') || name.includes('บำรุงการศึกษา')) {
+                return 'บกศ.';
+            }
             const parenMatch = name.match(/\(([^)]*[\u0E00-\u0E7F]+[^)]*)\)/);
             if (parenMatch && parenMatch[1]) return parenMatch[1].trim();
             if (/[\u0E00-\u0E7F]/.test(name) && /[a-zA-Z]/.test(name)) {
@@ -13801,10 +13805,11 @@ return (
                                                     { id: 4, name: 'งบทวิศึกษา' },
                                                     { id: 5, name: 'อุดหนุนเพื่อการจัดการฯ' },
                                                     { id: 6, name: 'อุดหนุนพัฒนาฯ' },
-                                                    { id: 7, name: 'บกศ. (บำรุงการศึกษา)' },
-                                                ]).map(s => (
-                                                    <option key={s.id} value={s.id}>{s.name}</option>
-                                                ))}
+                                                    { id: 7, name: 'บกศ.' },
+                                                ]).map(s => {
+                                                    const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
+                                                    return <option key={s.id} value={s.id}>{displayName}</option>;
+                                                })}
                                             </select>
                                         </div>
 
@@ -13973,10 +13978,11 @@ return (
                                                             { id: 4, name: 'งบทวิศึกษา' },
                                                             { id: 5, name: 'อุดหนุนเพื่อการจัดการฯ' },
                                                             { id: 6, name: 'อุดหนุนพัฒนาฯ' },
-                                                            { id: 7, name: 'บกศ. (บำรุงการศึกษา)' },
-                                                        ]).map(s => (
-                                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                                        ))}
+                                                            { id: 7, name: 'บกศ.' },
+                                                        ]).map(s => {
+                                                            const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
+                                                            return <option key={s.id} value={s.id}>{displayName}</option>;
+                                                        })}
                                                     </select>
                                                 </div>
                                             </div>

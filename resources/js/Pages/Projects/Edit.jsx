@@ -1610,7 +1610,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     <div className="p-4 rounded-2xl bg-white border border-purple-100 flex flex-col justify-between shadow-2xs min-h-[105px]">
                                         <span className="text-[11px] font-bold text-slate-500 block truncate">🎯 วงเงินที่ได้รับจัดสรร</span>
                                         <p className="text-xl font-black text-purple-950 my-1 tracking-tight">{allocatedBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
-                                        <p className="text-[10px] text-purple-700 font-medium truncate">{project?.funding_source?.name || 'Revenue (เงินรายได้สถานศึกษา)'}</p>
+                                        <p className="text-[10px] text-purple-700 font-medium truncate">{project?.funding_source?.name && !project?.funding_source?.name.includes('สถานศึกษา') && !project?.funding_source?.name.includes('Revenue') ? project.funding_source.name : 'บกศ.'}</p>
                                     </div>
 
                                     {/* 2. รวมสัญญายืมเงิน */}

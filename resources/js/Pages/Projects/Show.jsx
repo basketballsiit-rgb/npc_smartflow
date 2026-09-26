@@ -1366,11 +1366,14 @@ ${itemsListText}
                                                             onChange={(e) => setData('funding_source_id', e.target.value)}
                                                             className="w-full rounded-xl border-purple-200 text-xs font-medium focus:ring-purple-500 focus:border-purple-500"
                                                         >
-                                                            {fundingSources.map((fs) => (
-                                                                <option key={fs.id} value={fs.id}>
-                                                                    {fs.name} (คงเหลือ {new Intl.NumberFormat('th-TH').format((fs.total_budget || 0) - (fs.encumbered_budget || 0))} บาท)
-                                                                </option>
-                                                            ))}
+                                                            {fundingSources.map((fs) => {
+                                                                const displayName = (fs.name?.includes('สถานศึกษา') || fs.name?.includes('Revenue') || fs.name?.includes('บำรุงการศึกษา') || fs.name?.includes('บกศ')) ? 'บกศ.' : fs.name;
+                                                                return (
+                                                                    <option key={fs.id} value={fs.id}>
+                                                                        {displayName} (คงเหลือ {new Intl.NumberFormat('th-TH').format((fs.total_budget || 0) - (fs.encumbered_budget || 0))} บาท)
+                                                                    </option>
+                                                                );
+                                                            })}
                                                         </select>
                                                     </div>
                                                     <div>
@@ -1609,7 +1612,14 @@ ${itemsListText}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
                                     <span className="text-xs font-bold uppercase text-purple-800">แหล่งเงินงบประมาณ</span>
-                                    <p className="text-base font-black text-purple-950 mt-1">{project.budget?.fundingSource?.name || 'ยังไม่ระบุแหล่งเงินทุน'}</p>
+                                    <p className="text-base font-black text-purple-950 mt-1">
+                                        {(() => {
+                                            const fn = project.budget?.fundingSource?.name || project.fundingSource?.name;
+                                            if (!fn) return 'ยังไม่ระบุแหล่งเงินทุน';
+                                            if (fn.includes('สถานศึกษา') || fn.includes('Revenue') || fn.includes('บำรุงการศึกษา') || fn.includes('บกศ')) return 'บกศ.';
+                                            return fn;
+                                        })()}
+                                    </p>
                                 </div>
                                 <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
                                     <span className="text-xs font-bold uppercase text-emerald-800">วงเงินงบประมาณที่ได้รับการอนุมัติ</span>
