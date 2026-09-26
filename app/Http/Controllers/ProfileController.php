@@ -70,7 +70,7 @@ class ProfileController extends Controller
     /**
      * Update and sync user duties & positions.
      */
-    public function savePositions(Request $request): RedirectResponse
+    public function savePositions(Request $request)
     {
         $user = $request->user();
 
