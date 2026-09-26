@@ -10874,16 +10874,20 @@ ${itemsListText}
             );
         }
 
+        const isProjectApproved = (p) => {
+            return ['approved', 'budget_approved', 'completed', 'in_progress'].includes(p.status) || (p.current_approval_step >= 6);
+        };
+
         const filteredProjects = allProjectsMaster.filter((p) => {
             const matchesSearch = (p.title || '').toLowerCase().includes((projectSearch || '').toLowerCase()) ||
                 (p.proposer_name || '').toLowerCase().includes((projectSearch || '').toLowerCase()) ||
                 (p.department_name || '').toLowerCase().includes((projectSearch || '').toLowerCase());
             
             const matchesStatus = projectStatusFilter === 'all' ? true :
-                projectStatusFilter === 'approved' ? (p.status === 'approved' || p.current_approval_step >= 6) :
-                projectStatusFilter === 'rejected' ? p.status === 'rejected' :
+                projectStatusFilter === 'approved' ? isProjectApproved(p) :
+                projectStatusFilter === 'rejected' ? (p.status === 'rejected' || p.status === 'budget_rejected') :
                 projectStatusFilter === 'draft' ? p.status === 'draft' :
-                p.status === 'pending_approval';
+                (!isProjectApproved(p) && p.status !== 'draft' && p.status !== 'rejected' && p.status !== 'budget_rejected');
 
             const matchesYear = projectYearFilter === 'all' || String(p.academic_year) === String(projectYearFilter);
             const matchesDept = projectDeptFilter === 'all' || (() => {
@@ -10901,10 +10905,10 @@ ${itemsListText}
         });
 
         // Compute college-wide totals
-        const totalEstimatedSum = filteredProjects.reduce((acc, curr) => acc + (curr.estimated_budget || 0), 0);
-        const totalAllocatedSum = filteredProjects.reduce((acc, curr) => acc + (curr.allocated_budget || curr.allocated_amount || 0), 0);
-        const approvedCount = filteredProjects.filter(p => p.status === 'approved' || p.current_approval_step >= 6).length;
-        const pendingCount = filteredProjects.filter(p => p.status === 'pending_approval').length;
+        const totalEstimatedSum = filteredProjects.reduce((acc, curr) => acc + (parseFloat(curr.estimated_budget) || 0), 0);
+        const totalAllocatedSum = filteredProjects.reduce((acc, curr) => acc + (parseFloat(curr.allocated_budget) || parseFloat(curr.allocated_amount) || 0), 0);
+        const approvedCount = filteredProjects.filter(p => isProjectApproved(p)).length;
+        const pendingCount = filteredProjects.filter(p => !isProjectApproved(p) && p.status !== 'draft' && p.status !== 'rejected' && p.status !== 'budget_rejected').length;
         const draftCount = filteredProjects.filter(p => p.status === 'draft').length;
 
         const step1Count = filteredProjects.filter(p => p.status === 'pending_approval' && p.current_approval_step === 1).length;
@@ -10946,9 +10950,9 @@ ${itemsListText}
                 };
             }
             deptSummaryMap[deptId].projectCount += 1;
-            deptSummaryMap[deptId].estimatedSum += (p.estimated_budget || 0);
-            deptSummaryMap[deptId].allocatedSum += (p.allocated_budget || p.allocated_amount || 0);
-            if (p.status === 'approved' || p.current_approval_step >= 6) {
+            deptSummaryMap[deptId].estimatedSum += (parseFloat(p.estimated_budget) || 0);
+            deptSummaryMap[deptId].allocatedSum += (parseFloat(p.allocated_budget) || parseFloat(p.allocated_amount) || 0);
+            if (isProjectApproved(p)) {
                 deptSummaryMap[deptId].approvedCount += 1;
             }
             deptSummaryMap[deptId].projects.push(p);
@@ -11016,7 +11020,7 @@ ${itemsListText}
                         <div className="flex items-center justify-between">
                             <span className="text-2xl">💰</span>
                             <span className="text-lg sm:text-xl font-black text-indigo-900 font-mono">
-                                ฿{new Intl.NumberFormat('th-TH').format(totalAllocatedSum || totalEstimatedSum)}
+                                ฿{new Intl.NumberFormat('th-TH').format(totalAllocatedSum)}
                             </span>
                         </div>
                         <h4 className="text-sm font-extrabold text-slate-800 mt-2">งบประมาณจัดสรรรวม</h4>
@@ -11206,7 +11210,7 @@ ${itemsListText}
                                                         ฿{new Intl.NumberFormat('th-TH').format(dept.estimatedSum)}
                                                     </td>
                                                     <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-purple-900 whitespace-nowrap">
-                                                        ฿{new Intl.NumberFormat('th-TH').format(dept.allocatedSum || dept.estimatedSum)}
+                                                        ฿{new Intl.NumberFormat('th-TH').format(dept.allocatedSum)}
                                                     </td>
                                                     <td className="px-3 py-3.5 text-center whitespace-nowrap">
                                                         <span className="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-950 font-black text-xs border border-emerald-300">
@@ -11267,7 +11271,7 @@ ${itemsListText}
 
                                                         {/* Allocated Budget */}
                                                         <td className="px-4 py-3.5 text-right font-mono font-black text-xs sm:text-sm text-purple-950 align-top whitespace-nowrap">
-                                                            ฿{new Intl.NumberFormat('th-TH').format(p.allocated_budget || p.allocated_amount || p.estimated_budget || 0)}
+                                                            ฿{new Intl.NumberFormat('th-TH').format(parseFloat(p.allocated_budget) || parseFloat(p.allocated_amount) || 0)}
                                                         </td>
 
                                                         {/* Current Status */}
@@ -11336,11 +11340,11 @@ ${itemsListText}
                                         ฿{new Intl.NumberFormat('th-TH').format(totalEstimatedSum)}
                                     </td>
                                     <td className="px-4 py-4 text-right font-mono text-base font-black text-emerald-400">
-                                        ฿{new Intl.NumberFormat('th-TH').format(totalAllocatedSum || totalEstimatedSum)}
+                                        ฿{new Intl.NumberFormat('th-TH').format(totalAllocatedSum)}
                                     </td>
                                     <td className="px-4 py-4 text-center">
                                         <span className="px-2.5 py-1 rounded-lg bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 text-xs font-black">
-                                            อนุมัติแล้ว {approvedCount} โครงการ
+                                            อนุมัติแล้ว {approvedCount}/{filteredProjects.length} โครงการ
                                         </span>
                                     </td>
                                     <td className="px-4 py-4 text-right text-xs text-slate-300">
