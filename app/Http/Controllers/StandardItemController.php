@@ -74,15 +74,25 @@ class StandardItemController extends Controller
             'category' => 'nullable|string|max:100',
         ]);
 
-        $item = StandardItem::updateOrCreate(
-            ['name' => trim($validated['name'])],
-            [
+        $name = trim($validated['name']);
+        $existing = StandardItem::where('name', $name)->first();
+        if ($existing) {
+            $existing->update([
                 'unit' => trim($validated['unit']),
                 'standard_price' => $validated['standard_price'],
                 'category' => $validated['category'] ? trim($validated['category']) : 'วัสดุทั่วไป',
-                'usage_count' => \DB::raw('usage_count + 1'),
-            ]
-        );
+            ]);
+            $existing->increment('usage_count');
+            $item = $existing;
+        } else {
+            $item = StandardItem::create([
+                'name' => $name,
+                'unit' => trim($validated['unit']),
+                'standard_price' => $validated['standard_price'],
+                'category' => $validated['category'] ? trim($validated['category']) : 'วัสดุทั่วไป',
+                'usage_count' => 1,
+            ]);
+        }
 
         return response()->json([
             'success' => true,
