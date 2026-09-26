@@ -5,6 +5,9 @@ export default function Print({ project, strategyCategories = [] }) {
     // Font size preset state: 'compact' (14px) | 'normal' (15px) | 'large' (16.5px)
     const [fontSizePreset, setFontSizePreset] = useState('normal');
 
+    // Toggle printing with digital signatures or blank for manual ink signing
+    const [includeSignatures, setIncludeSignatures] = useState(true);
+
     // Utility to clean person name from parenthetical role tags like (อาจารย์ประจำสาขา), (Super Admin), etc.
     const cleanPersonName = (name) => {
         if (!name) return '';
@@ -295,6 +298,35 @@ export default function Print({ project, strategyCategories = [] }) {
                             title="ขนาดใหญ่ (16.5px)"
                         >
                             ตัวโต
+                        </button>
+                    </div>
+
+                    {/* Signature Toggle Switcher */}
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                        <span className="text-slate-500 px-1.5 text-[11px]">ลายเซ็นต์:</span>
+                        <button
+                            type="button"
+                            onClick={() => setIncludeSignatures(true)}
+                            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                                includeSignatures 
+                                    ? 'bg-emerald-600 text-white shadow-xs' 
+                                    : 'text-slate-700 hover:bg-slate-200'
+                            }`}
+                            title="พิมพ์พร้อมลายเซ็นดิจิทัลและวันที่ลงนาม"
+                        >
+                            <span>✍️</span> มีลายเซ็นต์
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIncludeSignatures(false)}
+                            className={`px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                                !includeSignatures 
+                                    ? 'bg-slate-800 text-white shadow-xs' 
+                                    : 'text-slate-700 hover:bg-slate-200'
+                            }`}
+                            title="เว้นว่างช่องลายเซ็นสำหรับลงนามด้วยปากกาจริง"
+                        >
+                            <span>📄</span> ไม่มีลายเซ็นต์
                         </button>
                     </div>
 
@@ -761,46 +793,10 @@ export default function Print({ project, strategyCategories = [] }) {
                         ๑๒. การอนุมัติโครงการ{formattedProjectTitle ? toThaiNumerals(formattedProjectTitle) : '......................................................'}
                     </p>
                     
-                    <div className="space-y-12 text-xs sm:text-sm">
-                        {/* Row 1: ผู้เสนอโครงการ (อยู่กึ่งกลางหน้ากระดาษ) */}
-                        <div className="flex justify-center">
-                            <div className="relative inline-flex flex-col items-center text-center font-sarabun">
-                                <div className="relative flex items-center justify-center">
-                                    <span className="absolute right-full mr-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
-                                        ลงชื่อ
-                                    </span>
-                                    <div className="relative inline-flex flex-col items-center">
-                                        {sig1?.signature_data ? (
-                                            <img 
-                                                src={sig1.signature_data} 
-                                                alt="ลายมือชื่อ" 
-                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
-                                            />
-                                        ) : (
-                                            <div className="h-6"></div>
-                                        )}
-                                        <span className="border-b border-dotted border-slate-700 w-40 sm:w-48 inline-block mb-1"></span>
-                                    </div>
-                                    <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
-                                        ผู้เสนอโครงการ
-                                    </span>
-                                </div>
-                                <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                    ({toThaiNumerals(sig1?.user?.name ? cleanPersonName(sig1.user.name) : (cleanedResponsiblePerson || '...............................................'))})
-                                </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
-                                    {project.position 
-                                        ? toThaiNumerals(project.position) 
-                                        : (project.department?.name 
-                                            ? toThaiNumerals(`หัวหน้างาน${project.department.name.replace(/^งาน/, '')}`) 
-                                            : 'หัวหน้างาน................................................')}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Row 2: ผู้ตรวจสอบโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ (ขวา) */}
+                    <div className="space-y-10 text-xs sm:text-sm">
+                        {/* Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: หัวหน้างาน/หัวหน้าแผนกวิชา (ขวา) */}
                         <div className="grid grid-cols-2 gap-x-8">
-                            {/* ซ้าย: ผู้ตรวจสอบโครงการ (นายพิพัฒน์ สีมา) */}
+                            {/* ซ้าย: ผู้เสนอโครงการ (Step 1) */}
                             <div className="flex justify-center">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
@@ -808,7 +804,96 @@ export default function Print({ project, strategyCategories = [] }) {
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {sig3?.signature_data ? (
+                                            {includeSignatures && sig1?.signature_data ? (
+                                                <img 
+                                                    src={sig1.signature_data} 
+                                                    alt="ลายมือชื่อ" 
+                                                    className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                />
+                                            ) : (
+                                                <div className="h-6"></div>
+                                            )}
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                                        </div>
+                                        <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                            ผู้เสนอโครงการ
+                                        </span>
+                                    </div>
+                                    <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
+                                        ({toThaiNumerals(sig1?.user?.name ? cleanPersonName(sig1.user.name) : (cleanedResponsiblePerson || '...............................................'))})
+                                    </p>
+                                    <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
+                                        {project.position 
+                                            ? toThaiNumerals(project.position) 
+                                            : (project.department?.name 
+                                                ? toThaiNumerals(`หัวหน้างาน${project.department.name.replace(/^งาน/, '')}`) 
+                                                : 'หัวหน้างาน................................................')}
+                                    </p>
+                                    <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
+                                        {includeSignatures && sig1?.signed_at 
+                                            ? formatThaiSignatureDate(sig1.signed_at) 
+                                            : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* ขวา: ผู้เห็นชอบโครงการ (Step 2: หัวหน้างาน / หัวหน้าแผนกวิชา) */}
+                            <div className="flex justify-center">
+                                <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                                    <div className="relative flex items-center justify-center">
+                                        <span className="absolute right-full mr-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                            ลงชื่อ
+                                        </span>
+                                        <div className="relative inline-flex flex-col items-center">
+                                            {includeSignatures && sig2?.signature_data ? (
+                                                <img 
+                                                    src={sig2.signature_data} 
+                                                    alt="ลายมือชื่อ" 
+                                                    className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                />
+                                            ) : (
+                                                <div className="h-6"></div>
+                                            )}
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
+                                        </div>
+                                        <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                            ผู้เห็นชอบโครงการ
+                                        </span>
+                                    </div>
+                                    <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
+                                        ({sig2?.user?.name 
+                                            ? toThaiNumerals(cleanPersonName(sig2.user.name)) 
+                                            : (project.department?.department_head_name 
+                                                ? toThaiNumerals(cleanPersonName(project.department.department_head_name))
+                                                : '...............................................')})
+                                    </p>
+                                    <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
+                                        {sig2?.user?.position_level 
+                                            ? toThaiNumerals(sig2.user.position_level) 
+                                            : (project.department?.name 
+                                                ? toThaiNumerals(`หัวหน้า${project.department.name}`) 
+                                                : 'หัวหน้างาน/หัวหน้าแผนกวิชา')}
+                                    </p>
+                                    <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
+                                        {includeSignatures && sig2?.signed_at 
+                                            ? formatThaiSignatureDate(sig2.signed_at) 
+                                            : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Row 2: ผู้ตรวจสอบโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง (ขวา) */}
+                        <div className="grid grid-cols-2 gap-x-8">
+                            {/* ซ้าย: ผู้ตรวจสอบโครงการ (Step 3: นายพิพัฒน์ สีมา) */}
+                            <div className="flex justify-center">
+                                <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                                    <div className="relative flex items-center justify-center">
+                                        <span className="absolute right-full mr-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
+                                            ลงชื่อ
+                                        </span>
+                                        <div className="relative inline-flex flex-col items-center">
+                                            {includeSignatures && sig3?.signature_data ? (
                                                 <img 
                                                     src={sig3.signature_data} 
                                                     alt="ลายมือชื่อ" 
@@ -817,7 +902,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                             ) : (
                                                 <div className="h-6"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-40 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
                                             ผู้ตรวจสอบโครงการ
@@ -829,10 +914,15 @@ export default function Print({ project, strategyCategories = [] }) {
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
                                         {sig3?.user?.position_level ? toThaiNumerals(sig3.user.position_level) : 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ'}
                                     </p>
+                                    <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
+                                        {includeSignatures && sig3?.signed_at 
+                                            ? formatThaiSignatureDate(sig3.signed_at) 
+                                            : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่าย...) */}
+                            {/* ขวา: ผู้เห็นชอบโครงการ (Step 4: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง) */}
                             <div className="flex justify-center">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
@@ -840,7 +930,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {sig4?.signature_data ? (
+                                            {includeSignatures && sig4?.signature_data ? (
                                                 <img 
                                                     src={sig4.signature_data} 
                                                     alt="ลายมือชื่อ" 
@@ -849,7 +939,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                             ) : (
                                                 <div className="h-6"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-40 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-44 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap text-xs sm:text-[13px] font-normal bottom-0.5">
                                             ผู้เห็นชอบโครงการ
@@ -870,11 +960,16 @@ export default function Print({ project, strategyCategories = [] }) {
                                             || project.department?.parent?.deputy_director_position 
                                             || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................'))}
                                     </p>
+                                    <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
+                                        {includeSignatures && sig4?.signed_at 
+                                            ? formatThaiSignatureDate(sig4.signed_at) 
+                                            : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Row 3: ผู้เห็นชอบโครงการ (นายนิพนธ์ ร่องพืช / รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน - ตรงกลาง) */}
+                        {/* Row 3: ผู้เห็นชอบโครงการ (Step 5: นายนิพนธ์ ร่องพืช / รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน - ตรงกลาง) */}
                         <div className="flex justify-center">
                             <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                 <div className="relative flex items-center justify-center">
@@ -882,7 +977,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                         ลงชื่อ
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
-                                        {sig5?.signature_data ? (
+                                        {includeSignatures && sig5?.signature_data ? (
                                             <img 
                                                 src={sig5.signature_data} 
                                                 alt="ลายมือชื่อ" 
@@ -900,13 +995,18 @@ export default function Print({ project, strategyCategories = [] }) {
                                 <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
                                     ({sig5?.user?.name ? toThaiNumerals(cleanPersonName(sig5.user.name)) : 'นายนิพนธ์ ร่องพืช'})
                                 </p>
-                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
+                                <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[280px] text-slate-800">
                                     {sig5?.user?.position_level ? toThaiNumerals(sig5.user.position_level) : 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'}
+                                </p>
+                                <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
+                                    {includeSignatures && sig5?.signed_at 
+                                        ? formatThaiSignatureDate(sig5.signed_at) 
+                                        : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Row 4: ผู้อนุมัติโครงการ (นายกเชษฐ์ กิ่งชนะ / ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน - ตรงกลาง) */}
+                        {/* Row 4: ผู้อนุมัติโครงการ (Step 6: นายกเชษฐ์ กิ่งชนะ / ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน - ตรงกลาง) */}
                         <div className="flex justify-center">
                             <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                 <div className="relative flex items-center justify-center">
@@ -914,7 +1014,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                         ลงชื่อ
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
-                                        {sig6?.signature_data ? (
+                                        {includeSignatures && sig6?.signature_data ? (
                                             <img 
                                                 src={sig6.signature_data} 
                                                 alt="ลายมือชื่อ" 
@@ -934,6 +1034,11 @@ export default function Print({ project, strategyCategories = [] }) {
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal text-slate-800">
                                     {sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'}
+                                </p>
+                                <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
+                                    {includeSignatures && sig6?.signed_at 
+                                        ? formatThaiSignatureDate(sig6.signed_at) 
+                                        : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                 </p>
                             </div>
                         </div>

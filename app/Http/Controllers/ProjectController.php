@@ -506,23 +506,7 @@ class ProjectController extends Controller
         $user = auth()->user();
         
         if ($project->status === 'submitted' || $project->status === 'pending_approval') {
-            switch ($project->current_approval_step) {
-                case 2: // Head of Department / Head of Work / Head of Major
-                    $canApprove = $user->isAdmin() 
-                        || $user->isPlanHead() 
-                        || ($user->isDepartmentHead($project->department_id) && $user->id !== $project->user_id);
-                    break;
-                case 3: // Plan Head
-                    $canApprove = $user->isAdmin() || $user->isPlanHead();
-                    break;
-                case 4: // Deputy Director of relevant department
-                    $canApprove = $user->isAdmin() || $user->isExecutiveForDepartment($project->department_id);
-                    break;
-                case 5: // Deputy Director of Planning
-                case 6: // Director
-                    $canApprove = $user->isAdmin() || $user->isExecutive();
-                    break;
-            }
+            $canApprove = $this->canApproveStep($user, $project, (int)($project->current_approval_step ?: 2));
         }
 
         return Inertia::render('Projects/Show', [
@@ -744,9 +728,26 @@ class ProjectController extends Controller
         }
 
         if ($request->boolean('submit_approval')) {
+            $isHeadProposer = false;
+            if ($project->user_position_id) {
+                $userPos = \App\Models\UserPosition::find($project->user_position_id);
+                if ($userPos && in_array($userPos->duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา'])) {
+                    $isHeadProposer = true;
+                }
+            }
+            if (!$isHeadProposer && $user->isDepartmentHead($project->department_id)) {
+                $isHeadProposer = true;
+            }
+
             $project->status = 'pending_approval';
-            $project->current_approval_step = 2; // Step 2: Head of Department
+            $project->current_approval_step = $isHeadProposer ? 3 : 2;
             $project->save();
+
+            $now = now();
+            $signatureData = $user->signature_data;
+            $sigHash = $signatureData 
+                ? hash('sha256', $user->id . '|' . $project->id . '|1|' . $now->toIso8601String() . '|' . config('app.key'))
+                : null;
 
             ProjectApproval::create([
                 'project_id' => $project->id,
@@ -754,11 +755,37 @@ class ProjectController extends Controller
                 'step_number' => 1,
                 'status' => 'submitted',
                 'comments' => 'จัดทำโครงการฉบับเต็มและยื่นขออนุมัติตามกระบวนการ 6 ขั้นตอน',
+                'signature_data' => $signatureData,
+                'signature_type' => 'stored',
+                'signature_hash' => $sigHash,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'signed_at' => $now,
             ]);
+
+            if ($isHeadProposer) {
+                ProjectApproval::create([
+                    'project_id' => $project->id,
+                    'user_id' => $user->id,
+                    'step_number' => 2,
+                    'status' => 'approved',
+                    'comments' => 'เห็นชอบเสนอโครงการ (ผู้เสนอเป็นหัวหน้างาน/หัวหน้าสาขาวิชา)',
+                    'signature_data' => $signatureData,
+                    'signature_type' => 'stored',
+                    'signature_hash' => $signatureData ? hash('sha256', $user->id . '|' . $project->id . '|2|' . $now->toIso8601String() . '|' . config('app.key')) : null,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'signed_at' => $now,
+                ]);
+            }
 
             NotificationService::notifyProjectStep($project);
 
-            return redirect()->route('projects.show', $project->id)->with('success', 'จัดทำรายละเอียดโครงการฉบับเต็มและยื่นขออนุมัติโครงการสำเร็จ ระบบได้ส่งต่อให้หัวหน้าแผนก/หัวหน้างานพิจารณา (ขั้นตอนที่ 2)');
+            $msg = $isHeadProposer 
+                ? 'จัดทำรายละเอียดโครงการฉบับเต็มและยื่นขออนุมัติโครงการสำเร็จ ระบบได้ส่งต่อให้หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณพิจารณา (ขั้นตอนที่ 3)'
+                : 'จัดทำรายละเอียดโครงการฉบับเต็มและยื่นขออนุมัติโครงการสำเร็จ ระบบได้ส่งต่อให้หัวหน้าแผนก/หัวหน้างานพิจารณา (ขั้นตอนที่ 2)';
+
+            return redirect()->route('projects.show', $project->id)->with('success', $msg);
         }
 
         if (in_array($project->status, ['approved', 'in_progress', 'completed'])) {
@@ -897,6 +924,34 @@ class ProjectController extends Controller
     }
 
     /**
+     * ตรวจสอบสิทธิ์การลงนามอนุมัติตามสายงาน 6 ขั้นตอนอย่างเข้มงวด
+     */
+    private function canApproveStep($user, Project $project, int $step): bool
+    {
+        if (!$user) return false;
+
+        switch ($step) {
+            case 2: // ขั้นตอนที่ ๒: หัวหน้างาน / หัวหน้าแผนกวิชา (ต้นสังกัดของผู้เสนอ)
+                return $user->isDepartmentHead($project->department_id) && $user->id !== $project->user_id;
+
+            case 3: // ขั้นตอนที่ ๓: หัวหน้างานวางแผนและงบประมาณ (ล็อกงบ/ผูกงบ)
+                return $user->isPlanHead();
+
+            case 4: // ขั้นตอนที่ ๔: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง (ฝ่ายต้นสังกัดของผู้เสนอ)
+                return $user->isDeputyDirectorForDepartment($project->department_id);
+
+            case 5: // ขั้นตอนที่ ๕: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน (นายนิพนธ์ ร่องพืช)
+                return $user->isDeputyDirectorStrategy();
+
+            case 6: // ขั้นตอนที่ ๖: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน (นายกเชษฐ์ กิ่งชนะ)
+                return $user->isDirector();
+
+            default:
+                return false;
+        }
+    }
+
+    /**
      * Approve the project at the current step.
      */
     public function approve(Request $request, Project $project)
@@ -905,25 +960,11 @@ class ProjectController extends Controller
         $isAuthorized = false;
 
         if ($project->status === 'submitted' || $project->status === 'pending_approval') {
-            switch ($project->current_approval_step) {
-                case 2:
-                    $isAuthorized = $user->isAdmin() || $user->isPlanHead() || ($user->isDepartmentHead($project->department_id) && $user->id !== $project->user_id);
-                    break;
-                case 3:
-                    $isAuthorized = $user->isAdmin() || $user->isPlanHead();
-                    break;
-                case 4:
-                    $isAuthorized = $user->isAdmin() || $user->isExecutiveForDepartment($project->department_id);
-                    break;
-                case 5:
-                case 6:
-                    $isAuthorized = $user->isAdmin() || $user->isExecutive();
-                    break;
-            }
+            $isAuthorized = $this->canApproveStep($user, $project, (int)($project->current_approval_step ?: 2));
         }
 
         if (!$isAuthorized) {
-            return redirect()->back()->with('error', 'ท่านไม่มีสิทธิ์ในการพิจารณาอนุมัติโครงการในขั้นตอนนี้');
+            return redirect()->back()->with('error', 'ท่านไม่มีสิทธิ์ในการพิจารณาอนุมัติโครงการในขั้นตอนนี้ (ต้องเป็นผู้มีอำนาจลงนามตามสายงานที่กำหนด)');
         }
 
         $request->validate([

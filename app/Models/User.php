@@ -158,13 +158,13 @@ class User extends Authenticatable
 
     public function isPlanHead(): bool
     {
-        if ($this->isAdmin()) return true;
         if ($this->role?->name === 'plan_head') return true;
 
-        // รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ / รองฝ่ายยุทธศาสตร์และแผนงาน
         $userPosText = ($this->position ?? '') . ' ' . $this->userPositions()->pluck('position')->implode(' ');
-        if (str_contains($userPosText, 'รองผู้อำนวยการ') && (str_contains($userPosText, 'แผน') || str_contains($userPosText, 'ยุทธศาสตร์'))) {
-            return true;
+        
+        // หากมีตำแหน่ง "รองผู้อำนวยการ" จะไม่ถือเป็นหัวหน้างานวางแผน (รองฯ จะมีขั้นตอนกำกับใน Step 5)
+        if (str_contains($userPosText, 'รองผู้อำนวยการ')) {
+            return false;
         }
 
         return $this->userPositions()
@@ -174,7 +174,7 @@ class User extends Authenticatable
                   ->orWhere('sub_department_id', function($sub) {
                       $sub->select('id')->from('departments')->where('name', 'like', '%แผน%');
                   });
-            })->exists();
+            })->exists() || (str_contains($this->position ?? '', 'หัวหน้างานวางแผน') || str_contains($this->position ?? '', 'หัวหน้างานแผนงาน'));
     }
 
     public function isPlanStaff(): bool
@@ -237,45 +237,117 @@ class User extends Authenticatable
 
     public function isExecutive(): bool
     {
-        if ($this->isAdmin()) return true;
         if ($this->role?->name === 'executive') return true;
-        return $this->userPositions()
-            ->where(function($q) {
-                $q->where('position', 'like', '%ผู้อำนวยการ%')
-                  ->orWhere('position', 'like', '%รองผู้อำนวยการ%');
-            })->exists() || (str_contains($this->position ?? '', 'ผู้อำนวยการ') || str_contains($this->position ?? '', 'รองผู้อำนวยการ'));
+        return $this->isDirector() || $this->isDeputyDirector();
     }
 
     /**
-     * ตรวจสอบว่าเป็นรองผู้อำนวยการหรือผู้บริหารที่กำกับดูแลฝ่ายนั้นหรือไม่ (Step 4)
+     * ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน (Step 6)
      */
-    public function isExecutiveForDepartment(?int $departmentId = null): bool
+    public function isDirector(): bool
     {
-        if ($this->isAdmin()) return true;
-        if (!$this->isExecutive()) return false;
-
-        // ผู้อำนวยการวิทยาลัย อนุมัติได้ทุกฝ่าย
         $userPosText = ($this->position ?? '') . ' ' . $this->userPositions()->pluck('position')->implode(' ');
-        if (str_contains($userPosText, 'ผู้อำนวยการวิทยาลัย') && !str_contains($userPosText, 'รองผู้อำนวยการ')) {
+        $dutiesText = $this->userPositions()->pluck('duty')->implode(' ');
+        
+        // ผู้อำนวยการ (ต้องไม่ใช่รองผู้อำนวยการ)
+        if (str_contains($userPosText, 'ผู้อำนวยการ') && !str_contains($userPosText, 'รองผู้อำนวยการ')) {
+            return true;
+        }
+        if (str_contains($dutiesText, 'ผู้อำนวยการ') && !str_contains($dutiesText, 'รองผู้อำนวยการ')) {
             return true;
         }
 
-        if (!$departmentId) return true;
+        return false;
+    }
+
+    /**
+     * รองผู้อำนวยการวิทยาลัย
+     */
+    public function isDeputyDirector(): bool
+    {
+        $userPosText = ($this->position ?? '') . ' ' . $this->userPositions()->pluck('position')->implode(' ');
+        $dutiesText = $this->userPositions()->pluck('duty')->implode(' ');
+
+        return str_contains($userPosText, 'รองผู้อำนวยการ') || str_contains($dutiesText, 'รองผู้อำนวยการ');
+    }
+
+    /**
+     * รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน (Step 5 - นายนิพนธ์ ร่องพืช)
+     */
+    public function isDeputyDirectorStrategy(): bool
+    {
+        if (!$this->isDeputyDirector()) {
+            return false;
+        }
+
+        $userPosText = ($this->position ?? '') . ' ' . $this->userPositions()->pluck('position')->implode(' ');
+        $dutiesText = $this->userPositions()->pluck('duty')->implode(' ');
+        $allText = $userPosText . ' ' . $dutiesText;
+
+        if (str_contains($allText, 'ยุทธศาสตร์') || str_contains($allText, 'แผนงาน') || str_contains($allText, 'ความร่วมมือ')) {
+            return true;
+        }
+
+        // ตรวจสอบฝ่ายหลักของตำแหน่ง
+        $planDeptIds = \App\Models\Department::whereNull('parent_id')
+            ->where(function($q) {
+                $q->where('name', 'like', '%แผนงาน%')
+                  ->orWhere('name', 'like', '%ยุทธศาสตร์%');
+            })->pluck('id')->toArray();
+
+        $userDeptIds = array_merge([$this->department_id], $this->userPositions()->pluck('department_id')->filter()->toArray());
+        return !empty(array_intersect($planDeptIds, $userDeptIds));
+    }
+
+    /**
+     * ตรวจสอบว่าเป็นรองผู้อำนวยการฝ่ายที่กำกับดูแลฝ่ายต้นสังกัดของโครงการนั้นโดยเฉพาะหรือไม่ (Step 4)
+     */
+    public function isDeputyDirectorForDepartment(?int $departmentId = null): bool
+    {
+        if (!$this->isDeputyDirector()) return false;
+        if (!$departmentId) return false;
 
         $targetDept = \App\Models\Department::find($departmentId);
-        if (!$targetDept) return true;
+        if (!$targetDept) return false;
 
         // หาฝ่ายหลัก (Main Division)
         $mainDeptName = $targetDept->parent ? $targetDept->parent->name : $targetDept->name;
+        $userPosText = ($this->position ?? '') . ' ' . $this->userPositions()->pluck('position')->implode(' ');
+        $dutiesText = $this->userPositions()->pluck('duty')->implode(' ');
+        $allText = $userPosText . ' ' . $dutiesText;
 
-        // ตรวจสอบชื่อตำแหน่งรองผู้อำนวยการว่าตรงกับฝ่ายหรือไม่
-        if (str_contains($mainDeptName, 'บริหารทรัพยากร') && str_contains($userPosText, 'บริหารทรัพยากร')) return true;
-        if (str_contains($mainDeptName, 'วิชาการ') && str_contains($userPosText, 'วิชาการ')) return true;
-        if ((str_contains($mainDeptName, 'กิจการนักเรียน') || str_contains($mainDeptName, 'พัฒนากิจการ')) && (str_contains($userPosText, 'กิจการนักเรียน') || str_contains($userPosText, 'พัฒนากิจการ') || str_contains($userPosText, 'พัฒนานักเรียน'))) return true;
-        if ((str_contains($mainDeptName, 'แผนงาน') || str_contains($mainDeptName, 'ยุทธศาสตร์')) && (str_contains($userPosText, 'แผนงาน') || str_contains($userPosText, 'ยุทธศาสตร์'))) return true;
+        // 1. ฝ่ายบริหารทรัพยากร
+        if (str_contains($mainDeptName, 'บริหารทรัพยากร')) {
+            return str_contains($allText, 'บริหารทรัพยากร') || str_contains($allText, 'บริหารทั่วไป');
+        }
 
-        // Fallback: หากเป็นผู้บริหารแต่ไม่ระบุฝ่ายเฉพาะ ให้มีสิทธิ์
-        return true;
+        // 2. ฝ่ายวิชาการ
+        if (str_contains($mainDeptName, 'วิชาการ')) {
+            return str_contains($allText, 'วิชาการ');
+        }
+
+        // 3. ฝ่ายพัฒนากิจการนักเรียน นักศึกษา
+        if (str_contains($mainDeptName, 'กิจการนักเรียน') || str_contains($mainDeptName, 'พัฒนากิจการ')) {
+            return str_contains($allText, 'กิจการนักเรียน') || str_contains($allText, 'พัฒนากิจการ') || str_contains($allText, 'พัฒนานักเรียน');
+        }
+
+        // 4. ฝ่ายยุทธศาสตร์และแผนงาน
+        if (str_contains($mainDeptName, 'แผนงาน') || str_contains($mainDeptName, 'ยุทธศาสตร์')) {
+            return str_contains($allText, 'แผนงาน') || str_contains($allText, 'ยุทธศาสตร์') || str_contains($allText, 'ความร่วมมือ');
+        }
+
+        // ตรวจสอบจาก ID ฝ่ายหลักของตำแหน่งใน user_positions
+        $targetMainDeptId = $targetDept->parent_id ?: $targetDept->id;
+        $posDeptIds = $this->userPositions()
+            ->where(function($q) {
+                $q->where('position', 'like', '%รองผู้อำนวยการ%')
+                  ->orWhere('duty', 'like', '%รองผู้อำนวยการ%');
+            })
+            ->pluck('department_id')
+            ->filter()
+            ->toArray();
+
+        return in_array($targetMainDeptId, $posDeptIds);
     }
 
     /**
