@@ -1384,8 +1384,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     </div>
                                 </div>
 
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-xs text-slate-800 border-collapse border border-purple-200">
+                                <div className="overflow-x-auto rounded-xl border border-purple-200 shadow-2xs">
+                                    <table className="w-full text-xs text-slate-800 border-collapse min-w-[1150px]">
                                         <thead>
                                             <tr className="bg-purple-100/80 text-purple-950 font-bold border-b border-purple-200 text-center">
                                                 <th rowSpan="2" className="p-2.5 text-left border-r border-purple-200 min-w-[260px]">
@@ -1402,22 +1402,22 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                     พื้นที่ดำเนินการ<br />
                                                     <span className="text-[10px] font-normal text-slate-600">ระบุ ตำบล/อำเภอ</span>
                                                 </th>
-                                                <th colSpan="4" className="p-1.5 border-r border-purple-200 text-center font-bold">
+                                                <th colSpan="4" className="p-1.5 border-r border-purple-200 text-center font-bold w-[480px] min-w-[480px]">
                                                     หมวดเงิน (ระบุจำนวนเงิน : บาท)
                                                 </th>
-                                                <th rowSpan="2" className="p-2 text-center w-8">
+                                                <th rowSpan="2" className="p-2 text-center w-10 min-w-[40px]">
                                                     ลบ
                                                 </th>
                                             </tr>
                                             <tr className="bg-purple-50 text-purple-900 font-bold border-b border-purple-200 text-[11px] text-center">
-                                                <th className="p-1 w-9 border-r border-purple-200">๑</th>
-                                                <th className="p-1 w-9 border-r border-purple-200">๒</th>
-                                                <th className="p-1 w-9 border-r border-purple-200">๓</th>
-                                                <th className="p-1 w-9 border-r border-purple-200">๔</th>
-                                                <th className="p-1 w-24 border-r border-purple-200 text-right pr-2">งบดำเนินงาน</th>
-                                                <th className="p-1 w-24 border-r border-purple-200 text-right pr-2">งบลงทุน</th>
-                                                <th className="p-1 w-24 border-r border-purple-200 text-right pr-2">งบรายจ่ายอื่น</th>
-                                                <th className="p-1 w-24 border-r border-purple-200 text-right pr-2">งบอุดหนุน</th>
+                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">๑</th>
+                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">๒</th>
+                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">๓</th>
+                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">๔</th>
+                                                <th className="p-2 w-[120px] min-w-[120px] border-r border-purple-200 text-right pr-3">งบดำเนินงาน</th>
+                                                <th className="p-2 w-[120px] min-w-[120px] border-r border-purple-200 text-right pr-3">งบลงทุน</th>
+                                                <th className="p-2 w-[120px] min-w-[120px] border-r border-purple-200 text-right pr-3">งบรายจ่ายอื่น</th>
+                                                <th className="p-2 w-[120px] min-w-[120px] border-r border-purple-200 text-right pr-3">งบอุดหนุน</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-purple-100">
@@ -1482,47 +1482,47 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                             placeholder="เช่น ต.ในเวียง อ.เมืองน่าน"
                                                         />
                                                     </td>
-                                                    <td className="p-1.5 border-r border-purple-100">
+                                                    <td className="p-1.5 border-r border-purple-100 w-[120px] min-w-[120px]">
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             step="any"
                                                             value={row.budget_operating ?? ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'budget_operating', parseFloat(e.target.value) || 0)}
-                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-medium focus:border-purple-500"
+                                                            className="w-full rounded-lg border-purple-200 px-2.5 py-1.5 text-xs text-right font-semibold text-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                             placeholder="0"
                                                         />
                                                     </td>
-                                                    <td className="p-1.5 border-r border-purple-100">
+                                                    <td className="p-1.5 border-r border-purple-100 w-[120px] min-w-[120px]">
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             step="any"
                                                             value={row.budget_investment ?? ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'budget_investment', parseFloat(e.target.value) || 0)}
-                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-medium focus:border-purple-500"
+                                                            className="w-full rounded-lg border-purple-200 px-2.5 py-1.5 text-xs text-right font-semibold text-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                             placeholder="0"
                                                         />
                                                     </td>
-                                                    <td className="p-1.5 border-r border-purple-100">
+                                                    <td className="p-1.5 border-r border-purple-100 w-[120px] min-w-[120px]">
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             step="any"
                                                             value={row.budget_other ?? ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'budget_other', parseFloat(e.target.value) || 0)}
-                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-medium focus:border-purple-500"
+                                                            className="w-full rounded-lg border-purple-200 px-2.5 py-1.5 text-xs text-right font-semibold text-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                             placeholder="0"
                                                         />
                                                     </td>
-                                                    <td className="p-1.5 border-r border-purple-100">
+                                                    <td className="p-1.5 border-r border-purple-100 w-[120px] min-w-[120px]">
                                                         <input
                                                             type="number"
                                                             min="0"
                                                             step="any"
                                                             value={row.budget_subsidy ?? ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'budget_subsidy', parseFloat(e.target.value) || 0)}
-                                                            className="w-full rounded-lg border-purple-200 px-2 py-1 text-xs text-right font-medium focus:border-purple-500"
+                                                            className="w-full rounded-lg border-purple-200 px-2.5 py-1.5 text-xs text-right font-semibold text-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                             placeholder="0"
                                                         />
                                                     </td>
@@ -1543,16 +1543,16 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 <td colSpan="7" className="p-2 text-center border-r border-purple-200">
                                                     รวมเงิน
                                                 </td>
-                                                <td className="p-2 text-right border-r border-purple-200 font-bold">
+                                                <td className="p-2 text-right border-r border-purple-200 font-bold min-w-[120px] pr-3 text-xs font-mono">
                                                     {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_operating) || 0), 0).toLocaleString()}
                                                 </td>
-                                                <td className="p-2 text-right border-r border-purple-200 font-bold">
+                                                <td className="p-2 text-right border-r border-purple-200 font-bold min-w-[120px] pr-3 text-xs font-mono">
                                                     {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_investment) || 0), 0).toLocaleString()}
                                                 </td>
-                                                <td className="p-2 text-right border-r border-purple-200 font-bold">
+                                                <td className="p-2 text-right border-r border-purple-200 font-bold min-w-[120px] pr-3 text-xs font-mono">
                                                     {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_other) || 0), 0).toLocaleString()}
                                                 </td>
-                                                <td className="p-2 text-right border-r border-purple-200 font-bold">
+                                                <td className="p-2 text-right border-r border-purple-200 font-bold min-w-[120px] pr-3 text-xs font-mono">
                                                     {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_subsidy) || 0), 0).toLocaleString()}
                                                 </td>
                                                 <td></td>
