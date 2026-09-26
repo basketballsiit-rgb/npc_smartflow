@@ -12,23 +12,53 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('funding_sources')) {
-            // 1. Update any local income, school revenue, or maintenance budget to standard "บกศ."
-            DB::table('funding_sources')
+            // Helper function to safely remap foreign keys and delete obsolete rows
+            $remapAndDelete = function ($fromId, $toId) {
+                if ($fromId == $toId) return;
+
+                $tables = ['budgets', 'projects', 'central_allocations', 'routine_budget_plans', 'travel_loans', 'expense_clearings'];
+                foreach ($tables as $tbl) {
+                    if (Schema::hasTable($tbl) && Schema::hasColumn($tbl, 'funding_source_id')) {
+                        DB::table($tbl)->where('funding_source_id', $fromId)->update(['funding_source_id' => $toId]);
+                    }
+                }
+                DB::table('funding_sources')->where('id', $fromId)->delete();
+            };
+
+            // 1. Gather all existing rows that represent บกศ. / school revenue / local income
+            $bgasRows = DB::table('funding_sources')
                 ->where('name', 'LIKE', '%สถานศึกษา%')
                 ->orWhere('name', 'LIKE', '%Revenue%')
                 ->orWhere('name', 'LIKE', '%บำรุงการศึกษา%')
                 ->orWhere('name', 'LIKE', '%บกศ%')
                 ->orWhere('code', 'REVENUE')
                 ->orWhere('code', 'LOCAL_INCOME')
-                ->update([
-                    'name' => 'บกศ.',
-                    'code' => 'LOCAL_INCOME',
-                    'description' => 'เงินบำรุงการศึกษา (บกศ.)',
-                    'fiscal_year' => '2569',
-                    'budget_number' => '20006-2569-601',
-                ]);
+                ->get();
 
-            // 2. Ensure all 7 standard funding sources are properly named and standardized
+            if ($bgasRows->isNotEmpty()) {
+                // Prefer ID 7 if present, otherwise the first matched record
+                $primaryBgas = $bgasRows->firstWhere('id', 7) ?: $bgasRows->first();
+
+                // Merge and delete any duplicate rows to prevent UNIQUE constraint violation on code/name
+                foreach ($bgasRows as $row) {
+                    if ($row->id != $primaryBgas->id) {
+                        $remapAndDelete($row->id, $primaryBgas->id);
+                    }
+                }
+
+                // Update the single primary row to standard บกศ.
+                DB::table('funding_sources')
+                    ->where('id', $primaryBgas->id)
+                    ->update([
+                        'name' => 'บกศ.',
+                        'code' => 'LOCAL_INCOME',
+                        'description' => 'เงินบำรุงการศึกษา (บกศ.)',
+                        'fiscal_year' => '2569',
+                        'budget_number' => '20006-2569-601',
+                    ]);
+            }
+
+            // 2. Standardize all 7 standard funding sources safely
             $standardSources = [
                 ['name' => 'ปวช.', 'code' => 'VEC_CERT', 'description' => 'งบดำเนินงาน ปวช.', 'budget_number' => '20006-2569-001'],
                 ['name' => 'ปวส.', 'code' => 'VEC_DIP', 'description' => 'งบดำเนินงาน ปวส.', 'budget_number' => '20006-2569-101'],
@@ -40,14 +70,20 @@ return new class extends Migration
             ];
 
             foreach ($standardSources as $src) {
-                $exists = DB::table('funding_sources')
-                    ->where('code', $src['code'])
-                    ->orWhere('name', $src['name'])
-                    ->first();
+                $byCode = DB::table('funding_sources')->where('code', $src['code'])->first();
+                $byName = DB::table('funding_sources')->where('name', $src['name'])->first();
 
-                if ($exists) {
+                if ($byCode && $byName && $byCode->id != $byName->id) {
+                    // Merge byName into byCode
+                    $remapAndDelete($byName->id, $byCode->id);
+                    $existing = $byCode;
+                } else {
+                    $existing = $byCode ?: $byName;
+                }
+
+                if ($existing) {
                     DB::table('funding_sources')
-                        ->where('id', $exists->id)
+                        ->where('id', $existing->id)
                         ->update([
                             'name' => $src['name'],
                             'code' => $src['code'],
@@ -58,10 +94,6 @@ return new class extends Migration
                 } else {
                     DB::table('funding_sources')->insert(array_merge($src, [
                         'fiscal_year' => '2569',
-                        'total_budget' => 0,
-                        'allocated_budget' => 0,
-                        'encumbered_budget' => 0,
-                        'spent_budget' => 0,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]));
