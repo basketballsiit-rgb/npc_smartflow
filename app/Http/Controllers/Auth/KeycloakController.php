@@ -305,12 +305,18 @@ class KeycloakController extends Controller
         $code = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $departmentName), 0, 10))
                 ?: 'DEPT' . rand(100, 999);
 
+        $parentId = null;
+        if (str_contains($departmentName, 'แผนก') || str_contains($departmentName, 'สาขา') || str_contains($departmentName, 'ช่าง') || str_contains($departmentName, 'การตลาด') || str_contains($departmentName, 'สารสนเทศ')) {
+            $parentId = Department::where('name', 'like', '%วิชาการ%')->whereNull('parent_id')->value('id') ?: 2;
+        }
+
         $dept = Department::create([
             'name' => $departmentName,
             'code' => $code,
+            'parent_id' => $parentId,
         ]);
 
-        Log::info("สร้างฝ่ายใหม่จาก npcjob: {$departmentName} (code: {$code})");
+        Log::info("สร้างฝ่ายใหม่จาก npcjob: {$departmentName} (code: {$code}, parent_id: {$parentId})");
 
         return $dept;
     }
@@ -364,10 +370,24 @@ class KeycloakController extends Controller
             $dept     = null;
 
             if ($deptName) {
-                $dept = Department::firstOrCreate(
-                    ['name' => $deptName],
-                    ['code' => strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $deptName), 0, 10)) ?: 'DEPT' . rand(100, 999)]
-                );
+                $dept = Department::where('name', $deptName)->first();
+                if (!$dept) {
+                    $parentId = null;
+                    if (str_contains($deptName, 'แผนก') || str_contains($deptName, 'สาขา') || str_contains($deptName, 'ช่าง') || str_contains($deptName, 'การตลาด') || str_contains($deptName, 'สารสนเทศ')) {
+                        $parentId = Department::where('name', 'like', '%วิชาการ%')->whereNull('parent_id')->value('id') ?: 2;
+                    } elseif (str_contains($deptName, 'กิจการ') || str_contains($deptName, 'นักเรียน') || str_contains($deptName, 'แนะแนว') || str_contains($deptName, 'ครูที่ปรึกษา')) {
+                        $parentId = Department::where('name', 'like', '%กิจการ%')->whereNull('parent_id')->value('id') ?: 3;
+                    } elseif (str_contains($deptName, 'บริหาร') || str_contains($deptName, 'พัสดุ') || str_contains($deptName, 'การเงิน') || str_contains($deptName, 'สารบรรณ')) {
+                        $parentId = Department::where('name', 'like', '%บริหารทรัพยากร%')->whereNull('parent_id')->value('id') ?: 1;
+                    } elseif (str_contains($deptName, 'แผนงาน') || str_contains($deptName, 'ยุทธศาสตร์') || str_contains($deptName, 'วิจัย') || str_contains($deptName, 'ประกัน')) {
+                        $parentId = Department::where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%')->whereNull('parent_id')->value('id') ?: 4;
+                    }
+                    $dept = Department::create([
+                        'name' => $deptName,
+                        'code' => strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $deptName), 0, 10)) ?: 'DEPT' . rand(100, 999),
+                        'parent_id' => $parentId,
+                    ]);
+                }
             }
 
             $user->userPositions()->create([

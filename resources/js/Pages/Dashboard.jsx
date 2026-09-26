@@ -1362,42 +1362,109 @@ export default function Dashboard({
 
     const getStatusBadge = (status, step, project = null) => renderProjectProgressBar(status, step, project);
 
-    // Resolve any department or sub-department to one of the 4 Main Divisions
+    // The official 4 Main Divisions of the College
+    const getFourMainDivisions = () => {
+        const findMain = (keywords, fallbackName, fallbackId) => {
+            const found = allDepartments.find(d => !d.parent_id && keywords.some(k => d.name.includes(k) && !d.name.includes('แผนก') && !d.name.includes('สาขา') && !d.name.includes('งาน')));
+            if (found) return found;
+            const byName = allDepartments.find(d => keywords.some(k => d.name.includes(k) && !d.name.includes('แผนก') && !d.name.includes('สาขา') && !d.name.includes('งาน')));
+            if (byName) return byName;
+            return { id: fallbackId, name: fallbackName };
+        };
+
+        const adminDept = findMain(['บริหารทรัพยากร'], 'ฝ่ายบริหารทรัพยากร', 1);
+        const acadDept = findMain(['วิชาการ'], 'ฝ่ายวิชาการ', 2);
+        const studDept = findMain(['กิจการนักเรียน', 'พัฒนากิจการ'], 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', 3);
+        const planDept = findMain(['ยุทธศาสตร์', 'แผนงาน'], 'ฝ่ายยุทธศาสตร์และแผนงาน', 4);
+
+        return [adminDept, acadDept, studDept, planDept];
+    };
+
+    // Resolve any department or sub-department strictly to one of the 4 Main Divisions
     const getMainDivision = (deptId, deptName) => {
-        if (!deptId && !deptName) return { id: 'other', name: 'ฝ่ายงานทั่วไป' };
-        
-        // 1. Direct lookup in allDepartments
+        const fourDivisions = getFourMainDivisions();
+        const [adminDept, acadDept, studDept, planDept] = fourDivisions;
+
         const dept = allDepartments.find(d => String(d.id) === String(deptId));
-        if (dept) {
-            if (!dept.parent_id) {
-                return { id: dept.id, name: dept.name };
-            }
+        const nameStr = String(deptName || dept?.name || '');
+
+        // 1. If it's a department/major (แผนกวิชา / สาขาวิชา / งานสอน / ช่าง / ฯลฯ) -> ALWAYS Academic Division (ฝ่ายวิชาการ)
+        if (
+            nameStr.includes('แผนก') || 
+            nameStr.includes('สาขา') || 
+            nameStr.includes('ช่าง') || 
+            nameStr.includes('วิชาการ') || 
+            nameStr.includes('เทคนิค') || 
+            nameStr.includes('การตลาด') || 
+            nameStr.includes('สารสนเทศ') || 
+            nameStr.includes('คอมพิวเตอร์') || 
+            nameStr.includes('ไฟฟ้า') || 
+            nameStr.includes('อิเล็กทรอนิกส์') || 
+            nameStr.includes('บัญชี') || 
+            nameStr.includes('สามัญ') || 
+            nameStr.includes('ระยะสั้น') || 
+            nameStr.includes('หลักสูตร') || 
+            nameStr.includes('วัดผล') || 
+            nameStr.includes('วิทยบริการ')
+        ) {
+            return acadDept;
+        }
+
+        // 2. Student Affairs Division (ฝ่ายพัฒนากิจการนักเรียน นักศึกษา)
+        if (
+            nameStr.includes('กิจการ') || 
+            nameStr.includes('นักเรียน') || 
+            nameStr.includes('นักศึกษา') || 
+            nameStr.includes('แนะแนว') || 
+            nameStr.includes('ครูที่ปรึกษา') || 
+            nameStr.includes('สวัสดิการ') || 
+            nameStr.includes('กิจกรรม') || 
+            nameStr.includes('บริการสังคม')
+        ) {
+            return studDept;
+        }
+
+        // 3. Resource Management Division (ฝ่ายบริหารทรัพยากร)
+        if (
+            nameStr.includes('บริหารทรัพยากร') || 
+            nameStr.includes('บริหารทั่วไป') || 
+            nameStr.includes('สารบรรณ') || 
+            nameStr.includes('การเงิน') || 
+            nameStr.includes('การบัญชี') || 
+            nameStr.includes('พัสดุ') || 
+            nameStr.includes('อาคาร') || 
+            nameStr.includes('ยานพาหนะ')
+        ) {
+            return adminDept;
+        }
+
+        // 4. Strategic Planning Division (ฝ่ายยุทธศาสตร์และแผนงาน)
+        if (
+            nameStr.includes('แผนงาน') || 
+            nameStr.includes('ยุทธศาสตร์') || 
+            nameStr.includes('ประกันคุณภาพ') || 
+            nameStr.includes('วิจัย') || 
+            nameStr.includes('บ่มเพาะ') || 
+            nameStr.includes('ดิจิทัล') || 
+            nameStr.includes('ประชาสัมพันธ์')
+        ) {
+            return planDept;
+        }
+
+        // 5. Check parent_id if available
+        if (dept && dept.parent_id) {
             const parent = allDepartments.find(d => d.id === dept.parent_id);
             if (parent) {
-                return { id: parent.id, name: parent.name };
+                return getMainDivision(parent.id, parent.name);
             }
         }
 
-        // 2. Keyword fallback to guarantee grouping into 4 main divisions
-        const nameStr = String(deptName || dept?.name || '');
-        if (nameStr.includes('วิชาการ') || nameStr.includes('ช่าง') || nameStr.includes('เทคนิค') || nameStr.includes('บัญชี') || nameStr.includes('การตลาด') || nameStr.includes('สามัญ') || nameStr.includes('หลักสูตร') || nameStr.includes('วัดผล') || nameStr.includes('วิทยบริการ')) {
-            const d = allDepartments.find(d => !d.parent_id && d.name.includes('วิชาการ'));
-            if (d) return { id: d.id, name: d.name };
-        }
-        if (nameStr.includes('กิจการ') || nameStr.includes('นักเรียน') || nameStr.includes('นักศึกษา') || nameStr.includes('แนะแนว') || nameStr.includes('ครูที่ปรึกษา') || nameStr.includes('สวัสดิการ') || nameStr.includes('บริการสังคม')) {
-            const d = allDepartments.find(d => !d.parent_id && (d.name.includes('กิจการ') || d.name.includes('พัฒนากิจการ')));
-            if (d) return { id: d.id, name: d.name };
-        }
-        if (nameStr.includes('บริหาร') || nameStr.includes('พัสดุ') || nameStr.includes('การเงิน') || nameStr.includes('สารบรรณ') || nameStr.includes('อาคาร') || nameStr.includes('ยานพาหนะ')) {
-            const d = allDepartments.find(d => !d.parent_id && d.name.includes('บริหารทรัพยากร'));
-            if (d) return { id: d.id, name: d.name };
-        }
-        if (nameStr.includes('แผน') || nameStr.includes('ยุทธศาสตร์') || nameStr.includes('ประกัน') || nameStr.includes('วิจัย') || nameStr.includes('บ่มเพาะ') || nameStr.includes('ดิจิทัล') || nameStr.includes('ประชาสัมพันธ์')) {
-            const d = allDepartments.find(d => !d.parent_id && (d.name.includes('แผน') || d.name.includes('ยุทธศาสตร์')));
-            if (d) return { id: d.id, name: d.name };
+        // Direct match with one of the 4 main divisions
+        if (dept && fourDivisions.some(m => m.id === dept.id)) {
+            return fourDivisions.find(m => m.id === dept.id);
         }
 
-        return { id: dept?.id || deptId || 'other', name: dept?.name || deptName || 'ฝ่ายงานทั่วไป' };
+        return acadDept; // Default to academic division
     };
 
     // User Modal Open Handlers
@@ -3842,9 +3909,10 @@ ${itemsListText}
         const divisionsData = (divisionBudgetRequests && divisionBudgetRequests.length > 0)
             ? divisionBudgetRequests
             : (() => {
-                const mainDepts = allDepartments.filter(d => !d.parent_id);
+                const mainDepts = getFourMainDivisions();
                 return mainDepts.map(main => {
                     const childIds = allDepartments.filter(d => d.parent_id === main.id).map(d => d.id);
+                    const allIds = [main.id, ...childIds];
                     const projs = (allProjectsMaster || []).filter(p => allIds.includes(p.department_id) || allIds.includes(p.main_division_id) || getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name).id === main.id);
                     const totalProposed = projs.reduce((s, p) => s + (parseFloat(p.proposed_budget || p.estimated_budget) || 0), 0);
                     const totalAlloc = projs.reduce((s, p) => s + (parseFloat(p.allocated_budget || p.allocated_amount) || 0), 0);
@@ -5949,7 +6017,7 @@ ${itemsListText}
         const rejectCount = pHead.preliminaryQueue?.filter(p => p.status === 'budget_rejected').length || 0;
 
         // Group preliminary projects by 4 Main Divisions
-        const mainDivisions = allDepartments.filter(d => !d.parent_id);
+        const mainDivisions = getFourMainDivisions();
         const prelimByDeptMap = {};
         mainDivisions.forEach(mainDept => {
             prelimByDeptMap[mainDept.id] = {
@@ -10820,8 +10888,9 @@ ${itemsListText}
             const matchesYear = projectYearFilter === 'all' || String(p.academic_year) === String(projectYearFilter);
             const matchesDept = projectDeptFilter === 'all' || (() => {
                 if (String(p.department_id) === String(projectDeptFilter)) return true;
-                const filterDept = allDepartments.find(d => String(d.id) === String(projectDeptFilter));
-                if (filterDept && !filterDept.parent_id) {
+                const fourMain = getFourMainDivisions();
+                const isMainFilter = fourMain.some(m => String(m.id) === String(projectDeptFilter));
+                if (isMainFilter) {
                     const div = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
                     return String(div.id) === String(projectDeptFilter);
                 }
@@ -10847,7 +10916,7 @@ ${itemsListText}
         const years = Array.from(new Set(allProjectsMaster.map(p => p.academic_year))).sort().reverse();
 
         // Group budgets & projects by the 4 Main Divisions (รวมโครงการย่อยเข้าไปอยู่ใน ๔ ฝ่ายหลัก)
-        const mainDivisions = allDepartments.filter(d => !d.parent_id);
+        const mainDivisions = getFourMainDivisions();
         const deptSummaryMap = {};
         mainDivisions.forEach(mainDept => {
             deptSummaryMap[mainDept.id] = {
@@ -11001,14 +11070,21 @@ ${itemsListText}
                             className="w-full text-xs rounded-xl border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                         >
                             <option value="all">ทุกฝ่ายงาน / ทั้ง 4 ฝ่ายหลัก</option>
-                            {allDepartments.filter(d => !d.parent_id).map(main => (
-                                <optgroup key={main.id} label={`🏢 ${main.name}`}>
-                                    <option value={main.id}>-- ทั้งหมดของ {main.name} --</option>
-                                    {allDepartments.filter(sub => sub.parent_id === main.id).map(sub => (
-                                        <option key={sub.id} value={sub.id}>&nbsp;&nbsp;&nbsp;&nbsp;↳ {sub.name}</option>
-                                    ))}
-                                </optgroup>
-                            ))}
+                            {getFourMainDivisions().map(main => {
+                                const subDepts = allDepartments.filter(sub => {
+                                    if (sub.id === main.id) return false;
+                                    const mappedDiv = getMainDivision(sub.id, sub.name);
+                                    return mappedDiv.id === main.id;
+                                });
+                                return (
+                                    <optgroup key={main.id} label={`🏢 ${main.name}`}>
+                                        <option value={main.id}>-- ทั้งหมดของ {main.name} --</option>
+                                        {subDepts.map(sub => (
+                                            <option key={sub.id} value={sub.id}>&nbsp;&nbsp;&nbsp;&nbsp;↳ {sub.name}</option>
+                                        ))}
+                                    </optgroup>
+                                );
+                            })}
                         </select>
                     </div>
                 </div>
