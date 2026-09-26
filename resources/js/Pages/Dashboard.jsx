@@ -1362,6 +1362,44 @@ export default function Dashboard({
 
     const getStatusBadge = (status, step, project = null) => renderProjectProgressBar(status, step, project);
 
+    // Resolve any department or sub-department to one of the 4 Main Divisions
+    const getMainDivision = (deptId, deptName) => {
+        if (!deptId && !deptName) return { id: 'other', name: 'ฝ่ายงานทั่วไป' };
+        
+        // 1. Direct lookup in allDepartments
+        const dept = allDepartments.find(d => String(d.id) === String(deptId));
+        if (dept) {
+            if (!dept.parent_id) {
+                return { id: dept.id, name: dept.name };
+            }
+            const parent = allDepartments.find(d => d.id === dept.parent_id);
+            if (parent) {
+                return { id: parent.id, name: parent.name };
+            }
+        }
+
+        // 2. Keyword fallback to guarantee grouping into 4 main divisions
+        const nameStr = String(deptName || dept?.name || '');
+        if (nameStr.includes('วิชาการ') || nameStr.includes('ช่าง') || nameStr.includes('เทคนิค') || nameStr.includes('บัญชี') || nameStr.includes('การตลาด') || nameStr.includes('สามัญ') || nameStr.includes('หลักสูตร') || nameStr.includes('วัดผล') || nameStr.includes('วิทยบริการ')) {
+            const d = allDepartments.find(d => !d.parent_id && d.name.includes('วิชาการ'));
+            if (d) return { id: d.id, name: d.name };
+        }
+        if (nameStr.includes('กิจการ') || nameStr.includes('นักเรียน') || nameStr.includes('นักศึกษา') || nameStr.includes('แนะแนว') || nameStr.includes('ครูที่ปรึกษา') || nameStr.includes('สวัสดิการ') || nameStr.includes('บริการสังคม')) {
+            const d = allDepartments.find(d => !d.parent_id && (d.name.includes('กิจการ') || d.name.includes('พัฒนากิจการ')));
+            if (d) return { id: d.id, name: d.name };
+        }
+        if (nameStr.includes('บริหาร') || nameStr.includes('พัสดุ') || nameStr.includes('การเงิน') || nameStr.includes('สารบรรณ') || nameStr.includes('อาคาร') || nameStr.includes('ยานพาหนะ')) {
+            const d = allDepartments.find(d => !d.parent_id && d.name.includes('บริหารทรัพยากร'));
+            if (d) return { id: d.id, name: d.name };
+        }
+        if (nameStr.includes('แผน') || nameStr.includes('ยุทธศาสตร์') || nameStr.includes('ประกัน') || nameStr.includes('วิจัย') || nameStr.includes('บ่มเพาะ') || nameStr.includes('ดิจิทัล') || nameStr.includes('ประชาสัมพันธ์')) {
+            const d = allDepartments.find(d => !d.parent_id && (d.name.includes('แผน') || d.name.includes('ยุทธศาสตร์')));
+            if (d) return { id: d.id, name: d.name };
+        }
+
+        return { id: dept?.id || deptId || 'other', name: dept?.name || deptName || 'ฝ่ายงานทั่วไป' };
+    };
+
     // User Modal Open Handlers
     const openCreateUserModal = () => {
         setEditingUser(null);
@@ -3807,8 +3845,7 @@ ${itemsListText}
                 const mainDepts = allDepartments.filter(d => !d.parent_id);
                 return mainDepts.map(main => {
                     const childIds = allDepartments.filter(d => d.parent_id === main.id).map(d => d.id);
-                    const allIds = [main.id, ...childIds];
-                    const projs = (allProjectsMaster || []).filter(p => allIds.includes(p.department_id));
+                    const projs = (allProjectsMaster || []).filter(p => allIds.includes(p.department_id) || allIds.includes(p.main_division_id) || getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name).id === main.id);
                     const totalProposed = projs.reduce((s, p) => s + (parseFloat(p.proposed_budget || p.estimated_budget) || 0), 0);
                     const totalAlloc = projs.reduce((s, p) => s + (parseFloat(p.allocated_budget || p.allocated_amount) || 0), 0);
                     const totalSpent = projs.reduce((s, p) => s + (parseFloat(p.spent_amount) || 0), 0);
@@ -5911,11 +5948,27 @@ ${itemsListText}
         const allocCount = pHead.preliminaryQueue?.filter(p => p.status === 'budget_approved').length || 0;
         const rejectCount = pHead.preliminaryQueue?.filter(p => p.status === 'budget_rejected').length || 0;
 
-        // Group preliminary projects by department
+        // Group preliminary projects by 4 Main Divisions
+        const mainDivisions = allDepartments.filter(d => !d.parent_id);
         const prelimByDeptMap = {};
+        mainDivisions.forEach(mainDept => {
+            prelimByDeptMap[mainDept.id] = {
+                id: mainDept.id,
+                name: mainDept.name,
+                projectCount: 0,
+                proposedSum: 0,
+                allocatedSum: 0,
+                prelimCount: 0,
+                allocCount: 0,
+                rejectCount: 0,
+                projects: []
+            };
+        });
+
         (pHead.preliminaryQueue || []).forEach(p => {
-            const deptId = p.department_id || p.department?.id || 'other';
-            const deptName = p.department?.name || 'ฝ่ายงานทั่วไป';
+            const div = getMainDivision(p.department_id || p.department?.id, p.department?.name);
+            const deptId = div.id;
+            const deptName = div.name;
             if (!prelimByDeptMap[deptId]) {
                 prelimByDeptMap[deptId] = {
                     id: deptId,
@@ -5940,7 +5993,7 @@ ${itemsListText}
 
             prelimByDeptMap[deptId].projects.push(p);
         });
-        const prelimDeptList = Object.values(prelimByDeptMap).sort((a, b) => b.proposedSum - a.proposedSum);
+        const prelimDeptList = Object.values(prelimByDeptMap).filter(d => d.projectCount > 0);
 
         const totalProposedSum = (pHead.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.proposed_budget || p.estimated_budget || 0), 0);
         const totalAllocatedSum = (pHead.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.allocated_budget || 0), 0);
@@ -10765,7 +10818,15 @@ ${itemsListText}
                 p.status === 'pending_approval';
 
             const matchesYear = projectYearFilter === 'all' || String(p.academic_year) === String(projectYearFilter);
-            const matchesDept = projectDeptFilter === 'all' || String(p.department_id) === String(projectDeptFilter);
+            const matchesDept = projectDeptFilter === 'all' || (() => {
+                if (String(p.department_id) === String(projectDeptFilter)) return true;
+                const filterDept = allDepartments.find(d => String(d.id) === String(projectDeptFilter));
+                if (filterDept && !filterDept.parent_id) {
+                    const div = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+                    return String(div.id) === String(projectDeptFilter);
+                }
+                return false;
+            })();
 
             return matchesSearch && matchesStatus && matchesYear && matchesDept;
         });
@@ -10785,11 +10846,25 @@ ${itemsListText}
 
         const years = Array.from(new Set(allProjectsMaster.map(p => p.academic_year))).sort().reverse();
 
-        // Group budgets & projects by department (แยกตามฝ่าย/งาน รวมรายละเอียดโครงการในตารางเดียว)
+        // Group budgets & projects by the 4 Main Divisions (รวมโครงการย่อยเข้าไปอยู่ใน ๔ ฝ่ายหลัก)
+        const mainDivisions = allDepartments.filter(d => !d.parent_id);
         const deptSummaryMap = {};
+        mainDivisions.forEach(mainDept => {
+            deptSummaryMap[mainDept.id] = {
+                id: mainDept.id,
+                name: mainDept.name,
+                projectCount: 0,
+                estimatedSum: 0,
+                allocatedSum: 0,
+                approvedCount: 0,
+                projects: []
+            };
+        });
+
         filteredProjects.forEach(p => {
-            const deptId = p.department_id || 'other';
-            const deptName = p.department_name || 'ไม่ระบุฝ่าย/งาน';
+            const div = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+            const deptId = div.id;
+            const deptName = div.name;
             if (!deptSummaryMap[deptId]) {
                 deptSummaryMap[deptId] = {
                     id: deptId,
@@ -10809,7 +10884,10 @@ ${itemsListText}
             }
             deptSummaryMap[deptId].projects.push(p);
         });
-        const deptSummaryList = Object.values(deptSummaryMap).sort((a, b) => b.estimatedSum - a.estimatedSum);
+
+        const isFiltered = (projectSearch && projectSearch.trim() !== '') || projectStatusFilter !== 'all' || projectDeptFilter !== 'all' || projectYearFilter !== 'all';
+        const deptSummaryList = Object.values(deptSummaryMap)
+            .filter(d => !isFiltered || d.projectCount > 0);
 
         return (
             <div className="space-y-6 font-sans">
@@ -10922,8 +11000,15 @@ ${itemsListText}
                             onChange={(e) => setProjectDeptFilter(e.target.value)}
                             className="w-full text-xs rounded-xl border-purple-200 focus:border-purple-500 focus:ring-purple-500"
                         >
-                            <option value="all">ทุกฝ่ายงาน/แผนกวิชา</option>
-                            {allDepartments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                            <option value="all">ทุกฝ่ายงาน / ทั้ง 4 ฝ่ายหลัก</option>
+                            {allDepartments.filter(d => !d.parent_id).map(main => (
+                                <optgroup key={main.id} label={`🏢 ${main.name}`}>
+                                    <option value={main.id}>-- ทั้งหมดของ {main.name} --</option>
+                                    {allDepartments.filter(sub => sub.parent_id === main.id).map(sub => (
+                                        <option key={sub.id} value={sub.id}>&nbsp;&nbsp;&nbsp;&nbsp;↳ {sub.name}</option>
+                                    ))}
+                                </optgroup>
+                            ))}
                         </select>
                     </div>
                 </div>

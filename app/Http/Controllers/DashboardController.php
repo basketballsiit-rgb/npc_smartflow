@@ -268,11 +268,11 @@ class DashboardController extends Controller
                 'globalSpent' => Budget::sum('spent_amount'),
                 'fundingChannelProgress' => $fundingChannelProgress,
                 'preliminaryQueue' => Project::whereIn('status', ['preliminary', 'budget_approved', 'budget_rejected'])
-                    ->with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals'])
+                    ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])
                     ->latest()
                     ->get(),
                 'planHeadQueue' => Project::whereIn('status', ['pending_approval', 'submitted', 'draft', 'rejected'])
-                    ->with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals'])
+                    ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])
                     ->orderByRaw("CASE WHEN status = 'pending_approval' AND current_approval_step = 3 THEN 0 WHEN status = 'pending_approval' THEN 1 ELSE 2 END")
                     ->latest()
                     ->get(),
@@ -553,7 +553,7 @@ class DashboardController extends Controller
 
         // Master Projects list for Admin, Plan Head, Plan Staff, Procurement, Finance & Executives
         if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isProcurementHead() || $user->isProcurementStaff() || $user->isFinanceStaff() || $user->isExecutive() || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets'])) {
-            $data['allProjectsMaster'] = Project::with(['user', 'department', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
+            $data['allProjectsMaster'] = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
                 ->latest()
                 ->get()
                 ->map(function ($p) {
@@ -564,6 +564,10 @@ class DashboardController extends Controller
                         $fundingId = 7;
                     }
                     $allocAmt = (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?? 0));
+                    $dept = $p->department;
+                    $parentDept = $dept?->parent;
+                    $mainDivId = $parentDept ? $parentDept->id : ($dept?->id ?? null);
+                    $mainDivName = $parentDept ? $parentDept->name : ($dept?->name ?? 'ฝ่ายงานทั่วไป');
                     return [
                         'id' => $p->id,
                         'title' => $p->title,
@@ -591,8 +595,11 @@ class DashboardController extends Controller
                         'created_at' => $p->created_at ? $p->created_at->format('Y-m-d H:i') : '',
                         'proposer_name' => $p->user?->name ?? 'ไม่ระบุชื่อ',
                         'proposer_email' => $p->user?->email ?? '',
-                        'department_name' => $p->department?->name ?? 'ฝ่ายงานทั่วไป',
+                        'department_name' => $dept?->name ?? 'ฝ่ายงานทั่วไป',
                         'department_id' => $p->department_id,
+                        'parent_department_id' => $parentDept?->id,
+                        'main_division_id' => $mainDivId,
+                        'main_division_name' => $mainDivName,
                         'funding_source_name' => $fundingName,
                         'funding_source_id' => $fundingId,
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
