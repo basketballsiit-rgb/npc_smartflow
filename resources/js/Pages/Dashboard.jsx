@@ -5656,6 +5656,7 @@ ${itemsListText}
                 budgetBySource: Array(7).fill(0),
                 spentBySource: Array(7).fill(0),
                 spentAmount: 0,
+                items: [],
             };
         });
 
@@ -5684,6 +5685,15 @@ ${itemsListText}
                 rowData[cat].budgetBySource[colIdx] += alloc;
                 rowData[cat].spentBySource[colIdx] += spent;
             }
+
+            rowData[cat].items.push({
+                type: 'routine',
+                title: plan.title || 'งบประมาณประจำ',
+                amount: alloc,
+                sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
+                sourceId: sourceId,
+                colIdx: colIdx,
+            });
         });
 
         const isProjectApprovedForReport = (p) => {
@@ -5723,6 +5733,15 @@ ${itemsListText}
                     rowData[cat].budgetBySource[colIdx] += alloc;
                     rowData[cat].spentBySource[colIdx] += spent;
                 }
+
+                rowData[cat].items.push({
+                    type: 'project',
+                    title: p.title || p.name || 'โครงการ',
+                    amount: alloc,
+                    sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
+                    sourceId: sourceId,
+                    colIdx: colIdx,
+                });
             }
         });
 
@@ -5735,6 +5754,9 @@ ${itemsListText}
                     for (let i = 0; i < 7; i++) {
                         rowData[parentKey].budgetBySource[i] += rowData[k].budgetBySource[i];
                         rowData[parentKey].spentBySource[i] += rowData[k].spentBySource[i];
+                    }
+                    if (rowData[k].items) {
+                        rowData[parentKey].items.push(...rowData[k].items);
                     }
                 }
             });
@@ -5924,17 +5946,35 @@ ${itemsListText}
                                         titleClass = `py-2 px-3 text-left border-r border-gray-200 text-gray-600 ${row.id.split('.').length > 2 ? 'pl-8' : 'pl-6'}`;
                                     }
 
+                                    const totalItemsCount = row.items?.length || 0;
+                                    const planTooltip = totalItemsCount > 0
+                                        ? `รายการงบประมาณที่รวมอยู่ในแถวนี้ (${totalItemsCount} รายการ):\n` +
+                                          row.items.map(it => `• [${it.type === 'project' ? 'โครงการ' : 'งบประจำ'}] ${it.title}: ฿${Number(it.amount).toLocaleString()} (${it.sourceName})`).join('\n')
+                                        : undefined;
+
                                     return (
                                         <tr key={row.id} className={rowClass}>
-                                            <td className={titleClass}>{row.title}</td>
-                                            <td className="py-2 px-2 text-right border-r border-gray-200 font-medium">
+                                            <td className={titleClass} title={planTooltip}>
+                                                <span>{row.title}</span>
+                                                {totalItemsCount > 0 && !row.isParent && (
+                                                    <span className="ml-1 text-[9px] font-normal text-purple-600">({totalItemsCount})</span>
+                                                )}
+                                            </td>
+                                            <td className="py-2 px-2 text-right border-r border-gray-200 font-medium" title={planTooltip}>
                                                 {row.planBudget > 0 ? row.planBudget.toLocaleString() : '-'}
                                             </td>
-                                            {row.budgetBySource.map((val, idx) => (
-                                                <td key={idx} className="py-2 px-2 text-right border-r border-gray-200">
-                                                    {val > 0 ? val.toLocaleString() : '-'}
-                                                </td>
-                                            ))}
+                                            {row.budgetBySource.map((val, idx) => {
+                                                const sourceItems = row.items?.filter(it => it.colIdx === idx) || [];
+                                                const sourceTooltip = sourceItems.length > 0
+                                                    ? `ที่มาของยอด (${sourceItems.length} รายการ):\n` +
+                                                      sourceItems.map(it => `• [${it.type === 'project' ? 'โครงการ' : 'งบประจำ'}] ${it.title}: ฿${Number(it.amount).toLocaleString()}`).join('\n')
+                                                    : undefined;
+                                                return (
+                                                    <td key={idx} className="py-2 px-2 text-right border-r border-gray-200" title={sourceTooltip}>
+                                                        {val > 0 ? val.toLocaleString() : '-'}
+                                                    </td>
+                                                );
+                                            })}
                                             <td className="py-2 px-2 text-right border-r border-gray-200 font-bold text-gray-800">
                                                 {totalSpent > 0 ? totalSpent.toLocaleString() : '-'}
                                             </td>
