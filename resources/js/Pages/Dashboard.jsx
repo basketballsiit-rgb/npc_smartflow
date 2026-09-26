@@ -760,6 +760,7 @@ export default function Dashboard({
     };
 
     const [activeTab, setActiveTab] = useState(getDefaultTab());
+    const [executiveTableView, setExecutiveTableView] = useState('projects');
 
     // API Connection Status & Mock Trigger
     const apiStatus = apiIntegrationStatus 
@@ -10746,80 +10747,126 @@ ${itemsListText}
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-sm">
-                    <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/70 px-6 py-4">
-                        <h3 className="text-lg font-bold text-slate-900">สรุปสถิติและงบประมาณจำแนกตาม ๔ ฝ่ายหลัก และงานย่อยในสังกัด</h3>
-                        <p className="text-xs text-slate-600">บริหารจัดการครอบคลุม ฝ่ายวิชาการ, ฝ่ายกิจการนักเรียน นักศึกษา, ฝ่ายบริหารทรัพยากร และ ฝ่ายยุทธศาสตร์และแผนงาน</p>
+                {/* View Switcher Header Bar */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 sm:p-5 rounded-3xl border border-purple-100 shadow-sm">
+                    <div>
+                        <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                            <span>🏛️</span>
+                            {executiveTableView === 'projects'
+                                ? 'สรุปโครงการแยกตาม ๔ ฝ่ายหลัก (แบบภาพที่ 1)'
+                                : 'สรุปสถิติตามผังโครงสร้างงานย่อย (แบบภาพที่ 2)'}
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                            {executiveTableView === 'projects'
+                                ? 'แสดงรายละเอียดโครงการ ผู้รับผิดชอบ งบประมาณเสนอขอ งบจัดสรร และสถานะอนุมัติแยกตาม ๔ ฝ่ายหลักของสถานศึกษา'
+                                : 'แสดงสถิติและงบประมาณจำแนกตามโครงสร้างฝ่ายและงานย่อยในสังกัด'}
+                        </p>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-900">
-                                    <th className="px-6 py-3.5">ฝ่ายหลัก / งานย่อยในสังกัด</th>
-                                    <th className="px-6 py-3.5">โครงการรวม</th>
-                                    <th className="px-6 py-3.5">อนุมัติแล้ว</th>
-                                    <th className="px-6 py-3.5">งบประมาณเสนอขอ</th>
-                                    <th className="px-6 py-3.5">เบิกจ่ายจริงแล้ว</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-purple-100 text-sm">
-                                {(executiveData.divisionTreeMetrics || []).map((mainDiv) => (
-                                    <div key={`main-group-${mainDiv.id}`} className="contents">
-                                        {/* Main Division Header Row */}
-                                        <tr className="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-950 text-white font-bold">
-                                            <td className="px-6 py-3.5 text-base flex items-center gap-2">
-                                                <span>🏛️</span>
-                                                <span>{mainDiv.name}</span>
-                                            </td>
-                                            <td className="px-6 py-3.5 font-bold">{mainDiv.total_projects} โครงการ</td>
-                                            <td className="px-6 py-3.5 font-bold text-emerald-300">{mainDiv.approved_projects} โครงการ</td>
-                                            <td className="px-6 py-3.5 font-bold">
-                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(mainDiv.total_estimated_budget)}
-                                            </td>
-                                            <td className="px-6 py-3.5 font-bold text-emerald-200">
-                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(mainDiv.total_spent_budget)}
-                                            </td>
-                                        </tr>
-
-                                        {/* Sub-work units under this main division */}
-                                        {mainDiv.children && mainDiv.children.map((sub) => {
-                                            const isOffice = String(sub.id).includes('main');
-                                            const hasProjects = (sub.total_projects || 0) > 0;
-                                            return (
-                                                <tr key={`sub-${sub.id}`} className={`transition-colors ${hasProjects ? 'bg-purple-50/20 hover:bg-purple-50/50' : 'hover:bg-slate-50/50'} text-slate-800`}>
-                                                    <td className="px-6 py-3 pl-12 font-medium flex items-center gap-2">
-                                                        <span className="text-purple-400 font-mono text-xs">└─</span>
-                                                        {isOffice && <span className="text-sm">🏢</span>}
-                                                        <span className={hasProjects ? 'font-bold text-purple-950' : 'text-slate-700'}>
-                                                            {sub.name}
-                                                        </span>
-                                                        {isOffice && (
-                                                            <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-bold">
-                                                                ระดับฝ่าย
-                                                            </span>
-                                                        )}
-                                                    </td>
-                                                    <td className={`px-6 py-3 ${hasProjects ? 'font-black text-purple-950' : 'text-slate-500'}`}>
-                                                        {sub.total_projects} โครงการ
-                                                    </td>
-                                                    <td className={`px-6 py-3 ${sub.approved_projects > 0 ? 'font-bold text-emerald-700' : 'text-slate-400'}`}>
-                                                        {sub.approved_projects} โครงการ
-                                                    </td>
-                                                    <td className={`px-6 py-3 ${sub.total_estimated_budget > 0 ? 'font-mono font-bold text-slate-900' : 'font-mono text-slate-400'}`}>
-                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_estimated_budget)}
-                                                    </td>
-                                                    <td className={`px-6 py-3 ${sub.total_spent_budget > 0 ? 'font-mono font-bold text-emerald-700' : 'font-mono text-slate-400'}`}>
-                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_spent_budget)}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </div>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="flex items-center gap-1.5 p-1 bg-purple-100/70 rounded-2xl border border-purple-200 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setExecutiveTableView('projects')}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                                executiveTableView === 'projects'
+                                    ? 'bg-purple-900 text-white shadow-sm'
+                                    : 'text-purple-800 hover:bg-purple-200/60'
+                            }`}
+                        >
+                            <span>📋</span> แยกโครงการตาม ๔ ฝ่าย (แบบภาพที่ 1)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setExecutiveTableView('departments')}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                                executiveTableView === 'departments'
+                                    ? 'bg-purple-900 text-white shadow-sm'
+                                    : 'text-purple-800 hover:bg-purple-200/60'
+                            }`}
+                        >
+                            <span>🏛️</span> ผังงานย่อย (แบบภาพที่ 2)
+                        </button>
                     </div>
                 </div>
+
+                {/* Conditional View: Projects by 4 Main Divisions (Picture 1) OR Org Chart Tree (Picture 2) */}
+                {executiveTableView === 'projects' ? (
+                    renderAllProjectsTab()
+                ) : (
+                    <div className="overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-sm">
+                        <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/70 px-6 py-4">
+                            <h3 className="text-lg font-bold text-slate-900">สรุปสถิติและงบประมาณจำแนกตาม ๔ ฝ่ายหลัก และงานย่อยในสังกัด</h3>
+                            <p className="text-xs text-slate-600">บริหารจัดการครอบคลุม ฝ่ายวิชาการ, ฝ่ายกิจการนักเรียน นักศึกษา, ฝ่ายบริหารทรัพยากร และ ฝ่ายยุทธศาสตร์และแผนงาน</p>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-900">
+                                        <th className="px-6 py-3.5">ฝ่ายหลัก / งานย่อยในสังกัด</th>
+                                        <th className="px-6 py-3.5">โครงการรวม</th>
+                                        <th className="px-6 py-3.5">อนุมัติแล้ว</th>
+                                        <th className="px-6 py-3.5">งบประมาณเสนอขอ</th>
+                                        <th className="px-6 py-3.5">เบิกจ่ายจริงแล้ว</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-purple-100 text-sm">
+                                    {(executiveData.divisionTreeMetrics || []).map((mainDiv) => (
+                                        <div key={`main-group-${mainDiv.id}`} className="contents">
+                                            {/* Main Division Header Row */}
+                                            <tr className="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-950 text-white font-bold">
+                                                <td className="px-6 py-3.5 text-base flex items-center gap-2">
+                                                    <span>🏛️</span>
+                                                    <span>{mainDiv.name}</span>
+                                                </td>
+                                                <td className="px-6 py-3.5 font-bold">{mainDiv.total_projects} โครงการ</td>
+                                                <td className="px-6 py-3.5 font-bold text-emerald-300">{mainDiv.approved_projects} โครงการ</td>
+                                                <td className="px-6 py-3.5 font-bold">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(mainDiv.total_estimated_budget)}
+                                                </td>
+                                                <td className="px-6 py-3.5 font-bold text-emerald-200">
+                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(mainDiv.total_spent_budget)}
+                                                </td>
+                                            </tr>
+
+                                            {/* Sub-work units under this main division */}
+                                            {mainDiv.children && mainDiv.children.map((sub) => {
+                                                const isOffice = String(sub.id).includes('main');
+                                                const hasProjects = (sub.total_projects || 0) > 0;
+                                                return (
+                                                    <tr key={`sub-${sub.id}`} className={`transition-colors ${hasProjects ? 'bg-purple-50/20 hover:bg-purple-50/50' : 'hover:bg-slate-50/50'} text-slate-800`}>
+                                                        <td className="px-6 py-3 pl-12 font-medium flex items-center gap-2">
+                                                            <span className="text-purple-400 font-mono text-xs">└─</span>
+                                                            {isOffice && <span className="text-sm">🏢</span>}
+                                                            <span className={hasProjects ? 'font-bold text-purple-950' : 'text-slate-700'}>
+                                                                {sub.name}
+                                                            </span>
+                                                            {isOffice && (
+                                                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-bold">
+                                                                    ระดับฝ่าย
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className={`px-6 py-3 ${hasProjects ? 'font-black text-purple-950' : 'text-slate-500'}`}>
+                                                            {sub.total_projects} โครงการ
+                                                        </td>
+                                                        <td className={`px-6 py-3 ${sub.approved_projects > 0 ? 'font-bold text-emerald-700' : 'text-slate-400'}`}>
+                                                            {sub.approved_projects} โครงการ
+                                                        </td>
+                                                        <td className={`px-6 py-3 ${sub.total_estimated_budget > 0 ? 'font-mono font-bold text-slate-900' : 'font-mono text-slate-400'}`}>
+                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_estimated_budget)}
+                                                        </td>
+                                                        <td className={`px-6 py-3 ${sub.total_spent_budget > 0 ? 'font-mono font-bold text-emerald-700' : 'font-mono text-slate-400'}`}>
+                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_spent_budget)}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </div>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };
