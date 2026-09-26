@@ -37,7 +37,7 @@ class DatabaseSeeder extends Seeder
         $departments = [
             ['name' => 'ฝ่ายบริหารทรัพยากร', 'code' => 'PLAN'],
             ['name' => 'ฝ่ายวิชาการ', 'code' => 'ACAD'],
-            ['name' => 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', 'code' => 'STUD'],
+            ['name' => 'ฝ่ายกิจการนักเรียน นักศึกษา', 'code' => 'STUD'],
             ['name' => 'ฝ่ายยุทธศาสตร์และแผนงาน', 'code' => 'ADMIN'],
         ];
 

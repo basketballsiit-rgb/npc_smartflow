@@ -1179,9 +1179,9 @@ export default function Dashboard({
         const deptText = p.department?.name || p.department_name || '';
         if (!defaultCat) {
             if (deptText.includes('วิชาการ')) defaultCat = '6.1';
-            else if (deptText.includes('พัฒนากิจการ') || deptText.includes('นักเรียน')) defaultCat = '6.2';
+            else if (deptText.includes('กิจการ') || deptText.includes('พัฒนากิจการ') || deptText.includes('นักเรียน')) defaultCat = '6.2';
             else if (deptText.includes('บริหาร') || deptText.includes('พัสดุ') || deptText.includes('ทรัพยากร')) defaultCat = '6.3';
-            else if (deptText.includes('แผน')) defaultCat = '6.4';
+            else if (deptText.includes('แผน') || deptText.includes('ยุทธศาสตร์')) defaultCat = '6.4';
             else defaultCat = '6.1';
         }
         setCommitteeForm({
@@ -1346,7 +1346,7 @@ export default function Dashboard({
             stepRole = 'รองฝ่ายที่เกี่ยวข้อง';
             stepIcon = '🎖️';
         } else if (currentStep === 5) {
-            stepRole = 'รองฝ่ายแผนงานฯ';
+            stepRole = 'รองฝ่ายยุทธศาสตร์และแผนงาน';
             stepIcon = '📑';
         } else if (currentStep === 6) {
             stepRole = 'ผู้อำนวยการ';
@@ -1596,7 +1596,7 @@ export default function Dashboard({
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อตำแหน่งรองผู้อำนวยการฝ่าย</label>
-                            <input id="swal-deputy-pos" class="swal2-input !m-0 !w-full !text-sm" value="${dept.deputy_director_position || ''}" placeholder="เช่น รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ">
+                            <input id="swal-deputy-pos" class="swal2-input !m-0 !w-full !text-sm" value="${dept.deputy_director_position || ''}" placeholder="เช่น รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน">
                         </div>
                     </div>
                 `,
@@ -4883,9 +4883,9 @@ ${itemsListText}
                                         <optgroup label="3. ค่าวัสดุ">
                                             <option value="3.1">3.1 วัสดุงานอาคาร</option>
                                             <option value="3.2.1">3.2.1 วัสดุสำนักงาน - ฝ่ายวิชาการ</option>
-                                            <option value="3.2.2">3.2.2 วัสดุสำนักงาน - ฝ่ายพัฒนากิจการนักเรียนนักศึกษา</option>
+                                            <option value="3.2.2">3.2.2 วัสดุสำนักงาน - ฝ่ายกิจการนักเรียน นักศึกษา</option>
                                             <option value="3.2.3">3.2.3 วัสดุสำนักงาน - ฝ่ายบริหารทรัพยากร</option>
-                                            <option value="3.2.4">3.2.4 วัสดุสำนักงาน - ฝ่ายแผนฯ</option>
+                                            <option value="3.2.4">3.2.4 วัสดุสำนักงาน - ฝ่ายยุทธศาสตร์และแผนงาน</option>
                                             <option value="3.3">3.3 วัสดุเชื้อเพลิงและหล่อลื่น</option>
                                         </optgroup>
                                         <optgroup label="4. วัสดุการศึกษา">
@@ -5497,9 +5497,9 @@ ${itemsListText}
             { id: '3.1', title: '3.1 วัสดุงานอาคาร', parentId: '3' },
             { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSubParent: true, parentId: '3' },
             { id: '3.2.1', title: 'ฝ่ายวิชาการ', parentId: '3.2' },
-            { id: '3.2.2', title: 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', parentId: '3.2' },
+            { id: '3.2.2', title: 'ฝ่ายกิจการนักเรียน นักศึกษา', parentId: '3.2' },
             { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', parentId: '3.2' },
-            { id: '3.2.4', title: 'ฝ่ายแผนฯ', parentId: '3.2' },
+            { id: '3.2.4', title: 'ฝ่ายยุทธศาสตร์และแผนงาน', parentId: '3.2' },
             { id: '3.3', title: '3.3 วัสดุเชื้อเพลิงและหล่อลื่น', parentId: '3' },
             { id: '4', title: '4. วัสดุการศึกษา', isParent: true },
             { id: '4.1', title: '4.1 หลักสูตรวิชาชีพระยะสั้น', parentId: '4' },
@@ -5519,9 +5519,9 @@ ${itemsListText}
             { id: '5.5', title: '5.5 ค่าบริการด้านสื่อสารโทรคมนาคม', parentId: '5' },
             { id: '6', title: '6. โครงการ', isParent: true },
             { id: '6.1', title: '6.1 โครงการฝ่ายวิชาการ', parentId: '6' },
-            { id: '6.2', title: '6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา', parentId: '6' },
+            { id: '6.2', title: '6.2 โครงการฝ่ายกิจการนักเรียน นักศึกษา', parentId: '6' },
             { id: '6.3', title: '6.3 โครงการฝ่ายบริหารทรัพยากร', parentId: '6' },
-            { id: '6.4', title: '6.4 โครงการฝ่ายแผนงานและความร่วมมือ', parentId: '6' },
+            { id: '6.4', title: '6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน', parentId: '6' },
             { id: '7', title: '7. สำรองจ่าย', isParent: true },
             { id: '7.1', title: '7.1 สำรองจ่าย', parentId: '7' }
         ];
@@ -5580,9 +5580,9 @@ ${itemsListText}
             if (!cat) {
                 const deptName = p.department_name || p.department?.name || '';
                 if (deptName.includes('วิชาการ')) cat = '6.1';
-                else if (deptName.includes('พัฒนากิจการ') || deptName.includes('นักเรียน')) cat = '6.2';
+                else if (deptName.includes('กิจการ') || deptName.includes('พัฒนากิจการ') || deptName.includes('นักเรียน')) cat = '6.2';
                 else if (deptName.includes('บริหาร') || deptName.includes('พัสดุ') || deptName.includes('บริหารทรัพยากร')) cat = '6.3';
-                else if (deptName.includes('วางแผน') || deptName.includes('แผน')) cat = '6.4';
+                else if (deptName.includes('วางแผน') || deptName.includes('แผน') || deptName.includes('ยุทธศาสตร์')) cat = '6.4';
                 else cat = '6.1'; // fallback
             }
 
@@ -10599,7 +10599,7 @@ ${itemsListText}
                 <div className="overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-sm">
                     <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/70 px-6 py-4">
                         <h3 className="text-lg font-bold text-slate-900">สรุปสถิติและงบประมาณจำแนกตาม ๔ ฝ่ายหลัก และงานย่อยในสังกัด</h3>
-                        <p className="text-xs text-slate-600">บริหารจัดการครอบคลุม ฝ่ายบริหารทรัพยากร, ฝ่ายยุทธศาสตร์และแผนงาน, ฝ่ายวิชาการ และ ฝ่ายพัฒนากิจการนักเรียนนักศึกษา</p>
+                        <p className="text-xs text-slate-600">บริหารจัดการครอบคลุม ฝ่ายวิชาการ, ฝ่ายกิจการนักเรียน นักศึกษา, ฝ่ายบริหารทรัพยากร และ ฝ่ายยุทธศาสตร์และแผนงาน</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
@@ -11179,7 +11179,7 @@ ${itemsListText}
             case 4:
                 return { title: 'ขั้นตอนที่ ๔: หัวหน้างานวางแผนฯ', role: 'หัวหน้างานวางแผนและงบประมาณ', icon: '📊' };
             case 5:
-                return { title: 'ขั้นตอนที่ ๕: รองผู้อำนวยการ', role: 'รองผู้อำนวยการฝ่ายแผนงานฯ', icon: '👔' };
+                return { title: 'ขั้นตอนที่ ๕: รองผู้อำนวยการ', role: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน', icon: '👔' };
             case 6:
                 return { title: 'ขั้นตอนที่ ๖: ผู้อำนวยการวิทยาลัย', role: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน', icon: '🏛️' };
             default:
@@ -13816,9 +13816,9 @@ return (
                                                 className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
                                             >
                                                 <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
-                                                <option value="6.2">6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา</option>
+                                                <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียน นักศึกษา</option>
                                                 <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
-                                                <option value="6.4">6.4 โครงการฝ่ายแผนงานและความร่วมมือ</option>
+                                                <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
                                             </select>
                                         </div>
                                     </div>
@@ -13991,9 +13991,9 @@ return (
                                                     className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
                                                 >
                                                     <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
-                                                    <option value="6.2">6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา</option>
+                                                    <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียน นักศึกษา</option>
                                                     <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
-                                                    <option value="6.4">6.4 โครงการฝ่ายแผนงานและความร่วมมือ</option>
+                                                    <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
                                                 </select>
                                             </div>
                                         </div>

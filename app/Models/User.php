@@ -271,7 +271,7 @@ class User extends Authenticatable
         // ตรวจสอบชื่อตำแหน่งรองผู้อำนวยการว่าตรงกับฝ่ายหรือไม่
         if (str_contains($mainDeptName, 'บริหารทรัพยากร') && str_contains($userPosText, 'บริหารทรัพยากร')) return true;
         if (str_contains($mainDeptName, 'วิชาการ') && str_contains($userPosText, 'วิชาการ')) return true;
-        if (str_contains($mainDeptName, 'พัฒนากิจการ') && (str_contains($userPosText, 'พัฒนากิจการ') || str_contains($userPosText, 'พัฒนานักเรียน'))) return true;
+        if ((str_contains($mainDeptName, 'กิจการนักเรียน') || str_contains($mainDeptName, 'พัฒนากิจการ')) && (str_contains($userPosText, 'กิจการนักเรียน') || str_contains($userPosText, 'พัฒนากิจการ') || str_contains($userPosText, 'พัฒนานักเรียน'))) return true;
         if ((str_contains($mainDeptName, 'แผนงาน') || str_contains($mainDeptName, 'ยุทธศาสตร์')) && (str_contains($userPosText, 'แผนงาน') || str_contains($userPosText, 'ยุทธศาสตร์'))) return true;
 
         // Fallback: หากเป็นผู้บริหารแต่ไม่ระบุฝ่ายเฉพาะ ให้มีสิทธิ์

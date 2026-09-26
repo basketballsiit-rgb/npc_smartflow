@@ -13,7 +13,7 @@ class DivisionStructureSeeder extends Seeder
             ['name' => 'ฝ่ายบริหารทรัพยากร', 'code' => 'RESOURCE'],
             ['name' => 'ฝ่ายยุทธศาสตร์และแผนงาน', 'code' => 'STRATEGY_PLAN'],
             ['name' => 'ฝ่ายวิชาการ', 'code' => 'ACADEMIC'],
-            ['name' => 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', 'code' => 'STUDENT_AFFAIRS'],
+            ['name' => 'ฝ่ายกิจการนักเรียน นักศึกษา', 'code' => 'STUDENT_AFFAIRS'],
         ];
 
         $parents = [];
@@ -72,7 +72,7 @@ class DivisionStructureSeeder extends Seeder
 
         // Re-map existing orphaned departments if any
         Department::whereNull('parent_id')
-            ->whereNotIn('name', ['ฝ่ายบริหารทรัพยากร', 'ฝ่ายยุทธศาสตร์และแผนงาน', 'ฝ่ายวิชาการ', 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา'])
+            ->whereNotIn('name', ['ฝ่ายบริหารทรัพยากร', 'ฝ่ายยุทธศาสตร์และแผนงาน', 'ฝ่ายวิชาการ', 'ฝ่ายกิจการนักเรียน นักศึกษา'])
             ->get()
             ->each(function($d) use ($parents) {
                 $n = $d->name;
