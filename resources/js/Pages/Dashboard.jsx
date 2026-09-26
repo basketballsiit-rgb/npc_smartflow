@@ -6053,8 +6053,14 @@ ${itemsListText}
             planHeadQueue: [],
         };
 
+        const isAllocatedOrApproved = (p) => {
+            return p.status === 'budget_approved' || 
+                   ['submitted', 'pending_approval', 'approved', 'in_progress', 'completed', 'draft'].includes(p.status) || 
+                   (parseFloat(p.allocated_budget || 0) > 0);
+        };
+
         const prelimCount = pHead.preliminaryQueue?.filter(p => p.status === 'preliminary').length || 0;
-        const allocCount = pHead.preliminaryQueue?.filter(p => p.status === 'budget_approved').length || 0;
+        const allocCount = pHead.preliminaryQueue?.filter(isAllocatedOrApproved).length || 0;
         const rejectCount = pHead.preliminaryQueue?.filter(p => p.status === 'budget_rejected').length || 0;
 
         // Group preliminary projects by 4 Main Divisions
@@ -6097,8 +6103,8 @@ ${itemsListText}
             prelimByDeptMap[deptId].proposedSum += proposed;
             prelimByDeptMap[deptId].allocatedSum += allocated;
             if (p.status === 'preliminary') prelimByDeptMap[deptId].prelimCount += 1;
-            else if (p.status === 'budget_approved') prelimByDeptMap[deptId].allocCount += 1;
             else if (p.status === 'budget_rejected') prelimByDeptMap[deptId].rejectCount += 1;
+            else if (isAllocatedOrApproved(p)) prelimByDeptMap[deptId].allocCount += 1;
 
             prelimByDeptMap[deptId].projects.push(p);
         });
@@ -6265,7 +6271,7 @@ ${itemsListText}
                                                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.proposed_budget || p.estimated_budget)}
                                                             </td>
                                                             <td className="px-3 py-2.5 text-xs align-top">
-                                                                {p.status === 'budget_approved' || p.allocated_budget > 0 ? (
+                                                                {p.status === 'budget_approved' || (p.allocated_budget > 0) || ['submitted', 'pending_approval', 'approved', 'in_progress', 'completed'].includes(p.status) ? (
                                                                     <div>
                                                                         <div className="font-extrabold text-emerald-700 text-xs">
                                                                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.allocated_budget || p.estimated_budget)}
@@ -6281,7 +6287,27 @@ ${itemsListText}
                                                             <td className="px-2 py-2.5 text-center align-top whitespace-nowrap">
                                                                 {p.status === 'budget_approved' && (
                                                                     <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                                                                        ✅ จัดสรรแล้ว
+                                                                        ✅ จัดสรรแล้ว (รอทำเล่ม)
+                                                                    </span>
+                                                                )}
+                                                                {(p.status === 'submitted' || p.status === 'pending_approval') && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200">
+                                                                        ⏳ ยื่นขออนุมัติแล้ว (ขั้น {p.current_approval_step || 1})
+                                                                    </span>
+                                                                )}
+                                                                {(p.status === 'approved' || p.status === 'in_progress' || p.status === 'completed') && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-bold text-purple-700 border border-purple-200">
+                                                                        👑 อนุมัติสมบูรณ์แล้ว
+                                                                    </span>
+                                                                )}
+                                                                {p.status === 'draft' && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-300">
+                                                                        📝 ร่างเล่มโครงการ
+                                                                    </span>
+                                                                )}
+                                                                {p.status === 'rejected' && (
+                                                                    <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">
+                                                                        ↩️ ส่งกลับแก้ไข
                                                                     </span>
                                                                 )}
                                                                 {p.status === 'budget_rejected' && (
@@ -6297,7 +6323,7 @@ ${itemsListText}
                                                             </td>
                                                             <td className="px-2.5 py-2.5 whitespace-nowrap text-right align-top">
                                                                 <div className="flex items-center justify-end gap-1">
-                                                                    {p.status !== 'budget_approved' && (
+                                                                    {p.status === 'preliminary' && (
                                                                         <button
                                                                             onClick={() => openCommitteeModal(p)}
                                                                             className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap cursor-pointer"
@@ -6306,10 +6332,19 @@ ${itemsListText}
                                                                             ⚖️ พิจารณา
                                                                         </button>
                                                                     )}
+                                                                    {p.status === 'budget_approved' && (
+                                                                        <button
+                                                                            onClick={() => openCommitteeModal(p)}
+                                                                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap cursor-pointer"
+                                                                            title="ปรับปรุงการจัดสรรงบประมาณ"
+                                                                        >
+                                                                            ✏️ ปรับงบ
+                                                                        </button>
+                                                                    )}
                                                                     <Link
                                                                         href={route('projects.show', p.id)}
                                                                         className="p-1 text-purple-700 hover:bg-purple-100 rounded-md transition text-xs"
-                                                                        title="ดูรายละเอียด"
+                                                                        title="ดูรายละเอียดโครงการ"
                                                                     >
                                                                         👁️
                                                                     </Link>

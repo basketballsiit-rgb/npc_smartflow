@@ -267,8 +267,7 @@ class DashboardController extends Controller
                 'globalEncumbered' => Budget::sum('encumbered_amount'),
                 'globalSpent' => Budget::sum('spent_amount'),
                 'fundingChannelProgress' => $fundingChannelProgress,
-                'preliminaryQueue' => Project::whereIn('status', ['preliminary', 'budget_approved', 'budget_rejected'])
-                    ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])
+                'preliminaryQueue' => Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])
                     ->latest()
                     ->get(),
                 'planHeadQueue' => Project::whereIn('status', ['pending_approval', 'submitted', 'draft', 'rejected'])
