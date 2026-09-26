@@ -6544,7 +6544,7 @@ ${itemsListText}
                                     <th className="px-6 py-3.5">ผู้เสนอโครงการ / ฝ่ายงาน</th>
                                     <th className="px-6 py-3.5">งบประมาณโครงการ</th>
                                     <th className="px-6 py-3.5 text-center">สถานะและขั้นตอนอนุมัติ</th>
-                                    <th className="px-6 py-3.5 text-right">การดำเนินการ (Full Control)</th>
+                                    <th className="px-6 py-3.5 text-right">การดำเนินการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-purple-100 text-sm">
@@ -6571,57 +6571,39 @@ ${itemsListText}
                                                 {renderProjectProgressBar(p.status, p.current_approval_step, p)}
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+                                                <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                                     <Link
                                                         href={route('projects.show', p.id)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="ตรวจสอบและจัดการโครงการ"
+                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                        title="ตรวจสอบและลงนามโครงการ"
                                                     >
                                                         🔍 ตรวจสอบ ➔
                                                     </Link>
                                                     {(p.status === 'draft' || p.status === 'rejected') && (
                                                         <button
                                                             onClick={() => handleResubmitProject(p)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
                                                             title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
                                                         >
                                                             🚀 ยื่นขออนุมัติ
                                                         </button>
                                                     )}
-                                                    {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && (
-                                                        <button
-                                                            onClick={() => handleAdminApproveProject(p, 'step')}
-                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-2.5 py-2 text-xs font-extrabold text-purple-950 shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="อนุมัติข้ามขั้นตอนปัจจุบันทันที (Admin Step Override)"
-                                                        >
-                                                            ⚡ อนุมัติลัด
-                                                        </button>
-                                                    )}
-                                                    {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && (
-                                                        <button
-                                                            onClick={() => handleAdminApproveProject(p, 'full')}
-                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-teal-700 px-2.5 py-2 text-xs font-extrabold text-white shadow-md hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="อนุมัติรวดเดียวสมบูรณ์ 6 ขั้นตอน (Admin Full 6-Step Override)"
-                                                        >
-                                                            👑 อนุมัติรวดเดียว
-                                                        </button>
-                                                    )}
                                                     {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && p.status !== 'completed' && (
                                                         <Link
                                                             href={route('projects.edit', p.id)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            className="p-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg border border-amber-200 transition text-xs shrink-0"
                                                             title="แก้ไขโครงการ"
                                                         >
-                                                            ✏️ แก้ไข
+                                                            ✏️
                                                         </Link>
                                                     )}
                                                     {(role === 'admin' || auth.user.is_admin) && (
                                                         <button
                                                             onClick={() => handleDeleteProject(p)}
-                                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition text-xs shrink-0"
                                                             title="ลบโครงการ"
                                                         >
-                                                            🗑️ ลบ
+                                                            🗑️
                                                         </button>
                                                     )}
                                                 </div>
