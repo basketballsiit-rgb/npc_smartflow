@@ -852,11 +852,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'budgets' })}
                                     className={getSubLinkClass(url.includes('tab=budgets'))}
-                                    title="งบประมาณสถานศึกษา & ประมาณการใช้จ่าย"
+                                    title="งบ บกศ. & ประมาณการใช้จ่าย"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=budgets'), 'text-amber-300')}>└─</span>
                                     <span className="text-sm">💰</span>
-                                    {isSidebarOpen && <span>งบสถานศึกษา & ประมาณการใช้จ่าย</span>}
+                                    {isSidebarOpen && <span>งบ บกศ. & ประมาณการใช้จ่าย</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'reviews' })}
@@ -1260,7 +1260,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                             <span>📊</span> ภาพรวมคำของบแยก 4 ฝ่าย
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>💰</span> งบสถานศึกษา & ประมาณการ
+                                            <span>💰</span> งบ บกศ. & ประมาณการ
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🔍</span> ตรวจสอบแผน & อนุมัติ

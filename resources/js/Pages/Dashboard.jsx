@@ -5462,16 +5462,28 @@ ${itemsListText}
     };
 
     const renderActionPlanReportTab = () => {
-        const getColumnIndexBySourceName = (name) => {
+        const getColumnIndexBySource = (name, sourceId) => {
+            if (sourceId) {
+                const idNum = Number(sourceId);
+                if (idNum >= 1 && idNum <= 7) return idNum - 1;
+            }
             if (!name) return -1;
-            const lowercaseName = name.toLowerCase();
-            if (lowercaseName.includes('ปวช') || lowercaseName.includes('ป.ว.ช')) return 0;
-            if (lowercaseName.includes('ปวส') || lowercaseName.includes('ป.ว.ส')) return 1;
-            if (lowercaseName.includes('ระยะสั้น')) return 2;
-            if (lowercaseName.includes('ทวิศึกษา')) return 3;
-            if (lowercaseName.includes('จัดการ')) return 4;
-            if (lowercaseName.includes('พัฒนา')) return 5;
-            if (lowercaseName.includes('บกศ') || lowercaseName.includes('บ.ก.ศ') || lowercaseName.includes('บำรุงการศึกษา')) return 6;
+            const lowercaseName = String(name).toLowerCase();
+            if (lowercaseName.includes('ปวช') || lowercaseName.includes('ป.ว.ช') || lowercaseName.includes('vec_cert')) return 0;
+            if (lowercaseName.includes('ปวส') || lowercaseName.includes('ป.ว.ส') || lowercaseName.includes('vec_dip')) return 1;
+            if (lowercaseName.includes('ระยะสั้น') || lowercaseName.includes('short_course')) return 2;
+            if (lowercaseName.includes('ทวิศึกษา') || lowercaseName.includes('dual_edu')) return 3;
+            if (lowercaseName.includes('จัดการ') || lowercaseName.includes('management')) return 4;
+            if ((lowercaseName.includes('พัฒนา') && !lowercaseName.includes('แผนพัฒนา')) || lowercaseName.includes('development')) return 5;
+            if (
+                lowercaseName.includes('บกศ') || 
+                lowercaseName.includes('บ.ก.ศ') || 
+                lowercaseName.includes('บำรุงการศึกษา') || 
+                lowercaseName.includes('สถานศึกษา') || 
+                lowercaseName.includes('รายได้') || 
+                lowercaseName.includes('revenue') || 
+                lowercaseName.includes('local_income')
+            ) return 6;
             return -1;
         };
 
@@ -5535,7 +5547,9 @@ ${itemsListText}
                 isParent: item.isParent,
                 isSubParent: item.isSubParent,
                 planBudget: 0,
+                budgetBySource: Array(7).fill(0),
                 spentBySource: Array(7).fill(0),
+                spentAmount: 0,
             };
         });
 
@@ -5547,8 +5561,9 @@ ${itemsListText}
             const alloc = parseFloat(plan.allocated_amount || 0);
             const spent = parseFloat(plan.spent_amount || 0);
 
-            // Add to planned budget
+            // Add to planned budget and spent
             rowData[cat].planBudget += alloc;
+            rowData[cat].spentAmount += spent;
 
             // If user customized the title (e.g. changed rate count like "1.1 ครูอัตราจ้าง 8 อัตรา"), update row title
             if (plan.title && plan.title.trim()) {
@@ -5556,9 +5571,11 @@ ${itemsListText}
             }
 
             // Resolve funding source column
-            const sourceName = plan.funding_source?.name;
-            const colIdx = getColumnIndexBySourceName(sourceName);
+            const sourceName = plan.funding_source?.name || plan.fundingSource?.name || '';
+            const sourceId = plan.funding_source_id || plan.funding_source?.id || plan.fundingSource?.id;
+            const colIdx = getColumnIndexBySource(sourceName, sourceId);
             if (colIdx !== -1) {
+                rowData[cat].budgetBySource[colIdx] += alloc;
                 rowData[cat].spentBySource[colIdx] += spent;
             }
         });
@@ -5591,10 +5608,13 @@ ${itemsListText}
 
             if (rowData[cat]) {
                 rowData[cat].planBudget += alloc;
+                rowData[cat].spentAmount += spent;
 
                 const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
-                const colIdx = getColumnIndexBySourceName(sourceName);
+                const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
+                const colIdx = getColumnIndexBySource(sourceName, sourceId);
                 if (colIdx !== -1) {
+                    rowData[cat].budgetBySource[colIdx] += alloc;
                     rowData[cat].spentBySource[colIdx] += spent;
                 }
             }
@@ -5605,7 +5625,9 @@ ${itemsListText}
             childKeys.forEach(k => {
                 if (rowData[k]) {
                     rowData[parentKey].planBudget += rowData[k].planBudget;
+                    rowData[parentKey].spentAmount += rowData[k].spentAmount;
                     for (let i = 0; i < 7; i++) {
+                        rowData[parentKey].budgetBySource[i] += rowData[k].budgetBySource[i];
                         rowData[parentKey].spentBySource[i] += rowData[k].spentBySource[i];
                     }
                 }
@@ -5629,7 +5651,7 @@ ${itemsListText}
         // 6. Calculate Top Summary Rows
         const transferBySource = Array(7).fill(0);
         centralAllocations.forEach(a => {
-            const colIdx = getColumnIndexBySourceName(a.funding_source?.name);
+            const colIdx = getColumnIndexBySource(a.funding_source?.name, a.funding_source_id || a.funding_source?.id);
             if (colIdx !== -1) {
                 transferBySource[colIdx] += parseFloat(a.amount || 0);
             }
@@ -5637,7 +5659,7 @@ ${itemsListText}
 
         const estimateBySource = Array(7).fill(0);
         routinePlans.forEach(plan => {
-            const colIdx = getColumnIndexBySourceName(plan.funding_source?.name);
+            const colIdx = getColumnIndexBySource(plan.funding_source?.name || plan.fundingSource?.name, plan.funding_source_id || plan.funding_source?.id);
             if (colIdx !== -1) {
                 estimateBySource[colIdx] += parseFloat(plan.allocated_amount || 0);
             }
@@ -5645,7 +5667,8 @@ ${itemsListText}
         allProjectsMaster.forEach(p => {
             if (!isProjectApprovedForReport(p)) return;
             const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
-            const colIdx = getColumnIndexBySourceName(sourceName);
+            const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
+            const colIdx = getColumnIndexBySource(sourceName, sourceId);
             if (colIdx !== -1) {
                 estimateBySource[colIdx] += parseFloat(p.allocated_amount || p.allocated_budget || p.estimated_budget || p.proposed_budget || 0);
             }
@@ -5653,12 +5676,14 @@ ${itemsListText}
 
         // 7. Calculate Grand Totals
         const grandPlanBudget = ['1', '2', '3', '4', '5', '6', '7'].reduce((sum, k) => sum + rowData[k].planBudget, 0);
+        const grandBudgetBySource = Array(7).fill(0);
         const grandSpentBySource = Array(7).fill(0);
         for (let i = 0; i < 7; i++) {
+            grandBudgetBySource[i] = ['1', '2', '3', '4', '5', '6', '7'].reduce((sum, k) => sum + rowData[k].budgetBySource[i], 0);
             grandSpentBySource[i] = ['1', '2', '3', '4', '5', '6', '7'].reduce((sum, k) => sum + rowData[k].spentBySource[i], 0);
         }
 
-        const grandSpentTotal = grandSpentBySource.reduce((sum, val) => sum + val, 0);
+        const grandSpentTotal = ['1', '2', '3', '4', '5', '6', '7'].reduce((sum, k) => sum + rowData[k].spentAmount, 0);
         const grandRemainingPlan = grandPlanBudget - grandSpentTotal;
 
         // 8. Calculate Bottom Balances
@@ -5670,9 +5695,9 @@ ${itemsListText}
 
         const planBalanceBySource = Array(7).fill(0);
         for (let i = 0; i < 7; i++) {
-            planBalanceBySource[i] = estimateBySource[i] - grandSpentBySource[i];
+            planBalanceBySource[i] = estimateBySource[i] - grandBudgetBySource[i];
         }
-        const totalPlanBalance = estimateBySource.reduce((sum, val) => sum + val, 0) - grandSpentTotal;
+        const totalPlanBalance = estimateBySource.reduce((sum, val) => sum + val, 0) - grandPlanBudget;
 
         return (
             <div className="space-y-6">
@@ -5778,7 +5803,7 @@ ${itemsListText}
                                 {/* Content rows */}
                                 {reportStructure.map(item => {
                                     const row = rowData[item.id];
-                                    const totalSpent = row.spentBySource.reduce((sum, v) => sum + v, 0);
+                                    const totalSpent = row.spentAmount || row.spentBySource.reduce((sum, v) => sum + v, 0);
                                     const remaining = row.planBudget - totalSpent;
                                     
                                     let rowClass = "border-b border-gray-100 hover:bg-gray-50/50";
@@ -5799,7 +5824,7 @@ ${itemsListText}
                                             <td className="py-2 px-2 text-right border-r border-gray-200 font-medium">
                                                 {row.planBudget > 0 ? row.planBudget.toLocaleString() : '-'}
                                             </td>
-                                            {row.spentBySource.map((val, idx) => (
+                                            {row.budgetBySource.map((val, idx) => (
                                                 <td key={idx} className="py-2 px-2 text-right border-r border-gray-200">
                                                     {val > 0 ? val.toLocaleString() : '-'}
                                                 </td>
@@ -5820,7 +5845,7 @@ ${itemsListText}
                                     <td className="py-3 px-2 text-right border-r border-gray-200">
                                         {grandPlanBudget.toLocaleString()}
                                     </td>
-                                    {grandSpentBySource.map((val, idx) => (
+                                    {grandBudgetBySource.map((val, idx) => (
                                         <td key={idx} className="py-3 px-2 text-right border-r border-gray-200">
                                             {val > 0 ? val.toLocaleString() : '-'}
                                         </td>

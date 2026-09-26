@@ -486,7 +486,7 @@
                         งปม. ที่ได้รับจาก สอศ. <span class="dotted-line" style="width: 75px;" contenteditable="true">&nbsp;</span> บาท คงเหลือ <span class="dotted-line" style="width: 70px;" contenteditable="true">&nbsp;</span> บาท<br>
                         เงินจัดสรรโครงการ/งาน/กิจกรรม <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท คงเหลือ <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;</span> บาท<br>
                         จำนวนที่ขออนุมัติจัดซื้อครั้งนี้ <span class="dotted-line" style="width: 90px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
-                        โดยให้เงินงบประมาณ <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) รายได้สถานศึกษา</span> <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งปม.</span> <span class="dotted-line" style="width: 80px;" contenteditable="true">&nbsp;</span><br>
+                        โดยให้เงินงบประมาณ <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) บกศ.</span> <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งปม.</span> <span class="dotted-line" style="width: 80px;" contenteditable="true">&nbsp;</span><br>
                         <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) เงินอุดหนุน</span> ............................................................................<br>
                         <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> .....................................................................................
                     </div>

@@ -557,8 +557,12 @@ class DashboardController extends Controller
                 ->latest()
                 ->get()
                 ->map(function ($p) {
-                    $fundingName = $p->fundingSource?->name ?: ($p->budget?->fundingSource?->name ?? 'ยังไม่จัดสรร');
                     $fundingId = $p->funding_source_id ?: ($p->budget?->funding_source_id ?? null);
+                    $fundingName = $p->fundingSource?->name ?: ($p->budget?->fundingSource?->name ?? 'ยังไม่จัดสรร');
+                    if ($fundingId == 7 || ($fundingName !== 'ยังไม่จัดสรร' && (str_contains($fundingName, 'สถานศึกษา') || str_contains($fundingName, 'Revenue') || str_contains($fundingName, 'บำรุงการศึกษา') || str_contains($fundingName, 'บกศ')))) {
+                        $fundingName = 'บกศ.';
+                        $fundingId = 7;
+                    }
                     $allocAmt = (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?? 0));
                     return [
                         'id' => $p->id,
