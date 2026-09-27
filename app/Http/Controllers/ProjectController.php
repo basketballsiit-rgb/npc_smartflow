@@ -1723,7 +1723,6 @@ class ProjectController extends Controller
 
         if ($project->procurement) {
             $project->procurement->status = 'pending';
-            $project->procurement->procurement_received_at = null;
             $project->procurement->save();
         }
 
