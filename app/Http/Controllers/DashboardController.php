@@ -279,23 +279,55 @@ class DashboardController extends Controller
         ];
 
         // 2. Plan Head, Plan Staff & Executive Dashboard Data
-        if ($user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || $user->isAdmin() || in_array($request->query('tab'), ['budgets', 'annual_budget_requests', 'action_plan_report', 'reviews'])) {
+        $isAuthorizedPlanOrExec = $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || $user->isAdmin();
+
+        if ($isAuthorizedPlanOrExec || in_array($request->query('tab'), ['budgets', 'annual_budget_requests', 'action_plan_report', 'reviews'])) {
+            $prelimQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])->latest();
+            
+            // For regular users (proposers/teachers), only load their own preliminary proposals
+            if (!$isAuthorizedPlanOrExec) {
+                $prelimQuery->where('user_id', $user->id);
+            }
+
+            $queueQuery = Project::whereIn('status', ['pending_approval', 'submitted', 'draft', 'rejected'])
+                ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals']);
+
+            if (!$isAuthorizedPlanOrExec) {
+                // Regular users only see their own projects, plus Step 2 projects if they are the department head
+                $queueQuery->where(function($q) use ($user) {
+                    $q->where('user_id', $user->id);
+                    if ($user->isDepartmentHead()) {
+                        $q->orWhere(function($sub) use ($user) {
+                            $sub->where('current_approval_step', 2)
+                                ->whereIn('status', ['submitted', 'pending_approval'])
+                                ->where('user_id', '!=', $user->id)
+                                ->where('department_id', $user->department_id);
+                        });
+                    }
+                });
+            } else {
+                $queueQuery->orderByRaw("CASE WHEN status = 'pending_approval' AND current_approval_step = 3 THEN 0 WHEN status = 'pending_approval' THEN 1 ELSE 2 END");
+            }
+
+            // Travel loans: regular users only see their own travel loans
+            $travelLoansForReviews = $allTravelLoans;
+            if (!$isAuthorizedPlanOrExec) {
+                $travelLoansForReviews = $allTravelLoans->filter(function($tl) use ($user) {
+                    return ($tl->borrower_citizen_id && $tl->borrower_citizen_id === $user->citizen_id)
+                        || ($tl->borrower_name && str_contains($tl->borrower_name, $user->name));
+                })->values();
+            }
+
             $data['planHeadData'] = [
                 'fundingSources' => $fundingSources,
                 'globalAllocated' => Budget::sum('allocated_amount'),
                 'globalEncumbered' => Budget::sum('encumbered_amount'),
                 'globalSpent' => Budget::sum('spent_amount'),
                 'fundingChannelProgress' => $fundingChannelProgress,
-                'preliminaryQueue' => Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])
-                    ->latest()
-                    ->get(),
-                'planHeadQueue' => Project::whereIn('status', ['pending_approval', 'submitted', 'draft', 'rejected'])
-                    ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])
-                    ->orderByRaw("CASE WHEN status = 'pending_approval' AND current_approval_step = 3 THEN 0 WHEN status = 'pending_approval' THEN 1 ELSE 2 END")
-                    ->latest()
-                    ->get(),
+                'preliminaryQueue' => $prelimQuery->get(),
+                'planHeadQueue' => $queueQuery->latest()->get(),
                 'advancePayments' => $advancePayments,
-                'externalTravelLoans' => $allTravelLoans,
+                'externalTravelLoans' => $travelLoansForReviews,
                 'nextDocNumberPreview' => DocumentNumberService::previewNext(),
                 'apiIntegrationStatus' => $apiIntegrationStatus,
             ];
@@ -633,9 +665,20 @@ class DashboardController extends Controller
         }
 
         // Master Projects list for Admin, Plan Head, Plan Staff, Procurement, Finance & Executives
-        if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isProcurementHead() || $user->isProcurementStaff() || $user->isFinanceStaff() || $user->isExecutive() || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets'])) {
-            $data['allProjectsMaster'] = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
-                ->latest()
+        $isPowerUser = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() 
+            || $user->isProcurementHead() || $user->isProcurementStaff() 
+            || $user->isFinanceStaff() || $user->isExecutive();
+
+        if ($isPowerUser || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets'])) {
+            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
+                ->latest();
+
+            // Non-power users (e.g. general teachers/proposers) only track their own projects
+            if (!$isPowerUser) {
+                $masterQuery->where('user_id', $user->id);
+            }
+
+            $data['allProjectsMaster'] = $masterQuery
                 ->get()
                 ->map(function ($p) {
                     $fundingId = $p->funding_source_id ?: ($p->budget?->funding_source_id ?? null);

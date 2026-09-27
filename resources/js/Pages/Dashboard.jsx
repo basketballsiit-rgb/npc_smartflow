@@ -6602,15 +6602,22 @@ ${itemsListText}
             planHeadQueue: [],
         };
 
+        const isPowerUser = isAdmin || isPlanStaff || isPlanHead || isExecutive;
+
+        let rawPrelimQueue = pHead.preliminaryQueue || [];
+        if (!isPowerUser) {
+            rawPrelimQueue = rawPrelimQueue.filter(p => p.user_id === auth.user.id || p.user?.id === auth.user.id);
+        }
+
         const isAllocatedOrApproved = (p) => {
             return p.status === 'budget_approved' || 
                    ['submitted', 'pending_approval', 'approved', 'in_progress', 'completed', 'draft'].includes(p.status) || 
                    (parseFloat(p.allocated_budget || 0) > 0);
         };
 
-        const prelimCount = pHead.preliminaryQueue?.filter(p => p.status === 'preliminary').length || 0;
-        const allocCount = pHead.preliminaryQueue?.filter(isAllocatedOrApproved).length || 0;
-        const rejectCount = pHead.preliminaryQueue?.filter(p => p.status === 'budget_rejected').length || 0;
+        const prelimCount = rawPrelimQueue.filter(p => p.status === 'preliminary').length || 0;
+        const allocCount = rawPrelimQueue.filter(isAllocatedOrApproved).length || 0;
+        const rejectCount = rawPrelimQueue.filter(p => p.status === 'budget_rejected').length || 0;
 
         // Group preliminary projects by 4 Main Divisions
         const mainDivisions = getFourMainDivisions();
@@ -6629,7 +6636,7 @@ ${itemsListText}
             };
         });
 
-        (pHead.preliminaryQueue || []).forEach(p => {
+        rawPrelimQueue.forEach(p => {
             const div = getMainDivision(p.department_id || p.department?.id, p.department?.name);
             const deptId = div.id;
             const deptName = div.name;
@@ -6659,8 +6666,8 @@ ${itemsListText}
         });
         const prelimDeptList = Object.values(prelimByDeptMap).filter(d => d.projectCount > 0);
 
-        const totalProposedSum = (pHead.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.proposed_budget || p.estimated_budget || 0), 0);
-        const totalAllocatedSum = (pHead.preliminaryQueue || []).reduce((sum, p) => sum + parseFloat(p.allocated_budget || 0), 0);
+        const totalProposedSum = rawPrelimQueue.reduce((sum, p) => sum + parseFloat(p.proposed_budget || p.estimated_budget || 0), 0);
+        const totalAllocatedSum = rawPrelimQueue.reduce((sum, p) => sum + parseFloat(p.allocated_budget || 0), 0);
 
         return (
             <div className="space-y-8 font-sans">
@@ -6669,13 +6676,15 @@ ${itemsListText}
                     <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/60 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div>
                             <div className="flex items-center gap-2">
-                                <span className="text-xl">⚖️</span>
+                                <span className="text-xl">{isPowerUser ? '⚖️' : '📋'}</span>
                                 <h3 className="text-lg font-black text-purple-950">
-                                    พิจารณาจัดสรรงบประมาณโครงการเบื้องต้น (Preliminary Budget Allocation)
+                                    {isPowerUser ? 'พิจารณาจัดสรรงบประมาณโครงการเบื้องต้น (Preliminary Budget Allocation)' : 'ข้อเสนอโครงการเบื้องต้นของฉัน (My Preliminary Proposals)'}
                                 </h3>
                             </div>
                             <p className="text-xs text-slate-600 mt-0.5">
-                                คณะกรรมการและงานแผนงานพิจารณากำหนดกรอบงบประมาณและแหล่งเงินทุน 7 หมวด เพื่อให้ผู้เสนอจัดทำรายละเอียดโครงการฉบับสมบูรณ์ (จัดกลุ่มแยกตามฝ่าย)
+                                {isPowerUser 
+                                    ? 'คณะกรรมการและงานแผนงานพิจารณากำหนดกรอบงบประมาณและแหล่งเงินทุน 7 หมวด เพื่อให้ผู้เสนอจัดทำรายละเอียดโครงการฉบับสมบูรณ์ (จัดกลุ่มแยกตามฝ่าย)'
+                                    : 'ตรวจสอบสถานะและกรอบงบประมาณที่ได้รับการพิจารณาจัดสรร เพื่อจัดทำรายละเอียดโครงการฉบับสมบูรณ์'}
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -6872,7 +6881,7 @@ ${itemsListText}
                                                             </td>
                                                             <td className="px-2.5 py-2.5 whitespace-nowrap text-right align-top">
                                                                 <div className="flex items-center justify-end gap-1">
-                                                                    {p.status === 'preliminary' && (
+                                                                    {p.status === 'preliminary' && isPowerUser && (
                                                                         <button
                                                                             onClick={() => openCommitteeModal(p)}
                                                                             className="inline-flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap cursor-pointer"
@@ -6881,7 +6890,7 @@ ${itemsListText}
                                                                             ⚖️ พิจารณา
                                                                         </button>
                                                                     )}
-                                                                    {p.status === 'budget_approved' && (
+                                                                    {p.status === 'budget_approved' && isPowerUser && (
                                                                         <button
                                                                             onClick={() => openCommitteeModal(p)}
                                                                             className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap cursor-pointer"
@@ -6889,6 +6898,15 @@ ${itemsListText}
                                                                         >
                                                                             ✏️ ปรับงบ
                                                                         </button>
+                                                                    )}
+                                                                    {p.status === 'budget_approved' && !isPowerUser && (
+                                                                        <Link
+                                                                            href={route('projects.edit', p.id)}
+                                                                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 px-2 py-1 text-[11px] font-bold text-white shadow-2xs transition-all whitespace-nowrap"
+                                                                            title="จัดทำรายละเอียดโครงการฉบับสมบูรณ์"
+                                                                        >
+                                                                            ➕ ทำฉบับเต็ม
+                                                                        </Link>
                                                                     )}
                                                                     <Link
                                                                         href={route('projects.show', p.id)}
@@ -6942,263 +6960,300 @@ ${itemsListText}
                 </div>
 
                 {/* 1.5 External Travel Loans Queue (จากระบบ npc_eleve) */}
-                {pHead && (
-                    <div className="overflow-hidden rounded-3xl border border-purple-200 bg-white shadow-sm">
-                        <div className="border-b border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                            <div>
-                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mb-1 border border-purple-200">
-                                    <span>✈️</span> สัญญายืมเงินไปราชการ (กค. ๑๐๑)
+                {(() => {
+                    const displayedTravelLoans = isPowerUser 
+                        ? travelLoansList 
+                        : travelLoansList.filter(tl => 
+                            (tl.borrower_citizen_id && tl.borrower_citizen_id === auth.user.citizen_id) ||
+                            (tl.borrower_name && tl.borrower_name.includes(auth.user.name))
+                        );
+
+                    if (!pHead || (!isPowerUser && displayedTravelLoans.length === 0)) return null;
+
+                    return (
+                        <div className="overflow-hidden rounded-3xl border border-purple-200 bg-white shadow-sm">
+                            <div className="border-b border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mb-1 border border-purple-200">
+                                        <span>✈️</span> สัญญายืมเงินไปราชการ (กค. ๑๐๑)
+                                    </div>
+                                    <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
+                                        <span>📝</span> {isPowerUser ? 'สัญญายืมเงินไปราชการ รอแผนงานตัดยอดงบประมาณ' : 'สัญญายืมเงินไปราชการของฉัน'}
+                                    </h3>
+                                    <p className="text-xs text-slate-600 mt-0.5">
+                                        {isPowerUser 
+                                            ? 'สัญญายืมเงินไปราชการที่ส่งผ่าน API จากระบบภายนอก ต้องผ่านงานแผนงานเพื่อเลือกหมวดหมู่งบประมาณและออกเลขคุมเอกสาร ก่อนส่งต่องานการเงิน'
+                                            : 'รายการสัญญายืมเงินไปราชการที่ท่านได้ยื่นขอผ่านระบบ'}
+                                    </p>
                                 </div>
-                                <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
-                                    <span>📝</span> สัญญายืมเงินไปราชการ รอแผนงานตัดยอดงบประมาณ
-                                </h3>
-                                <p className="text-xs text-slate-600 mt-0.5">
-                                    สัญญายืมเงินไปราชการที่ส่งผ่าน API จากระบบภายนอก ต้องผ่านงานแผนงานเพื่อเลือกหมวดหมู่งบประมาณและออกเลขคุมเอกสาร ก่อนส่งต่องานการเงิน
-                                </p>
+                                <div className="flex items-center gap-2">
+                                    {isPowerUser && (
+                                        <span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-xl text-xs font-bold border border-amber-300">
+                                            รอตัดยอด: {displayedTravelLoans.filter(tl => tl.loan_status === 'pending_plan' || tl.loan_status === 'pending').length} รายการ
+                                        </span>
+                                    )}
+                                    <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
+                                        ทั้งหมด: {displayedTravelLoans.length} รายการ
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="bg-amber-100 text-amber-900 px-3 py-1 rounded-xl text-xs font-bold border border-amber-300">
-                                    รอตัดยอด: {travelLoansList.filter(tl => tl.loan_status === 'pending_plan' || tl.loan_status === 'pending').length} รายการ
-                                </span>
-                                <span className="bg-purple-100 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
-                                    ทั้งหมด: {travelLoansList.length} รายการ
-                                </span>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-950 whitespace-nowrap">
+                                            <th className="px-5 py-3.5">เลขที่สัญญา / วันที่</th>
+                                            <th className="px-5 py-3.5">ผู้ขอยืม / ตำแหน่ง / ฝ่ายงาน</th>
+                                            <th className="px-5 py-3.5">เรื่อง / ปลายทาง / วันที่เดินทาง</th>
+                                            <th className="px-5 py-3.5 text-right">ยอดเงินยืมรวม</th>
+                                            <th className="px-5 py-3.5 text-center">สถานะ</th>
+                                            <th className="px-5 py-3.5 text-right">การดำเนินการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-purple-100 text-sm">
+                                        {displayedTravelLoans.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="6" className="px-6 py-10 text-center text-sm text-slate-500">
+                                                    <span className="text-2xl block mb-1">📭</span>
+                                                    ยังไม่มีรายการสัญญายืมเงินไปราชการในขณะนี้
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            displayedTravelLoans.map((tl) => {
+                                                const isPendingCut = tl.loan_status === 'pending_plan' || tl.loan_status === 'pending';
+                                                return (
+                                                    <tr key={tl.id} className="hover:bg-purple-50/30 transition-all">
+                                                        <td className="px-5 py-4 align-top whitespace-nowrap">
+                                                            <div className="font-mono font-bold text-purple-900 text-xs">
+                                                                📄 {tl.contract_no || `ID: #${tl.id}`}
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-500">
+                                                                {tl.doc_date ? `วันที่: ${tl.doc_date}` : ''}
+                                                            </div>
+                                                            {tl.plan_doc_number && (
+                                                                <div className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                                    <span>ผง.</span> {tl.plan_doc_number}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-5 py-4 align-top">
+                                                            <div className="font-bold text-slate-900 text-xs sm:text-sm">
+                                                                👤 {tl.borrower_name}
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-600">
+                                                                {tl.borrower_position || 'บุคลากร'}
+                                                            </div>
+                                                            <div className="text-[11px] text-purple-700 font-medium">
+                                                                🏢 {tl.borrower_department || '-'}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-5 py-4 align-top max-w-xs">
+                                                            <div className="font-semibold text-slate-800 text-xs line-clamp-2" title={tl.subject}>
+                                                                {tl.subject}
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
+                                                                <span>📍</span> {tl.destination}
+                                                            </div>
+                                                            <div className="text-[10px] text-purple-700 font-bold mt-0.5">
+                                                                📅 {tl.start_date_formatted || tl.start_date} - {tl.end_date_formatted || tl.end_date} ({tl.total_days} วัน)
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-5 py-4 align-top text-right whitespace-nowrap font-mono font-black text-xs sm:text-sm text-purple-950">
+                                                            <div>{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(tl.total_loan_amount)}</div>
+                                                            <div className="text-[10px] font-normal text-slate-500 mt-0.5">
+                                                                เบี้ยเลี้ยง: {new Intl.NumberFormat('th-TH').format(tl.allowance_amount || 0)} | ที่พัก: {new Intl.NumberFormat('th-TH').format(tl.rent_amount || 0)}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-5 py-4 align-top text-center whitespace-nowrap">
+                                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                                                                isPendingCut ? 'bg-amber-50 text-amber-900 border-amber-300 animate-pulse' :
+                                                                tl.loan_status === 'plan_cut' ? 'bg-blue-50 text-blue-900 border-blue-300' :
+                                                                tl.loan_status === 'finance_received' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' :
+                                                                tl.loan_status === 'disbursed' ? 'bg-emerald-50 text-emerald-900 border-emerald-300' :
+                                                                'bg-slate-100 text-slate-700 border-slate-200'
+                                                            }`}>
+                                                                {isPendingCut && '⏳ รอแผนงานตัดยอด'}
+                                                                {tl.loan_status === 'plan_cut' && '📋 แผนงานตัดยอดแล้ว'}
+                                                                {tl.loan_status === 'finance_received' && '📥 การเงินลงรับแล้ว'}
+                                                                {tl.loan_status === 'disbursed' && '💳 โอนเงินยืมแล้ว'}
+                                                                {tl.loan_status === 'cleared' && '✅ เคลียร์เงินแล้ว'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-4 align-top text-right whitespace-nowrap">
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedTravelLoanDetail(tl)}
+                                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer"
+                                                                    title="ดูสัญญายืมเงินฉบับเต็ม"
+                                                                >
+                                                                    🔍 รายละเอียด
+                                                                </button>
+                                                                {isPendingCut && isPlanStaff ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenPlanCutModal(tl)}
+                                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 px-3.5 py-1.5 text-xs font-black text-white shadow-md shadow-purple-600/25 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                                    >
+                                                                        <span>📊</span> แผนงานตัดยอดงบ
+                                                                    </button>
+                                                                ) : isPendingCut ? (
+                                                                    <span className="text-xs text-amber-700 font-semibold px-2 py-1 bg-amber-50 rounded-lg border border-amber-200">
+                                                                        ⏳ รอแผนงานตัดยอด
+                                                                    </span>
+                                                                ) : isPlanStaff ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRollbackTravelLoan(tl)}
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
+                                                                        title="ยกเลิกการตัดยอดและย้อนสถานะ"
+                                                                    >
+                                                                        ↺ ย้อนสถานะ
+                                                                    </button>
+                                                                ) : null}
+
+                                                                {/* สิทธิ์เฉพาะผู้ดูแลระบบ (Admin Only: แก้ไข & ลบ) */}
+                                                                {(role === 'admin' || auth?.user?.is_admin || auth?.user?.role?.name === 'admin') && (
+                                                                    <>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleOpenEditTravelLoanModal(tl)}
+                                                                            className="inline-flex items-center gap-1 rounded-xl bg-purple-100 hover:bg-purple-200 border border-purple-300 px-2.5 py-1.5 text-xs font-black text-purple-950 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                                            title="แก้ไขสัญญายืมเงิน (ผู้ดูแลระบบเท่านั้น)"
+                                                                        >
+                                                                            ✏️ แก้ไข
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteTravelLoan(tl)}
+                                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                                            title="ลบสัญญายืมเงิน (ผู้ดูแลระบบเท่านั้น)"
+                                                                        >
+                                                                            🗑️ ลบ
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
+                    );
+                })()}
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-950 whitespace-nowrap">
-                                        <th className="px-5 py-3.5">เลขที่สัญญา / วันที่</th>
-                                        <th className="px-5 py-3.5">ผู้ขอยืม / ตำแหน่ง / ฝ่ายงาน</th>
-                                        <th className="px-5 py-3.5">เรื่อง / ปลายทาง / วันที่เดินทาง</th>
-                                        <th className="px-5 py-3.5 text-right">ยอดเงินยืมรวม</th>
-                                        <th className="px-5 py-3.5 text-center">สถานะ</th>
-                                        <th className="px-5 py-3.5 text-right">การดำเนินการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-purple-100 text-sm">
-                                    {travelLoansList.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="6" className="px-6 py-10 text-center text-sm text-slate-500">
-                                                <span className="text-2xl block mb-1">📭</span>
-                                                ยังไม่มีรายการสัญญายืมเงินไปราชการจากระบบ npc_eleve ในขณะนี้
-                                            </td>
+                {/* 2. Full 6-Step Workflow Approval Queue */}
+                {(() => {
+                    const displayedPlanHeadQueue = isPowerUser
+                        ? (pHead.planHeadQueue || [])
+                        : (pHead.planHeadQueue || []).filter(p => {
+                            if (p.user_id === auth.user.id || p.user?.id === auth.user.id) return true;
+                            if (auth.user.is_department_head && p.current_approval_step === 2 && (p.department_id === auth.user.department_id || p.department?.id === auth.user.department_id)) {
+                                return true;
+                            }
+                            return false;
+                        });
+
+                    return (
+                        <div className="overflow-hidden rounded-3xl border border-purple-100 bg-white shadow-sm">
+                            <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                <div>
+                                    <h3 className="text-lg font-black text-purple-950">
+                                        {isPowerUser ? '📋 คิวตรวจสอบและอนุมัติโครงการตามสายงาน (6-Step Review Queue)' : '📋 ติดตามการลงนามและอนุมัติโครงการของฉัน (My Project Approvals)'}
+                                    </h3>
+                                    <p className="text-xs text-slate-600 mt-0.5">
+                                        {isPowerUser ? 'ตรวจสอบรายละเอียดข้อเสนอโครงการฉบับสมบูรณ์ และอนุมัติส่งต่อตามลำดับสายงาน 6 ขั้นตอน' : 'ตรวจสอบความคืบหน้าการลงนามอนุมัติโครงการตามสายงาน 6 ขั้นตอน'}
+                                    </p>
+                                </div>
+                                <div className="bg-purple-100/70 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
+                                    {isPowerUser ? `รออนุมัติในระบบ: ${displayedPlanHeadQueue.length} รายการ` : `โครงการของฉัน: ${displayedPlanHeadQueue.length} รายการ`}
+                                </div>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
+                                            <th className="px-6 py-3.5">ชื่อโครงการ</th>
+                                            <th className="px-6 py-3.5">ผู้เสนอโครงการ / ฝ่ายงาน</th>
+                                            <th className="px-6 py-3.5">งบประมาณโครงการ</th>
+                                            <th className="px-6 py-3.5 text-center">สถานะและขั้นตอนอนุมัติ</th>
+                                            <th className="px-6 py-3.5 text-right">การดำเนินการ</th>
                                         </tr>
-                                    ) : (
-                                        travelLoansList.map((tl) => {
-                                            const isPendingCut = tl.loan_status === 'pending_plan' || tl.loan_status === 'pending';
-                                            return (
-                                                <tr key={tl.id} className="hover:bg-purple-50/30 transition-all">
-                                                    <td className="px-5 py-4 align-top whitespace-nowrap">
-                                                        <div className="font-mono font-bold text-purple-900 text-xs">
-                                                            📄 {tl.contract_no || `ID: #${tl.id}`}
-                                                        </div>
-                                                        <div className="text-[11px] text-slate-500">
-                                                            {tl.doc_date ? `วันที่: ${tl.doc_date}` : ''}
-                                                        </div>
-                                                        {tl.plan_doc_number && (
-                                                            <div className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                                                                <span>ผง.</span> {tl.plan_doc_number}
-                                                            </div>
-                                                        )}
+                                    </thead>
+                                    <tbody className="divide-y divide-purple-100 text-sm">
+                                        {displayedPlanHeadQueue.length === 0 ? (
+                                            <tr>
+                                                <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
+                                                    {isPowerUser ? 'ไม่มีรายการโครงการรออนุมัติในคิวงานขณะนี้' : 'ยังไม่มีโครงการที่อยู่ในขั้นตอนรอการอนุมัติ'}
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            displayedPlanHeadQueue.map((p) => (
+                                                <tr key={p.id} className="hover:bg-purple-50/20 transition-all">
+                                                    <td className="px-6 py-4 font-bold text-slate-900 max-w-xs truncate" title={p.title}>
+                                                        {p.title}
                                                     </td>
-                                                    <td className="px-5 py-4 align-top">
-                                                        <div className="font-bold text-slate-900 text-xs sm:text-sm">
-                                                            👤 {tl.borrower_name}
-                                                        </div>
-                                                        <div className="text-[11px] text-slate-600">
-                                                            {tl.borrower_position || 'บุคลากร'}
-                                                        </div>
-                                                        <div className="text-[11px] text-purple-700 font-medium">
-                                                            🏢 {tl.borrower_department || '-'}
-                                                        </div>
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-semibold text-slate-800 text-xs">{p.user?.name || 'ไม่ระบุชื่อ'}</div>
+                                                        <div className="text-[11px] text-purple-600 font-medium">{p.department?.name || 'ฝ่ายงานทั่วไป'}</div>
                                                     </td>
-                                                    <td className="px-5 py-4 align-top max-w-xs">
-                                                        <div className="font-semibold text-slate-800 text-xs line-clamp-2" title={tl.subject}>
-                                                            {tl.subject}
-                                                        </div>
-                                                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-1">
-                                                            <span>📍</span> {tl.destination}
-                                                        </div>
-                                                        <div className="text-[10px] text-purple-700 font-bold mt-0.5">
-                                                            📅 {tl.start_date_formatted || tl.start_date} - {tl.end_date_formatted || tl.end_date} ({tl.total_days} วัน)
-                                                        </div>
+                                                    <td className="px-6 py-4 font-bold text-purple-700 text-xs whitespace-nowrap">
+                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget)}
                                                     </td>
-                                                    <td className="px-5 py-4 align-top text-right whitespace-nowrap font-mono font-black text-xs sm:text-sm text-purple-950">
-                                                        <div>{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(tl.total_loan_amount)}</div>
-                                                        <div className="text-[10px] font-normal text-slate-500 mt-0.5">
-                                                            เบี้ยเลี้ยง: {new Intl.NumberFormat('th-TH').format(tl.allowance_amount || 0)} | ที่พัก: {new Intl.NumberFormat('th-TH').format(tl.rent_amount || 0)}
-                                                        </div>
+                                                    <td className="px-6 py-4 text-center whitespace-nowrap">
+                                                        {renderProjectProgressBar(p.status, p.current_approval_step, p)}
                                                     </td>
-                                                    <td className="px-5 py-4 align-top text-center whitespace-nowrap">
-                                                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${
-                                                            isPendingCut ? 'bg-amber-50 text-amber-900 border-amber-300 animate-pulse' :
-                                                            tl.loan_status === 'plan_cut' ? 'bg-blue-50 text-blue-900 border-blue-300' :
-                                                            tl.loan_status === 'finance_received' ? 'bg-indigo-50 text-indigo-900 border-indigo-300' :
-                                                            tl.loan_status === 'disbursed' ? 'bg-emerald-50 text-emerald-900 border-emerald-300' :
-                                                            'bg-slate-100 text-slate-700 border-slate-200'
-                                                        }`}>
-                                                            {isPendingCut && '⏳ รอแผนงานตัดยอด'}
-                                                            {tl.loan_status === 'plan_cut' && '📋 แผนงานตัดยอดแล้ว'}
-                                                            {tl.loan_status === 'finance_received' && '📥 การเงินลงรับแล้ว'}
-                                                            {tl.loan_status === 'disbursed' && '💳 โอนเงินยืมแล้ว'}
-                                                            {tl.loan_status === 'cleared' && '✅ เคลียร์เงินแล้ว'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-5 py-4 align-top text-right whitespace-nowrap">
-                                                        <div className="flex items-center justify-end gap-1.5">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSelectedTravelLoanDetail(tl)}
-                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-all cursor-pointer"
-                                                                title="ดูสัญญายืมเงินฉบับเต็ม"
+                                                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                        <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                                                            <Link
+                                                                href={route('projects.show', p.id)}
+                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                title="ตรวจสอบและลงนามโครงการ"
                                                             >
-                                                                🔍 รายละเอียด
-                                                            </button>
-                                                            {isPendingCut ? (
+                                                                🔍 ตรวจสอบ ➔
+                                                            </Link>
+                                                            {(p.status === 'draft' || p.status === 'rejected') && (
                                                                 <button
-                                                                    type="button"
-                                                                    onClick={() => handleOpenPlanCutModal(tl)}
-                                                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700 px-3.5 py-1.5 text-xs font-black text-white shadow-md shadow-purple-600/25 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                                    onClick={() => handleResubmitProject(p)}
+                                                                    className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                    title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
                                                                 >
-                                                                    <span>📊</span> แผนงานตัดยอดงบ
-                                                                </button>
-                                                            ) : (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRollbackTravelLoan(tl)}
-                                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all cursor-pointer"
-                                                                    title="ยกเลิกการตัดยอดและย้อนสถานะ"
-                                                                >
-                                                                    ↺ ย้อนสถานะ
+                                                                    🚀 ยื่นขออนุมัติ
                                                                 </button>
                                                             )}
-
-                                                            {/* สิทธิ์เฉพาะผู้ดูแลระบบ (Admin Only: แก้ไข & ลบ) */}
-                                                            {(role === 'admin' || auth?.user?.is_admin || auth?.user?.role?.name === 'admin') && (
-                                                                <>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleOpenEditTravelLoanModal(tl)}
-                                                                        className="inline-flex items-center gap-1 rounded-xl bg-purple-100 hover:bg-purple-200 border border-purple-300 px-2.5 py-1.5 text-xs font-black text-purple-950 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                                                                        title="แก้ไขสัญญายืมเงิน (ผู้ดูแลระบบเท่านั้น)"
-                                                                    >
-                                                                        ✏️ แก้ไข
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleDeleteTravelLoan(tl)}
-                                                                        className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                                                                        title="ลบสัญญายืมเงิน (ผู้ดูแลระบบเท่านั้น)"
-                                                                    >
-                                                                        🗑️ ลบ
-                                                                    </button>
-                                                                </>
+                                                            {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && p.status !== 'completed' && (
+                                                                <Link
+                                                                    href={route('projects.edit', p.id)}
+                                                                    className="p-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg border border-amber-200 transition text-xs shrink-0"
+                                                                    title="แก้ไขโครงการ"
+                                                                >
+                                                                    ✏️
+                                                                </Link>
+                                                            )}
+                                                            {(role === 'admin' || auth.user.is_admin) && (
+                                                                <button
+                                                                    onClick={() => handleDeleteProject(p)}
+                                                                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition text-xs shrink-0"
+                                                                    title="ลบโครงการ"
+                                                                >
+                                                                    🗑️
+                                                                </button>
                                                             )}
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
-                )}
-
-                {/* 2. Full 6-Step Workflow Approval Queue */}
-                <div className="overflow-hidden rounded-3xl border border-purple-100 bg-white shadow-sm">
-                    <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                        <div>
-                            <h3 className="text-lg font-black text-purple-950">📋 คิวตรวจสอบและอนุมัติโครงการตามสายงาน (6-Step Review Queue)</h3>
-                            <p className="text-xs text-slate-600 mt-0.5">ตรวจสอบรายละเอียดข้อเสนอโครงการฉบับสมบูรณ์ และอนุมัติส่งต่อตามลำดับสายงาน 6 ขั้นตอน</p>
-                        </div>
-                        <div className="bg-purple-100/70 text-purple-900 px-3 py-1 rounded-xl text-xs font-bold border border-purple-200">
-                            รออนุมัติในระบบ: {pHead.planHeadQueue?.length || 0} รายการ
-                        </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-purple-100 bg-purple-50/30 text-xs font-bold uppercase text-purple-900 whitespace-nowrap">
-                                    <th className="px-6 py-3.5">ชื่อโครงการ</th>
-                                    <th className="px-6 py-3.5">ผู้เสนอโครงการ / ฝ่ายงาน</th>
-                                    <th className="px-6 py-3.5">งบประมาณโครงการ</th>
-                                    <th className="px-6 py-3.5 text-center">สถานะและขั้นตอนอนุมัติ</th>
-                                    <th className="px-6 py-3.5 text-right">การดำเนินการ</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-purple-100 text-sm">
-                                {(!pHead.planHeadQueue || pHead.planHeadQueue.length === 0) ? (
-                                    <tr>
-                                        <td colSpan="5" className="px-6 py-10 text-center text-sm text-slate-500">
-                                            ไม่มีรายการโครงการรออนุมัติในคิวงานขณะนี้
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    pHead.planHeadQueue.map((p) => (
-                                        <tr key={p.id} className="hover:bg-purple-50/20 transition-all">
-                                            <td className="px-6 py-4 font-bold text-slate-900 max-w-xs truncate" title={p.title}>
-                                                {p.title}
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="font-semibold text-slate-800 text-xs">{p.user?.name || 'ไม่ระบุชื่อ'}</div>
-                                                <div className="text-[11px] text-purple-600 font-medium">{p.department?.name || 'ฝ่ายงานทั่วไป'}</div>
-                                            </td>
-                                            <td className="px-6 py-4 font-bold text-purple-700 text-xs whitespace-nowrap">
-                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(p.estimated_budget)}
-                                            </td>
-                                            <td className="px-6 py-4 text-center whitespace-nowrap">
-                                                {renderProjectProgressBar(p.status, p.current_approval_step, p)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                                                    <Link
-                                                        href={route('projects.show', p.id)}
-                                                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                        title="ตรวจสอบและลงนามโครงการ"
-                                                    >
-                                                        🔍 ตรวจสอบ ➔
-                                                    </Link>
-                                                    {(p.status === 'draft' || p.status === 'rejected') && (
-                                                        <button
-                                                            onClick={() => handleResubmitProject(p)}
-                                                            className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                                            title="ยื่นเสนอขออนุมัติเพื่อดำเนินงานต่อ"
-                                                        >
-                                                            🚀 ยื่นขออนุมัติ
-                                                        </button>
-                                                    )}
-                                                    {(role === 'admin' || auth.user.is_admin) && p.status !== 'approved' && p.status !== 'completed' && (
-                                                        <Link
-                                                            href={route('projects.edit', p.id)}
-                                                            className="p-1.5 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg border border-amber-200 transition text-xs shrink-0"
-                                                            title="แก้ไขโครงการ"
-                                                        >
-                                                            ✏️
-                                                        </Link>
-                                                    )}
-                                                    {(role === 'admin' || auth.user.is_admin) && (
-                                                        <button
-                                                            onClick={() => handleDeleteProject(p)}
-                                                            className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg border border-rose-200 transition text-xs shrink-0"
-                                                            title="ลบโครงการ"
-                                                        >
-                                                            🗑️
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                    );
+                })()}
             </div>
         );
     };
@@ -12052,11 +12107,17 @@ ${itemsListText}
 
     const renderDocumentTrackingTab = () => {
         const isStrictFinanceUser = isFinanceStaff && !isAdmin;
+        const isPowerTrackingUser = isAdmin || isPlanStaff || isProcurementStaff || isFinanceStaff || isExecutive;
 
         // Collect projects based on user authority
-        const sourceProjects = (Array.isArray(allProjectsMaster) && allProjectsMaster.length > 0)
+        let sourceProjects = (Array.isArray(allProjectsMaster) && allProjectsMaster.length > 0)
             ? allProjectsMaster
             : (Array.isArray(teacherData?.projects) ? teacherData.projects : []);
+
+        // Regular users (teachers/proposers) only track their own projects
+        if (!isPowerTrackingUser) {
+            sourceProjects = sourceProjects.filter(p => p.user_id === auth.user.id || p.user?.id === auth.user.id);
+        }
 
         // Filter projects that have been approved or in proposal stage
         const trackingList = sourceProjects.map(p => {
@@ -12470,12 +12531,14 @@ return (
                                 <span>📍</span> Real-time Document & Loan Tracking Center
                             </div>
                             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                                <span>{isStrictFinanceUser ? '💳' : '📍'}</span> {isStrictFinanceUser ? 'ศูนย์เอกสารและการเงิน (สัญญายืมเงิน & จัดซื้อรอเบิกจ่าย)' : 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน'}
+                                <span>{isStrictFinanceUser ? '💳' : '📍'}</span> {isStrictFinanceUser ? 'ศูนย์เอกสารและการเงิน (สัญญายืมเงิน & จัดซื้อรอเบิกจ่าย)' : (isPowerTrackingUser ? 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน' : 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน (โครงการของฉัน)')}
                             </h2>
                             <p className="text-xs sm:text-sm text-purple-200 max-w-2xl leading-relaxed">
                                 {isStrictFinanceUser
                                     ? 'แสดงเฉพาะเอกสารและสัญญาที่วิ่งเข้าสู่งานการเงิน เพื่อลงรับ โอนเงินยืมทดรองราชการ หรือเบิกจ่ายตามชุดจัดซื้อจัดจ้าง ๔ ฉบับ'
-                                    : 'ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค.๑๐๑) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน'}
+                                    : (isPowerTrackingUser
+                                        ? 'ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค.๑๐๑) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน'
+                                        : 'ติดตามสถานะและตำแหน่งเอกสารของโครงการที่คุณเสนอขออนุมัติ ทราบทันทีว่าสัญญายืมเงินหรือจัดซื้อจัดจ้างอยู่ที่ขั้นตอนหรือโต๊ะงานใด ป้องกันเอกสารตกค้าง')}
                             </p>
                         </div>
                         {(isPlanStaff || isAdmin) && (
