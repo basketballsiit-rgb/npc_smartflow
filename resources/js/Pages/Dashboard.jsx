@@ -384,9 +384,9 @@ export default function Dashboard({
     const isPlanHead = Boolean(role === 'plan_head' || auth.user?.is_plan_head || auth.user?.role?.name === 'plan_head');
     const isProcurementHead = Boolean(role === 'procurement_head' || auth.user?.role?.name === 'procurement_head');
     const isExecutive = Boolean(role === 'executive' || auth.user?.role?.name === 'executive');
-    const isPlanStaff = isAdmin || isPlanHead || Boolean(auth.user?.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN'));
-    const isFinanceStaff = Boolean(isAdmin || role === 'finance_head' || auth.user?.role?.name === 'finance_head' || (auth.user?.department && (auth.user.department.code === 'FIN' || auth.user.department.name?.includes('การเงิน'))) || (auth.user?.position && auth.user.position.includes('การเงิน')));
-    const isProcurementStaff = isAdmin || isProcurementHead || Boolean(auth.user?.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC'));
+    const isPlanStaff = isAdmin || isPlanHead || Boolean(auth.user?.is_plan_staff || role === 'plan_staff' || auth.user?.role?.name === 'plan_staff');
+    const isFinanceStaff = Boolean(isAdmin || role === 'finance_head' || auth.user?.role?.name === 'finance_head' || auth.user?.is_finance_staff);
+    const isProcurementStaff = isAdmin || isProcurementHead || Boolean(auth.user?.is_procurement_staff || role === 'procurement_staff' || auth.user?.role?.name === 'procurement_staff');
 
     const handleRollbackProcurement = (proj, targetStatus) => {
         const isToPending = targetStatus === 'pending';

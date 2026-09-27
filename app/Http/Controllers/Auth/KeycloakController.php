@@ -427,8 +427,12 @@ class KeycloakController extends Controller
         if (mb_strpos($combinedText, 'ผู้อำนวยการ') !== false || mb_strpos($combinedText, 'รองผู้อำนวยการ') !== false) {
             return Role::where('name', 'executive')->first();
         }
-        if (mb_strpos($combinedText, 'หัวหน้างานแผน') !== false || mb_strpos($combinedText, 'งานวางแผน') !== false) {
+        if (User::isPlanningWorkTitle($combinedText) && mb_strpos($combinedText, 'หัวหน้า') !== false) {
             return Role::where('name', 'plan_head')->first();
+        }
+        if (User::isPlanningWorkTitle($combinedText)) {
+            $planStaffRole = Role::where('name', 'plan_staff')->first();
+            if ($planStaffRole) return $planStaffRole;
         }
         if (mb_strpos($combinedText, 'หัวหน้างานพัสดุ') !== false || mb_strpos($combinedText, 'งานพัสดุ') !== false) {
             return Role::where('name', 'procurement_head')->first();

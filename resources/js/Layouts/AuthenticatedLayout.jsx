@@ -13,11 +13,11 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const userRoleName = user?.role?.name || (typeof user?.role === 'string' ? user.role : '');
     const isAdmin = Boolean(user?.is_admin || userRoleName === 'admin');
-    const isExecutive = Boolean(user?.is_executive || userRoleName === 'executive' || isAdmin);
-    const isPlanHead = Boolean(user?.is_plan_head || userRoleName === 'plan_head' || isAdmin);
-    const isPlanStaff = Boolean(user?.is_plan_staff || isPlanHead || (user?.department && (user.department.name?.includes('แผน') || user.department.code === 'PLAN')) || user?.position?.includes('แผน'));
-    const isProcurementStaff = Boolean(user?.is_procurement_staff || user?.is_procurement_head || userRoleName === 'procurement_head' || isAdmin || (user?.department && (user.department.name?.includes('พัสดุ') || user.department.code === 'PROC')) || user?.position?.includes('พัสดุ'));
-    const isFinanceStaff = Boolean(user?.is_finance_staff || userRoleName === 'finance_head' || userRoleName === 'finance_staff' || isAdmin || (user?.department && (user.department.name?.includes('การเงิน') || user.department.code === 'FIN')) || user?.position?.includes('การเงิน'));
+    const isExecutive = Boolean(user?.is_executive || userRoleName === 'executive');
+    const isPlanHead = Boolean(user?.is_plan_head || userRoleName === 'plan_head');
+    const isPlanStaff = Boolean(user?.is_plan_staff || userRoleName === 'plan_staff' || isPlanHead);
+    const isProcurementStaff = Boolean(user?.is_procurement_staff || user?.is_procurement_head || userRoleName === 'procurement_head');
+    const isFinanceStaff = Boolean(user?.is_finance_staff || userRoleName === 'finance_head' || userRoleName === 'finance_staff');
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         const saved = localStorage.getItem('sidebar-open');
@@ -259,10 +259,16 @@ export default function AuthenticatedLayout({ header, children }) {
     const getRoleLabel = () => {
         if (isAdmin) return 'ผู้ดูแลระบบ (Super Admin)';
         if (isExecutive) return 'ผู้บริหาร';
-        if (isPlanHead || isPlanStaff) return 'งานแผนงานและงบประมาณ';
+        if (isPlanHead || userRoleName === 'plan_head') return 'หัวหน้างานแผนงานและงบประมาณ';
+        if (isPlanStaff || userRoleName === 'plan_staff') return 'งานแผนงานและงบประมาณ';
         if (isProcurementStaff) return 'เจ้าหน้าที่งานพัสดุ';
         if (isFinanceStaff) return 'เจ้าหน้าที่งานการเงิน';
-        return 'ครูผู้เสนอโครงการ';
+
+        const primaryPos = user?.all_positions?.find(p => p.is_primary);
+        if (primaryPos?.position) return primaryPos.position;
+        if (primaryPos?.duty) return primaryPos.duty;
+        if (user?.role_display) return user.role_display;
+        return 'บุคลากร / ผู้เสนอโครงการ';
     };
 
     // Auto-open ONLY the section that contains the currently active URL/page

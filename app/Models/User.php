@@ -156,41 +156,99 @@ class User extends Authenticatable
         return false;
     }
 
+    /**
+     * ตรวจสอบว่าชื่อกลุ่มงานย่อยเป็นงานพัฒนายุทธศาสตร์/วางแผนและงบประมาณหรือไม่
+     * (ต้องไม่ตรงกับชื่อฝ่ายหลัก เช่น "ฝ่ายยุทธศาสตร์และแผนงาน" หรือฝ่ายอื่นๆ)
+     */
+    public static function isPlanningSubDepartmentName(?string $name): bool
+    {
+        if (empty($name)) return false;
+        $clean = trim($name);
+        if (str_starts_with($clean, 'ฝ่าย')) return false;
+
+        return str_contains($clean, 'พัฒนายุทธศาสตร์')
+            || str_contains($clean, 'วางแผน')
+            || (str_contains($clean, 'แผน') && str_contains($clean, 'งบประมาณ'))
+            || (str_contains($clean, 'งานแผน') && !str_contains($clean, 'แผนก'));
+    }
+
+    /**
+     * ตรวจสอบว่าชื่อตำแหน่งงานเป็นงานพัฒนายุทธศาสตร์/วางแผนและงบประมาณหรือไม่
+     * (ตัดชื่อฝ่ายหลักในวงเล็บออกก่อน เช่น "(ฝ่ายยุทธศาสตร์และแผนงาน)" เพื่อไม่ให้งานอื่นในฝ่ายเดียวกันติดสิทธิ์ไปด้วย)
+     */
+    public static function isPlanningWorkTitle(?string $title): bool
+    {
+        if (empty($title)) return false;
+        $clean = preg_replace('/\s*\(ฝ่าย.*?\)/u', '', $title);
+        $clean = trim($clean);
+
+        return str_contains($clean, 'พัฒนายุทธศาสตร์')
+            || str_contains($clean, 'วางแผน')
+            || (str_contains($clean, 'แผน') && str_contains($clean, 'งบประมาณ'))
+            || (str_contains($clean, 'งานแผน') && !str_contains($clean, 'แผนก'));
+    }
+
     public function isPlanHead(): bool
     {
         if ($this->role?->name === 'plan_head') return true;
 
         $userPosText = ($this->position ?? '') . ' ' . $this->userPositions()->pluck('position')->implode(' ');
         
-        // หากมีตำแหน่ง "รองผู้อำนวยการ" จะไม่ถือเป็นหัวหน้างานวางแผน (รองฯ จะมีขั้นตอนกำกับใน Step 5)
-        if (str_contains($userPosText, 'รองผู้อำนวยการ')) {
+        // หากมีตำแหน่ง "รองผู้อำนวยการ" หรือ "ผู้อำนวยการ" จะไม่ถือเป็นหัวหน้างานวางแผน (รองฯ จะมีขั้นตอนกำกับใน Step 5)
+        if (str_contains($userPosText, 'รองผู้อำนวยการ') || str_contains($userPosText, 'ผู้อำนวยการ')) {
             return false;
         }
 
-        return $this->userPositions()
-            ->where(function($q) {
-                $q->where('position', 'like', '%หัวหน้างานแผน%')
-                  ->orWhere('position', 'like', '%งานวางแผน%')
-                  ->orWhere('sub_department_id', function($sub) {
-                      $sub->select('id')->from('departments')->where('name', 'like', '%แผน%');
-                  });
-            })->exists() || (str_contains($this->position ?? '', 'หัวหน้างานวางแผน') || str_contains($this->position ?? '', 'หัวหน้างานแผนงาน'));
+        // ตรวจสอบจาก user_positions ที่มีตำแหน่งเป็นหัวหน้างาน และสังกัดงานวางแผน/พัฒนายุทธศาสตร์
+        foreach ($this->userPositions()->with(['subDepartment'])->get() as $p) {
+            $duty = $p->duty ?? '';
+            $subDeptName = $p->subDepartment?->name ?? '';
+            $posTitle = $p->position ?? '';
+
+            if (in_array($duty, ['หัวหน้างาน', 'หัวหน้างานแผน', 'หัวหน้างานวางแผน']) || str_contains($posTitle, 'หัวหน้างาน')) {
+                if (self::isPlanningSubDepartmentName($subDeptName) || self::isPlanningWorkTitle($posTitle)) {
+                    return true;
+                }
+            }
+        }
+
+        // Fallback จาก position ในตาราง users
+        if (str_contains($this->position ?? '', 'หัวหน้างาน') && self::isPlanningWorkTitle($this->position)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function isPlanStaff(): bool
     {
         if ($this->isAdmin() || $this->isPlanHead()) return true;
         if ($this->role?->name === 'plan_staff') return true;
-        if ($this->department && ($this->department->code === 'PLAN' || str_contains($this->department->name, 'แผน') || str_contains($this->department->name, 'ยุทธศาสตร์'))) return true;
-        return str_contains($this->position ?? '', 'แผน') ||
-            str_contains($this->position ?? '', 'ยุทธศาสตร์') ||
-            $this->userPositions()->where(function($q) {
-                $q->where('position', 'like', '%แผน%')
-                  ->orWhere('position', 'like', '%ยุทธศาสตร์%')
-                  ->orWhere('sub_department_id', function($sub) {
-                      $sub->select('id')->from('departments')->where('name', 'like', '%แผน%');
-                  });
-            })->exists();
+        
+        // ผู้บริหารไม่ใช่เจ้าหน้าที่งานแผน
+        if ($this->isExecutive()) return false;
+
+        // ตรวจสอบจากตาราง user_positions เฉพาะตำแหน่งที่รับผิดชอบงานพัฒนายุทธศาสตร์/วางแผนและงบประมาณ
+        foreach ($this->userPositions()->with(['subDepartment'])->get() as $p) {
+            $subDeptName = $p->subDepartment?->name ?? '';
+            $posTitle = $p->position ?? '';
+
+            if (self::isPlanningSubDepartmentName($subDeptName) || self::isPlanningWorkTitle($posTitle)) {
+                return true;
+            }
+        }
+
+        // ตรวจสอบ department ที่ไม่ใช่ระดับฝ่าย (ต้องเป็นระดับงานย่อยเท่านั้น)
+        if ($this->department && $this->department->parent_id !== null && self::isPlanningSubDepartmentName($this->department->name)) {
+            return true;
+        }
+
+        // Fallback จาก position ในตาราง users
+        if (!empty($this->position) && self::isPlanningWorkTitle($this->position)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function isFinanceStaff(): bool
