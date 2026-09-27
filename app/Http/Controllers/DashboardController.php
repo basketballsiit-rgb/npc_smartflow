@@ -30,7 +30,16 @@ class DashboardController extends Controller
                ($user->isDepartmentHead() ? 'department_head' : 'teacher')))));
 
         $requestedTab = $request->query('tab');
-        $activeTab = ($requestedTab === 'proposals') ? 'document_tracking' : $requestedTab;
+        if (!$requestedTab) {
+            if ($user->isAdmin()) $activeTab = 'admin_users';
+            else if ($user->isPlanHead()) $activeTab = 'budgets';
+            else if ($user->isProcurementHead()) $activeTab = 'procurement';
+            else if ($user->isFinanceHead() || $user->isFinanceStaff()) $activeTab = 'central_budgets';
+            else if ($user->isExecutive()) $activeTab = 'executive_overview';
+            else $activeTab = 'document_tracking';
+        } else {
+            $activeTab = ($requestedTab === 'proposals') ? 'document_tracking' : $requestedTab;
+        }
 
         $data = [
             'role' => $role,
@@ -239,15 +248,26 @@ class DashboardController extends Controller
                             } catch (\Throwable $e) {
                                 $formattedTitle = $p->position ?: 'บุคลากร';
                             }
+                            $duty = $p->duty;
+                            if ($duty && !mb_check_encoding($duty, 'UTF-8')) {
+                                $duty = mb_convert_encoding($duty, 'UTF-8', 'ISO-8859-1');
+                            }
+                            $position = $p->position;
+                            if ($position && !mb_check_encoding($position, 'UTF-8')) {
+                                $position = mb_convert_encoding($position, 'UTF-8', 'ISO-8859-1');
+                            }
+                            if ($formattedTitle && !mb_check_encoding($formattedTitle, 'UTF-8')) {
+                                $formattedTitle = mb_convert_encoding($formattedTitle, 'UTF-8', 'ISO-8859-1');
+                            }
                             return [
                                 'id' => $p->id,
                                 'department_id' => $p->department_id,
                                 'department_name' => $p->department?->name,
-                                'duty' => $p->duty,
+                                'duty' => $duty,
                                 'sub_department_id' => $p->sub_department_id,
                                 'sub_department_name' => $p->subDepartment?->name,
                                 'major' => $p->major,
-                                'position' => $p->position,
+                                'position' => $position,
                                 'formatted_title' => $formattedTitle,
                                 'is_primary' => (bool)$p->is_primary,
                             ];

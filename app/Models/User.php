@@ -251,6 +251,11 @@ class User extends Authenticatable
         return false;
     }
 
+    public function isFinanceHead(): bool
+    {
+        return $this->isFinanceStaff();
+    }
+
     public function isFinanceStaff(): bool
     {
         if ($this->isAdmin()) return true;

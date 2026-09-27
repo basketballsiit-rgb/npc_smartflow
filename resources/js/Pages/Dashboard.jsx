@@ -12201,7 +12201,7 @@ ${itemsListText}
 
         // Regular users (teachers/proposers) only track their own projects
         if (!isPowerTrackingUser) {
-            sourceProjects = sourceProjects.filter(p => !p.user_id || p.user_id === auth.user.id || p.user?.id === auth.user.id);
+            sourceProjects = sourceProjects.filter(p => !p.user_id || p.user_id === auth?.user?.id || p.user?.id === auth?.user?.id);
         }
 
         // Filter projects that have been approved or in proposal stage
