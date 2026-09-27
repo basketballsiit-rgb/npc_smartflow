@@ -1076,11 +1076,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'all_projects' })}
                                     className={getSubLinkClass(url.includes('tab=all_projects'))}
-                                    title="สรุปโครงการทั้งหมดของวิทยาลัย"
+                                    title="จัดการโครงการทั้งหมดของวิทยาลัย และปลดล็อคแก้ไข"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-rose-300')}>└─</span>
                                     <span className="text-sm">🏛️</span>
-                                    {isSidebarOpen && <span>สรุปโครงการทั้งหมด</span>}
+                                    {isSidebarOpen && <span>จัดการโครงการทั้งหมด & ปลดล็อค</span>}
                                 </Link>
                             </div>
                             )}

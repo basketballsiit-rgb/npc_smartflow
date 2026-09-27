@@ -215,8 +215,20 @@ ${itemsListText}
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
     const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
     const isFinanceStaff = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'finance_head' || (auth.user.department && (auth.user.department.name?.includes('การเงิน') || auth.user.department.code === 'FIN')) || auth.user.position?.includes('การเงิน'));
-    const isProcStaffOrAdmin = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'procurement_head' || auth.user.role === 'procurement_head' || (auth.user.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC')) || auth.user.position?.includes('พัสดุ'));
-    const isPlanStaffOrAdmin = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'plan_head' || auth.user.role === 'plan_head' || (auth.user.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN')) || auth.user.position?.includes('แผน'));
+    const isPlanStaffOrAdmin = Boolean(
+        auth.user?.is_admin || 
+        auth.user?.is_plan_head || 
+        auth.user?.is_plan_staff || 
+        auth.user?.role === 'admin' || 
+        auth.user?.role === 'superadmin' || 
+        auth.user?.role === 'plan_head' || 
+        auth.user?.role?.name === 'admin' || 
+        auth.user?.role?.name === 'plan_head' || 
+        auth.user?.department_name?.includes('แผน') ||
+        auth.user?.department?.name?.includes('แผน') ||
+        auth.user?.position?.includes('แผน') ||
+        auth.user?.position?.includes('ผู้ดูแลระบบ')
+    );
     const isProposer = Boolean(project.user_id === auth.user.id);
 
     // Auto-detect disbursement type: 'loan', 'procurement', or 'both'
@@ -1075,6 +1087,30 @@ ${itemsListText}
                                     ✏️ จัดทำ/แก้ไขโครงการ
                                 </Link>
                             )
+                        )}
+
+                        {/* Quick Admin Actions in Top Header */}
+                        {isPlanStaffOrAdmin && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={handleQuickSetDisbursementType}
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 rounded-xl text-xs font-bold shadow-2xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                    title="เปลี่ยนรูปแบบการเบิกจ่าย (สัญญายืมเงิน / พัสดุจัดซื้อ)"
+                                >
+                                    <span>⚙️</span>
+                                    <span>รูปแบบ: {disbType === 'loan' ? 'สัญญายืมเงิน' : disbType === 'procurement' ? 'จัดซื้อพัสดุ' : 'ทั้งสองส่วน'}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleUnlockForEdit}
+                                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-xs font-bold shadow-2xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                    title="ปลดล็อคโครงการให้ผู้เสนอเข้าแก้ไขรายละเอียด/งบประมาณ"
+                                >
+                                    <span>🔄</span>
+                                    <span>ปลดล็อคแก้ไข</span>
+                                </button>
+                            </>
                         )}
 
                         {/* Delete Button */}
