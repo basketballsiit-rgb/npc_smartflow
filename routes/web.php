@@ -160,9 +160,11 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/generate-ai-content', [ProjectController::class, 'generateAiContent'])->name('projects.generate_ai_content');
     Route::post('projects/{project}/submit', [ProjectController::class, 'submit'])->name('projects.submit');
     Route::post('projects/{project}/approve', [ProjectController::class, 'approve'])->name('projects.approve');
-    Route::post('projects/{project}/admin-approve', [ProjectController::class, 'adminApprove'])->name('projects.admin_approve');
     Route::post('projects/{project}/update-status', [ProjectController::class, 'updateStatus'])->name('projects.update_status');
     Route::post('projects/{project}/reject', [ProjectController::class, 'reject'])->name('projects.reject');
+    Route::post('projects/{project}/update-funding-source', [ProjectController::class, 'updateFundingSource'])->name('projects.update_funding_source');
+    Route::post('projects/{project}/set-disbursement-type', [ProjectController::class, 'setDisbursementType'])->name('projects.set_disbursement_type');
+    Route::post('projects/{project}/unlock-for-edit', [ProjectController::class, 'unlockForEdit'])->name('projects.unlock_for_edit');
 
     // Budget & Procurement DO phase routes
     Route::post('budgets/{budget}/clear', [BudgetController::class, 'clear'])->name('budgets.clear');

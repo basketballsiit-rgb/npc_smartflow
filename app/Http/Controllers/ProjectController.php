@@ -1640,4 +1640,93 @@ class ProjectController extends Controller
 
         return response()->json(['success' => false, 'message' => 'Invalid type']);
     }
+
+    /**
+     * Update project funding source directly (Admin / Plan Staff).
+     */
+    public function updateFundingSource(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || ($user->department && (str_contains($user->department->name, 'แผน') || $user->department->code === 'PLAN'));
+        if (!$isPlanOrAdmin) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานแผนงานและผู้ดูแลระบบเท่านั้นที่สามารถกำหนดแหล่งเงินทุนได้');
+        }
+
+        $request->validate([
+            'funding_source_id' => 'required|exists:funding_sources,id',
+        ]);
+
+        $project->funding_source_id = $request->input('funding_source_id');
+        $project->save();
+
+        if ($project->budget) {
+            $project->budget->funding_source_id = $request->input('funding_source_id');
+            $project->budget->save();
+        } else {
+            \App\Models\Budget::create([
+                'project_id' => $project->id,
+                'funding_source_id' => $request->input('funding_source_id'),
+                'allocated_amount' => $project->allocated_budget ?: $project->estimated_budget,
+                'encumbered_amount' => $project->allocated_budget ?: $project->estimated_budget,
+                'spent_amount' => 0.00,
+                'is_advance_payment' => in_array($project->disbursement_type, ['loan', 'both']),
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'กำหนดแหล่งเงินงบประมาณเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Set project disbursement type directly (Admin / Plan Staff / Proposer).
+     */
+    public function setDisbursementType(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || ($user->department && (str_contains($user->department->name, 'แผน') || $user->department->code === 'PLAN'));
+        if (!$isPlanOrAdmin && $project->user_id !== $user->id) {
+            abort(403, 'คุณไม่มีสิทธิ์ปรับเปลี่ยนประเภทการเบิกจ่ายของโครงการนี้');
+        }
+
+        $request->validate([
+            'disbursement_type' => 'required|in:procurement,loan,both',
+        ]);
+
+        $type = $request->input('disbursement_type');
+        $project->disbursement_type = $type;
+        $project->save();
+
+        if ($project->budget) {
+            $project->budget->is_advance_payment = in_array($type, ['loan', 'both']);
+            $project->budget->save();
+        }
+
+        // If switched to loan, clean up empty procurement items
+        if ($type === 'loan' && $project->procurement) {
+            $project->procurement->items()->where(function($q) {
+                $q->whereNull('total_price')->orWhere('total_price', '<=', 0);
+            })->delete();
+        }
+
+        return redirect()->back()->with('success', 'ปรับเปลี่ยนประเภทการเบิกจ่ายโครงการเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Unlock project for proposer to edit.
+     */
+    public function unlockForEdit(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || ($user->department && (str_contains($user->department->name, 'แผน') || $user->department->code === 'PLAN'));
+        if (!$isPlanOrAdmin && $project->user_id !== $user->id) {
+            abort(403, 'คุณไม่มีสิทธิ์ปลดล็อคโครงการนี้');
+        }
+
+        if ($project->procurement) {
+            $project->procurement->status = 'pending';
+            $project->procurement->procurement_received_at = null;
+            $project->procurement->save();
+        }
+
+        return redirect()->route('projects.edit', $project->id)->with('success', 'ปลดล็อคโครงการเรียบร้อยแล้ว ท่านสามารถเข้าแก้ไขประเภทการเบิกจ่ายและรายละเอียดโครงการได้ทันที');
+    }
 }

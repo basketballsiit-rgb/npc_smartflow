@@ -216,6 +216,21 @@ ${itemsListText}
     const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
     const isFinanceStaff = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'finance_head' || (auth.user.department && (auth.user.department.name?.includes('การเงิน') || auth.user.department.code === 'FIN')) || auth.user.position?.includes('การเงิน'));
     const isProcStaffOrAdmin = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'procurement_head' || auth.user.role === 'procurement_head' || (auth.user.department && (auth.user.department.name?.includes('พัสดุ') || auth.user.department.code === 'PROC')) || auth.user.position?.includes('พัสดุ'));
+    const isPlanStaffOrAdmin = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'plan_head' || auth.user.role === 'plan_head' || (auth.user.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN')) || auth.user.position?.includes('แผน'));
+    const isProposer = Boolean(project.user_id === auth.user.id);
+
+    // Auto-detect disbursement type: 'loan', 'procurement', or 'both'
+    const disbType = (() => {
+        if (project.disbursement_type) return project.disbursement_type;
+        if (project.budget?.is_advance_payment) return 'loan';
+        const rawItems = project.procurement?.items || [];
+        const isLoanRegex = /ค่าตอบแทน|วิทยากร|ค่าอาหาร|อาหารกลางวัน|อาหารว่าง|เครื่องดื่ม|เดินทาง|พาหนะ|ยานพาหนะ|เบี้ยเลี้ยง|ที่พัก|สมนาคุณ|ค่าจ้างเหมาบริการบุคคล|เงินยืม|ยืมเงิน/ui;
+        const hasLoanItems = rawItems.some(i => isLoanRegex.test(i.description || ''));
+        const hasProcurementItems = rawItems.some(i => !isLoanRegex.test(i.description || '') && Number(i.unit_price) > 0);
+        if (hasLoanItems && hasProcurementItems) return 'both';
+        if (hasLoanItems && !hasProcurementItems) return 'loan';
+        return 'procurement';
+    })();
     const [savingProcurement, setSavingProcurement] = useState(false);
     const [isEditingProcurement, setIsEditingProcurement] = useState(!project.procurement?.id);
 
@@ -341,6 +356,120 @@ ${itemsListText}
                     onSuccess: () => {
                         setIsEditingProcurement(true);
                         Swal.fire('สำเร็จ', isToPending ? 'ส่งคืนให้ผู้เสนอโครงการแก้ไขเรียบร้อยแล้ว' : 'ดึงเรื่องกลับมาให้งานพัสดุแก้ไขเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
+
+    const handleQuickSetFundingSource = () => {
+        const optionsHtml = fundingSources.map(fs => `<option value="${fs.id}" ${fs.id == (project.funding_source_id || project.budget?.funding_source_id) ? 'selected' : ''}>${fs.name}</option>`).join('');
+        Swal.fire({
+            title: '🏛️ ระบุ/แก้ไข แหล่งเงินงบประมาณ',
+            html: `
+                <div class="text-left text-xs text-slate-600 space-y-2 font-sans">
+                    <p>กำหนดหรือปรับปรุงแหล่งงบประมาณสำหรับโครงการนี้:</p>
+                    <div class="pt-2">
+                        <label class="block font-bold text-slate-800 mb-1">เลือกแหล่งเงินงบประมาณ:</label>
+                        <select id="swal-funding-source" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm font-semibold">
+                            ${optionsHtml}
+                        </select>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '💾 บันทึกแหล่งเงินทุน',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#7c3aed',
+            preConfirm: () => {
+                return document.getElementById('swal-funding-source')?.value;
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                router.post(route('projects.update_funding_source', project.id), {
+                    funding_source_id: result.value
+                }, {
+                    onSuccess: () => {
+                        Swal.fire('สำเร็จ', 'บันทึกแหล่งเงินงบประมาณเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
+
+    const handleQuickSetDisbursementType = () => {
+        Swal.fire({
+            title: '⚙️ เลือกรูปแบบการเบิกจ่ายงบประมาณ',
+            html: `
+                <div class="text-left text-xs text-slate-600 space-y-3 font-sans">
+                    <p>เลือกรูปแบบการเบิกจ่ายของโครงการ <b>"${project.title}"</b>:</p>
+                    <div class="space-y-2 pt-1">
+                        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 cursor-pointer hover:bg-amber-100/50">
+                            <input type="radio" name="swal_disb_type" value="loan" ${disbType === 'loan' ? 'checked' : ''} class="text-amber-600 focus:ring-amber-500" />
+                            <div>
+                                <div class="font-bold text-slate-800 text-xs">💵 สัญญายืมเงินทดรองราชการ (แบบ กค.๑๐๑)</div>
+                                <div class="text-[10px] text-slate-500">สำหรับค่าตอบแทนวิทยากร ค่าอาหาร ค่าเดินทาง (ไม่ต้องทำชุดพัสดุ 4 ฉบับ)</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-purple-200 bg-purple-50/50 cursor-pointer hover:bg-purple-100/50">
+                            <input type="radio" name="swal_disb_type" value="procurement" ${disbType === 'procurement' ? 'checked' : ''} class="text-purple-600 focus:ring-purple-500" />
+                            <div>
+                                <div class="font-bold text-slate-800 text-xs">📦 จัดซื้อจัดจ้างพัสดุ (ชุดจัดซื้อ 4 ฉบับ)</div>
+                                <div class="text-[10px] text-slate-500">สำหรับจัดซื้อวัสดุ/ครุภัณฑ์/จ้างเหมา ตาม พ.ร.บ. จัดซื้อจัดจ้างฯ</div>
+                            </div>
+                        </label>
+                        <label class="flex items-center gap-2 p-2.5 rounded-xl border border-indigo-200 bg-indigo-50/50 cursor-pointer hover:bg-indigo-100/50">
+                            <input type="radio" name="swal_disb_type" value="both" ${disbType === 'both' ? 'checked' : ''} class="text-indigo-600 focus:ring-indigo-500" />
+                            <div>
+                                <div class="font-bold text-slate-800 text-xs">🔄 ทั้งจัดซื้อจัดจ้าง และ สัญญายืมเงิน</div>
+                                <div class="text-[10px] text-slate-500">มีทั้งรายการพัสดุ และเงินยืมจัดกิจกรรม</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '💾 ยืนยันปรับรูปแบบ',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#7c3aed',
+            preConfirm: () => {
+                const selected = document.querySelector('input[name="swal_disb_type"]:checked')?.value;
+                return selected;
+            }
+        }).then((result) => {
+            if (result.isConfirmed && result.value) {
+                router.post(route('projects.set_disbursement_type', project.id), {
+                    disbursement_type: result.value
+                }, {
+                    onSuccess: () => {
+                        Swal.fire('สำเร็จ', 'ปรับรูปแบบการเบิกจ่ายโครงการเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
+
+    const handleUnlockForEdit = () => {
+        Swal.fire({
+            title: '🔓 ปลดล็อค / คืนค่าให้ผู้เสนอโครงการแก้ไข',
+            html: `
+                <div class="text-left text-xs text-slate-600 space-y-2 font-sans">
+                    <p>ระบบจะปลดล็อคสถานะจัดซื้อจัดจ้าง ให้ผู้เสนอโครงการ (<b>${project.user?.name || 'ผู้เสนอ'}</b>) สามารถเข้าแก้ไขรายละเอียดโครงการ รายการค่าใช้จ่าย หรือเลือกรูปแบบการเบิกจ่ายใหม่ได้</p>
+                    <p class="text-amber-800 bg-amber-50 p-2 rounded-lg font-medium border border-amber-200">
+                        ⚡ ในกรณีที่งานพัสดุยังไม่ได้จัดซื้อจริง สามารถปลดล็อคเพื่อให้ผู้เสนอโครงการปรับปรุงข้อมูลให้ถูกต้องได้ทันที
+                    </p>
+                </div>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '🔓 ยืนยันปลดล็อคแก้ไข',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#059669',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('projects.unlock_for_edit', project.id), {}, {
+                    onSuccess: () => {
+                        Swal.fire('ปลดล็อคสำเร็จ', 'ระบบได้ปลดล็อคและเปิดให้แก้ไขโครงการเรียบร้อยแล้ว', 'success');
                     }
                 });
             }
@@ -1205,7 +1334,7 @@ ${itemsListText}
                                 onClick={() => setActiveTab('do')}
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-black text-white shadow-md hover:scale-105 transition-all whitespace-nowrap shrink-0"
                             >
-                                🛠️ ไปยัง แท็บที่ 2 (Do) จัดการพัสดุ ➔
+                                {disbType === 'loan' ? '💵 ไปยัง แท็บที่ 2 (Do) สัญญายืมเงิน ➔' : '🛠️ ไปยัง แท็บที่ 2 (Do) จัดการพัสดุ ➔'}
                             </button>
                         </div>
                     )}
@@ -1230,7 +1359,13 @@ ${itemsListText}
                                     : 'border-transparent text-slate-500 hover:text-purple-700'
                             }`}
                         >
-                            <span>🛠️ แท็บที่ 2: การจัดซื้อจัดจ้าง & ดำเนินงาน (Do)</span>
+                            <span>
+                                {disbType === 'loan' 
+                                    ? '💵 แท็บที่ 2: สัญญายืมเงิน & ดำเนินงาน (Do)' 
+                                    : disbType === 'procurement' 
+                                    ? '🛠️ แท็บที่ 2: การจัดซื้อจัดจ้าง & ดำเนินงาน (Do)' 
+                                    : '🔄 แท็บที่ 2: จัดซื้อจัดจ้าง & สัญญายืมเงิน (Do)'}
+                            </span>
                             {!isPlanApproved && (
                                 <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">🔒 รออนุมัติ</span>
                             )}
@@ -1573,96 +1708,221 @@ ${itemsListText}
 
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-4">
                                 <div>
-                                    <h3 className="text-lg font-black text-purple-950">🛠️ การจัดซื้อจัดจ้าง และคำสั่งแต่งตั้งกรรมการ (Do Phase)</h3>
-                                    <p className="text-xs text-slate-600 mt-0.5">ระบุรายการวัสดุอุปกรณ์ แต่งตั้งคณะกรรมการพัสดุ และพิมพ์เอกสารจัดซื้อจัดจ้าง 4 ฉบับตามระเบียบ</p>
+                                    <h3 className="text-lg font-black text-purple-950">
+                                        {disbType === 'loan' 
+                                            ? '💵 สัญญายืมเงินทดรองราชการ (แบบ กค.๑๐๑) (Do Phase)' 
+                                            : disbType === 'procurement' 
+                                            ? '🛠️ การจัดซื้อจัดจ้าง และคำสั่งแต่งตั้งกรรมการ (Do Phase)' 
+                                            : '🔄 จัดซื้อจัดจ้าง & สัญญายืมเงินทดรองราชการ (Do Phase)'}
+                                    </h3>
+                                    <p className="text-xs text-slate-600 mt-0.5">
+                                        {disbType === 'loan' 
+                                            ? 'โครงการนี้เบิกจ่ายในลักษณะสัญญายืมเงินทดรองราชการ (แบบ กค.๑๐๑) เพื่อเป็นค่าใช้จ่ายในการดำเนินงาน' 
+                                            : disbType === 'procurement' 
+                                            ? 'ระบุรายการวัสดุอุปกรณ์ แต่งตั้งคณะกรรมการพัสดุ และพิมพ์เอกสารจัดซื้อจัดจ้าง 4 ฉบับตามระเบียบ' 
+                                            : 'บริหารจัดการรายการจัดซื้อจัดจ้างพัสดุ 4 ฉบับ และสัญญายืมเงินราชการ (กค.๑๐๑)'}
+                                    </p>
                                 </div>
-                                {project.procurement?.id && !isEditingProcurement ? (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <div className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-black shadow-2xs select-none">
-                                            <span className="text-sm">🔒</span>
-                                            <span>บันทึกส่งงานพัสดุแล้ว (ดูอย่างเดียว)</span>
-                                        </div>
-                                        {/* Only Procurement staff or Admin can unlock to edit after submission */}
-                                        {isProcStaffOrAdmin && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsEditingProcurement(true)}
-                                                className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold shadow-2xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                                                title="ปลดล็อคแก้ไขข้อมูลพัสดุ (เฉพาะเจ้าหน้าที่พัสดุและแอดมิน)"
-                                            >
-                                                <span>✏️</span>
-                                                <span>แก้ไขข้อมูล (เฉพาะงานพัสดุ)</span>
-                                            </button>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {project.procurement?.id && (
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsEditingProcurement(false)}
-                                                className="px-3 py-2 text-slate-500 hover:text-slate-800 text-xs font-bold hover:bg-slate-100 rounded-xl transition cursor-pointer"
-                                            >
-                                                ยกเลิกการแก้ไข
-                                            </button>
-                                        )}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {/* Action button to switch disbursement type for Admin/Plan Staff */}
+                                    {isPlanStaffOrAdmin && (
                                         <button
                                             type="button"
-                                            disabled={savingProcurement || isOverBudget}
-                                            onClick={handleSaveProcurement}
-                                            className={`rounded-xl px-4 py-2.5 text-xs font-bold text-white shadow-md transition-all whitespace-nowrap flex items-center gap-2 ${
-                                                savingProcurement || isOverBudget
-                                                    ? 'bg-purple-400 cursor-not-allowed opacity-75'
-                                                    : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 shadow-purple-600/25 hover:scale-105 active:scale-95 cursor-pointer'
-                                            }`}
+                                            onClick={handleQuickSetDisbursementType}
+                                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 rounded-xl text-xs font-bold shadow-2xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                            title="เปลี่ยนรูปแบบการเบิกจ่าย (สัญญายืมเงิน / พัสดุจัดซื้อ)"
                                         >
-                                            {savingProcurement ? (
-                                                <>
-                                                    <svg className="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                    </svg>
-                                                    <span>กำลังบันทึกข้อมูล...</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span>💾</span>
-                                                    <span>บันทึกข้อมูล & ออกคำสั่งพัสดุ</span>
-                                                </>
-                                            )}
+                                            <span>⚙️</span>
+                                            <span>รูปแบบ: {disbType === 'loan' ? 'สัญญายืมเงิน' : disbType === 'procurement' ? 'จัดซื้อพัสดุ' : 'ทั้งสองส่วน'}</span>
                                         </button>
-                                    </div>
-                                )}
+                                    )}
+
+                                    {/* Unlock for edit button for Admin/Plan Staff */}
+                                    {isPlanStaffOrAdmin && (
+                                        <button
+                                            type="button"
+                                            onClick={handleUnlockForEdit}
+                                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-xs font-bold shadow-2xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                            title="ปลดล็อคโครงการให้ผู้เสนอเข้าแก้ไขรายละเอียด/งบประมาณ"
+                                        >
+                                            <span>🔄</span>
+                                            <span>ปลดล็อคให้ผู้เสนอแก้ไข</span>
+                                        </button>
+                                    )}
+
+                                    {/* Proposer Edit Link */}
+                                    {isProposer && (
+                                        <Link
+                                            href={route('projects.edit', project.id)}
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                        >
+                                            <span>✏️</span>
+                                            <span>แก้ไขโครงการ / รายการ</span>
+                                        </Link>
+                                    )}
+
+                                    {/* Procurement mode buttons */}
+                                    {disbType !== 'loan' && (
+                                        project.procurement?.id && !isEditingProcurement ? (
+                                            <>
+                                                <div className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-black shadow-2xs select-none">
+                                                    <span className="text-sm">🔒</span>
+                                                    <span>บันทึกส่งงานพัสดุแล้ว (ดูอย่างเดียว)</span>
+                                                </div>
+                                                {isProcStaffOrAdmin && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsEditingProcurement(true)}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold shadow-2xs hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                                        title="ปลดล็อคแก้ไขข้อมูลพัสดุ (เฉพาะเจ้าหน้าที่พัสดุและแอดมิน)"
+                                                    >
+                                                        <span>✏️</span>
+                                                        <span>แก้ไขข้อมูล (เฉพาะงานพัสดุ)</span>
+                                                    </button>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <>
+                                                {project.procurement?.id && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsEditingProcurement(false)}
+                                                        className="px-3 py-2 text-slate-500 hover:text-slate-800 text-xs font-bold hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                                                    >
+                                                        ยกเลิกการแก้ไข
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    disabled={savingProcurement || isOverBudget}
+                                                    onClick={handleSaveProcurement}
+                                                    className={`rounded-xl px-4 py-2.5 text-xs font-bold text-white shadow-md transition-all whitespace-nowrap flex items-center gap-2 ${
+                                                        savingProcurement || isOverBudget
+                                                            ? 'bg-purple-400 cursor-not-allowed opacity-75'
+                                                            : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 shadow-purple-600/25 hover:scale-105 active:scale-95 cursor-pointer'
+                                                    }`}
+                                                >
+                                                    {savingProcurement ? (
+                                                        <>
+                                                            <svg className="animate-spin -ml-1 mr-1 h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                            </svg>
+                                                            <span>กำลังบันทึกข้อมูล...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span>💾</span>
+                                                            <span>บันทึกข้อมูล & ออกคำสั่งพัสดุ</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </>
+                                        )
+                                    )}
+                                </div>
                             </div>
                             
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
-                                    <span className="text-xs font-bold uppercase text-purple-800">แหล่งเงินงบประมาณ</span>
-                                    <p className="text-base font-black text-purple-950 mt-1">
-                                        {(() => {
-                                            const fn = project.budget?.fundingSource?.name || project.fundingSource?.name;
-                                            if (!fn) return 'ยังไม่ระบุแหล่งเงินทุน';
-                                            if (fn.includes('สถานศึกษา') || fn.includes('Revenue') || fn.includes('บำรุงการศึกษา') || fn.includes('บกศ')) return 'บกศ.';
-                                            return fn;
-                                        })()}
-                                    </p>
+                                <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-between">
+                                    <div>
+                                        <span className="text-xs font-bold uppercase text-purple-800">แหล่งเงินงบประมาณ</span>
+                                        <p className="text-base font-black text-purple-950 mt-1">
+                                            {(() => {
+                                                const fn = project.budget?.fundingSource?.name || project.fundingSource?.name;
+                                                if (!fn) return 'ยังไม่ระบุแหล่งเงินทุน';
+                                                if (fn.includes('สถานศึกษา') || fn.includes('Revenue') || fn.includes('บำรุงการศึกษา') || fn.includes('บกศ')) return 'เงินรายได้สถานศึกษา (บกศ.)';
+                                                return fn;
+                                            })()}
+                                        </p>
+                                    </div>
+                                    {isPlanStaffOrAdmin && (
+                                        <div className="pt-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleQuickSetFundingSource}
+                                                className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-100/70 hover:bg-purple-200/80 px-2.5 py-1 rounded-lg transition cursor-pointer"
+                                            >
+                                                <span>✏️</span> ระบุ/แก้ไขแหล่งเงินทุน
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100">
                                     <span className="text-xs font-bold uppercase text-emerald-800">วงเงินงบประมาณที่ได้รับการอนุมัติ</span>
                                     <p className="text-base font-black text-emerald-600 mt-1">{formatCurrency(allocatedBudget)}</p>
                                 </div>
-                                <div className={`p-4 rounded-xl border transition-all ${isOverBudget ? 'bg-rose-50 border-rose-200' : 'bg-indigo-50/50 border-indigo-100'}`}>
-                                    <span className={`text-xs font-bold uppercase ${isOverBudget ? 'text-rose-800' : 'text-indigo-800'}`}>ยอดรวมจัดซื้อจัดจ้างทั้งสิ้น</span>
-                                    <div className="flex items-center justify-between mt-1">
-                                        <p className={`text-base font-black ${isOverBudget ? 'text-rose-600' : 'text-indigo-950'}`}>{formatCurrency(totalProcurementSum)}</p>
-                                        <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${isOverBudget ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-100 text-emerald-800'}`}>
-                                            {isOverBudget ? `เกิน ${formatCurrency(budgetDifference)}` : `คงเหลือ ${formatCurrency(budgetDifference)}`}
-                                        </span>
+                                {disbType === 'loan' ? (
+                                    <div className="p-4 rounded-xl border bg-amber-50/50 border-amber-200">
+                                        <span className="text-xs font-bold uppercase text-amber-800">วงเงินสัญญายืมเงินราชการ (กค.๑๐๑)</span>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <p className="text-base font-black text-amber-950">{formatCurrency(allocatedBudget)}</p>
+                                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-200 text-amber-900">
+                                                💵 สัญญายืมเงิน
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className={`p-4 rounded-xl border transition-all ${isOverBudget ? 'bg-rose-50 border-rose-200' : 'bg-indigo-50/50 border-indigo-100'}`}>
+                                        <span className={`text-xs font-bold uppercase ${isOverBudget ? 'text-rose-800' : 'text-indigo-800'}`}>ยอดรวมจัดซื้อจัดจ้างทั้งสิ้น</span>
+                                        <div className="flex items-center justify-between mt-1">
+                                            <p className={`text-base font-black ${isOverBudget ? 'text-rose-600' : 'text-indigo-950'}`}>{formatCurrency(totalProcurementSum)}</p>
+                                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${isOverBudget ? 'bg-rose-600 text-white animate-pulse' : 'bg-emerald-100 text-emerald-800'}`}>
+                                                {isOverBudget ? `เกิน ${formatCurrency(budgetDifference)}` : `คงเหลือ ${formatCurrency(budgetDifference)}`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
-                            {/* Over Budget Red Warning Banner */}
+                            {disbType === 'loan' ? (
+                                <div className="border border-amber-200 bg-gradient-to-br from-amber-50/70 via-orange-50/30 to-amber-50/50 rounded-2xl p-6 space-y-4 shadow-sm">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-amber-200/80 pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-3xl">💵</span>
+                                            <div>
+                                                <h4 className="text-base font-black text-amber-950">สัญญายืมเงินทดรองราชการ (แบบ กค. ๑๐๑)</h4>
+                                                <p className="text-xs text-amber-800">โครงการนี้ดำเนินการเบิกจ่ายงบประมาณเป็นเงินยืมทดรองราชการเพื่อจัดกิจกรรมโครงการ</p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={route('procurements.download_document', [project.id, 'loan_contract'])}
+                                            target="_blank"
+                                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md hover:scale-105 active:scale-95 transition cursor-pointer"
+                                        >
+                                            <span>🖨️</span>
+                                            <span>พิมพ์สัญญายืมเงิน (แบบ กค.๑๐๑)</span>
+                                        </a>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                        <div className="bg-white/80 p-3.5 rounded-xl border border-amber-200">
+                                            <span className="text-slate-500 font-medium block">ผู้ขอยืมเงิน (ผู้รับผิดชอบโครงการ):</span>
+                                            <span className="font-black text-slate-800 text-sm mt-0.5 block">{project.user?.name || '-'}</span>
+                                            <span className="text-[11px] text-slate-500">{project.position || project.user?.position || '-'}</span>
+                                        </div>
+                                        <div className="bg-white/80 p-3.5 rounded-xl border border-amber-200">
+                                            <span className="text-slate-500 font-medium block">สังกัด / แผนกวิชา:</span>
+                                            <span className="font-black text-slate-800 text-sm mt-0.5 block">{project.department?.name || '-'}</span>
+                                            <span className="text-[11px] text-slate-500">ปีงบประมาณ {toArabic(String(project.academic_year || ''))}</span>
+                                        </div>
+                                        <div className="bg-white/80 p-3.5 rounded-xl border border-amber-200">
+                                            <span className="text-slate-500 font-medium block">วงเงินยืมทดรองราชการ:</span>
+                                            <span className="font-black text-amber-700 text-base mt-0.5 block">{formatCurrency(allocatedBudget)}</span>
+                                            <span className="text-[11px] text-emerald-700 font-bold">✓ อนุมัติจัดสรรแล้ว</span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-white/90 p-4 rounded-xl border border-amber-200 text-xs space-y-1.5 text-slate-700">
+                                        <p className="font-bold text-amber-950 flex items-center gap-1.5">
+                                            <span>📌</span> เงื่อนไขและกำหนดเวลาส่งใช้เงินยืมทดรองราชการ:
+                                        </p>
+                                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                                            ตามระเบียบการเบิกจ่ายเงินจากคลัง ผู้ยืมจะต้องจัดทำกิจกรรมให้เสร็จสิ้นและนำใบสำคัญคู่จ่าย (พร้อมเงินเหลือจ่าย ถ้ามี) ส่งใช้เงินยืมทดรองราชการให้แก่งานการเงินภายในกำหนด <b>๓๐ วัน</b> นับถัดจากวันดำเนินโครงการเสร็จสิ้น
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Over Budget Red Warning Banner */}
                             {isOverBudget && (
                                 <div className="rounded-2xl bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 p-4 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md">
                                     <div className="flex items-center gap-3">
@@ -1998,36 +2258,50 @@ ${itemsListText}
                                     placeholder="ระบุข้อกำหนดขอบเขตงาน (TOR Specifications)..."
                                 ></textarea>
                             </div>
+                        </>
+                    )}
 
                             {/* Section 4: Dynamic Procurement & Loan Documents Download Cards */}
                             <div className="border-t border-purple-100 pt-4">
-                                <h4 className="text-sm font-black text-purple-950 mb-3">📄 เอกสารจัดซื้อจัดจ้าง & สัญญายืมเงินราชการ (พิมพ์/สร้างอัตโนมัติ)</h4>
-                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                                    <a href={route('procurements.download_document', [project.id, 'loan_contract'])} target="_blank" className="p-3.5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
-                                        <div className="text-lg mb-1">💵</div>
-                                        <div className="text-xs font-bold text-amber-950">สัญญายืมเงิน</div>
-                                        <div className="text-[10px] text-amber-700 font-medium">แบบ กค. ๑๐๑</div>
-                                    </a>
-                                    <a href={route('procurements.download_document', [project.id, 'memo'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
-                                        <div className="text-lg mb-1">📄</div>
-                                        <div className="text-xs font-bold text-purple-900">1. บันทึกข้อความ</div>
-                                        <div className="text-[10px] text-purple-600">ขออนุมัติจัดซื้อจัดจ้าง</div>
-                                    </a>
-                                    <a href={route('procurements.download_document', [project.id, 'request_form'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
-                                        <div className="text-lg mb-1">🛒</div>
-                                        <div className="text-xs font-bold text-purple-900">2. รายงานขอซื้อ/ขอจ้าง</div>
-                                        <div className="text-[10px] text-purple-600">แบบฟอร์ม 7 ส่วน + กรรมการ</div>
-                                    </a>
-                                    <a href={route('procurements.download_document', [project.id, 'estimation'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
-                                        <div className="text-lg mb-1">📊</div>
-                                        <div className="text-xs font-bold text-purple-900">3. ประมาณการรายละเอียด</div>
-                                        <div className="text-[10px] text-purple-600">ตารางประมาณการ/ราคากลาง</div>
-                                    </a>
-                                    <a href={route('procurements.download_document', [project.id, 'tor'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
-                                        <div className="text-lg mb-1">📜</div>
-                                        <div className="text-xs font-bold text-purple-900">4. ขอบเขตงาน (TOR)</div>
-                                        <div className="text-[10px] text-purple-600">คุณลักษณะเฉพาะ 10 ข้อ</div>
-                                    </a>
+                                <h4 className="text-sm font-black text-purple-950 mb-3">
+                                    {disbType === 'loan' 
+                                        ? '💵 สัญญายืมเงินราชการ แบบ กค. ๑๐๑ (พิมพ์/สร้างอัตโนมัติ)' 
+                                        : disbType === 'procurement' 
+                                        ? '📄 เอกสารจัดซื้อจัดจ้าง ๔ ฉบับ (พิมพ์/สร้างอัตโนมัติ)' 
+                                        : '📄 เอกสารจัดซื้อจัดจ้าง & สัญญายืมเงินราชการ (พิมพ์/สร้างอัตโนมัติ)'}
+                                </h4>
+                                <div className={`grid gap-3 ${disbType === 'loan' ? 'grid-cols-1 sm:grid-cols-2 max-w-md' : disbType === 'procurement' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-5'}`}>
+                                    {disbType !== 'procurement' && (
+                                        <a href={route('procurements.download_document', [project.id, 'loan_contract'])} target="_blank" className="p-3.5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
+                                            <div className="text-lg mb-1">💵</div>
+                                            <div className="text-xs font-bold text-amber-950">สัญญายืมเงิน</div>
+                                            <div className="text-[10px] text-amber-700 font-medium">แบบ กค. ๑๐๑</div>
+                                        </a>
+                                    )}
+                                    {disbType !== 'loan' && (
+                                        <>
+                                            <a href={route('procurements.download_document', [project.id, 'memo'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
+                                                <div className="text-lg mb-1">📄</div>
+                                                <div className="text-xs font-bold text-purple-900">1. บันทึกข้อความ</div>
+                                                <div className="text-[10px] text-purple-600">ขออนุมัติจัดซื้อจัดจ้าง</div>
+                                            </a>
+                                            <a href={route('procurements.download_document', [project.id, 'request_form'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
+                                                <div className="text-lg mb-1">🛒</div>
+                                                <div className="text-xs font-bold text-purple-900">2. รายงานขอซื้อ/ขอจ้าง</div>
+                                                <div className="text-[10px] text-purple-600">แบบฟอร์ม 7 ส่วน + กรรมการ</div>
+                                            </a>
+                                            <a href={route('procurements.download_document', [project.id, 'estimation'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
+                                                <div className="text-lg mb-1">📊</div>
+                                                <div className="text-xs font-bold text-purple-900">3. ประมาณการรายละเอียด</div>
+                                                <div className="text-[10px] text-purple-600">ตารางประมาณการ/ราคากลาง</div>
+                                            </a>
+                                            <a href={route('procurements.download_document', [project.id, 'tor'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
+                                                <div className="text-lg mb-1">📜</div>
+                                                <div className="text-xs font-bold text-purple-900">4. ขอบเขตงาน (TOR)</div>
+                                                <div className="text-[10px] text-purple-600">คุณลักษณะเฉพาะ 10 ข้อ</div>
+                                            </a>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
