@@ -41,15 +41,35 @@ class AdminController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6',
             'role_id' => 'required|exists:roles,id',
-            'department_id' => 'required|exists:departments,id',
+            'department_id' => 'nullable|exists:departments,id',
             'position' => 'nullable|string|max:255',
             'is_active' => 'boolean',
+            'positions' => 'nullable|array',
+            'positions.*.id' => 'nullable|integer',
+            'positions.*.department_id' => 'required_with:positions|exists:departments,id',
+            'positions.*.duty' => 'required_with:positions|string',
+            'positions.*.sub_department_id' => 'nullable|exists:departments,id',
+            'positions.*.major' => 'nullable|string',
+            'positions.*.is_primary' => 'nullable|boolean',
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
         $validated['is_active'] = $request->boolean('is_active', true);
 
-        User::create($validated);
+        $incomingPositions = $request->input('positions', []);
+        unset($validated['positions']);
+
+        if (empty($validated['department_id'])) {
+            $validated['department_id'] = !empty($incomingPositions[0]['department_id']) 
+                ? (int)$incomingPositions[0]['department_id'] 
+                : Department::value('id');
+        }
+
+        $user = User::create($validated);
+
+        if (!empty($incomingPositions)) {
+            $this->syncUserPositions($user, $incomingPositions);
+        }
 
         return redirect()->back()->with('success', 'เพิ่มผู้ใช้งานใหม่สำเร็จเรียบร้อยแล้ว');
     }
@@ -68,9 +88,16 @@ class AdminController extends Controller
             'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => 'nullable|string|min:6',
             'role_id' => 'required|exists:roles,id',
-            'department_id' => 'required|exists:departments,id',
+            'department_id' => 'nullable|exists:departments,id',
             'position' => 'nullable|string|max:255',
             'is_active' => 'boolean',
+            'positions' => 'nullable|array',
+            'positions.*.id' => 'nullable|integer',
+            'positions.*.department_id' => 'required_with:positions|exists:departments,id',
+            'positions.*.duty' => 'required_with:positions|string',
+            'positions.*.sub_department_id' => 'nullable|exists:departments,id',
+            'positions.*.major' => 'nullable|string',
+            'positions.*.is_primary' => 'nullable|boolean',
         ]);
 
         if (!empty($validated['password'])) {
@@ -81,9 +108,95 @@ class AdminController extends Controller
 
         $validated['is_active'] = $request->boolean('is_active', true);
 
+        $incomingPositions = $request->input('positions');
+        unset($validated['positions']);
+
         $user->update($validated);
 
-        return redirect()->back()->with('success', 'อัปเดตข้อมูลผู้ใช้งานเรียบร้อยแล้ว');
+        if (is_array($incomingPositions)) {
+            $this->syncUserPositions($user, $incomingPositions);
+        }
+
+        return redirect()->back()->with('success', 'อัปเดตข้อมูลผู้ใช้งานและตำแหน่งหน้าที่เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Helper to sync positions list into user_positions table and update user's primary department/position.
+     */
+    private function syncUserPositions(User $user, array $incomingPositions): void
+    {
+        if (empty($incomingPositions)) {
+            return;
+        }
+
+        $incomingIds = [];
+        $hasPrimary = false;
+        foreach ($incomingPositions as $p) {
+            if (!empty($p['is_primary'])) {
+                $hasPrimary = true;
+                break;
+            }
+        }
+        if (!$hasPrimary && count($incomingPositions) > 0) {
+            $incomingPositions[0]['is_primary'] = true;
+        }
+
+        $primaryPos = null;
+        $allTitles = [];
+
+        foreach ($incomingPositions as $item) {
+            $deptId = (int)$item['department_id'];
+            $duty = $item['duty'];
+            $subDeptId = !empty($item['sub_department_id']) ? (int)$item['sub_department_id'] : null;
+            $major = $item['major'] ?? null;
+            $isPrimary = !empty($item['is_primary']);
+
+            // If major is selected for head_of_major / teacher, match department under academic division
+            if (in_array($duty, ['หัวหน้าสาขาวิชา', 'ครูผู้สอน']) && $major) {
+                $matchedDept = Department::where(function($q) use ($major) {
+                    $q->where('name', 'like', "%{$major}%");
+                })->first();
+                if ($matchedDept) {
+                    $subDeptId = $matchedDept->id;
+                }
+            }
+
+            $pos = null;
+            if (!empty($item['id'])) {
+                $pos = UserPosition::where('id', $item['id'])->where('user_id', $user->id)->first();
+            }
+            if (!$pos) {
+                $pos = new UserPosition();
+                $pos->user_id = $user->id;
+            }
+
+            $pos->department_id = $deptId;
+            $pos->duty = $duty;
+            $pos->sub_department_id = $subDeptId;
+            $pos->major = $major;
+            $pos->is_primary = $isPrimary;
+            $pos->position = $pos->formatPositionTitle();
+            $pos->save();
+
+            $incomingIds[] = $pos->id;
+            $allTitles[] = $pos->position;
+
+            if ($isPrimary || $primaryPos === null) {
+                $primaryPos = $pos;
+            }
+        }
+
+        // Delete positions not in list
+        UserPosition::where('user_id', $user->id)
+            ->whereNotIn('id', $incomingIds)
+            ->delete();
+
+        // Sync user's primary department_id and aggregated position string
+        if ($primaryPos) {
+            $user->department_id = $primaryPos->sub_department_id ?: $primaryPos->department_id;
+            $user->position = implode(' / ', array_unique(array_filter($allTitles)));
+            $user->save();
+        }
     }
 
     /**

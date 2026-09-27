@@ -78,7 +78,7 @@ class ProfileController extends Controller
             'positions' => 'required|array|min:1',
             'positions.*.id' => 'nullable|integer',
             'positions.*.department_id' => 'required|exists:departments,id',
-            'positions.*.duty' => 'required|string|in:หัวหน้างาน,หัวหน้าสาขาวิชา,เจ้าหน้าที่,ครูผู้สอน',
+            'positions.*.duty' => 'required|string|in:ผู้อำนวยการ,รองผู้อำนวยการ,หัวหน้างาน,หัวหน้าสาขาวิชา,เจ้าหน้าที่,ครูผู้สอน',
             'positions.*.sub_department_id' => 'nullable|exists:departments,id',
             'positions.*.major' => 'nullable|string',
             'positions.*.is_primary' => 'nullable|boolean',

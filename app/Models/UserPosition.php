@@ -62,6 +62,14 @@ class UserPosition extends Model
             return !empty($this->position) ? $this->position : 'บุคลากร';
         }
 
+        if ($duty === 'ผู้อำนวยการ') {
+            return 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน';
+        }
+
+        if ($duty === 'รองผู้อำนวยการ') {
+            return $deptName ? "รองผู้อำนวยการ{$deptName}" : 'รองผู้อำนวยการวิทยาลัย';
+        }
+
         if (in_array($duty, ['หัวหน้าสาขาวิชา', 'ครูผู้สอน'])) {
             $majorName = $this->major ?: ($subDept ? str_replace('สาขาวิชา', '', $subDept->name) : '');
             $title = "{$duty} - สาขาวิชา{$majorName}";

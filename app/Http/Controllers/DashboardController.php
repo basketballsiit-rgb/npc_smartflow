@@ -217,7 +217,7 @@ class DashboardController extends Controller
         // 0. Admin Dashboard Data
         if ($user->isAdmin() || $user->isPlanHead()) {
             $data['adminData'] = [
-                'users' => User::with(['role', 'department'])->get()->map(function ($u) {
+                'users' => User::with(['role', 'department', 'userPositions.department', 'userPositions.subDepartment'])->get()->map(function ($u) {
                     return [
                         'id' => $u->id,
                         'name' => $u->name,
@@ -230,6 +230,25 @@ class DashboardController extends Controller
                         'position' => $u->position ?? 'ไม่ได้ระบุ',
                         'is_active' => (bool)$u->is_active,
                         'line_user_id' => $u->line_user_id,
+                        'positions' => $u->userPositions->map(function ($p) {
+                            try {
+                                $formattedTitle = $p->formatPositionTitle();
+                            } catch (\Throwable $e) {
+                                $formattedTitle = $p->position ?: 'บุคลากร';
+                            }
+                            return [
+                                'id' => $p->id,
+                                'department_id' => $p->department_id,
+                                'department_name' => $p->department?->name,
+                                'duty' => $p->duty,
+                                'sub_department_id' => $p->sub_department_id,
+                                'sub_department_name' => $p->subDepartment?->name,
+                                'major' => $p->major,
+                                'position' => $p->position,
+                                'formatted_title' => $formattedTitle,
+                                'is_primary' => (bool)$p->is_primary,
+                            ];
+                        })->values()->all(),
                     ];
                 }),
                 'stats' => [

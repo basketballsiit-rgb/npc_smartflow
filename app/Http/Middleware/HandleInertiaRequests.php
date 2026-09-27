@@ -124,6 +124,8 @@ class HandleInertiaRequests extends Middleware
                         'ระยะสั้น',
                     ],
                     'available_duties' => [
+                        'ผู้อำนวยการ',
+                        'รองผู้อำนวยการ',
                         'หัวหน้างาน',
                         'หัวหน้าสาขาวิชา',
                         'เจ้าหน้าที่',
