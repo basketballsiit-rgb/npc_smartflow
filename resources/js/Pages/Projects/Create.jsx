@@ -62,7 +62,7 @@ export default function Create({
         >
             <Head title="จัดทำและติดตามข้อเสนอโครงการ" />
 
-            <div className="max-w-6xl mx-auto py-6 space-y-8 font-sans px-4 sm:px-6">
+            <div className="w-full max-w-[100rem] space-y-8 font-sans">
                 {/* Plan Staff & Admin Overview Banner */}
                 {isPlanOrAdmin && (
                     <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white p-4 sm:p-5 rounded-2xl shadow-md flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border border-amber-300">

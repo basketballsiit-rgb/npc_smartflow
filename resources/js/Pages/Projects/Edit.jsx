@@ -603,8 +603,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         >
             <Head title={`จัดทำโครงการฉบับเต็ม: ${project?.title}`} />
 
-            <div className="py-8 font-sans">
-                <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 space-y-6">
+            <div className="w-full max-w-[100rem] space-y-6 font-sans">
 
                     {/* Stepper Bar */}
                     <ProjectWorkflowStepper currentStep={project.current_approval_step || 1} status={project.status} />
@@ -2406,7 +2405,6 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                         </form>
                     </div>
                 </div>
-            </div>
 
             {/* Quick Add Standard Item Modal */}
             {showQuickAddItemModal && (

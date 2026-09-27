@@ -1144,7 +1144,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <button
                         type="button"
                         onClick={toggleSidebar}
-                        className="hidden sm:flex fixed left-3 top-20 z-30 items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-950/90 hover:bg-purple-900 text-purple-300 hover:text-white border border-purple-400/40 shadow-xl text-xs font-bold transition-all hover:scale-105 backdrop-blur-md cursor-pointer animate-in fade-in"
+                        className="hidden sm:flex fixed left-0 top-20 z-30 items-center gap-1.5 px-3 py-1.5 rounded-r-xl bg-purple-950/95 hover:bg-purple-900 text-purple-200 hover:text-white border-y border-r border-purple-400/40 shadow-xl text-xs font-bold transition-all hover:pl-4 backdrop-blur-md cursor-pointer animate-in fade-in"
                         title="คลิกเพื่อแสดงแถบเมนูด้านซ้าย"
                     >
                         <span>▶</span>
@@ -1329,7 +1329,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 <div className="flex-1 flex flex-col min-w-0">
                     {header && (
                         <header className="bg-white/80 border-b border-purple-100 shadow-2xs backdrop-blur-xs">
-                            <div className="mx-auto max-w-[100rem] px-4 py-4 sm:px-6 lg:px-8 overflow-x-auto whitespace-nowrap">
+                            <div className="w-full max-w-[100rem] px-4 py-4 sm:px-6 lg:px-8 overflow-x-auto whitespace-nowrap">
                                 {header}
                             </div>
                         </header>

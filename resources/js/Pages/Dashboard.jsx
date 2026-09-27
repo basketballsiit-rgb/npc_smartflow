@@ -13828,7 +13828,7 @@ return (
             <Head title="หน้าหลัก - ศูนย์ควบคุม" />
 
             <div className="py-8 font-sans">
-                <div className="mx-auto max-w-[100rem] px-4 sm:px-6 lg:px-8">
+                <div className="w-full max-w-[100rem] px-4 sm:px-6 lg:px-8">
                     
                     {/* Content Workspace Area (Full Width Clean Layout) */}
                     <div className="w-full">

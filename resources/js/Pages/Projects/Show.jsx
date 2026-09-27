@@ -1193,8 +1193,7 @@ ${itemsListText}
         >
             <Head title={`รายละเอียดโครงการ: ${project.title}`} />
 
-            <div className="py-8 font-sans">
-                <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="w-full max-w-[100rem] space-y-6 font-sans">
                     
                     {/* Top Status Header */}
                     <div className="mb-6 rounded-2xl border border-purple-100 bg-white p-6 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -2922,9 +2921,7 @@ ${itemsListText}
                         </div>
                         )
                     )}
-
                 </div>
-            </div>
 
             {/* 6-Step Digital Signature Modal */}
             <DigitalSignatureModal
