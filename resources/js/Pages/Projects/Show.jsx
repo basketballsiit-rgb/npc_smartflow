@@ -261,6 +261,10 @@ ${itemsListText}
     };
 
     const handleReceiveProcurement = () => {
+        const defaultDocNum = project.procurement?.plan_procurement_doc_number 
+            || (project.procurement?.procurement_number && !project.procurement.procurement_number.startsWith('PR-') ? project.procurement.procurement_number : '') 
+            || '';
+
         Swal.fire({
             title: '📥 งานพัสดุลงรับชุดจัดซื้อจัดจ้าง',
             html: `
@@ -268,8 +272,9 @@ ${itemsListText}
                     <p><strong>โครงการ:</strong> ${project.title}</p>
                     <p><strong>ผู้เสนอ:</strong> ${project.user?.name || '-'}</p>
                     <div class="pt-2">
-                        <label class="block font-bold text-slate-800 mb-1">เลขที่ลงรับพัสดุ (ถ้ามี):</label>
-                        <input id="swal-proc-number" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" placeholder="เช่น พด. 012/2569" value="${project.procurement?.procurement_number || ''}">
+                        <label class="block font-bold text-slate-800 mb-1">เลขคุมเอกสารงานแผน / เลขคุมจัดซื้อจัดจ้าง:</label>
+                        <input id="swal-proc-number" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm font-semibold" placeholder="เช่น ผง. 002/2569" value="${defaultDocNum}">
+                        <p class="text-[10px] text-purple-700 mt-1">💡 ยึดตามเลขคุมเดียวจากงานแผนงาน เพื่อความถูกต้องและเป็นเอกภาพตลอดกระบวนการ</p>
                     </div>
                     <div>
                         <label class="block font-bold text-slate-800 mb-1">วันที่ลงรับ:</label>
@@ -652,6 +657,11 @@ ${itemsListText}
         }
         if (status === 'approved') {
             const procStatus = procurement?.status || 'pending';
+            const isProcReceived = procStatus === 'received' || (procStatus === 'processing' && procurement?.memo_date);
+            const docNumber = procurement?.plan_procurement_doc_number 
+                || (procurement?.procurement_number && !procurement.procurement_number.startsWith('PR-') ? procurement.procurement_number : null) 
+                || '-';
+
             if (procStatus === 'forwarded_to_finance') {
                 return {
                     title: '💰 อยู่ที่: งานการเงิน (พัสดุส่งเรื่องเบิกจ่ายแล้ว — รอการเงินตรวจสอบสัญญายืมเงิน/เบิกจ่าย)',
@@ -661,9 +671,9 @@ ${itemsListText}
                     roleName: 'เจ้าหน้าที่งานการเงิน'
                 };
             }
-            if (procStatus === 'received' || procStatus === 'processing') {
+            if (isProcReceived) {
                 return {
-                    title: `📦 อยู่ที่: งานพัสดุ (ลงรับแล้ว เลขที่ ${procurement?.procurement_number || '-'} — กำลังจัดซื้อจัดจ้าง)`,
+                    title: `📦 อยู่ที่: งานพัสดุ (ลงรับแล้ว เลขที่ ${docNumber} — กำลังจัดซื้อจัดจ้าง)`,
                     desc: 'เจ้าหน้าที่งานพัสดุได้ลงรับเรื่องแล้ว อยู่ระหว่างการจัดทำเอกสารขอซื้อขอจ้าง/ออกใบสั่งซื้อสั่งจ้าง เมื่อตรวจเรียบร้อยจะส่งต่อไปยังงานการเงิน',
                     color: 'bg-blue-50 border-blue-300 text-blue-950',
                     icon: '📦',
@@ -999,44 +1009,52 @@ ${itemsListText}
                             </p>
                         </div>
                         <div className="flex items-center gap-x-3">
-                            <span className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black shadow-xs ${
-                                project.status === 'approved' ? (
-                                    project.procurement?.status === 'forwarded_to_finance' 
-                                        ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 ring-2 ring-emerald-400/30'
-                                        : project.procurement?.status === 'received'
-                                        ? 'bg-blue-100 text-blue-950 border border-blue-300'
-                                        : 'bg-amber-100 text-amber-950 border border-amber-300'
-                                ) :
-                                project.status === 'in_progress' ? 'bg-purple-100 text-purple-950 border border-purple-300 ring-2 ring-purple-400/20' :
-                                project.status === 'evaluating' ? 'bg-indigo-100 text-indigo-950 border border-indigo-300 ring-2 ring-indigo-400/20' :
-                                project.status === 'reporting' ? 'bg-blue-100 text-blue-950 border border-blue-300 ring-2 ring-blue-400/20' :
-                                (project.status === 'completed' || project.status === 'cleared') ? 'bg-teal-100 text-teal-950 border border-teal-300 ring-2 ring-teal-400/20' :
-                                project.status === 'draft' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
-                                project.status === 'rejected' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
-                                'bg-amber-50 text-amber-900 border border-amber-300 ring-2 ring-amber-400/20'
-                            }`}>
-                                <span>{currentOfficerInfo.icon}</span>
-                                <span>
-                                    {project.status === 'approved' 
-                                        ? (project.procurement?.status === 'forwarded_to_finance'
-                                            ? 'สถานะ: อยู่ที่งานการเงิน (ส่งเรื่องเบิกจ่ายแล้ว)'
-                                            : project.procurement?.status === 'received'
-                                            ? `สถานะ: อยู่ที่งานพัสดุ (ลงรับแล้ว เลขที่ ${project.procurement.procurement_number || '-'})`
-                                            : 'สถานะ: อยู่ที่งานพัสดุ (รอลงรับเรื่อง)')
-                                        : (project.status === 'submitted' || project.status === 'pending_approval')
-                                        ? `สถานะ: อยู่ที่ ${currentOfficerInfo.roleName} (ขั้นตอนที่ ${project.current_approval_step || 2}/6)`
-                                        : project.status === 'in_progress'
-                                        ? 'สถานะ: ดำเนินกิจกรรม & ใช้จ่ายเงินยืม (In Progress)'
-                                        : project.status === 'evaluating'
-                                        ? 'สถานะ: ประเมินผลความพึงพอใจด้วย AI (Evaluating)'
-                                        : project.status === 'reporting'
-                                        ? 'สถานะ: สรุปเล่มรายงานผลโครงการ (Reporting)'
-                                        : (project.status === 'completed' || project.status === 'cleared')
-                                        ? 'สถานะ: เคลียร์เงินยืมและปิดโครงการสมบูรณ์ (Completed)'
-                                        : `สถานะ: ${getStatusBadgeText(project.status)}`
-                                    }
-                                </span>
-                            </span>
+                            {(() => {
+                                const isProcReceived = project.procurement?.status === 'received' || (project.procurement?.status === 'processing' && project.procurement?.memo_date);
+                                const docNumber = project.procurement?.plan_procurement_doc_number 
+                                    || (project.procurement?.procurement_number && !project.procurement.procurement_number.startsWith('PR-') ? project.procurement.procurement_number : null) 
+                                    || '-';
+                                return (
+                                    <span className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black shadow-xs ${
+                                        project.status === 'approved' ? (
+                                            project.procurement?.status === 'forwarded_to_finance' 
+                                                ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 ring-2 ring-emerald-400/30'
+                                                : isProcReceived
+                                                ? 'bg-blue-100 text-blue-950 border border-blue-300'
+                                                : 'bg-amber-100 text-amber-950 border border-amber-300'
+                                        ) :
+                                        project.status === 'in_progress' ? 'bg-purple-100 text-purple-950 border border-purple-300 ring-2 ring-purple-400/20' :
+                                        project.status === 'evaluating' ? 'bg-indigo-100 text-indigo-950 border border-indigo-300 ring-2 ring-indigo-400/20' :
+                                        project.status === 'reporting' ? 'bg-blue-100 text-blue-950 border border-blue-300 ring-2 ring-blue-400/20' :
+                                        (project.status === 'completed' || project.status === 'cleared') ? 'bg-teal-100 text-teal-950 border border-teal-300 ring-2 ring-teal-400/20' :
+                                        project.status === 'draft' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
+                                        project.status === 'rejected' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                        'bg-amber-50 text-amber-900 border border-amber-300 ring-2 ring-amber-400/20'
+                                    }`}>
+                                        <span>{currentOfficerInfo.icon}</span>
+                                        <span>
+                                            {project.status === 'approved' 
+                                                ? (project.procurement?.status === 'forwarded_to_finance'
+                                                    ? 'สถานะ: อยู่ที่งานการเงิน (ส่งเรื่องเบิกจ่ายแล้ว)'
+                                                    : isProcReceived
+                                                    ? `สถานะ: อยู่ที่งานพัสดุ (ลงรับแล้ว เลขที่ ${docNumber})`
+                                                    : 'สถานะ: อยู่ที่งานพัสดุ (รอลงรับเรื่อง)')
+                                                : (project.status === 'submitted' || project.status === 'pending_approval')
+                                                ? `สถานะ: อยู่ที่ ${currentOfficerInfo.roleName} (ขั้นตอนที่ ${project.current_approval_step || 2}/6)`
+                                                : project.status === 'in_progress'
+                                                ? 'สถานะ: ดำเนินกิจกรรม & ใช้จ่ายเงินยืม (In Progress)'
+                                                : project.status === 'evaluating'
+                                                ? 'สถานะ: ประเมินผลความพึงพอใจด้วย AI (Evaluating)'
+                                                : project.status === 'reporting'
+                                                ? 'สถานะ: สรุปเล่มรายงานผลโครงการ (Reporting)'
+                                                : (project.status === 'completed' || project.status === 'cleared')
+                                                ? 'สถานะ: เคลียร์เงินยืมและปิดโครงการสมบูรณ์ (Completed)'
+                                                : `สถานะ: ${getStatusBadgeText(project.status)}`
+                                            }
+                                        </span>
+                                    </span>
+                                );
+                            })()}
                             {(project.status === 'draft' || project.status === 'rejected' || project.status === 'budget_approved') && (project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
                                 <button
                                     onClick={handleWorkflowSubmit}
@@ -1075,7 +1093,7 @@ ${itemsListText}
                                 </div>
                             </div>
                             <span className="text-xs font-bold text-slate-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
-                                อนุมัติแล้ว {project.approvals?.filter(a => a.status === 'approved' || a.status === 'submitted')?.length || 0}/6 ขั้นตอน
+                                อนุมัติแล้ว {[1, 2, 3, 4, 5, 6].filter(s => project.approvals?.some(a => a.step_number === s && (a.status === 'approved' || a.status === 'submitted'))).length}/6 ขั้นตอน
                             </span>
                         </div>
 
@@ -1473,77 +1491,85 @@ ${itemsListText}
                         <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6 font-sans">
 
                             {/* Procurement Intake & Status Box */}
-                            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/5 via-indigo-900/10 to-purple-900/5 border border-purple-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                                <div className="space-y-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold uppercase text-purple-950">📦 สถานะงานพัสดุ:</span>
-                                        {project.procurement?.status === 'forwarded_to_finance' ? (
-                                            <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                                <span>🟢</span> ตั้งเบิกส่งงานการเงินแล้ว
-                                            </span>
-                                        ) : project.procurement?.status === 'received' ? (
-                                            <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
-                                                <span>🔵</span> พัสดุลงรับเรื่องแล้ว {project.procurement.procurement_number ? `(${project.procurement.procurement_number})` : ''}
-                                            </span>
-                                        ) : (
-                                            <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                                                <span>🟡</span> รอพัสดุลงรับเรื่อง
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="text-xs text-slate-600">
-                                        {project.procurement?.status === 'forwarded_to_finance'
-                                            ? 'งานพัสดุได้ดำเนินการจัดซื้อจัดจ้างและส่งเรื่องไปยังงานการเงินเพื่อดำเนินการเบิกจ่ายเรียบร้อยแล้ว'
-                                            : project.procurement?.status === 'received'
-                                            ? `งานพัสดุได้ลงรับชุดจัดซื้อจัดจ้างแล้ว เมื่อ ${project.procurement.memo_date ? new Date(project.procurement.memo_date).toLocaleDateString('th-TH') : 'วันนี้'} อยู่ระหว่างดำเนินการตั้งเบิก`
-                                            : 'เมื่อผู้เสนอโครงการบันทึกข้อมูลพัสดุครบถ้วน เจ้าหน้าที่งานพัสดุสามารถกดลงรับชุดจัดซื้อจัดจ้างเพื่อดำเนินการต่อไป'}
-                                    </p>
-                                </div>
+                            {(() => {
+                                const isProcReceived = project.procurement?.status === 'received' || (project.procurement?.status === 'processing' && project.procurement?.memo_date);
+                                const docNumber = project.procurement?.plan_procurement_doc_number 
+                                    || (project.procurement?.procurement_number && !project.procurement.procurement_number.startsWith('PR-') ? project.procurement.procurement_number : null) 
+                                    || '';
+                                return (
+                                    <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-900/5 via-indigo-900/10 to-purple-900/5 border border-purple-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-bold uppercase text-purple-950">📦 สถานะงานพัสดุ:</span>
+                                                {project.procurement?.status === 'forwarded_to_finance' ? (
+                                                    <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                        <span>🟢</span> ตั้งเบิกส่งงานการเงินแล้ว
+                                                    </span>
+                                                ) : isProcReceived ? (
+                                                    <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-300">
+                                                        <span>🔵</span> พัสดุลงรับเรื่องแล้ว {docNumber ? `(${docNumber})` : ''}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                                        <span>🟡</span> รอพัสดุลงรับเรื่อง
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-slate-600">
+                                                {project.procurement?.status === 'forwarded_to_finance'
+                                                    ? 'งานพัสดุได้ดำเนินการจัดซื้อจัดจ้างและส่งเรื่องไปยังงานการเงินเพื่อดำเนินการเบิกจ่ายเรียบร้อยแล้ว'
+                                                    : isProcReceived
+                                                    ? `งานพัสดุได้ลงรับชุดจัดซื้อจัดจ้างแล้ว เมื่อ ${project.procurement.memo_date ? new Date(project.procurement.memo_date).toLocaleDateString('th-TH') : 'วันนี้'} อยู่ระหว่างดำเนินการตั้งเบิก`
+                                                    : 'เมื่อผู้เสนอโครงการบันทึกข้อมูลพัสดุครบถ้วน เจ้าหน้าที่งานพัสดุสามารถกดลงรับชุดจัดซื้อจัดจ้างเพื่อดำเนินการต่อไป'}
+                                            </p>
+                                        </div>
 
-                                {/* Buttons for Procurement Staff / Admin */}
-                                {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'procurement_head' || auth.user.role === 'procurement_head' || auth.user.position?.includes('พัสดุ')) && (
-                                    <div className="flex flex-wrap gap-2 shrink-0">
-                                        {project.procurement?.status !== 'received' && project.procurement?.status !== 'forwarded_to_finance' && (
-                                            <button
-                                                type="button"
-                                                onClick={handleReceiveProcurement}
-                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
-                                            >
-                                                <span>📥</span> พัสดุกดลงรับชุดจัดซื้อจัดจ้าง
-                                            </button>
-                                        )}
-                                        {isProcStaffOrAdmin && project.procurement?.status === 'received' && (
-                                            <button
-                                                type="button"
-                                                onClick={handleForwardToFinance}
-                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
-                                            >
-                                                <span>📤</span> ตั้งเบิกส่งงานการเงิน ➔
-                                            </button>
-                                        )}
-                                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.procurement?.status === 'forwarded_to_finance' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRollbackProcurement('received')}
-                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer"
-                                                title="ยกเลิกการส่งการเงิน และดึงเรื่องกลับมาให้งานพัสดุแก้ไข (Admin/พัสดุ)"
-                                            >
-                                                <span>↩️</span> ยกเลิกส่งการเงิน (ดึงกลับให้พัสดุ)
-                                            </button>
-                                        )}
-                                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.procurement?.status === 'received' && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRollbackProcurement('pending')}
-                                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer"
-                                                title="ยกเลิกการลงรับ และส่งคืนให้ผู้เสนอโครงการแก้ไขรายการพัสดุ"
-                                            >
-                                                <span>↩️</span> ยกเลิกการลงรับ (ส่งคืนผู้เสนอ)
-                                            </button>
+                                        {/* Buttons for Procurement Staff / Admin */}
+                                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'procurement_head' || auth.user.role === 'procurement_head' || auth.user.position?.includes('พัสดุ')) && (
+                                            <div className="flex flex-wrap gap-2 shrink-0">
+                                                {!isProcReceived && project.procurement?.status !== 'forwarded_to_finance' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleReceiveProcurement}
+                                                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
+                                                    >
+                                                        <span>📥</span> พัสดุกดลงรับชุดจัดซื้อจัดจ้าง
+                                                    </button>
+                                                )}
+                                                {isProcStaffOrAdmin && isProcReceived && project.procurement?.status !== 'forwarded_to_finance' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleForwardToFinance}
+                                                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer"
+                                                    >
+                                                        <span>📤</span> ตั้งเบิกส่งงานการเงิน ➔
+                                                    </button>
+                                                )}
+                                                {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.procurement?.status === 'forwarded_to_finance' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRollbackProcurement('received')}
+                                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                        title="ยกเลิกการส่งการเงิน และดึงเรื่องกลับมาให้งานพัสดุแก้ไข (Admin/พัสดุ)"
+                                                    >
+                                                        <span>↩️</span> ยกเลิกส่งการเงิน (ดึงกลับให้พัสดุ)
+                                                    </button>
+                                                )}
+                                                {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && isProcReceived && project.procurement?.status !== 'forwarded_to_finance' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRollbackProcurement('pending')}
+                                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 font-bold text-xs rounded-xl shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                        title="ยกเลิกการลงรับ และส่งคืนให้ผู้เสนอโครงการแก้ไขรายการพัสดุ"
+                                                    >
+                                                        <span>↩️</span> ยกเลิกการลงรับ (ส่งคืนผู้เสนอ)
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
-                                )}
-                            </div>
+                                );
+                            })()}
 
                             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-4">
                                 <div>

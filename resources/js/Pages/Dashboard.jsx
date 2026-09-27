@@ -13019,8 +13019,8 @@ return (
                                                                                 <div class="text-left text-xs text-slate-700 space-y-3 font-sans">
                                                                                     <p>ยืนยันว่าได้รับชุดเอกสารจัดซื้อจัดจ้างของโครงการ <strong>"${item.title}"</strong> เรียบร้อยแล้ว</p>
                                                                                     <div>
-                                                                                        <label class="block font-bold mb-1">เลขคุมจัดซื้อ / เลขที่พัสดุ (PR Number):</label>
-                                                                                        <input id="swal-pr-num" class="w-full px-3 py-2 border rounded-xl text-xs" value="${item.plan_procurement_doc_number || item.prNumber || ('PR-' + String(item.id).padStart(5, '0'))}" />
+                                                                                        <label class="block font-bold mb-1">เลขคุมเอกสารงานแผน / เลขคุมจัดซื้อจัดจ้าง:</label>
+                                                                                        <input id="swal-pr-num" class="w-full px-3 py-2 border rounded-xl text-xs font-semibold" value="${item.plan_procurement_doc_number || (item.prNumber && !item.prNumber.startsWith('PR-') ? item.prNumber : '') || ''}" placeholder="เช่น ผง. 002/2569" />
                                                                                         <span class="text-[10px] text-slate-500">ดึงเลขคุมจากงานแผนงานโดยอัตโนมัติ เพื่อให้เป็นเลขเดียวกันตลอดกระบวนการ</span>
                                                                                     </div>
                                                                                     <div>

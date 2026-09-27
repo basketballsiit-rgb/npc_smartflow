@@ -1010,6 +1010,18 @@ class ProjectController extends Controller
                     'is_advance_payment' => $request->boolean('is_advance_payment', false),
                 ]
             );
+
+            // Pre-assign or lock unified planning document number for the project's procurement lifecycle
+            $procurement = \App\Models\Procurement::firstOrCreate(
+                ['project_id' => $project->id],
+                ['status' => 'pending']
+            );
+            if (empty($procurement->plan_procurement_doc_number) || str_starts_with($procurement->plan_procurement_doc_number, 'PR-')) {
+                $unifiedDocNumber = \App\Services\DocumentNumberService::generateAndIncrement();
+                $procurement->plan_procurement_doc_number = $unifiedDocNumber;
+                $procurement->procurement_number = $unifiedDocNumber;
+                $procurement->save();
+            }
         }
 
         // Record approval log with signature
@@ -1117,6 +1129,18 @@ class ProjectController extends Controller
                     'is_advance_payment' => false,
                 ]
             );
+
+            // Pre-assign or lock unified planning document number for the project's procurement lifecycle
+            $procurement = \App\Models\Procurement::firstOrCreate(
+                ['project_id' => $project->id],
+                ['status' => 'pending']
+            );
+            if (empty($procurement->plan_procurement_doc_number) || str_starts_with($procurement->plan_procurement_doc_number, 'PR-')) {
+                $unifiedDocNumber = \App\Services\DocumentNumberService::generateAndIncrement();
+                $procurement->plan_procurement_doc_number = $unifiedDocNumber;
+                $procurement->procurement_number = $unifiedDocNumber;
+                $procurement->save();
+            }
         }
 
         ProjectApproval::create([
