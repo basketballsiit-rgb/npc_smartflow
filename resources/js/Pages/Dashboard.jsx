@@ -12197,8 +12197,18 @@ ${itemsListText}
                 });
             }
 
+            const hasLoanDoc = Boolean(p.plan_loan_doc_number || proc?.plan_loan_doc_number);
+            const hasLoanStatus = Boolean(loanStatus && loanStatus !== 'pending');
+            const hasLoanComponent = Boolean(
+                hasExplicitLoanItems || 
+                hasLoanDoc || 
+                hasLoanStatus ||
+                p.is_advance_payment || 
+                p.budget?.is_advance_payment
+            );
+
             if (!hasExplicitLoanItems) {
-                if (p.plan_loan_doc_number || proc?.plan_loan_doc_number || loanStatus === 'plan_cut' || loanStatus === 'finance_received' || loanStatus === 'cleared') {
+                if (hasLoanComponent && (hasLoanDoc || hasLoanStatus)) {
                     loanAmount = totalProcAmount > 0 ? Math.max(0, allocBudget - totalProcAmount) : allocBudget;
                 } else {
                     loanAmount = 0;
@@ -12206,41 +12216,30 @@ ${itemsListText}
             }
 
             // Lifecycle Flags
-            const isLoanCleared = loanStatus === 'cleared' || p.budget?.advance_cleared_at;
-            const isLoanFinReceived = loanStatus === 'finance_received' || p.finance_received_at || proc?.finance_received_at;
-            const isLoanPlanCut = loanStatus === 'plan_cut' || p.plan_loan_cut_at || proc?.plan_loan_cut_at || (p.encumbered_amount && p.encumbered_amount > 0);
+            const isLoanCleared = hasLoanComponent && Boolean(loanStatus === 'cleared' || p.budget?.advance_cleared_at);
+            const isLoanFinReceived = hasLoanComponent && Boolean(loanStatus === 'finance_received' || p.finance_received_at || proc?.finance_received_at);
+            const isLoanPlanCut = hasLoanComponent && Boolean(loanStatus === 'plan_cut' || p.plan_loan_cut_at || proc?.plan_loan_cut_at);
 
             const isProcPlanCut = procStatus === 'plan_cut' || p.plan_procurement_cut_at || proc?.plan_procurement_cut_at || (procStatus === 'processing' && !proc?.procurement_received_at);
             const isProcReceived = procStatus === 'received';
             const isProcForwardedToFin = procStatus === 'forwarded_to_finance' || proc?.status === 'forwarded_to_finance';
             const isProcDisbursed = procStatus === 'completed' || proc?.status === 'completed' || procStatus === 'disbursed';
 
-            // Component Existence
-            const hasLoanComponent = Boolean(
-                hasExplicitLoanItems || 
-                loanAmount > 0 || 
-                p.plan_loan_doc_number || 
-                proc?.plan_loan_doc_number || 
-                isLoanPlanCut || 
-                isLoanFinReceived || 
-                isLoanCleared ||
-                (loanStatus && loanStatus !== 'pending')
-            );
-
-            const hasProcComponent = Boolean(
+            const hasProcDoc = Boolean(p.plan_procurement_doc_number || proc?.plan_procurement_doc_number || p.procurement_number || proc?.procurement_number);
+            const hasProcStatus = Boolean(procStatus && procStatus !== 'pending');
+            const hasExplicitProcItems = Boolean(
                 totalProcAmount > 0 || 
-                (Array.isArray(p.procurement_items) && p.procurement_items.length > 0) || 
-                p.plan_procurement_doc_number || 
-                proc?.plan_procurement_doc_number || 
-                isProcPlanCut || 
-                isProcReceived || 
-                isProcForwardedToFin || 
-                isProcDisbursed ||
+                (Array.isArray(p.procurement_items) && p.procurement_items.length > 0)
+            );
+            const hasProcComponent = Boolean(
+                hasExplicitProcItems || 
+                hasProcDoc || 
+                hasProcStatus ||
                 !hasLoanComponent
             );
 
-            const hasLoanAtFinance = Boolean(isLoanPlanCut || isLoanFinReceived || isLoanCleared);
-            const hasProcAtFinance = Boolean(isProcForwardedToFin || isProcDisbursed);
+            const hasLoanAtFinance = Boolean(hasLoanComponent && (isLoanPlanCut || isLoanFinReceived || isLoanCleared));
+            const hasProcAtFinance = Boolean(hasProcComponent && (isProcForwardedToFin || isProcDisbursed));
 
             const isAllFinCompleted = (hasLoanComponent && hasProcComponent)
                 ? (isLoanCleared && isProcDisbursed)
@@ -12249,79 +12248,83 @@ ${itemsListText}
             // ==========================================
             // 1. Compute Loan Contract (สัญญายืมเงิน กค. ๑๐๑) Status & Location
             // ==========================================
-            let loanLocation = 'อยู่ที่งานแผนงาน';
-            let loanHolder = 'เจ้าหน้าที่งานแผนงาน';
-            let loanStatusText = '🏢 รอแผนงานตัดยอดสัญญายืมเงิน';
-            let loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
-            let loanCategory = 'pending';
+            let loanLocation = null;
+            let loanHolder = null;
+            let loanStatusText = null;
+            let loanBadgeClass = '';
+            let loanCategory = null;
 
-            if (isLoanCleared) {
-                const spent = (parseFloat(p.finance_disbursed_amount) || parseFloat(proc?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0);
-                const diff = allocBudget - spent;
-                loanLocation = 'งานการเงิน / ปิดสัญญาแล้ว';
-                loanHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'ปิดเคลียร์เงินยืมสมบูรณ์';
-                loanStatusText = `🎉 เคลียร์ปิดยอดแล้ว (จ่ายจริง: ฿${new Intl.NumberFormat('th-TH').format(spent)} | ${diff >= 0 ? `เหลืองบคืน: ฿${new Intl.NumberFormat('th-TH').format(diff)}` : `เกินงบ: ฿${new Intl.NumberFormat('th-TH').format(Math.abs(diff))}`})`;
-                loanBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
-                loanCategory = 'completed';
-            } else if (isLoanFinReceived) {
-                loanLocation = 'อยู่ที่งานการเงิน';
-                loanHolder = (p.finance_doc_number || proc?.finance_doc_number) ? `เลขรับ กง: ${p.finance_doc_number || proc?.finance_doc_number}` : 'เจ้าหน้าที่งานการเงิน';
-                loanStatusText = '📥 การเงินลงรับแล้ว (รอโอนเงินยืม)';
-                loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
-                loanCategory = 'at_finance';
-            } else if (isLoanPlanCut) {
-                loanLocation = 'อยู่ที่งานการเงิน';
-                loanHolder = (p.plan_loan_doc_number || proc?.plan_loan_doc_number) ? `เลขตัดยอดแผน: ${p.plan_loan_doc_number || proc?.plan_loan_doc_number}` : 'รอเจ้าหน้าที่การเงินลงรับ';
-                loanStatusText = '⏳ แผนตัดยอดแล้ว (รอการเงินลงรับ)';
-                loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
-                loanCategory = 'at_finance';
-            } else {
+            if (hasLoanComponent) {
                 loanLocation = 'อยู่ที่งานแผนงาน';
-                loanHolder = 'เจ้าหน้าที่งานวางแผนและงบประมาณ';
+                loanHolder = 'เจ้าหน้าที่งานแผนงาน';
                 loanStatusText = '🏢 รอแผนงานตัดยอดสัญญายืมเงิน';
                 loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
-                loanCategory = 'at_planning';
+                loanCategory = 'pending';
+
+                if (isLoanCleared) {
+                    const spent = (parseFloat(p.finance_disbursed_amount) || parseFloat(proc?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0);
+                    const diff = allocBudget - spent;
+                    loanLocation = 'งานการเงิน / ปิดสัญญาแล้ว';
+                    loanHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'ปิดเคลียร์เงินยืมสมบูรณ์';
+                    loanStatusText = `🎉 เคลียร์ปิดยอดแล้ว (จ่ายจริง: ฿${new Intl.NumberFormat('th-TH').format(spent)} | ${diff >= 0 ? `เหลืองบคืน: ฿${new Intl.NumberFormat('th-TH').format(diff)}` : `เกินงบ: ฿${new Intl.NumberFormat('th-TH').format(Math.abs(diff))}`})`;
+                    loanBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
+                    loanCategory = 'completed';
+                } else if (isLoanFinReceived) {
+                    loanLocation = 'อยู่ที่งานการเงิน';
+                    loanHolder = (p.finance_doc_number || proc?.finance_doc_number) ? `เลขรับ กง: ${p.finance_doc_number || proc?.finance_doc_number}` : 'เจ้าหน้าที่งานการเงิน';
+                    loanStatusText = '📥 การเงินลงรับแล้ว (รอโอนเงินยืม)';
+                    loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                    loanCategory = 'at_finance';
+                } else if (isLoanPlanCut) {
+                    loanLocation = 'อยู่ที่งานการเงิน';
+                    loanHolder = (p.plan_loan_doc_number || proc?.plan_loan_doc_number) ? `เลขตัดยอดแผน: ${p.plan_loan_doc_number || proc?.plan_loan_doc_number}` : 'รอเจ้าหน้าที่การเงินลงรับ';
+                    loanStatusText = '⏳ แผนตัดยอดแล้ว (รอการเงินลงรับ)';
+                    loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                    loanCategory = 'at_finance';
+                }
             }
 
             // ==========================================
             // 2. Compute Procurement Package (ชุดจัดซื้อจัดจ้าง ๔ ฉบับ) Status & Location
             // ==========================================
-            let procLocation = 'อยู่ที่งานแผนงาน';
-            let procHolder = 'เจ้าหน้าที่งานแผนงาน';
-            let procStatusText = '🏢 รอแผนงานตัดยอดจัดซื้อ';
-            let procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
-            let procCategory = 'pending';
+            let procLocation = null;
+            let procHolder = null;
+            let procStatusText = null;
+            let procBadgeClass = '';
+            let procCategory = null;
 
-            if (isProcDisbursed) {
-                procLocation = 'งานการเงิน / เบิกจ่ายแล้ว';
-                procHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'เบิกจ่ายจัดซื้อเรียบร้อย';
-                procStatusText = '🎉 เบิกจ่ายจัดซื้อแล้ว';
-                procBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
-                procCategory = 'completed';
-            } else if (isProcForwardedToFin) {
-                procLocation = 'อยู่ที่งานการเงิน';
-                procHolder = 'เจ้าหน้าที่งานการเงิน (รอเบิกจ่าย)';
-                procStatusText = '💰 ส่งงานการเงินเบิกจ่ายแล้ว';
-                procBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-bold';
-                procCategory = 'at_finance';
-            } else if (isProcReceived) {
-                procLocation = 'อยู่ที่งานพัสดุ';
-                procHolder = (p.procurement_number || proc?.procurement_number) ? `เลขที่ PR: ${p.procurement_number || proc?.procurement_number}` : 'เจ้าหน้าที่งานพัสดุ';
-                procStatusText = '📦 พัสดุลงรับเรื่องแล้ว (ดำเนินการจัดซื้อ)';
-                procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
-                procCategory = 'at_procurement';
-            } else if (isProcPlanCut) {
-                procLocation = 'อยู่ที่งานพัสดุ (รอลงรับ)';
-                procHolder = (p.plan_procurement_doc_number || proc?.plan_procurement_doc_number) ? `เลขตัดยอดแผน: ${p.plan_procurement_doc_number || proc?.plan_procurement_doc_number}` : 'รอเจ้าหน้าที่พัสดุลงรับ';
-                procStatusText = '⏳ รอพัสดุลงรับ';
-                procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
-                procCategory = 'at_procurement';
-            } else {
+            if (hasProcComponent) {
                 procLocation = 'อยู่ที่งานแผนงาน';
-                procHolder = 'เจ้าหน้าที่งานวางแผนและงบประมาณ';
+                procHolder = 'เจ้าหน้าที่งานแผนงาน';
                 procStatusText = '🏢 รอแผนงานตัดยอดจัดซื้อ';
                 procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
-                procCategory = 'at_planning';
+                procCategory = 'pending';
+
+                if (isProcDisbursed) {
+                    procLocation = 'งานการเงิน / เบิกจ่ายแล้ว';
+                    procHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'เบิกจ่ายจัดซื้อเรียบร้อย';
+                    procStatusText = '🎉 เบิกจ่ายจัดซื้อแล้ว';
+                    procBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
+                    procCategory = 'completed';
+                } else if (isProcForwardedToFin) {
+                    procLocation = 'อยู่ที่งานการเงิน';
+                    procHolder = 'เจ้าหน้าที่งานการเงิน (รอเบิกจ่าย)';
+                    procStatusText = '💰 ส่งงานการเงินเบิกจ่ายแล้ว';
+                    procBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-bold';
+                    procCategory = 'at_finance';
+                } else if (isProcReceived) {
+                    procLocation = 'อยู่ที่งานพัสดุ';
+                    procHolder = (p.procurement_number || proc?.procurement_number) ? `เลขที่ PR: ${p.procurement_number || proc?.procurement_number}` : 'เจ้าหน้าที่งานพัสดุ';
+                    procStatusText = '📦 พัสดุลงรับเรื่องแล้ว (ดำเนินการจัดซื้อ)';
+                    procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                    procCategory = 'at_procurement';
+                } else if (isProcPlanCut) {
+                    procLocation = 'อยู่ที่งานพัสดุ (รอลงรับ)';
+                    procHolder = (p.plan_procurement_doc_number || proc?.plan_procurement_doc_number) ? `เลขตัดยอดแผน: ${p.plan_procurement_doc_number || proc?.plan_procurement_doc_number}` : 'รอเจ้าหน้าที่พัสดุลงรับ';
+                    procStatusText = '⏳ รอพัสดุลงรับ';
+                    procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                    procCategory = 'at_procurement';
+                }
             }
 
             return {
@@ -12370,10 +12373,25 @@ ${itemsListText}
         const countFinCompleted = trackingList.filter(p => p.isAllFinCompleted).length;
 
         // General Metrics count
-        const countProcurement = trackingList.filter(p => p.loanCategory === 'at_procurement' || p.procCategory === 'at_procurement').length;
-        const countFinance = trackingList.filter(p => p.loanCategory === 'at_finance' || p.procCategory === 'at_finance').length;
-        const countBorrower = trackingList.filter(p => p.loanCategory === 'with_borrower').length;
-        const countCompleted = trackingList.filter(p => p.loanCategory === 'completed').length;
+        const countProcurement = trackingList.filter(p => 
+            (p.hasProcComponent && p.procCategory === 'at_procurement') || 
+            (p.hasLoanComponent && p.loanCategory === 'at_procurement')
+        ).length;
+
+        const countFinance = trackingList.filter(p => 
+            (p.hasProcComponent && p.procCategory === 'at_finance') || 
+            (p.hasLoanComponent && p.loanCategory === 'at_finance')
+        ).length;
+
+        const countBorrower = trackingList.filter(p => 
+            p.hasLoanComponent && p.loanCategory === 'with_borrower'
+        ).length;
+
+        const countCompleted = trackingList.filter(p => 
+            (p.hasLoanComponent ? p.loanCategory === 'completed' : true) &&
+            (p.hasProcComponent ? p.procCategory === 'completed' : true) &&
+            (p.hasLoanComponent || p.hasProcComponent)
+        ).length;
 
         // Filtered list
         const filtered = trackingList.filter(p => {
@@ -12383,10 +12401,22 @@ ${itemsListText}
                 if (docTrackingFilter === 'fin_proc_pay' && !(p.hasProcAtFinance && !p.isProcDisbursed)) return false;
                 if (docTrackingFilter === 'fin_completed' && !p.isAllFinCompleted) return false;
             } else {
-                if (docTrackingFilter === 'at_procurement' && !(p.loanCategory === 'at_procurement' || p.procCategory === 'at_procurement')) return false;
-                if (docTrackingFilter === 'at_finance' && !(p.loanCategory === 'at_finance' || p.procCategory === 'at_finance')) return false;
-                if (docTrackingFilter === 'with_borrower' && p.loanCategory !== 'with_borrower') return false;
-                if (docTrackingFilter === 'completed' && p.loanCategory !== 'completed') return false;
+                if (docTrackingFilter === 'at_procurement' && !(
+                    (p.hasProcComponent && p.procCategory === 'at_procurement') ||
+                    (p.hasLoanComponent && p.loanCategory === 'at_procurement')
+                )) return false;
+                if (docTrackingFilter === 'at_finance' && !(
+                    (p.hasProcComponent && p.procCategory === 'at_finance') ||
+                    (p.hasLoanComponent && p.loanCategory === 'at_finance')
+                )) return false;
+                if (docTrackingFilter === 'with_borrower' && !(
+                    p.hasLoanComponent && p.loanCategory === 'with_borrower'
+                )) return false;
+                if (docTrackingFilter === 'completed' && !(
+                    (p.hasLoanComponent ? p.loanCategory === 'completed' : true) &&
+                    (p.hasProcComponent ? p.procCategory === 'completed' : true) &&
+                    (p.hasLoanComponent || p.hasProcComponent)
+                )) return false;
             }
 
             if (docTrackingSearch.trim()) {
