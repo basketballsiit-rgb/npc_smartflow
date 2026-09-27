@@ -1491,7 +1491,29 @@ export default function Dashboard({
             );
         }
         if (status === 'approved' || step >= 6) {
-            const disbType = project?.disbursement_type || (project?.is_advance_payment || project?.budget?.is_advance_payment ? 'loan' : 'procurement');
+            let disbType = project?.disbursement_type;
+            if (!disbType) {
+                let lAmt = 0;
+                let pAmt = 0;
+                if (Array.isArray(project?.activities)) {
+                    project.activities.forEach(act => {
+                        if (Array.isArray(act.loan_items)) {
+                            act.loan_items.forEach(li => { lAmt += (parseFloat(li.total_price) || (parseFloat(li.quantity) * parseFloat(li.unit_price)) || 0); });
+                        }
+                        if (Array.isArray(act.procurement_items)) {
+                            act.procurement_items.forEach(pi => { pAmt += (parseFloat(pi.total_price) || (parseFloat(pi.quantity) * parseFloat(pi.unit_price)) || 0); });
+                        }
+                    });
+                }
+                if (Array.isArray(project?.procurement_items)) {
+                    project.procurement_items.forEach(pi => { pAmt += (parseFloat(pi.total_price) || (parseFloat(pi.quantity) * parseFloat(pi.unit_price)) || 0); });
+                }
+                if (lAmt > 0 && pAmt > 0) disbType = 'both';
+                else if (lAmt > 0 && pAmt === 0) disbType = 'loan';
+                else if (pAmt > 0 && lAmt === 0) disbType = 'procurement';
+                else if (project?.is_advance_payment || project?.budget?.is_advance_payment) disbType = 'loan';
+                else disbType = 'procurement';
+            }
             const proc = project?.procurement;
             const procStatus = proc?.status || project?.procurement_status;
             const loanStatus = project?.loan_status || proc?.loan_status;
@@ -1516,7 +1538,7 @@ export default function Dashboard({
                         </span>
                     );
                 }
-                if (planLoanCut) {
+                if (planLoanCut || status === 'approved' || step >= 6) {
                     return (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold whitespace-nowrap">
                             ⏳ รอการเงินลงรับ
@@ -12181,15 +12203,18 @@ ${itemsListText}
 
             // Compute procurement sets and total procurement amount
             const procSets = [];
-            if (Array.isArray(p.procurement_items) && p.procurement_items.length > 1) {
+            if (Array.isArray(p.procurement_items) && p.procurement_items.length > 0) {
                 p.procurement_items.forEach((it, itIdx) => {
+                    const itAmt = parseFloat(it.total_price) || (parseFloat(it.quantity) * parseFloat(it.unit_price)) || 0;
+                    if (itAmt > 0) {
                     procSets.push({
                         id: it.id || itIdx,
                         label: it.description ? `ชุดที่ ${itIdx + 1}: ${it.description}` : `ชุดที่ ${itIdx + 1}`,
                         shortLabel: `ชุดที่ ${itIdx + 1}`,
-                        amount: parseFloat(it.total_price) || (parseFloat(it.quantity) * parseFloat(it.unit_price)) || 0,
+                        amount: itAmt,
                         items: [it]
                     });
+                    }
                 });
             } else if (Array.isArray(p.activities) && p.activities.length > 0) {
                 p.activities.forEach((act, actIdx) => {
@@ -12229,7 +12254,20 @@ ${itemsListText}
                 });
             }
 
-            const disbType = p.disbursement_type || (p.is_advance_payment || p.budget?.is_advance_payment ? 'loan' : 'procurement');
+            let disbType = p.disbursement_type;
+            if (!disbType) {
+                if (loanAmount > 0 && totalProcAmount > 0) {
+                    disbType = 'both';
+                } else if (loanAmount > 0 && totalProcAmount === 0) {
+                    disbType = 'loan';
+                } else if (totalProcAmount > 0 && loanAmount === 0) {
+                    disbType = 'procurement';
+                } else if (p.is_advance_payment || p.budget?.is_advance_payment) {
+                    disbType = 'loan';
+                } else {
+                    disbType = 'procurement';
+                }
+            }
             const hasLoanDoc = Boolean(p.plan_loan_doc_number || proc?.plan_loan_doc_number);
             const hasLoanStatus = Boolean(loanStatus && loanStatus !== 'pending');
 
@@ -12969,95 +13007,44 @@ return (
 
                                             {/* คอลัมน์ที่ 3: สัญญายืม (โชว์แค่ตัวเลข ขนาดเล็กลง พออ่านได้ กดเพื่อเปิดดูเอกสาร) */}
                                             <td className="px-3 py-2.5 align-top text-right whitespace-nowrap">
-                                                {(() => {
-                                                    let loanAmount = 0;
-                                                    let hasLoanItems = false;
-                                                    if (Array.isArray(item.activities) && item.activities.length > 0) {
-                                                        item.activities.forEach(act => {
-                                                            if (Array.isArray(act.loan_items)) {
-                                                                act.loan_items.forEach(li => {
-                                                                    loanAmount += (parseFloat(li.total_price) || (parseFloat(li.quantity) * parseFloat(li.unit_price)) || 0);
-                                                                    hasLoanItems = true;
-                                                                });
-                                                            }
-                                                        });
-                                                    }
-
-                                                    const totalBudget = parseFloat(item.allocated_budget) || parseFloat(item.estimated_budget) || 0;
-                                                    const procSum = (item.procurement_items || []).reduce((acc, it) => acc + (parseFloat(it.total_price) || (parseFloat(it.quantity) * parseFloat(it.unit_price)) || 0), 0);
-
-                                                    if (!hasLoanItems) {
-                                                        if (item.hasLoanAtFinance || item.plan_loan_doc_number || item.loan_status === 'plan_cut' || item.loan_status === 'finance_received' || item.loan_status === 'cleared') {
-                                                            loanAmount = procSum > 0 ? Math.max(0, totalBudget - procSum) : totalBudget;
-                                                        } else {
-                                                            loanAmount = 0;
-                                                        }
-                                                    }
-
-                                                    return loanAmount > 0 || item.hasLoanAtFinance ? (
-                                                        <a
-                                                            href={route('procurements.download_document', [item.id, 'loan_contract'])}
-                                                            target="_blank"
-                                                            className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-amber-50/90 hover:bg-amber-100 border border-amber-300 text-amber-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
-                                                            title="คลิกที่ตัวเลขเพื่อเปิดดูสัญญายืมเงิน แบบ กค. ๑๐๑"
-                                                        >
-                                                            <span className="text-xs sm:text-sm font-bold text-amber-950 font-mono underline decoration-amber-400 group-hover:text-amber-700">
-                                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(loanAmount)}
-                                                            </span>
-                                                            <span className="text-[10px] text-amber-700 font-medium group-hover:underline">
-                                                                📄 สัญญายืม ➔
-                                                            </span>
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-slate-400 font-mono text-xs">
-                                                            -
+                                                {item.hasLoanComponent && item.loanAmount > 0 ? (
+                                                    <a
+                                                        href={route('procurements.download_document', [item.id, 'loan_contract'])}
+                                                        target="_blank"
+                                                        className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-amber-50/90 hover:bg-amber-100 border border-amber-300 text-amber-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
+                                                        title="คลิกที่ตัวเลขเพื่อเปิดดูสัญญายืมเงิน แบบ กค. ๑๐๑"
+                                                    >
+                                                        <span className="text-xs sm:text-sm font-bold text-amber-950 font-mono underline decoration-amber-400 group-hover:text-amber-700">
+                                                            ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.loanAmount)}
                                                         </span>
-                                                    );
-                                                })()}
+                                                        <span className="text-[10px] text-amber-700 font-medium group-hover:underline">
+                                                            📄 สัญญายืม ➔
+                                                        </span>
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-slate-400 font-mono text-xs">
+                                                        -
+                                                    </span>
+                                                )}
                                             </td>
 
                                             {/* คอลัมน์ที่ 4: ชุดจัดซื้อ (โชว์แค่ตัวเลขยอดรวม/แยกชุด ขนาดเล็กลง พออ่านได้ กดเพื่อเปิดดูเอกสารและรายการ) */}
                                             <td className="px-3 py-2.5 align-top text-right whitespace-nowrap">
                                                 {(() => {
-                                                    const procSets = [];
-                                                    if (Array.isArray(item.procurement_items) && item.procurement_items.length > 1) {
-                                                        item.procurement_items.forEach((it, itIdx) => {
-                                                            procSets.push({
-                                                                id: it.id || itIdx,
-                                                                label: it.description ? `ชุดที่ ${itIdx + 1}: ${it.description}` : `ชุดที่ ${itIdx + 1}`,
-                                                                shortLabel: `ชุดที่ ${itIdx + 1}`,
-                                                                amount: parseFloat(it.total_price) || (parseFloat(it.quantity) * parseFloat(it.unit_price)) || 0,
-                                                                items: [it]
-                                                            });
-                                                        });
-                                                    } else if (Array.isArray(item.activities) && item.activities.length > 0) {
-                                                        item.activities.forEach((act, actIdx) => {
-                                                            if (Array.isArray(act.procurement_items) && act.procurement_items.length > 0) {
-                                                                const actProcSum = act.procurement_items.reduce((s, pi) => s + (parseFloat(pi.total_price) || 0), 0);
-                                                                if (actProcSum > 0) {
-                                                                    procSets.push({
-                                                                        id: act.id || actIdx,
-                                                                        label: `ชุดที่ ${procSets.length + 1}: ${act.name || `กิจกรรมที่ ${actIdx + 1}`}`,
-                                                                        shortLabel: `ชุดที่ ${procSets.length + 1}`,
-                                                                        amount: actProcSum,
-                                                                        items: act.procurement_items
-                                                                    });
-                                                                }
-                                                            }
-                                                        });
+                                                    if (!item.hasProcComponent || item.totalProcAmount <= 0) {
+                                                        return (
+                                                            <span className="text-slate-400 font-mono text-xs">
+                                                                -
+                                                            </span>
+                                                        );
                                                     }
 
-                                                    let totalProcAmount = 0;
-                                                    if (Array.isArray(item.procurement_items) && item.procurement_items.length > 0) {
-                                                        totalProcAmount = item.procurement_items.reduce((sum, it) => sum + (parseFloat(it.total_price) || (parseFloat(it.quantity) * parseFloat(it.unit_price)) || 0), 0);
-                                                    } else if (procSets.length > 0) {
-                                                        totalProcAmount = procSets.reduce((sum, s) => sum + s.amount, 0);
-                                                    }
+                                                    const validSets = (item.procSets || []).filter(s => s.amount > 0);
 
-                                                    if (procSets.length > 1) {
+                                                    if (validSets.length > 1) {
                                                         return (
                                                             <div className="flex flex-col items-end gap-1">
-                                                                {procSets.map((set, sIdx) => (
+                                                                {validSets.map((set, sIdx) => (
                                                                     <button
                                                                         key={sIdx}
                                                                         type="button"
@@ -13067,25 +13054,25 @@ return (
                                                                     >
                                                                         <span className="text-[10px] text-purple-800 font-bold">{set.shortLabel}:</span>
                                                                         <span className="text-xs font-bold text-purple-950 font-mono underline decoration-purple-400 group-hover:text-purple-700">
-                                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(set.amount)}
+                                                                            ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(set.amount)}
                                                                         </span>
                                                                     </button>
                                                                 ))}
-                                                                {totalProcAmount > 0 && (
+                                                                {item.totalProcAmount > 0 && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setSelectedFinanceDocDetails(item)}
                                                                         className="text-[10px] font-mono font-bold text-slate-500 hover:text-purple-800 underline decoration-dotted cursor-pointer"
                                                                         title="คลิกเพื่อดูภาพรวมชุดจัดซื้อทั้งหมด"
                                                                     >
-                                                                        (รวม: {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalProcAmount)})
+                                                                        (รวม: ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.totalProcAmount)})
                                                                     </button>
                                                                 )}
                                                             </div>
                                                         );
                                                     }
 
-                                                    return totalProcAmount > 0 || (Array.isArray(item.procurement_items) && item.procurement_items.length > 0) ? (
+                                                    return (
                                                         <button
                                                             type="button"
                                                             onClick={() => setSelectedFinanceDocDetails(item)}
@@ -13093,16 +13080,12 @@ return (
                                                             title="คลิกที่ตัวเลขเพื่อดูรายละเอียดเอกสารและรายการชุดจัดซื้อ"
                                                         >
                                                             <span className="text-xs sm:text-sm font-bold text-purple-950 font-mono underline decoration-purple-400 group-hover:text-purple-700">
-                                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(totalProcAmount)}
+                                                                ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.totalProcAmount)}
                                                             </span>
                                                             <span className="text-[10px] text-purple-700 font-medium group-hover:underline">
                                                                 📦 ชุดจัดซื้อ ➔
                                                             </span>
                                                         </button>
-                                                    ) : (
-                                                        <span className="text-slate-400 font-mono text-xs">
-                                                            -
-                                                        </span>
                                                     );
                                                 })()}
                                             </td>

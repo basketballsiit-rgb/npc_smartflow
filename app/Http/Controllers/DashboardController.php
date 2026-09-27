@@ -351,19 +351,46 @@ class DashboardController extends Controller
                         $q->where('status', 'approved')
                           ->orWhereHas('procurement');
                     })
-                    ->where(function($q) {
-                        $q->where('disbursement_type', 'procurement')
-                          ->orWhere('disbursement_type', 'both')
-                          ->orWhere(function($sub) {
-                              $sub->whereNull('disbursement_type')
-                                  ->whereDoesntHave('budget', function($b) {
-                                      $b->where('is_advance_payment', true);
-                                  });
-                          });
-                    })
-                    ->with(['user', 'department', 'procurement.items', 'procurement.committees'])
+                    ->with(['user', 'department', 'procurement.items', 'procurement.committees', 'budget'])
                     ->latest()
-                    ->get(),
+                    ->get()
+                    ->filter(function($p) {
+                        $disbType = $p->disbursement_type;
+                        if ($disbType === 'loan') return false;
+                        if ($disbType === 'procurement' || $disbType === 'both') return true;
+                        if ($p->budget?->is_advance_payment) return false;
+
+                        // Auto-detect based on activities and items
+                        $hasLoan = false;
+                        $hasProc = false;
+                        if (is_array($p->activities)) {
+                            foreach ($p->activities as $act) {
+                                if (!empty($act['loan_items'])) {
+                                    foreach ($act['loan_items'] as $li) {
+                                        $amt = (float)($li['total_price'] ?? (($li['quantity'] ?? 0) * ($li['unit_price'] ?? 0)));
+                                        if ($amt > 0) $hasLoan = true;
+                                    }
+                                }
+                                if (!empty($act['procurement_items'])) {
+                                    foreach ($act['procurement_items'] as $pi) {
+                                        $amt = (float)($pi['total_price'] ?? (($pi['quantity'] ?? 0) * ($pi['unit_price'] ?? 0)));
+                                        if ($amt > 0) $hasProc = true;
+                                    }
+                                }
+                            }
+                        }
+                        if ($p->procurement && $p->procurement->items) {
+                            foreach ($p->procurement->items as $pi) {
+                                $amt = (float)($pi->total_price ?? (($pi->quantity ?? 0) * ($pi->unit_price ?? 0)));
+                                if ($amt > 0) $hasProc = true;
+                            }
+                        }
+                        if ($hasLoan && !$hasProc) {
+                            return false;
+                        }
+                        return true;
+                    })
+                    ->values(),
                 'vendors' => \App\Models\Vendor::orderBy('name', 'asc')->get(),
                 'users' => User::with('department')->get()->map(function ($u) {
                     $cId = null;
@@ -704,6 +731,46 @@ class DashboardController extends Controller
                     $parentDept = $dept?->parent;
                     $mainDivId = $parentDept ? $parentDept->id : ($dept?->id ?? null);
                     $mainDivName = $parentDept ? $parentDept->name : ($dept?->name ?? 'ฝ่ายงานทั่วไป');
+                    // Auto-detect disbursement_type if not explicitly set
+                    $disbType = $p->disbursement_type;
+                    if (!$disbType) {
+                        $hasLoan = false;
+                        $hasProc = false;
+                        if (is_array($p->activities)) {
+                            foreach ($p->activities as $act) {
+                                if (!empty($act['loan_items'])) {
+                                    foreach ($act['loan_items'] as $li) {
+                                        $amt = (float)($li['total_price'] ?? (($li['quantity'] ?? 0) * ($li['unit_price'] ?? 0)));
+                                        if ($amt > 0) $hasLoan = true;
+                                    }
+                                }
+                                if (!empty($act['procurement_items'])) {
+                                    foreach ($act['procurement_items'] as $pi) {
+                                        $amt = (float)($pi['total_price'] ?? (($pi['quantity'] ?? 0) * ($pi['unit_price'] ?? 0)));
+                                        if ($amt > 0) $hasProc = true;
+                                    }
+                                }
+                            }
+                        }
+                        if ($p->procurement && $p->procurement->items) {
+                            foreach ($p->procurement->items as $pi) {
+                                $amt = (float)($pi->total_price ?? (($pi->quantity ?? 0) * ($pi->unit_price ?? 0)));
+                                if ($amt > 0) $hasProc = true;
+                            }
+                        }
+                        if ($hasLoan && $hasProc) {
+                            $disbType = 'both';
+                        } elseif ($hasLoan && !$hasProc) {
+                            $disbType = 'loan';
+                        } elseif ($hasProc && !$hasLoan) {
+                            $disbType = 'procurement';
+                        } elseif ($p->budget?->is_advance_payment) {
+                            $disbType = 'loan';
+                        } else {
+                            $disbType = 'procurement';
+                        }
+                    }
+
                     return [
                         'id' => $p->id,
                         'user_id' => $p->user_id,
@@ -714,8 +781,8 @@ class DashboardController extends Controller
                         ],
                         'title' => $p->title,
                         'academic_year' => $p->academic_year,
-                        'disbursement_type' => $p->disbursement_type ?: ($p->budget?->is_advance_payment ? 'loan' : 'procurement'),
-                        'is_advance_payment' => (bool)($p->budget?->is_advance_payment ?? false),
+                        'disbursement_type' => $disbType,
+                        'is_advance_payment' => in_array($disbType, ['loan', 'both']) || (bool)($p->budget?->is_advance_payment ?? false),
                         'estimated_budget' => (float)$p->estimated_budget,
                         'proposed_budget' => (float)($p->proposed_budget ?: $p->estimated_budget),
                         'allocated_budget' => $allocAmt,
