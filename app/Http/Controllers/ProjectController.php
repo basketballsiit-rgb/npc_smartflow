@@ -599,6 +599,7 @@ class ProjectController extends Controller
             'iqa_strategy_id' => 'nullable|exists:iqa_strategies,id',
             'ovec_strategy_id' => 'nullable|exists:ovec_strategies,id',
             'estimated_budget' => 'required|numeric|min:0',
+            'disbursement_type' => 'nullable|string|in:procurement,loan,both',
             'user_position_id' => 'nullable|exists:user_positions,id',
             'department_id' => 'nullable|exists:departments,id',
         ], [
@@ -646,8 +647,19 @@ class ProjectController extends Controller
 
         $project->update($validated);
 
-        // Sync Procurement Estimated Items (flows directly to Procurement stage, excluding loan contract items)
-        if ($request->has('activities') || $request->has('procurement_items')) {
+        $disbursementType = $request->input('disbursement_type', $project->disbursement_type ?? 'procurement');
+        if ($project->budget) {
+            $project->budget->update([
+                'is_advance_payment' => in_array($disbursementType, ['loan', 'both']),
+            ]);
+        }
+
+        // Sync Procurement Estimated Items (flows to Procurement stage if procurement/both, excluded if loan only)
+        if ($disbursementType === 'loan') {
+            if ($project->procurement) {
+                $project->procurement->items()->delete();
+            }
+        } elseif ($request->has('activities') || $request->has('procurement_items')) {
             $procurement = \App\Models\Procurement::firstOrCreate(
                 ['project_id' => $project->id],
                 [

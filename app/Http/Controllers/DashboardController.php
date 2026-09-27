@@ -347,8 +347,20 @@ class DashboardController extends Controller
         // 3. Procurement Head Dashboard Data
         if ($user->isProcurementHead() || $user->isAdmin()) {
             $data['procurementData'] = [
-                'procurementQueue' => Project::where('status', 'approved')
-                    ->orWhereHas('procurement')
+                'procurementQueue' => Project::where(function($q) {
+                        $q->where('status', 'approved')
+                          ->orWhereHas('procurement');
+                    })
+                    ->where(function($q) {
+                        $q->where('disbursement_type', 'procurement')
+                          ->orWhere('disbursement_type', 'both')
+                          ->orWhere(function($sub) {
+                              $sub->whereNull('disbursement_type')
+                                  ->whereDoesntHave('budget', function($b) {
+                                      $b->where('is_advance_payment', true);
+                                  });
+                          });
+                    })
                     ->with(['user', 'department', 'procurement.items', 'procurement.committees'])
                     ->latest()
                     ->get(),
@@ -702,6 +714,8 @@ class DashboardController extends Controller
                         ],
                         'title' => $p->title,
                         'academic_year' => $p->academic_year,
+                        'disbursement_type' => $p->disbursement_type ?: ($p->budget?->is_advance_payment ? 'loan' : 'procurement'),
+                        'is_advance_payment' => (bool)($p->budget?->is_advance_payment ?? false),
                         'estimated_budget' => (float)$p->estimated_budget,
                         'proposed_budget' => (float)($p->proposed_budget ?: $p->estimated_budget),
                         'allocated_budget' => $allocAmt,

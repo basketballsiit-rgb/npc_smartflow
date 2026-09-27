@@ -40,6 +40,7 @@ class Project extends Model
         'estimated_budget',
         'proposed_budget',
         'allocated_budget',
+        'disbursement_type',
         'funding_source_id',
         'report_category',
         'committee_comment',

@@ -151,9 +151,32 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         }
     });
 
+    const determineInitialDisbursementType = () => {
+        if (project?.disbursement_type) {
+            return project.disbursement_type;
+        }
+        const acts = Array.isArray(project?.activities) ? project.activities : [];
+        let hasLoan = false;
+        let hasProc = false;
+        acts.forEach(act => {
+            if ((act.loan_items || []).some(item => (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0) > 0)) {
+                hasLoan = true;
+            }
+            if ((act.procurement_items || []).some(item => (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0) > 0)) {
+                hasProc = true;
+            }
+        });
+        if (hasLoan && hasProc) return 'both';
+        if (hasLoan) return 'loan';
+        if (hasProc) return 'procurement';
+        if (project?.budget?.is_advance_payment) return 'loan';
+        return 'procurement';
+    };
+
     const { data, setData, patch, processing, errors } = useForm({
         title: project?.title || '',
         academic_year: project?.academic_year || 2569,
+        disbursement_type: determineInitialDisbursementType(),
         user_position_id: project?.user_position_id || '',
         department_id: project?.department_id || '',
         responsible_person: project?.responsible_person || project?.user?.name || '',
@@ -208,7 +231,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         return sum + (act.procurement_items || []).reduce((pSum, item) => pSum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
     }, 0);
 
-    const grandTotalBudget = totalLoanAllActivities + totalProcurementAllActivities;
+    const effectiveLoanBudget = data.disbursement_type === 'procurement' ? 0 : totalLoanAllActivities;
+    const effectiveProcBudget = data.disbursement_type === 'loan' ? 0 : totalProcurementAllActivities;
+    const grandTotalBudget = effectiveLoanBudget + effectiveProcBudget;
     const remainingBudget = allocatedBudget - grandTotalBudget;
     const usedPercentage = allocatedBudget > 0 ? ((grandTotalBudget / allocatedBudget) * 100).toFixed(1) : 0;
 
@@ -469,25 +494,34 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const prepareSubmitData = (submitApproval = false) => {
         // Flatten only actual procurement items (พัสดุ/วัสดุ/ครุภัณฑ์/จ้างทำของ) for procurement stage
-        // Note: Loan items (ค่าตอบแทน, ค่าอาหาร, ค่าใช้จ่ายเดินทาง) are for Loan Contract (กค.๑๐๑) and go directly to Finance!
+        // Note: If disbursement_type is 'loan', procurement items are cleared because it goes directly to Finance!
         const flattenedProcurementItems = [];
-        (data.activities || []).forEach((act, actIdx) => {
-            const actLabel = `[กิจกรรมที่ ${actIdx + 1}]`;
-            (act.procurement_items || []).forEach(item => {
-                if (item.description && item.description.trim() !== '') {
-                    flattenedProcurementItems.push({
-                        description: `${actLabel} ${item.description}`,
-                        quantity: item.quantity,
-                        unit: item.unit,
-                        unit_price: item.unit_price,
-                        total_price: item.total_price,
-                    });
-                }
+        if (data.disbursement_type !== 'loan') {
+            (data.activities || []).forEach((act, actIdx) => {
+                const actLabel = `[กิจกรรมที่ ${actIdx + 1}]`;
+                (act.procurement_items || []).forEach(item => {
+                    if (item.description && item.description.trim() !== '') {
+                        flattenedProcurementItems.push({
+                            description: `${actLabel} ${item.description}`,
+                            quantity: item.quantity,
+                            unit: item.unit,
+                            unit_price: item.unit_price,
+                            total_price: item.total_price,
+                        });
+                    }
+                });
             });
-        });
+        }
+
+        const cleanedActivities = (data.activities || []).map(act => ({
+            ...act,
+            loan_items: data.disbursement_type === 'procurement' ? [] : (act.loan_items || []),
+            procurement_items: data.disbursement_type === 'loan' ? [] : (act.procurement_items || []),
+        }));
 
         return {
             ...data,
+            activities: cleanedActivities,
             procurement_items: flattenedProcurementItems,
             submit_approval: submitApproval
         };
@@ -1604,6 +1638,128 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     </div>
                                 </div>
 
+                                {/* Disbursement Type Selector (3 Choices) */}
+                                <div className="bg-white p-4 rounded-2xl border border-purple-200 shadow-2xs space-y-3">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 border-b border-slate-100 pb-2.5">
+                                        <div>
+                                            <span className="text-[11px] font-bold text-purple-600 block uppercase tracking-wider">ตัวเลือกรูปแบบการเบิกจ่ายงบประมาณ</span>
+                                            <h4 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                                <span>📑</span> โปรดระบุประเภทเอกสารที่ต้องการใช้ในการดำเนินโครงการ:
+                                            </h4>
+                                        </div>
+                                        <span className="text-[11px] font-medium text-slate-500">
+                                            ระบบจะกำหนดเส้นทางการส่งเอกสารไปยังงานพัสดุ หรืองานการเงิน ให้อัตโนมัติตามที่เลือก
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {/* Option 1: Procurement */}
+                                        <label
+                                            onClick={() => setData('disbursement_type', 'procurement')}
+                                            className={`relative p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                                                data.disbursement_type === 'procurement'
+                                                    ? 'border-indigo-600 bg-indigo-50/50 shadow-sm ring-2 ring-indigo-200'
+                                                    : 'border-slate-200 bg-slate-50/50 hover:border-indigo-300 hover:bg-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-start gap-2.5">
+                                                <input
+                                                    type="radio"
+                                                    name="disbursement_type"
+                                                    value="procurement"
+                                                    checked={data.disbursement_type === 'procurement'}
+                                                    onChange={() => setData('disbursement_type', 'procurement')}
+                                                    className="mt-1 text-indigo-600 focus:ring-indigo-500"
+                                                />
+                                                <div className="space-y-1">
+                                                    <span className="text-xs font-black text-indigo-950 flex items-center gap-1">
+                                                        <span>📦</span> ชุดจัดซื้อจัดจ้าง (๔ ฉบับ)
+                                                    </span>
+                                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                                        จัดซื้อวัสดุ ครุภัณฑ์ จ้างทำของ หรือจ้างเหมาบริการ
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2.5 pt-2 border-t border-indigo-100 flex items-center justify-between text-[10px]">
+                                                <span className="font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">
+                                                    ➔ ส่งต่อไปยังงานพัสดุ
+                                                </span>
+                                                <span className="text-slate-500 font-medium">ไม่ใช้สัญญายืมเงิน</span>
+                                            </div>
+                                        </label>
+
+                                        {/* Option 2: Loan */}
+                                        <label
+                                            onClick={() => setData('disbursement_type', 'loan')}
+                                            className={`relative p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                                                data.disbursement_type === 'loan'
+                                                    ? 'border-amber-600 bg-amber-50/50 shadow-sm ring-2 ring-amber-200'
+                                                    : 'border-slate-200 bg-slate-50/50 hover:border-amber-300 hover:bg-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-start gap-2.5">
+                                                <input
+                                                    type="radio"
+                                                    name="disbursement_type"
+                                                    value="loan"
+                                                    checked={data.disbursement_type === 'loan'}
+                                                    onChange={() => setData('disbursement_type', 'loan')}
+                                                    className="mt-1 text-amber-600 focus:ring-amber-500"
+                                                />
+                                                <div className="space-y-1">
+                                                    <span className="text-xs font-black text-amber-950 flex items-center gap-1">
+                                                        <span>💵</span> สัญญายืมเงินทดรองราชการ (แบบ กค. ๑๐๑)
+                                                    </span>
+                                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                                        ค่าตอบแทนวิทยากร ค่าอาหาร/อาหารว่าง ค่าเดินทางไปราชการ
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2.5 pt-2 border-t border-amber-100 flex items-center justify-between text-[10px]">
+                                                <span className="font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
+                                                    ➔ ส่งตรงไปยังงานการเงิน
+                                                </span>
+                                                <span className="text-slate-500 font-medium">ไม่ผ่านงานพัสดุ</span>
+                                            </div>
+                                        </label>
+
+                                        {/* Option 3: Both */}
+                                        <label
+                                            onClick={() => setData('disbursement_type', 'both')}
+                                            className={`relative p-3.5 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${
+                                                data.disbursement_type === 'both'
+                                                    ? 'border-purple-600 bg-purple-50/50 shadow-sm ring-2 ring-purple-200'
+                                                    : 'border-slate-200 bg-slate-50/50 hover:border-purple-300 hover:bg-white'
+                                            }`}
+                                        >
+                                            <div className="flex items-start gap-2.5">
+                                                <input
+                                                    type="radio"
+                                                    name="disbursement_type"
+                                                    value="both"
+                                                    checked={data.disbursement_type === 'both'}
+                                                    onChange={() => setData('disbursement_type', 'both')}
+                                                    className="mt-1 text-purple-600 focus:ring-purple-500"
+                                                />
+                                                <div className="space-y-1">
+                                                    <span className="text-xs font-black text-purple-950 flex items-center gap-1">
+                                                        <span>🔄</span> ดำเนินการทั้ง ๒ รูปแบบ
+                                                    </span>
+                                                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                                                        มีทั้งการจัดซื้อจัดจ้างวัสดุ และทำสัญญายืมเงินทดรองจ่าย
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2.5 pt-2 border-t border-purple-100 flex items-center justify-between text-[10px]">
+                                                <span className="font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md">
+                                                    ➔ แยกส่งพัสดุและการเงิน
+                                                </span>
+                                                <span className="text-slate-500 font-medium">ทำ ๒ ชุดเอกสาร</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
                                 {/* Grand Totals Summary Cards (4 Cards Grid - Perfectly Aligned) */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
                                     {/* 1. วงเงินจัดสรร */}
@@ -1614,18 +1770,34 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     </div>
 
                                     {/* 2. รวมสัญญายืมเงิน */}
-                                    <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col justify-between shadow-2xs min-h-[105px]">
-                                        <span className="text-[11px] font-bold text-amber-900 block truncate">💵 รวมสัญญายืมเงิน</span>
-                                        <p className="text-xl font-black text-amber-800 my-1 tracking-tight">{totalLoanAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
-                                        <p className="text-[10px] text-amber-700 font-medium truncate">วิทยากร, อาหาร, เครื่องดื่ม, เดินทาง</p>
-                                    </div>
+                                    {data.disbursement_type === 'procurement' ? (
+                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col justify-between shadow-2xs min-h-[105px] opacity-60">
+                                            <span className="text-[11px] font-bold text-slate-400 block truncate">💵 รวมสัญญายืมเงิน</span>
+                                            <p className="text-sm font-bold text-slate-400 my-1">ไม่ได้เลือกใช้งาน</p>
+                                            <p className="text-[10px] text-slate-400 truncate">เลือกรูปแบบจัดซื้อจัดจ้าง</p>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 flex flex-col justify-between shadow-2xs min-h-[105px]">
+                                            <span className="text-[11px] font-bold text-amber-900 block truncate">💵 รวมสัญญายืมเงิน</span>
+                                            <p className="text-xl font-black text-amber-800 my-1 tracking-tight">{totalLoanAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
+                                            <p className="text-[10px] text-amber-700 font-medium truncate">วิทยากร, อาหาร, เครื่องดื่ม, เดินทาง</p>
+                                        </div>
+                                    )}
 
                                     {/* 3. รวมจัดซื้อจัดจ้าง */}
-                                    <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex flex-col justify-between shadow-2xs min-h-[105px]">
-                                        <span className="text-[11px] font-bold text-indigo-900 block truncate">📦 รวมจัดซื้อจัดจ้าง</span>
-                                        <p className="text-xl font-black text-indigo-800 my-1 tracking-tight">{totalProcurementAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
-                                        <p className="text-[10px] text-indigo-700 font-medium truncate">ค่าวัสดุ และรายการจัดซื้ออื่น ๆ</p>
-                                    </div>
+                                    {data.disbursement_type === 'loan' ? (
+                                        <div className="p-4 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col justify-between shadow-2xs min-h-[105px] opacity-60">
+                                            <span className="text-[11px] font-bold text-slate-400 block truncate">📦 รวมจัดซื้อจัดจ้าง</span>
+                                            <p className="text-sm font-bold text-slate-400 my-1">ไม่ได้เลือกใช้งาน</p>
+                                            <p className="text-[10px] text-slate-400 truncate">เลือกรูปแบบสัญญายืมเงิน</p>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-200 flex flex-col justify-between shadow-2xs min-h-[105px]">
+                                            <span className="text-[11px] font-bold text-indigo-900 block truncate">📦 รวมจัดซื้อจัดจ้าง</span>
+                                            <p className="text-xl font-black text-indigo-800 my-1 tracking-tight">{totalProcurementAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
+                                            <p className="text-[10px] text-indigo-700 font-medium truncate">ค่าวัสดุ และรายการจัดซื้ออื่น ๆ</p>
+                                        </div>
+                                    )}
 
                                     {/* 4. สถานะงบประมาณคงเหลือ (Remaining Balance) */}
                                     <div className={`p-4 rounded-2xl border flex flex-col justify-between shadow-2xs min-h-[105px] transition-all ${
@@ -1675,28 +1847,36 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
                                     {/* Progress Bar Track */}
                                     <div className="w-full bg-slate-100 h-3.5 rounded-full overflow-hidden flex border border-slate-200">
-                                        <div 
-                                            style={{ width: `${Math.min(100, allocatedBudget > 0 ? (totalLoanAllActivities / allocatedBudget) * 100 : 0)}%` }} 
-                                            className="bg-amber-500 h-full transition-all duration-300"
-                                            title={`สัญญายืมเงิน: ${totalLoanAllActivities.toLocaleString()} บาท`}
-                                        />
-                                        <div 
-                                            style={{ width: `${Math.min(100, allocatedBudget > 0 ? (totalProcurementAllActivities / allocatedBudget) * 100 : 0)}%` }} 
-                                            className="bg-indigo-600 h-full transition-all duration-300"
-                                            title={`จัดซื้อจัดจ้าง: ${totalProcurementAllActivities.toLocaleString()} บาท`}
-                                        />
+                                        {data.disbursement_type !== 'procurement' && (
+                                            <div 
+                                                style={{ width: `${Math.min(100, allocatedBudget > 0 ? (totalLoanAllActivities / allocatedBudget) * 100 : 0)}%` }} 
+                                                className="bg-amber-500 h-full transition-all duration-300"
+                                                title={`สัญญายืมเงิน: ${totalLoanAllActivities.toLocaleString()} บาท`}
+                                            />
+                                        )}
+                                        {data.disbursement_type !== 'loan' && (
+                                            <div 
+                                                style={{ width: `${Math.min(100, allocatedBudget > 0 ? (totalProcurementAllActivities / allocatedBudget) * 100 : 0)}%` }} 
+                                                className="bg-indigo-600 h-full transition-all duration-300"
+                                                title={`จัดซื้อจัดจ้าง: ${totalProcurementAllActivities.toLocaleString()} บาท`}
+                                            />
+                                        )}
                                     </div>
 
                                     <div className="flex flex-wrap justify-between items-center text-[11px] text-slate-600 pt-0.5">
                                         <div className="flex items-center gap-4">
-                                            <span className="flex items-center gap-1.5 font-bold text-amber-900">
-                                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 
-                                                สัญญายืมเงิน: {totalLoanAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท ({allocatedBudget > 0 ? ((totalLoanAllActivities / allocatedBudget) * 100).toFixed(1) : 0}%)
-                                            </span>
-                                            <span className="flex items-center gap-1.5 font-bold text-indigo-900">
-                                                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span> 
-                                                จัดซื้อจัดจ้าง: {totalProcurementAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท ({allocatedBudget > 0 ? ((totalProcurementAllActivities / allocatedBudget) * 100).toFixed(1) : 0}%)
-                                            </span>
+                                            {data.disbursement_type !== 'procurement' && (
+                                                <span className="flex items-center gap-1.5 font-bold text-amber-900">
+                                                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 
+                                                    สัญญายืมเงิน: {totalLoanAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท ({allocatedBudget > 0 ? ((totalLoanAllActivities / allocatedBudget) * 100).toFixed(1) : 0}%)
+                                                </span>
+                                            )}
+                                            {data.disbursement_type !== 'loan' && (
+                                                <span className="flex items-center gap-1.5 font-bold text-indigo-900">
+                                                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block"></span> 
+                                                    จัดซื้อจัดจ้าง: {totalProcurementAllActivities.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท ({allocatedBudget > 0 ? ((totalProcurementAllActivities / allocatedBudget) * 100).toFixed(1) : 0}%)
+                                                </span>
+                                            )}
                                         </div>
                                         <span className="text-slate-500 font-medium">
                                             {data.activities?.length || 1} กิจกรรมย่อย
@@ -1741,11 +1921,23 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                         <div className="text-right">
                                                             <div className="text-xs font-black text-purple-950 bg-white px-3 py-1 rounded-xl border border-purple-200 shadow-2xs inline-flex items-center gap-1.5">
                                                                 <span>รวมกิจกรรมนี้:</span>
-                                                                <span className="text-purple-700 font-black">{actTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</span>
-                                                                <span className="text-[10px] text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded">({actPercentage}%)</span>
+                                                                <span className="text-purple-700 font-black">
+                                                                    {(data.disbursement_type === 'loan' ? actLoanSum : data.disbursement_type === 'procurement' ? actProcSum : actTotal).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                                                </span>
+                                                                <span className="text-[10px] text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded">
+                                                                    ({allocatedBudget > 0 ? (((data.disbursement_type === 'loan' ? actLoanSum : data.disbursement_type === 'procurement' ? actProcSum : actTotal) / allocatedBudget) * 100).toFixed(1) : 0}%)
+                                                                </span>
                                                             </div>
                                                             <div className="text-[10px] text-slate-500 mt-0.5 font-medium">
-                                                                💵 ยืมเงิน {actLoanSum.toLocaleString()} บ. | 📦 จัดซื้อ {actProcSum.toLocaleString()} บ.
+                                                                {data.disbursement_type === 'loan' && (
+                                                                    <span>💵 เงินยืม {actLoanSum.toLocaleString()} บ.</span>
+                                                                )}
+                                                                {data.disbursement_type === 'procurement' && (
+                                                                    <span>📦 จัดซื้อ {actProcSum.toLocaleString()} บ.</span>
+                                                                )}
+                                                                {data.disbursement_type === 'both' && (
+                                                                    <span>💵 ยืมเงิน {actLoanSum.toLocaleString()} บ. | 📦 จัดซื้อ {actProcSum.toLocaleString()} บ.</span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         {(data.activities || []).length > 1 && (
@@ -1785,16 +1977,48 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                     </div>
                                                 </div>
 
-                                                {/* Loan Items for this Activity */}
-                                                <div className="p-3.5 bg-amber-50/40 rounded-xl border border-amber-200 space-y-2.5">
-                                                    <div className="flex justify-between items-center">
-                                                        <h5 className="text-xs font-bold text-amber-950 flex items-center gap-1">
-                                                            <span>💵</span> รายการสัญญายืมเงิน (แบบ กค. ๑๐๑) - กิจกรรมที่ {actIdx + 1}
-                                                        </h5>
-                                                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
-                                                            เงินยืม: {actLoanSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
-                                                        </span>
-                                                    </div>
+                                                {/* Loan Items for this Activity (Rendered if loan or both) */}
+                                                {data.disbursement_type !== 'procurement' && (
+                                                    <div className="p-3.5 bg-amber-50/40 rounded-xl border border-amber-200 space-y-2.5">
+                                                        <div className="flex flex-wrap justify-between items-center gap-1.5">
+                                                            <h5 className="text-xs font-bold text-amber-950 flex items-center gap-1">
+                                                                <span>💵</span> รายการสัญญายืมเงิน (แบบ กค. ๑๐๑) - กิจกรรมที่ {actIdx + 1}
+                                                            </h5>
+                                                            <div className="flex items-center gap-2">
+                                                                {remainingBudget > 0 && data.disbursement_type === 'loan' && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const acts = [...(data.activities || [])];
+                                                                            const lItems = [...(acts[actIdx].loan_items || [])];
+                                                                            if (lItems.length > 0) {
+                                                                                const currentPrice = parseFloat(lItems[0].unit_price) || 0;
+                                                                                const qty = parseFloat(lItems[0].quantity) || 1;
+                                                                                lItems[0].unit_price = currentPrice + (remainingBudget / qty);
+                                                                                lItems[0].total_price = qty * lItems[0].unit_price;
+                                                                            } else {
+                                                                                lItems.push({
+                                                                                    description: '๑. ค่าใช้จ่ายตามสัญญายืมเงินดำเนินกิจกรรม',
+                                                                                    quantity: 1,
+                                                                                    unit: 'งาน',
+                                                                                    unit_price: remainingBudget,
+                                                                                    total_price: remainingBudget,
+                                                                                });
+                                                                            }
+                                                                            acts[actIdx].loan_items = lItems;
+                                                                            setData('activities', acts);
+                                                                        }}
+                                                                        className="text-[11px] font-bold text-amber-800 bg-amber-100/90 hover:bg-amber-200 border border-amber-300 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1"
+                                                                        title="ดึงงบประมาณที่ยังคงเหลืออยู่มาเติมในรายการสัญญายืมเงินของกิจกรรมนี้ให้ครบวงเงินพอดี"
+                                                                    >
+                                                                        ⚡ ดึงยอดคงเหลือ (+{remainingBudget.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บ.) เติมในกิจกรรมนี้
+                                                                    </button>
+                                                                )}
+                                                                <span className="text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-md">
+                                                                    เงินยืม: {actLoanSum.toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     <div className="overflow-x-auto">
                                                         <table className="w-full text-xs text-slate-800 border-collapse">
                                                             <thead>
@@ -1877,13 +2101,15 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                         + เพิ่มรายการสัญญายืมเงิน
                                                     </button>
                                                 </div>
+                                            )}
 
-                                                {/* Procurement Items for this Activity */}
-                                                <div className="p-3.5 bg-indigo-50/40 rounded-xl border border-indigo-200 space-y-2.5">
-                                                    <div className="flex flex-wrap justify-between items-center gap-1.5">
-                                                        <h5 className="text-xs font-bold text-indigo-950 flex items-center gap-1">
-                                                            <span>📦</span> รายการจัดซื้อจัดจ้างพัสดุ - กิจกรรมที่ {actIdx + 1}
-                                                        </h5>
+                                            {/* Procurement Items for this Activity (Rendered if procurement or both) */}
+                                            {data.disbursement_type !== 'loan' && (
+                                                    <div className="p-3.5 bg-indigo-50/40 rounded-xl border border-indigo-200 space-y-2.5">
+                                                        <div className="flex flex-wrap justify-between items-center gap-1.5">
+                                                            <h5 className="text-xs font-bold text-indigo-950 flex items-center gap-1">
+                                                                <span>📦</span> รายการจัดซื้อจัดจ้างพัสดุ - กิจกรรมที่ {actIdx + 1}
+                                                            </h5>
                                                         <div className="flex items-center gap-2">
                                                             {remainingBudget > 0 && (
                                                                 <button
@@ -2074,6 +2300,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                         </button>
                                                     </div>
                                                 </div>
+                                                )}
 
                                             </div>
                                         );
