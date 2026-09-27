@@ -214,22 +214,42 @@ ${itemsListText}
     const isOverBudget = totalProcurementSum > (allocatedBudget + 0.01);
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
     const isPlanApproved = ['approved', 'in_progress', 'evaluating', 'completed'].includes(project.status) || project.current_approval_step >= 6;
-    const isFinanceStaff = Boolean(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'finance_head' || (auth.user.department && (auth.user.department.name?.includes('การเงิน') || auth.user.department.code === 'FIN')) || auth.user.position?.includes('การเงิน'));
-    const isPlanStaffOrAdmin = Boolean(
-        auth.user?.is_admin || 
-        auth.user?.is_plan_head || 
-        auth.user?.is_plan_staff || 
-        auth.user?.role === 'admin' || 
-        auth.user?.role === 'superadmin' || 
-        auth.user?.role === 'plan_head' || 
-        auth.user?.role?.name === 'admin' || 
-        auth.user?.role?.name === 'plan_head' || 
-        auth.user?.department_name?.includes('แผน') ||
-        auth.user?.department?.name?.includes('แผน') ||
-        auth.user?.position?.includes('แผน') ||
-        auth.user?.position?.includes('ผู้ดูแลระบบ')
+    const isFinanceStaff = Boolean(
+        auth?.user?.is_admin || 
+        auth?.user?.role?.name === 'admin' || 
+        auth?.user?.role === 'admin' || 
+        auth?.user?.role === 'superadmin' || 
+        auth?.user?.role?.name === 'finance_head' || 
+        (auth?.user?.department && (auth?.user?.department.name?.includes('การเงิน') || auth?.user?.department.code === 'FIN')) || 
+        auth?.user?.position?.includes('การเงิน') ||
+        auth?.user?.position?.includes('ผู้ดูแลระบบ')
     );
-    const isProposer = Boolean(project.user_id === auth.user.id);
+    const isPlanStaffOrAdmin = Boolean(
+        auth?.user?.is_admin || 
+        auth?.user?.is_plan_head || 
+        auth?.user?.is_plan_staff || 
+        auth?.user?.role === 'admin' || 
+        auth?.user?.role === 'superadmin' || 
+        auth?.user?.role === 'plan_head' || 
+        auth?.user?.role?.name === 'admin' || 
+        auth?.user?.role?.name === 'plan_head' || 
+        auth?.user?.department_name?.includes('แผน') ||
+        auth?.user?.department?.name?.includes('แผน') ||
+        auth?.user?.position?.includes('แผน') ||
+        auth?.user?.position?.includes('ผู้ดูแลระบบ')
+    );
+    const isProcStaffOrAdmin = Boolean(
+        auth?.user?.is_admin || 
+        auth?.user?.role?.name === 'admin' || 
+        auth?.user?.role === 'admin' || 
+        auth?.user?.role === 'superadmin' || 
+        auth?.user?.role?.name === 'procurement_head' || 
+        auth?.user?.role === 'procurement_head' || 
+        (auth?.user?.department && (auth?.user?.department.name?.includes('พัสดุ') || auth?.user?.department.code === 'PROC')) || 
+        auth?.user?.position?.includes('พัสดุ') ||
+        auth?.user?.position?.includes('ผู้ดูแลระบบ')
+    );
+    const isProposer = Boolean(auth?.user?.id && project.user_id === auth?.user?.id);
 
     // Auto-detect disbursement type: 'loan', 'procurement', or 'both'
     const disbType = (() => {
@@ -368,6 +388,27 @@ ${itemsListText}
                     onSuccess: () => {
                         setIsEditingProcurement(true);
                         Swal.fire('สำเร็จ', isToPending ? 'ส่งคืนให้ผู้เสนอโครงการแก้ไขเรียบร้อยแล้ว' : 'ดึงเรื่องกลับมาให้งานพัสดุแก้ไขเรียบร้อยแล้ว', 'success');
+                    }
+                });
+            }
+        });
+    };
+
+    const handleForwardToFinance = () => {
+        Swal.fire({
+            title: '📤 ตั้งเบิกชุดจัดซื้อจัดจ้าง ➔ ส่งงานการเงิน',
+            text: `ต้องการตั้งเบิกชุดจัดซื้อจัดจ้างโครงการ "${project.title}" และส่งต่อให้งานการเงินดำเนินการเบิกจ่ายหรือไม่?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '📤 ยืนยันตั้งเบิกส่งการเงิน',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('procurements.forward_to_finance', project.id), {}, {
+                    onSuccess: () => {
+                        Swal.fire('สำเร็จ', 'ตั้งเบิกและส่งต่อให้งานการเงินเรียบร้อยแล้ว', 'success');
                     }
                 });
             }
@@ -1057,7 +1098,7 @@ ${itemsListText}
                         </p>
                     </div>
                     <div className="flex items-center gap-x-2.5 whitespace-nowrap flex-nowrap shrink-0">
-                        {(project.status === 'draft' || project.status === 'rejected' || project.status === 'budget_approved') && (project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
+                        {(project.status === 'draft' || project.status === 'rejected' || project.status === 'budget_approved') && (project.user_id === auth?.user?.id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && (
                             <button
                                 onClick={handleWorkflowSubmit}
                                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white shadow-md shadow-emerald-500/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
@@ -1115,11 +1156,11 @@ ${itemsListText}
 
                         {/* Delete Button */}
                         {(() => {
-                            const isPlanOrAdmin = Boolean(auth.user?.is_admin || auth.user?.role?.name === 'admin' || auth.user?.is_plan_head || auth.user?.is_plan_staff || (auth.user?.department && (auth.user.department.name?.includes('แผน') || auth.user.department.code === 'PLAN')));
+                            const isPlanOrAdmin = Boolean(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.is_plan_head || auth?.user?.is_plan_staff || (auth?.user?.department && (auth?.user?.department?.name?.includes('แผน') || auth?.user?.department?.code === 'PLAN')));
                             const isNotApproved = !['approved', 'in_progress', 'completed'].includes(project.status) || ['rejected', 'budget_rejected', 'pending_approval', 'submitted', 'draft', 'preliminary'].includes(project.status);
-                            const isOwnerDraft = project.user_id === auth.user?.id && ['draft', 'preliminary', 'rejected', 'budget_rejected'].includes(project.status);
+                            const isOwnerDraft = project.user_id === auth?.user?.id && ['draft', 'preliminary', 'rejected', 'budget_rejected'].includes(project.status);
 
-                            if (auth.user?.is_admin || (isPlanOrAdmin && isNotApproved) || isOwnerDraft) {
+                            if (auth?.user?.is_admin || (isPlanOrAdmin && isNotApproved) || isOwnerDraft) {
                                 return (
                                     <button
                                         type="button"
@@ -1220,7 +1261,7 @@ ${itemsListText}
                                     </span>
                                 );
                             })()}
-                            {(project.status === 'draft' || project.status === 'rejected' || project.status === 'budget_approved') && (project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
+                            {(project.status === 'draft' || project.status === 'rejected' || project.status === 'budget_approved') && (project.user_id === auth?.user?.id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && (
                                 <button
                                     onClick={handleWorkflowSubmit}
                                     className="rounded-xl bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-4 py-2 text-xs font-bold text-white hover:scale-105 shadow-md shadow-emerald-600/25 transition-all whitespace-nowrap"
@@ -1436,8 +1477,8 @@ ${itemsListText}
 
                     {/* Tab 1: Plan & Details */}
                     {activeTab === 'plan' && (
-                        <div className={`grid grid-cols-1 gap-8 ${(canApprove || ((auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'approved')) ? 'lg:grid-cols-3' : 'lg:grid-cols-1'}`}>
-                            <div className={`${(canApprove || ((auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'approved')) ? 'lg:col-span-2' : 'w-full'} space-y-6`}>
+                        <div className={`grid grid-cols-1 gap-8 ${(canApprove || ((auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'approved')) ? 'lg:grid-cols-3' : 'lg:grid-cols-1'}`}>
+                            <div className={`${(canApprove || ((auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'approved')) ? 'lg:col-span-2' : 'w-full'} space-y-6`}>
                                 <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6">
                                     <div className="bg-purple-50/80 p-4 rounded-xl border border-purple-100 flex justify-between items-center">
                                         <div>
@@ -1525,7 +1566,7 @@ ${itemsListText}
                             </div>
 
                             {/* Approver Side Panel */}
-                            {(canApprove || ((auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'approved')) && (
+                            {(canApprove || ((auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'approved')) && (
                                 <div className="lg:col-span-1 space-y-6">
                                 {canApprove && (
                                     <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
@@ -1601,7 +1642,7 @@ ${itemsListText}
                                     </div>
                                 )}
 
-                                {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'approved' && (
+                                {(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'approved' && (
                                     <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 p-5 shadow-md space-y-3 font-sans">
                                         <div className="flex items-center gap-2 text-amber-950 font-black text-sm">
                                             <span>👑</span>
@@ -1696,7 +1737,7 @@ ${itemsListText}
                                         </div>
 
                                         {/* Buttons for Procurement Staff / Admin */}
-                                        {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin' || auth.user.role?.name === 'procurement_head' || auth.user.role === 'procurement_head' || auth.user.position?.includes('พัสดุ')) && (
+                                        {(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin' || auth?.user?.role?.name === 'procurement_head' || auth?.user?.role === 'procurement_head' || auth?.user?.position?.includes('พัสดุ')) && (
                                             <div className="flex flex-wrap gap-2 shrink-0">
                                                 {!isProcReceived && project.procurement?.status !== 'forwarded_to_finance' && (
                                                     <button
@@ -1716,7 +1757,7 @@ ${itemsListText}
                                                         <span>📤</span> ตั้งเบิกส่งงานการเงิน ➔
                                                     </button>
                                                 )}
-                                                {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.procurement?.status === 'forwarded_to_finance' && (
+                                                {(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.procurement?.status === 'forwarded_to_finance' && (
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRollbackProcurement('received')}
@@ -1726,7 +1767,7 @@ ${itemsListText}
                                                         <span>↩️</span> ยกเลิกส่งการเงิน (ดึงกลับให้พัสดุ)
                                                     </button>
                                                 )}
-                                                {(auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && isProcReceived && project.procurement?.status !== 'forwarded_to_finance' && (
+                                                {(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && isProcReceived && project.procurement?.status !== 'forwarded_to_finance' && (
                                                     <button
                                                         type="button"
                                                         onClick={() => handleRollbackProcurement('pending')}
@@ -2411,7 +2452,7 @@ ${itemsListText}
                             </div>
                         ) : (
                         <div className="space-y-6 font-sans">
-                            {(project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && project.status !== 'completed' && (
+                            {(project.user_id === auth?.user?.id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'completed' && (
                                 <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-900/10 via-teal-900/10 to-emerald-900/5 border border-emerald-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
                                     <div>
                                         <h4 className="text-xs font-black text-emerald-950 uppercase">
@@ -2797,7 +2838,7 @@ ${itemsListText}
                                     </div>
                                 </div>
 
-                                {(project.user_id === auth.user.id || auth.user.is_admin || auth.user.role?.name === 'admin' || auth.user.role === 'admin') && (
+                                {(project.user_id === auth?.user?.id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && (
                                     <form onSubmit={handleUploadAppendix} className="space-y-4 border-b border-purple-100 pb-6">
                                         {/* Quick Title Selection Chips */}
                                         <div>

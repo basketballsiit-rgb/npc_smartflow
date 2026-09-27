@@ -33,6 +33,8 @@ export default function Dashboard({
     currentTab
 }) {
     const { auth, flash, departments_data } = usePage().props;
+    const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
+    const fiscalYear = systemSettings?.find(s => s.key === 'current_fiscal_year')?.value || '2569';
 
     // Routine budgets states
     const [editingRoutinePlan, setEditingRoutinePlan] = useState(null);
