@@ -652,7 +652,7 @@ class ProjectController extends Controller
                 ['project_id' => $project->id],
                 [
                     'procurement_number' => 'PR-' . str_pad($project->id, 5, '0', STR_PAD_LEFT),
-                    'status' => 'processing'
+                    'status' => 'pending'
                 ]
             );
 

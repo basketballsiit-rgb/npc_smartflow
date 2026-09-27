@@ -1491,31 +1491,51 @@ export default function Dashboard({
             );
         }
         if (status === 'approved' || step >= 6) {
-            const procStatus = project?.procurement?.status || project?.procurement_status;
-            const loanStatus = project?.loan_status || project?.procurement?.loan_status;
-            const isAtFinance = procStatus === 'forwarded_to_finance' || loanStatus === 'finance_received' || project?.finance_received_at;
-            
-            if (isAtFinance) {
+            const proc = project?.procurement;
+            const procStatus = proc?.status || project?.procurement_status;
+            const loanStatus = project?.loan_status || proc?.loan_status;
+            const planProcCut = Boolean(project?.plan_procurement_cut_at || proc?.plan_procurement_cut_at || procStatus === 'plan_cut');
+            const planLoanCut = Boolean(project?.plan_loan_cut_at || proc?.plan_loan_cut_at || loanStatus === 'plan_cut');
+            const isFinReceived = loanStatus === 'finance_received' || project?.finance_received_at || proc?.finance_received_at;
+            const isProcToFin = procStatus === 'forwarded_to_finance' || procStatus === 'completed';
+
+            // 1. Finance stage (sent to finance or finance received)
+            if (isProcToFin || isFinReceived) {
                 return (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-950 border border-emerald-400 text-xs font-black whitespace-nowrap shadow-2xs">
                         💰 งานการเงิน
                     </span>
                 );
             }
-            if (procStatus === 'received' || procStatus === 'processing') {
+
+            // 2. Procurement received: only when procurement staff has actually received it
+            if (procStatus === 'received') {
                 return (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-100 text-blue-950 border border-blue-300 text-xs font-bold whitespace-nowrap">
-                        📦 งานพัสดุ
+                        📦 อยู่ที่พัสดุ
                     </span>
                 );
             }
-            if (project?.plan_procurement_cut_at || project?.plan_loan_cut_at) {
+
+            // 3. Waiting for procurement receipt (plan cut budget / forwarded to procurement, waiting for receive)
+            if (planProcCut || procStatus === 'processing') {
                 return (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold whitespace-nowrap">
-                        ⏳ รอพัสดุ/การเงิน
+                        ⏳ รอพัสดุลงรับ
                     </span>
                 );
             }
+
+            // 4. Waiting for finance loan receipt
+            if (planLoanCut) {
+                return (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-100 text-amber-950 border border-amber-300 text-xs font-bold whitespace-nowrap">
+                        ⏳ รอการเงินลงรับ
+                    </span>
+                );
+            }
+
+            // 5. Waiting for planning to cut budget
             return (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-bold whitespace-nowrap">
                     🏢 แผนงาน
@@ -12116,7 +12136,7 @@ ${itemsListText}
 
         // Regular users (teachers/proposers) only track their own projects
         if (!isPowerTrackingUser) {
-            sourceProjects = sourceProjects.filter(p => p.user_id === auth.user.id || p.user?.id === auth.user.id);
+            sourceProjects = sourceProjects.filter(p => !p.user_id || p.user_id === auth.user.id || p.user?.id === auth.user.id);
         }
 
         // Filter projects that have been approved or in proposal stage
@@ -12190,8 +12210,8 @@ ${itemsListText}
             const isLoanFinReceived = loanStatus === 'finance_received' || p.finance_received_at || proc?.finance_received_at;
             const isLoanPlanCut = loanStatus === 'plan_cut' || p.plan_loan_cut_at || proc?.plan_loan_cut_at || (p.encumbered_amount && p.encumbered_amount > 0);
 
-            const isProcPlanCut = procStatus === 'plan_cut' || p.plan_procurement_cut_at || proc?.plan_procurement_cut_at;
-            const isProcReceived = procStatus === 'received' || p.procurement_number || proc?.procurement_number;
+            const isProcPlanCut = procStatus === 'plan_cut' || p.plan_procurement_cut_at || proc?.plan_procurement_cut_at || (procStatus === 'processing' && !proc?.procurement_received_at);
+            const isProcReceived = procStatus === 'received';
             const isProcForwardedToFin = procStatus === 'forwarded_to_finance' || proc?.status === 'forwarded_to_finance';
             const isProcDisbursed = procStatus === 'completed' || proc?.status === 'completed' || procStatus === 'disbursed';
 
@@ -12215,7 +12235,8 @@ ${itemsListText}
                 isProcPlanCut || 
                 isProcReceived || 
                 isProcForwardedToFin || 
-                isProcDisbursed
+                isProcDisbursed ||
+                !hasLoanComponent
             );
 
             const hasLoanAtFinance = Boolean(isLoanPlanCut || isLoanFinReceived || isLoanCleared);
@@ -12290,9 +12311,9 @@ ${itemsListText}
                 procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
                 procCategory = 'at_procurement';
             } else if (isProcPlanCut) {
-                procLocation = 'อยู่ที่งานพัสดุ';
+                procLocation = 'อยู่ที่งานพัสดุ (รอลงรับ)';
                 procHolder = (p.plan_procurement_doc_number || proc?.plan_procurement_doc_number) ? `เลขตัดยอดแผน: ${p.plan_procurement_doc_number || proc?.plan_procurement_doc_number}` : 'รอเจ้าหน้าที่พัสดุลงรับ';
-                procStatusText = '⏳ แผนตัดยอดแล้ว (รอพัสดุลงรับ)';
+                procStatusText = '⏳ รอพัสดุลงรับ';
                 procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
                 procCategory = 'at_procurement';
             } else {
@@ -12859,6 +12880,19 @@ return (
                                                                 <span className="text-slate-300">•</span>
                                                                 <span>🏢 {item.department.name}</span>
                                                             </>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                                        {item.hasProcComponent && (
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] ${item.procBadgeClass}`}>
+                                                                {item.procStatusText}
+                                                            </span>
+                                                        )}
+                                                        {item.hasLoanComponent && (
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] ${item.loanBadgeClass}`}>
+                                                                {item.loanStatusText}
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </div>
