@@ -509,15 +509,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>จัดทำโครงการฉบับเต็ม</span>}
                                 </Link>
                                 <Link
-                                    href={route('dashboard', { tab: 'proposals' })}
-                                    className={getSubLinkClass(url.includes('tab=proposals') && !url.includes('filter=report'))}
-                                    title="โครงการของฉัน (ดำเนินโครงการ & ประเมิน)"
-                                >
-                                    <span className={getPrefixClass(url.includes('tab=proposals') && !url.includes('filter=report'))}>└─</span>
-                                    <span className="text-sm">📋</span>
-                                    {isSidebarOpen && <span>โครงการของฉัน & ประเมิน</span>}
-                                </Link>
-                                <Link
                                     href={route('dashboard', { tab: 'reviews' })}
                                     className={getSubLinkClass(url.includes('tab=reviews'))}
                                     title="คิวลงนามอนุมัติของผู้เกี่ยวข้อง"
@@ -646,7 +637,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             {(!isSidebarOpen || openSections.procurement_loan) && (
                             <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                 <Link
-                                    href={route('dashboard', { tab: 'proposals' })}
+                                    href={route('dashboard', { tab: 'document_tracking' })}
                                     className={getSubLinkClass(false)}
                                     title="จัดทำชุดจัดซื้อจัดจ้าง 4 ฉบับจากโครงการ"
                                 >
@@ -1178,9 +1169,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </Link>
                                         <Link href={route('projects.create')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>➕</span> จัดทำโครงการฉบับเต็ม
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'proposals' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📋</span> โครงการของฉัน & ประเมิน
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>✍️</span> คิวลงนามอนุมัติ

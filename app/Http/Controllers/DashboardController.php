@@ -29,9 +29,12 @@ class DashboardController extends Controller
                ($user->isFinanceStaff() ? 'finance_head' :
                ($user->isDepartmentHead() ? 'department_head' : 'teacher')))));
 
+        $requestedTab = $request->query('tab');
+        $activeTab = ($requestedTab === 'proposals') ? 'document_tracking' : $requestedTab;
+
         $data = [
             'role' => $role,
-            'currentTab' => $request->query('tab'),
+            'currentTab' => $activeTab,
         ];
 
         // Auto-cleanup any residual duplicate/imported test departments
@@ -708,7 +711,7 @@ class DashboardController extends Controller
             || $user->isProcurementHead() || $user->isProcurementStaff() 
             || $user->isFinanceStaff() || $user->isExecutive();
 
-        if ($isPowerUser || in_array($request->query('tab'), ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets'])) {
+        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals'])) {
             $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
                 ->latest();
 

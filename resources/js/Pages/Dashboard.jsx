@@ -726,14 +726,17 @@ export default function Dashboard({
     }, [flash]);
 
     const getDefaultTab = () => {
-        if (currentTab) return currentTab;
+        if (currentTab) {
+            if (currentTab === 'proposals') return 'document_tracking';
+            return currentTab;
+        }
         if (role === 'admin') return 'admin_users';
-        if (role === 'teacher') return 'proposals';
+        if (role === 'teacher') return 'document_tracking';
         if (role === 'plan_head') return 'budgets';
         if (role === 'procurement_head') return 'procurement';
         if (role === 'finance_head' || isFinanceStaff) return 'central_budgets';
         if (role === 'executive') return 'executive_overview';
-        return 'proposals';
+        return 'document_tracking';
     };
 
     const cleanThaiFundingName = (name) => {
@@ -12185,10 +12188,16 @@ ${itemsListText}
         const isStrictFinanceUser = isFinanceStaff && !isAdmin;
         const isPowerTrackingUser = isAdmin || isPlanStaff || isProcurementStaff || isFinanceStaff || isExecutive;
 
-        // Collect projects based on user authority
-        let sourceProjects = (Array.isArray(allProjectsMaster) && allProjectsMaster.length > 0)
-            ? allProjectsMaster
-            : (Array.isArray(teacherData?.projects) ? teacherData.projects : []);
+        // Collect projects based on user authority (combining master and proposer projects)
+        const masterList = Array.isArray(allProjectsMaster) ? allProjectsMaster : [];
+        const teacherList = Array.isArray(teacherData?.projects) ? teacherData.projects : [];
+        const projectMap = new Map();
+        [...masterList, ...teacherList].forEach(p => {
+            if (p && p.id && !projectMap.has(p.id)) {
+                projectMap.set(p.id, p);
+            }
+        });
+        let sourceProjects = Array.from(projectMap.values());
 
         // Regular users (teachers/proposers) only track their own projects
         if (!isPowerTrackingUser) {
@@ -12329,82 +12338,114 @@ ${itemsListText}
             let loanBadgeClass = '';
             let loanCategory = null;
 
-            if (hasLoanComponent) {
-                loanLocation = 'อยู่ที่งานแผนงาน';
+            if (status === 'preliminary') {
+                loanLocation = 'งานแผนงาน (พิจารณาคำขอ)';
                 loanHolder = 'เจ้าหน้าที่งานแผนงาน';
-                loanStatusText = '🏢 รอแผนงานตัดยอดสัญญายืมเงิน';
-                loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
-                loanCategory = 'pending';
+                loanStatusText = '💡 รอจัดสรรงบประมาณ (คำขอเบื้องต้น)';
+                loanBadgeClass = 'bg-amber-50 text-amber-900 border-amber-300 font-bold';
+                loanCategory = 'preliminary';
 
-                if (isLoanCleared) {
-                    const spent = (parseFloat(p.finance_disbursed_amount) || parseFloat(proc?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0);
-                    const diff = allocBudget - spent;
-                    loanLocation = 'งานการเงิน / ปิดสัญญาแล้ว';
-                    loanHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'ปิดเคลียร์เงินยืมสมบูรณ์';
-                    loanStatusText = `🎉 เคลียร์ปิดยอดแล้ว (จ่ายจริง: ฿${new Intl.NumberFormat('th-TH').format(spent)} | ${diff >= 0 ? `เหลืองบคืน: ฿${new Intl.NumberFormat('th-TH').format(diff)}` : `เกินงบ: ฿${new Intl.NumberFormat('th-TH').format(Math.abs(diff))}`})`;
-                    loanBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
-                    loanCategory = 'completed';
-                } else if (isLoanFinReceived) {
-                    loanLocation = 'อยู่ที่งานการเงิน';
-                    loanHolder = (p.finance_doc_number || proc?.finance_doc_number) ? `เลขรับ กง: ${p.finance_doc_number || proc?.finance_doc_number}` : 'เจ้าหน้าที่งานการเงิน';
-                    loanStatusText = '📥 การเงินลงรับแล้ว (รอโอนเงินยืม)';
-                    loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
-                    loanCategory = 'at_finance';
-                } else if (isLoanPlanCut) {
-                    loanLocation = 'อยู่ที่งานการเงิน (รอลงรับ)';
-                    loanHolder = (p.plan_loan_doc_number || proc?.plan_loan_doc_number) ? `เลขตัดยอดแผน: ${p.plan_loan_doc_number || proc?.plan_loan_doc_number}` : 'รอเจ้าหน้าที่การเงินลงรับ';
-                    loanStatusText = '⏳ รอการเงินลงรับ';
-                    loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
-                    loanCategory = 'at_finance';
-                } else if (status === 'approved' || p.current_approval_step >= 6) {
-                    loanLocation = 'อยู่ที่งานการเงิน (รอลงรับ)';
-                    loanHolder = 'รอเจ้าหน้าที่การเงินลงรับ';
-                    loanStatusText = '⏳ รอการเงินลงรับ';
-                    loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
-                    loanCategory = 'at_finance';
-                }
-            }
-
-            // ==========================================
-            // 2. Compute Procurement Package (ชุดจัดซื้อจัดจ้าง ๔ ฉบับ) Status & Location
-            // ==========================================
-            let procLocation = null;
-            let procHolder = null;
-            let procStatusText = null;
-            let procBadgeClass = '';
-            let procCategory = null;
-
-            if (hasProcComponent) {
-                procLocation = 'อยู่ที่งานแผนงาน';
+                procLocation = 'งานแผนงาน (พิจารณาคำขอ)';
                 procHolder = 'เจ้าหน้าที่งานแผนงาน';
-                procStatusText = '🏢 รอแผนงานตัดยอดจัดซื้อ';
-                procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
-                procCategory = 'pending';
+                procStatusText = '💡 รอจัดสรรงบประมาณ (คำขอเบื้องต้น)';
+                procBadgeClass = 'bg-amber-50 text-amber-900 border-amber-300 font-bold';
+                procCategory = 'preliminary';
+            } else if (status === 'budget_approved') {
+                loanLocation = 'อยู่ที่ผู้เสนอโครงการ';
+                loanHolder = p.user?.name || 'ผู้เสนอโครงการ';
+                loanStatusText = '📝 งบอนุมัติแล้ว (รอจัดทำโครงการฉบับเต็ม)';
+                loanBadgeClass = 'bg-emerald-50 text-emerald-900 border-emerald-300 font-bold';
+                loanCategory = 'budget_approved';
 
-                if (isProcDisbursed) {
-                    procLocation = 'งานการเงิน / เบิกจ่ายแล้ว';
-                    procHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'เบิกจ่ายจัดซื้อเรียบร้อย';
-                    procStatusText = '🎉 เบิกจ่ายจัดซื้อแล้ว';
-                    procBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
-                    procCategory = 'completed';
-                } else if (isProcForwardedToFin) {
-                    procLocation = 'อยู่ที่งานการเงิน';
-                    procHolder = 'เจ้าหน้าที่งานการเงิน (รอเบิกจ่าย)';
-                    procStatusText = '💰 ส่งงานการเงินเบิกจ่ายแล้ว';
-                    procBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-bold';
-                    procCategory = 'at_finance';
-                } else if (isProcReceived) {
-                    procLocation = 'อยู่ที่งานพัสดุ';
-                    procHolder = (p.procurement_number || proc?.procurement_number) ? `เลขที่ PR: ${p.procurement_number || proc?.procurement_number}` : 'เจ้าหน้าที่งานพัสดุ';
-                    procStatusText = '📦 พัสดุลงรับเรื่องแล้ว (ดำเนินการจัดซื้อ)';
-                    procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
-                    procCategory = 'at_procurement';
-                } else if (isProcPlanCut || status === 'approved' || p.current_approval_step >= 6) {
-                    procLocation = 'อยู่ที่งานพัสดุ (รอลงรับ)';
-                    procHolder = (p.plan_procurement_doc_number || proc?.plan_procurement_doc_number) ? `เลขตัดยอดแผน: ${p.plan_procurement_doc_number || proc?.plan_procurement_doc_number}` : 'รอเจ้าหน้าที่พัสดุลงรับ';
-                    procStatusText = '⏳ รอพัสดุลงรับ';
-                    procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
-                    procCategory = 'at_procurement';
+                procLocation = 'อยู่ที่ผู้เสนอโครงการ';
+                procHolder = p.user?.name || 'ผู้เสนอโครงการ';
+                procStatusText = '📝 งบอนุมัติแล้ว (รอจัดทำโครงการฉบับเต็ม)';
+                procBadgeClass = 'bg-emerald-50 text-emerald-900 border-emerald-300 font-bold';
+                procCategory = 'budget_approved';
+            } else if (status === 'draft') {
+                loanLocation = 'ร่างโครงการ';
+                loanHolder = p.user?.name || 'ผู้เสนอโครงการ';
+                loanStatusText = '✏️ แบบร่างโครงการ (ยังไม่ยื่นเสนอ)';
+                loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300 font-semibold';
+                loanCategory = 'draft';
+
+                procLocation = 'ร่างโครงการ';
+                procHolder = p.user?.name || 'ผู้เสนอโครงการ';
+                procStatusText = '✏️ แบบร่างโครงการ (ยังไม่ยื่นเสนอ)';
+                procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300 font-semibold';
+                procCategory = 'draft';
+            } else {
+                if (hasLoanComponent) {
+                    loanLocation = 'อยู่ที่งานแผนงาน';
+                    loanHolder = 'เจ้าหน้าที่งานแผนงาน';
+                    loanStatusText = '🏢 รอแผนงานตัดยอดสัญญายืมเงิน';
+                    loanBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
+                    loanCategory = 'pending';
+
+                    if (isLoanCleared) {
+                        const spent = (parseFloat(p.finance_disbursed_amount) || parseFloat(proc?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0);
+                        const diff = allocBudget - spent;
+                        loanLocation = 'งานการเงิน / ปิดสัญญาแล้ว';
+                        loanHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'ปิดเคลียร์เงินยืมสมบูรณ์';
+                        loanStatusText = `🎉 เคลียร์ปิดยอดแล้ว (จ่ายจริง: ฿${new Intl.NumberFormat('th-TH').format(spent)} | ${diff >= 0 ? `เหลืองบคืน: ฿${new Intl.NumberFormat('th-TH').format(diff)}` : `เกินงบ: ฿${new Intl.NumberFormat('th-TH').format(Math.abs(diff))}`})`;
+                        loanBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
+                        loanCategory = 'completed';
+                    } else if (isLoanFinReceived) {
+                        loanLocation = 'อยู่ที่งานการเงิน';
+                        loanHolder = (p.finance_doc_number || proc?.finance_doc_number) ? `เลขรับ กง: ${p.finance_doc_number || proc?.finance_doc_number}` : 'เจ้าหน้าที่งานการเงิน';
+                        loanStatusText = '📥 การเงินลงรับแล้ว (รอโอนเงินยืม)';
+                        loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                        loanCategory = 'at_finance';
+                    } else if (isLoanPlanCut) {
+                        loanLocation = 'อยู่ที่งานการเงิน (รอลงรับ)';
+                        loanHolder = (p.plan_loan_doc_number || proc?.plan_loan_doc_number) ? `เลขตัดยอดแผน: ${p.plan_loan_doc_number || proc?.plan_loan_doc_number}` : 'รอเจ้าหน้าที่การเงินลงรับ';
+                        loanStatusText = '⏳ รอการเงินลงรับ';
+                        loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                        loanCategory = 'at_finance';
+                    } else if (status === 'approved' || p.current_approval_step >= 6) {
+                        loanLocation = 'อยู่ที่งานการเงิน (รอลงรับ)';
+                        loanHolder = 'รอเจ้าหน้าที่การเงินลงรับ';
+                        loanStatusText = '⏳ รอการเงินลงรับ';
+                        loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                        loanCategory = 'at_finance';
+                    }
+                }
+
+                // ==========================================
+                // 2. Compute Procurement Package (ชุดจัดซื้อจัดจ้าง ๔ ฉบับ) Status & Location
+                // ==========================================
+                if (hasProcComponent) {
+                    procLocation = 'อยู่ที่งานแผนงาน';
+                    procHolder = 'เจ้าหน้าที่งานแผนงาน';
+                    procStatusText = '🏢 รอแผนงานตัดยอดจัดซื้อ';
+                    procBadgeClass = 'bg-slate-100 text-slate-700 border-slate-300';
+                    procCategory = 'pending';
+
+                    if (isProcDisbursed) {
+                        procLocation = 'งานการเงิน / เบิกจ่ายแล้ว';
+                        procHolder = (p.finance_payment_ref || proc?.finance_payment_ref) ? `เลขอ้างอิง: ${p.finance_payment_ref || proc?.finance_payment_ref}` : 'เบิกจ่ายจัดซื้อเรียบร้อย';
+                        procStatusText = '🎉 เบิกจ่ายจัดซื้อแล้ว';
+                        procBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
+                        procCategory = 'completed';
+                    } else if (isProcForwardedToFin) {
+                        procLocation = 'อยู่ที่งานการเงิน';
+                        procHolder = 'เจ้าหน้าที่งานการเงิน (รอเบิกจ่าย)';
+                        procStatusText = '💰 ส่งงานการเงินเบิกจ่ายแล้ว';
+                        procBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-bold';
+                        procCategory = 'at_finance';
+                    } else if (isProcReceived) {
+                        procLocation = 'อยู่ที่งานพัสดุ';
+                        procHolder = (p.procurement_number || proc?.procurement_number) ? `เลขที่ PR: ${p.procurement_number || proc?.procurement_number}` : 'เจ้าหน้าที่งานพัสดุ';
+                        procStatusText = '📦 พัสดุลงรับเรื่องแล้ว (ดำเนินการจัดซื้อ)';
+                        procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                        procCategory = 'at_procurement';
+                    } else if (isProcPlanCut || status === 'approved' || p.current_approval_step >= 6) {
+                        procLocation = 'อยู่ที่งานพัสดุ (รอลงรับ)';
+                        procHolder = (p.plan_procurement_doc_number || proc?.plan_procurement_doc_number) ? `เลขตัดยอดแผน: ${p.plan_procurement_doc_number || proc?.plan_procurement_doc_number}` : 'รอเจ้าหน้าที่พัสดุลงรับ';
+                        procStatusText = '⏳ รอพัสดุลงรับ';
+                        procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                        procCategory = 'at_procurement';
+                    }
                 }
             }
 
@@ -12454,6 +12495,9 @@ ${itemsListText}
         const countFinCompleted = trackingList.filter(p => p.isAllFinCompleted).length;
 
         // General Metrics count
+        const countPreliminary = trackingList.filter(p => p.status === 'preliminary').length;
+        const countBudgetApproved = trackingList.filter(p => p.status === 'budget_approved').length;
+
         const countProcurement = trackingList.filter(p => 
             p.hasProcComponent && p.procCategory === 'at_procurement'
         ).length;
@@ -12481,6 +12525,8 @@ ${itemsListText}
                 if (docTrackingFilter === 'fin_proc_pay' && !(p.hasProcAtFinance && !p.isProcDisbursed)) return false;
                 if (docTrackingFilter === 'fin_completed' && !p.isAllFinCompleted) return false;
             } else {
+                if (docTrackingFilter === 'preliminary' && p.status !== 'preliminary') return false;
+                if (docTrackingFilter === 'budget_approved' && p.status !== 'budget_approved') return false;
                 if (docTrackingFilter === 'at_procurement' && !(
                     p.hasProcComponent && p.procCategory === 'at_procurement'
                 )) return false;
@@ -12671,8 +12717,30 @@ return (
                                         : 'ติดตามสถานะและตำแหน่งเอกสารของโครงการที่คุณเสนอขออนุมัติ ทราบทันทีว่าสัญญายืมเงินหรือจัดซื้อจัดจ้างอยู่ที่ขั้นตอนหรือโต๊ะงานใด ป้องกันเอกสารตกค้าง')}
                             </p>
                         </div>
-                        {(isPlanStaff || isAdmin) && (
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            {isPlanStaff && (
+                                <button
+                                    type="button"
+                                    onClick={openDirectAllocateModal}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3.5 py-2 text-xs font-black text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                    title="สิทธิ์พิเศษสำหรับงานแผนงาน/Admin: เพิ่มโครงการและจัดสรรงบได้ทันที"
+                                >
+                                    <span>➕</span> เพิ่มโครงการ & จัดสรรงบทันที
+                                </button>
+                            )}
+                            <Link
+                                href={route('projects.quick_create')}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/30 px-3.5 py-2 text-xs font-black shadow-xs hover:scale-105 active:scale-95 transition-all"
+                            >
+                                <span>💡</span> เสนอโครงการเบื้องต้น (ขอตั้งงบ)
+                            </Link>
+                            <Link
+                                href={route('projects.create')}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2 text-xs font-black shadow-md hover:scale-105 active:scale-95 transition-all"
+                            >
+                                <span>➕</span> จัดทำโครงการฉบับเต็ม
+                            </Link>
+                            {(isPlanStaff || isAdmin) && (
                                 <button
                                     type="button"
                                     onClick={() => setIsDocNumberModalOpen(true)}
@@ -12680,10 +12748,30 @@ return (
                                 >
                                     <span>⚙️</span> ตั้งค่ารูปแบบเลขคุมเอกสาร
                                 </button>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
+
+                {/* Proposer KPI Cards (Merged from proposals tab) */}
+                {!isStrictFinanceUser && teacherData && (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">จำนวนโครงการที่เสนอ</span>
+                            <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">{teacherData.proposalsCount || 0} โครงการ</p>
+                        </div>
+                        <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">โครงการที่ผ่านอนุมัติงบ</span>
+                            <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">{teacherData.approvedCount || 0} โครงการ</p>
+                        </div>
+                        <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">วงเงินงบประมาณรวม</span>
+                            <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(teacherData.totalBudget || 0)}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Top Document KPI Cards matching standard format */}
                 {isStrictFinanceUser && renderDocumentKpiCards({
@@ -12893,6 +12981,8 @@ return (
                         ) : (
                             [
                                 { id: 'all', label: 'ทั้งหมด' },
+                                ...(countPreliminary > 0 ? [{ id: 'preliminary', label: `💡 รอจัดสรรงบ (${countPreliminary})` }] : []),
+                                ...(countBudgetApproved > 0 ? [{ id: 'budget_approved', label: `📝 รอทำฉบับเต็ม (${countBudgetApproved})` }] : []),
                                 { id: 'at_procurement', label: '📦 อยู่ที่งานพัสดุ' },
                                 { id: 'at_finance', label: '💰 อยู่ที่งานการเงิน' },
                                 { id: 'with_borrower', label: '⭐ อยู่ที่ผู้ยืมเงิน' },
@@ -13302,25 +13392,109 @@ return (
                                                         </>
                                                     )}
 
-                                                    {/* Sign History & Open Project Buttons (Hidden for strict finance users) */}
+                                                    {/* Proposer Lifecycle & Approval Action Buttons (Hidden for strict finance users) */}
                                                     {!isStrictFinanceUser && (
                                                         <>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setSelectedApprovalProject(item)}
-                                                                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
-                                                                title="ดูประวัติการพิจารณาและลำดับการลงนาม 6 ขั้นตอน"
-                                                            >
-                                                                <span>📜</span>
-                                                                <span>ประวัติลงนาม</span>
-                                                            </button>
-                                                            <Link
-                                                                href={route('projects.show', item.id)}
-                                                                className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-purple-100 text-purple-950 font-black text-xs sm:text-sm rounded-xl shadow-2xs hover:scale-105 transition"
-                                                            >
-                                                                <span>เปิดโครงการ</span>
-                                                                <span>➔</span>
-                                                            </Link>
+                                                            {item.status === 'preliminary' && (
+                                                                <div className="flex flex-col items-center gap-1 w-full">
+                                                                    <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold w-full">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                                                        รอจัดสรรงบ
+                                                                    </span>
+                                                                    <Link
+                                                                        href={route('projects.show', item.id)}
+                                                                        className="w-full inline-flex items-center justify-center gap-1 px-3 py-1 bg-slate-100 hover:bg-purple-100 text-purple-950 font-bold text-xs rounded-xl transition"
+                                                                    >
+                                                                        <span>ดูรายละเอียด</span>
+                                                                        <span>➔</span>
+                                                                    </Link>
+                                                                    {(isPlanStaff || isAdmin) && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={openDirectAllocateModal}
+                                                                            className="w-full inline-flex items-center justify-center gap-1 px-3 py-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold text-xs rounded-xl shadow-xs hover:scale-105 transition cursor-pointer"
+                                                                        >
+                                                                            <span>➕ จัดสรรงบ</span>
+                                                                        </button>
+                                                                    )}
+                                                                    {(isAdmin || auth?.user?.is_admin || item.user_id === auth?.user?.id) && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteProject(item)}
+                                                                            className="text-[11px] text-rose-500 hover:text-rose-700 hover:underline mt-0.5 cursor-pointer"
+                                                                            title="ยกเลิกคำขอเสนอโครงการ"
+                                                                        >
+                                                                            🗑️ ยกเลิกคำขอ
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {item.status === 'budget_approved' && (
+                                                                <div className="flex flex-col items-center gap-1 w-full">
+                                                                    <Link
+                                                                        href={route('projects.edit', item.id)}
+                                                                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-md hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                        title="งบประมาณได้รับการจัดสรรแล้ว จัดทำรายละเอียดโครงการฉบับเต็ม"
+                                                                    >
+                                                                        <span>📝</span>
+                                                                        <span>ทำฉบับเต็ม</span>
+                                                                    </Link>
+                                                                    <Link
+                                                                        href={route('projects.show', item.id)}
+                                                                        className="w-full inline-flex items-center justify-center gap-1 px-3 py-1 bg-slate-100 hover:bg-purple-100 text-purple-950 font-bold text-xs rounded-xl transition"
+                                                                    >
+                                                                        <span>ดูรายละเอียด</span>
+                                                                        <span>➔</span>
+                                                                    </Link>
+                                                                </div>
+                                                            )}
+
+                                                            {item.status === 'draft' && (
+                                                                <div className="flex flex-col items-center gap-1 w-full">
+                                                                    <Link
+                                                                        href={route('projects.edit', item.id)}
+                                                                        className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl transition shadow-xs"
+                                                                    >
+                                                                        <span>✏️ แก้ไขโครงการ</span>
+                                                                    </Link>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleResubmitProject(item)}
+                                                                        className="w-full inline-flex items-center justify-center gap-1 px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-xs cursor-pointer"
+                                                                    >
+                                                                        <span>🚀 ยื่นขออนุมัติ</span>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeleteProject(item)}
+                                                                        className="text-[11px] text-rose-500 hover:text-rose-700 hover:underline mt-0.5 cursor-pointer"
+                                                                    >
+                                                                        🗑️ ลบแบบร่าง
+                                                                    </button>
+                                                                </div>
+                                                            )}
+
+                                                            {item.status !== 'preliminary' && item.status !== 'budget_approved' && item.status !== 'draft' && (
+                                                                <>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setSelectedApprovalProject(item)}
+                                                                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm rounded-xl shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                        title="ดูประวัติการพิจารณาและลำดับการลงนาม 6 ขั้นตอน"
+                                                                    >
+                                                                        <span>📜</span>
+                                                                        <span>ประวัติลงนาม</span>
+                                                                    </button>
+                                                                    <Link
+                                                                        href={route('projects.show', item.id)}
+                                                                        className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-purple-100 text-purple-950 font-black text-xs sm:text-sm rounded-xl shadow-2xs hover:scale-105 transition"
+                                                                    >
+                                                                        <span>เปิดโครงการ</span>
+                                                                        <span>➔</span>
+                                                                    </Link>
+                                                                </>
+                                                            )}
                                                         </>
                                                     )}
                                                 </div>
@@ -13837,8 +14011,7 @@ return (
                         {activeTab === 'admin_settings' && renderAdminSettingsTab()}
                         {activeTab === 'all_projects' && renderAllProjectsTab()}
                         {activeTab === 'central_budgets' && renderCentralBudgetsTab()}
-                        {activeTab === 'document_tracking' && renderDocumentTrackingTab()}
-                        {activeTab === 'proposals' && renderProposalsTab()}
+                        {(activeTab === 'document_tracking' || activeTab === 'proposals') && renderDocumentTrackingTab()}
                         {activeTab === 'annual_budget_requests' && renderAnnualBudgetRequestsTab()}
                         {activeTab === 'budgets' && renderBudgetsTab()}
                         {activeTab === 'action_plan_report' && renderActionPlanReportTab()}
