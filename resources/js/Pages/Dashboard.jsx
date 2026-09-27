@@ -12338,6 +12338,12 @@ ${itemsListText}
             let loanBadgeClass = '';
             let loanCategory = null;
 
+            let procLocation = null;
+            let procHolder = null;
+            let procStatusText = null;
+            let procBadgeClass = '';
+            let procCategory = null;
+
             if (status === 'preliminary') {
                 loanLocation = 'งานแผนงาน (พิจารณาคำขอ)';
                 loanHolder = 'เจ้าหน้าที่งานแผนงาน';
