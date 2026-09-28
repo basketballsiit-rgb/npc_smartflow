@@ -359,18 +359,6 @@ export default function PrintChapter1({ project }) {
                     </div>
                 )}
 
-                {/* Footer Signature Block */}
-                <div className="mt-12 pt-6 border-t border-slate-200 print:border-none print-break-inside-avoid flex justify-end">
-                    <div className="text-center w-72">
-                        <p className="mb-8">ลงชื่อ..............................................................</p>
-                        <p className="font-bold">({project.responsible_person || project.user?.name || '..............................................................'})</p>
-                        <p className="text-xs text-slate-600 print:text-black mt-1">ผู้รับผิดชอบโครงการ</p>
-                        <p className="text-xs text-slate-600 print:text-black">
-                            {project.department?.name || 'วิทยาลัยสารพัดช่างน่าน'}
-                        </p>
-                    </div>
-                </div>
-
             </div>
         </div>
     );

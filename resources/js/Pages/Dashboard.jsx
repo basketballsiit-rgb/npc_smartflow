@@ -14472,20 +14472,6 @@ return (
                                     </div>
                                 </div>
                             )}
-
-                            {/* Signatures */}
-                            <div className="mt-14 pt-8 border-t border-slate-200 flex justify-end">
-                                <div className="text-center w-72 text-sm">
-                                    <p className="mb-10 text-slate-400">ลงชื่อ..............................................................</p>
-                                    <p className="font-bold text-slate-900">
-                                        ({activeChapter1Project.responsible_person || activeChapter1Project.user?.name || '..............................................................'})
-                                    </p>
-                                    <p className="text-xs text-slate-500 mt-1">ผู้รับผิดชอบโครงการ</p>
-                                    <p className="text-xs text-slate-500">
-                                        {activeChapter1Project.department?.name || 'วิทยาลัยสารพัดช่างน่าน'}
-                                    </p>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 ) : (
