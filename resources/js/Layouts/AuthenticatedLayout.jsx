@@ -518,15 +518,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>คิวลงนามอนุมัติ (ผู้เกี่ยวข้อง)</span>}
                                 </Link>
                                 <Link
-                                    href={route('dashboard', { tab: 'proposals', filter: 'reporting' })}
-                                    className={getSubLinkClass(url.includes('filter=reporting'))}
-                                    title="สรุปและจัดทำรูปเล่มโครงการ 5 บท"
-                                >
-                                    <span className={getPrefixClass(url.includes('filter=reporting'))}>└─</span>
-                                    <span className="text-sm">📖</span>
-                                    {isSidebarOpen && <span>สรุป & เล่มโครงการ 5 บท</span>}
-                                </Link>
-                                <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
                                     className={getSubLinkClass(url.includes('tab=document_tracking'))}
                                     title="ติดตามเอกสารและสถานะโครงการ"
