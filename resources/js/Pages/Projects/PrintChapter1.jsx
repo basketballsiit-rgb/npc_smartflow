@@ -233,9 +233,6 @@ export default function PrintChapter1({ project }) {
                             <h3 className="print-heading text-black mb-2">
                                 ๑.๒ วัตถุประสงค์ของโครงการ
                             </h3>
-                            <p className="thai-indent mb-1.5">
-                                โครงการนี้มีวัตถุประสงค์เพื่อ:
-                            </p>
                             <div className="space-y-1 pl-6">
                                 {sections.objectives ? (
                                     <div className="whitespace-pre-wrap">{sections.objectives}</div>

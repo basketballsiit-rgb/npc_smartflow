@@ -804,8 +804,22 @@ export default function Dashboard({
         const teacherList = Array.isArray(teacherData?.projects) ? teacherData.projects : [];
         const map = new Map();
         [...masterList, ...teacherList].forEach(p => {
-            if (p && p.id && !map.has(p.id)) {
-                map.set(p.id, p);
+            if (p && p.id) {
+                if (!map.has(p.id)) {
+                    map.set(p.id, { ...p });
+                } else {
+                    const existing = map.get(p.id);
+                    map.set(p.id, {
+                        ...existing,
+                        ...p,
+                        background_rationale: p.background_rationale || existing.background_rationale || '',
+                        objectives: (p.objectives && (Array.isArray(p.objectives) ? p.objectives.length > 0 : String(p.objectives).trim())) ? p.objectives : (existing.objectives || []),
+                        targets: p.targets || existing.targets || null,
+                        indicators: p.indicators || existing.indicators || null,
+                        expected_benefits: p.expected_benefits || existing.expected_benefits || null,
+                        chapter_1_sections: p.chapter_1_sections || existing.chapter_1_sections || null,
+                    });
+                }
             }
         });
         return Array.from(map.values());
@@ -918,8 +932,8 @@ export default function Dashboard({
         const saved = activeChapter1Project.chapter_1_sections;
         if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
             setChapter1Sections({
-                background: saved.background !== undefined ? saved.background : (activeChapter1Project.background_rationale || ''),
-                objectives: typeof saved.objectives === 'string' ? saved.objectives : (Array.isArray(saved.objectives) ? saved.objectives.join('\n') : ''),
+                background: (saved.background && saved.background.trim()) ? saved.background : (activeChapter1Project.background_rationale || ''),
+                objectives: (saved.objectives && (typeof saved.objectives === 'string' ? saved.objectives.trim() : saved.objectives.length > 0)) ? (typeof saved.objectives === 'string' ? saved.objectives : saved.objectives.join('\n')) : (typeof activeChapter1Project.objectives === 'string' ? activeChapter1Project.objectives : (Array.isArray(activeChapter1Project.objectives) ? activeChapter1Project.objectives.map((o, idx) => `${toThaiNumerals(idx + 1)}. ${typeof o === 'string' ? o : (o?.title || o?.name || o?.text || '')}`).join('\n') : '')),
                 scope_target: saved.scope_target || '',
                 scope_content: saved.scope_content || '',
                 scope_location_time: saved.scope_location_time || '',
@@ -14399,9 +14413,6 @@ return (
                                 <h4 className="text-base font-bold text-slate-900">
                                     ๑.๒ วัตถุประสงค์ของโครงการ
                                 </h4>
-                                <p className="text-sm text-slate-700 indent-8">
-                                    การดำเนินโครงการมีวัตถุประสงค์เพื่อ:
-                                </p>
                                 <div className="space-y-1.5 pl-6 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
                                     {chapter1Sections.objectives || 'ยังไม่ได้ระบุวัตถุประสงค์'}
                                 </div>
