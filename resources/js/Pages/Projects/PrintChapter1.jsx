@@ -14,6 +14,31 @@ export default function PrintChapter1({ project }) {
         return String(val).replace(/[0-9]/g, (digit) => thaiDigits[parseInt(digit, 10)]);
     };
 
+    // Safe string serializer ensuring objects like {text, unit} never crash React
+    const safeString = (val, fallback = '') => {
+        if (val === null || val === undefined) return fallback;
+        if (typeof val === 'string') return val;
+        if (typeof val === 'number') return String(val);
+        if (typeof val === 'object') {
+            if (Array.isArray(val)) {
+                return val.map(item => safeString(item)).filter(Boolean).join('\n') || fallback;
+            }
+            if (val.text !== undefined || val.unit !== undefined) {
+                const parts = [val.text, val.unit].filter(Boolean);
+                return parts.join(' ') || fallback;
+            }
+            if (val.description) return String(val.description);
+            if (val.title) return String(val.title);
+            if (val.name) return String(val.name);
+            try {
+                return JSON.stringify(val);
+            } catch (e) {
+                return fallback;
+            }
+        }
+        return String(val);
+    };
+
     const handlePrint = () => {
         window.print();
     };
@@ -224,7 +249,7 @@ export default function PrintChapter1({ project }) {
                                 ๑.๑ ความเป็นมาและความสำคัญของปัญหา
                             </h3>
                             <div className="text-justify thai-indent whitespace-pre-wrap">
-                                {sections.background || project.background_rationale || 'ไม่ได้ระบุความเป็นมาและความสำคัญของปัญหา'}
+                                {safeString(sections.background) || safeString(project.background_rationale) || 'ไม่ได้ระบุความเป็นมาและความสำคัญของปัญหา'}
                             </div>
                         </div>
 
@@ -235,12 +260,12 @@ export default function PrintChapter1({ project }) {
                             </h3>
                             <div className="space-y-1 pl-6">
                                 {sections.objectives ? (
-                                    <div className="whitespace-pre-wrap">{sections.objectives}</div>
+                                    <div className="whitespace-pre-wrap">{safeString(sections.objectives)}</div>
                                 ) : rawObjectives.length > 0 ? (
                                     rawObjectives.map((obj, idx) => (
                                         <div key={idx} className="flex items-start gap-2">
                                             <span className="font-bold shrink-0">๑.๒.{toThaiNumerals(idx + 1)}</span>
-                                            <span>{typeof obj === 'string' ? obj : obj.title || obj.name || ''}</span>
+                                            <span>{safeString(obj)}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -261,9 +286,9 @@ export default function PrintChapter1({ project }) {
                                     ๑.๓.๑ ขอบเขตด้านประชากรและกลุ่มเป้าหมาย
                                 </h4>
                                 <div className="thai-indent whitespace-pre-wrap">
-                                    {sections.scope_target || (
+                                    {safeString(sections.scope_target) || (
                                         rawTargets.length > 0
-                                            ? rawTargets.map(t => typeof t === 'string' ? t : (t.description || t.title || '')).join(', ')
+                                            ? rawTargets.map(t => safeString(t)).filter(Boolean).join(', ')
                                             : 'นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษาที่เกี่ยวข้อง'
                                     )}
                                 </div>
@@ -275,9 +300,9 @@ export default function PrintChapter1({ project }) {
                                     ๑.๓.๒ ขอบเขตด้านเนื้อหาและกิจกรรมการดำเนินงาน
                                 </h4>
                                 <div className="thai-indent whitespace-pre-wrap">
-                                    {sections.scope_content || (
+                                    {safeString(sections.scope_content) || (
                                         rawActivities.length > 0
-                                            ? rawActivities.map((a, i) => `${toThaiNumerals(i + 1)}. ${a.name || a.title || 'กิจกรรม'}`).join('\n')
+                                            ? rawActivities.map((a, i) => `${toThaiNumerals(i + 1)}. ${safeString(a)}`).join('\n')
                                             : 'ดำเนินงานตามกิจกรรมและขั้นตอนการดำเนินงานที่ระบุไว้ในแผนปฏิบัติการ'
                                     )}
                                 </div>
@@ -289,7 +314,7 @@ export default function PrintChapter1({ project }) {
                                     ๑.๓.๓ ขอบเขตด้านสถานที่และระยะเวลาดำเนินการ
                                 </h4>
                                 <div className="thai-indent">
-                                    {sections.scope_location_time || (
+                                    {safeString(sections.scope_location_time) || (
                                         `สถานที่ดำเนินโครงการ: ${project.location || 'วิทยาลัยสารพัดช่างน่าน'} ` +
                                         (project.start_date ? `ระยะเวลาตั้งแต่วันที่ ${toThaiNumerals(project.start_date)} ถึง ${toThaiNumerals(project.end_date || project.start_date)}` : '')
                                     )}
@@ -306,15 +331,15 @@ export default function PrintChapter1({ project }) {
                                 <div>
                                     <span className="font-bold">๑.๔.๑ ตัวชี้วัดเชิงปริมาณ: </span>
                                     <span>
-                                        {sections.indicators_quantitative || 
-                                         (project.indicators?.quantitative || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐ ของกลุ่มเป้าหมาย')}
+                                        {safeString(sections.indicators_quantitative) || 
+                                         safeString(project.indicators?.quantitative) || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐ ของกลุ่มเป้าหมาย'}
                                     </span>
                                 </div>
                                 <div>
                                     <span className="font-bold">๑.๔.๒ ตัวชี้วัดเชิงคุณภาพ: </span>
                                     <span>
-                                        {sections.indicators_qualitative || 
-                                         (project.indicators?.qualitative || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป (ค่าเฉลี่ย ๓.๕๑ ขึ้นไป)')}
+                                        {safeString(sections.indicators_qualitative) || 
+                                         safeString(project.indicators?.qualitative) || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป (ค่าเฉลี่ย ๓.๕๑ ขึ้นไป)'}
                                     </span>
                                 </div>
                             </div>
@@ -327,12 +352,12 @@ export default function PrintChapter1({ project }) {
                             </h3>
                             <div className="space-y-1 pl-6">
                                 {sections.benefits || sections.expected_benefits ? (
-                                    <div className="whitespace-pre-wrap">{sections.benefits || sections.expected_benefits}</div>
+                                    <div className="whitespace-pre-wrap">{safeString(sections.benefits || sections.expected_benefits)}</div>
                                 ) : rawBenefits.length > 0 ? (
                                     rawBenefits.map((b, idx) => (
                                         <div key={idx} className="flex items-start gap-2">
                                             <span className="font-bold shrink-0">๑.๕.{toThaiNumerals(idx + 1)}</span>
-                                            <span>{typeof b === 'string' ? b : b.title || b.name || ''}</span>
+                                            <span>{safeString(b)}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -348,7 +373,7 @@ export default function PrintChapter1({ project }) {
                                     ๑.๖ นิยามศัพท์เฉพาะ
                                 </h3>
                                 <div className="text-justify thai-indent whitespace-pre-wrap">
-                                    {sections.definitions}
+                                    {safeString(sections.definitions)}
                                 </div>
                             </div>
                         )}

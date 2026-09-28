@@ -799,6 +799,30 @@ export default function Dashboard({
         return String(num).replace(/[0-9]/g, (d) => thDigits[parseInt(d, 10)]);
     };
 
+    const safeString = (val, fallback = '') => {
+        if (val === null || val === undefined) return fallback;
+        if (typeof val === 'string') return val;
+        if (typeof val === 'number') return String(val);
+        if (typeof val === 'object') {
+            if (Array.isArray(val)) {
+                return val.map(item => safeString(item)).filter(Boolean).join('\n') || fallback;
+            }
+            if (val.text !== undefined || val.unit !== undefined) {
+                const parts = [val.text, val.unit].filter(Boolean);
+                return parts.join(' ') || fallback;
+            }
+            if (val.description) return String(val.description);
+            if (val.title) return String(val.title);
+            if (val.name) return String(val.name);
+            try {
+                return JSON.stringify(val);
+            } catch (e) {
+                return fallback;
+            }
+        }
+        return String(val);
+    };
+
     const chapter1Projects = React.useMemo(() => {
         const masterList = Array.isArray(allProjectsMaster) ? allProjectsMaster : [];
         const teacherList = Array.isArray(teacherData?.projects) ? teacherData.projects : [];
@@ -854,11 +878,11 @@ export default function Dashboard({
         let objsText = '';
         if (Array.isArray(proj.objectives)) {
             objsText = proj.objectives.map((o, idx) => {
-                const text = typeof o === 'string' ? o : (o?.title || o?.name || o?.text || '');
-                return `${toThaiNumerals(idx + 1)}. ${text}`;
+                const text = safeString(typeof o === 'string' ? o : (o?.title || o?.name || o?.text || o));
+                return text ? `${toThaiNumerals(idx + 1)}. ${text}` : '';
             }).filter(Boolean).join('\n');
-        } else if (typeof proj.objectives === 'string') {
-            objsText = proj.objectives;
+        } else if (proj.objectives) {
+            objsText = safeString(proj.objectives);
         }
 
         // Parse targets/scope
@@ -866,52 +890,57 @@ export default function Dashboard({
         if (typeof proj.targets === 'string') {
             targetText = proj.targets;
         } else if (Array.isArray(proj.targets)) {
-            targetText = proj.targets.map(t => typeof t === 'string' ? t : (t.description || t.title || t.name || '')).filter(Boolean).join(', ');
+            targetText = proj.targets.map(t => safeString(t)).filter(Boolean).join(', ');
         } else if (proj.targets && typeof proj.targets === 'object') {
             const parts = [];
-            if (proj.targets.target_group) parts.push(`กลุ่มเป้าหมาย: ${proj.targets.target_group}`);
-            if (proj.targets.quantity) parts.push(`จำนวน: ${toThaiNumerals(proj.targets.quantity)} คน`);
-            if (proj.targets.details) parts.push(proj.targets.details);
-            targetText = parts.join('\n') || JSON.stringify(proj.targets);
+            if (proj.targets.target_group) parts.push(`กลุ่มเป้าหมาย: ${safeString(proj.targets.target_group)}`);
+            if (proj.targets.quantity) parts.push(`จำนวน: ${toThaiNumerals(safeString(proj.targets.quantity))} คน`);
+            if (proj.targets.quantitative) parts.push(`เชิงปริมาณ: ${safeString(proj.targets.quantitative)}`);
+            if (proj.targets.qualitative) parts.push(`เชิงคุณภาพ: ${safeString(proj.targets.qualitative)}`);
+            if (proj.targets.details) parts.push(safeString(proj.targets.details));
+            targetText = parts.join('\n') || safeString(proj.targets);
         }
 
         // Parse activities/content
         let contentText = '';
         if (Array.isArray(proj.activities)) {
-            contentText = proj.activities.map((a, idx) => `${toThaiNumerals(idx + 1)}. ${a.name || a.title || a || ''}`).join('\n');
-        } else if (typeof proj.activities === 'string') {
-            contentText = proj.activities;
+            contentText = proj.activities.map((a, idx) => {
+                const text = safeString(a?.name || a?.title || a);
+                return `${toThaiNumerals(idx + 1)}. ${text}`;
+            }).join('\n');
+        } else if (proj.activities) {
+            contentText = safeString(proj.activities);
         }
 
         // Location & Time
         const locTime = [
-            proj.location ? `สถานที่ดำเนินโครงการ: ${proj.location}` : 'สถานที่ดำเนินโครงการ: วิทยาลัยสารพัดช่างน่าน',
-            proj.start_date ? `ระยะเวลาดำเนินการ: ตั้งแต่วันที่ ${toThaiNumerals(proj.start_date)} ถึง ${toThaiNumerals(proj.end_date || proj.start_date)}` : ''
+            proj.location ? `สถานที่ดำเนินโครงการ: ${safeString(proj.location)}` : 'สถานที่ดำเนินโครงการ: วิทยาลัยสารพัดช่างน่าน',
+            proj.start_date ? `ระยะเวลาดำเนินการ: ตั้งแต่วันที่ ${toThaiNumerals(safeString(proj.start_date))} ถึง ${toThaiNumerals(safeString(proj.end_date || proj.start_date))}` : ''
         ].filter(Boolean).join('\n');
 
         // Indicators
         let quantInd = '';
         let qualInd = '';
         if (proj.indicators && typeof proj.indicators === 'object') {
-            quantInd = proj.indicators.quantitative || proj.indicators.quant || '';
-            qualInd = proj.indicators.qualitative || proj.indicators.qual || '';
-        } else if (typeof proj.indicators === 'string') {
-            quantInd = proj.indicators;
+            quantInd = safeString(proj.indicators.quantitative || proj.indicators.quant);
+            qualInd = safeString(proj.indicators.qualitative || proj.indicators.qual);
+        } else if (proj.indicators) {
+            quantInd = safeString(proj.indicators);
         }
 
         // Benefits
         let benefitsText = '';
         if (Array.isArray(proj.expected_benefits)) {
             benefitsText = proj.expected_benefits.map((b, idx) => {
-                const text = typeof b === 'string' ? b : (b?.title || b?.name || b?.text || '');
+                const text = safeString(typeof b === 'string' ? b : (b?.title || b?.name || b?.text || b));
                 return `${toThaiNumerals(idx + 1)}. ${text}`;
             }).filter(Boolean).join('\n');
-        } else if (typeof proj.expected_benefits === 'string') {
-            benefitsText = proj.expected_benefits;
+        } else if (proj.expected_benefits) {
+            benefitsText = safeString(proj.expected_benefits);
         }
 
         setChapter1Sections({
-            background: proj.background_rationale || '',
+            background: safeString(proj.background_rationale),
             objectives: objsText || `๑. เพื่อพัฒนาทักษะวิชาชีพและการเรียนรู้ของผู้เรียนตามมาตรฐานการศึกษา\n๒. เพื่อเพิ่มประสิทธิภาพการปฏิบัติงานและการจัดการเรียนการสอน`,
             scope_target: targetText || 'คณะครู บุคลากรทางการศึกษา และนักเรียน นักศึกษา วิทยาลัยสารพัดช่างน่าน',
             scope_content: contentText || 'การดำเนินกิจกรรมตามแผนงาน การฝึกอบรมเชิงปฏิบัติการ และการประเมินผลสัมฤทธิ์',
@@ -931,16 +960,22 @@ export default function Dashboard({
 
         const saved = activeChapter1Project.chapter_1_sections;
         if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
+            const rawBg = safeString((saved.background && String(saved.background).trim()) ? saved.background : (activeChapter1Project.background_rationale || ''));
+            const rawObjs = safeString((saved.objectives && (typeof saved.objectives === 'string' ? saved.objectives.trim() : (Array.isArray(saved.objectives) && saved.objectives.length > 0))) ? saved.objectives : activeChapter1Project.objectives);
+            const rawQuant = safeString(saved.indicators_quantitative || activeChapter1Project.indicators?.quantitative);
+            const rawQual = safeString(saved.indicators_qualitative || activeChapter1Project.indicators?.qualitative);
+            const rawBenefits = safeString(saved.expected_benefits !== undefined ? saved.expected_benefits : (saved.benefits !== undefined ? saved.benefits : activeChapter1Project.expected_benefits));
+
             setChapter1Sections({
-                background: (saved.background && saved.background.trim()) ? saved.background : (activeChapter1Project.background_rationale || ''),
-                objectives: (saved.objectives && (typeof saved.objectives === 'string' ? saved.objectives.trim() : saved.objectives.length > 0)) ? (typeof saved.objectives === 'string' ? saved.objectives : saved.objectives.join('\n')) : (typeof activeChapter1Project.objectives === 'string' ? activeChapter1Project.objectives : (Array.isArray(activeChapter1Project.objectives) ? activeChapter1Project.objectives.map((o, idx) => `${toThaiNumerals(idx + 1)}. ${typeof o === 'string' ? o : (o?.title || o?.name || o?.text || '')}`).join('\n') : '')),
-                scope_target: saved.scope_target || '',
-                scope_content: saved.scope_content || '',
-                scope_location_time: saved.scope_location_time || '',
-                indicators_quantitative: saved.indicators_quantitative || '',
-                indicators_qualitative: saved.indicators_qualitative || '',
-                expected_benefits: saved.expected_benefits !== undefined ? (typeof saved.expected_benefits === 'string' ? saved.expected_benefits : (Array.isArray(saved.expected_benefits) ? saved.expected_benefits.join('\n') : '')) : (saved.benefits ? (typeof saved.benefits === 'string' ? saved.benefits : (Array.isArray(saved.benefits) ? saved.benefits.join('\n') : '')) : ''),
-                definitions: saved.definitions || ''
+                background: rawBg,
+                objectives: rawObjs,
+                scope_target: safeString(saved.scope_target),
+                scope_content: safeString(saved.scope_content),
+                scope_location_time: safeString(saved.scope_location_time),
+                indicators_quantitative: rawQuant,
+                indicators_qualitative: rawQual,
+                expected_benefits: rawBenefits,
+                definitions: safeString(saved.definitions)
             });
         } else {
             populateChapter1FromProject(activeChapter1Project);
@@ -14404,7 +14439,7 @@ return (
                                     ๑.๑ ความเป็นมาและความสำคัญของปัญหา
                                 </h4>
                                 <div className="text-justify indent-12 whitespace-pre-wrap text-sm text-slate-800 leading-relaxed">
-                                    {chapter1Sections.background || activeChapter1Project.background_rationale || 'ยังไม่ได้ระบุข้อมูลความเป็นมาและความสำคัญของปัญหา'}
+                                    {safeString(chapter1Sections.background) || safeString(activeChapter1Project.background_rationale) || 'ยังไม่ได้ระบุข้อมูลความเป็นมาและความสำคัญของปัญหา'}
                                 </div>
                             </div>
 
@@ -14414,7 +14449,7 @@ return (
                                     ๑.๒ วัตถุประสงค์ของโครงการ
                                 </h4>
                                 <div className="space-y-1.5 pl-6 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
-                                    {chapter1Sections.objectives || 'ยังไม่ได้ระบุวัตถุประสงค์'}
+                                    {safeString(chapter1Sections.objectives) || 'ยังไม่ได้ระบุวัตถุประสงค์'}
                                 </div>
                             </div>
 
@@ -14427,19 +14462,19 @@ return (
                                     <div>
                                         <p className="font-bold text-slate-900 mb-1">๑.๓.๑ ขอบเขตด้านประชากรและกลุ่มเป้าหมาย</p>
                                         <div className="indent-8 whitespace-pre-wrap">
-                                            {chapter1Sections.scope_target || 'คณะครู บุคลากรทางการศึกษา และนักเรียน นักศึกษา'}
+                                            {safeString(chapter1Sections.scope_target) || 'คณะครู บุคลากรทางการศึกษา และนักเรียน นักศึกษา'}
                                         </div>
                                     </div>
                                     <div>
                                         <p className="font-bold text-slate-900 mb-1">๑.๓.๒ ขอบเขตด้านเนื้อหาและกิจกรรมการดำเนินงาน</p>
                                         <div className="indent-8 whitespace-pre-wrap">
-                                            {chapter1Sections.scope_content || 'การดำเนินกิจกรรมตามแผนปฏิบัติการที่กำหนด'}
+                                            {safeString(chapter1Sections.scope_content) || 'การดำเนินกิจกรรมตามแผนปฏิบัติการที่กำหนด'}
                                         </div>
                                     </div>
                                     <div>
                                         <p className="font-bold text-slate-900 mb-1">๑.๓.๓ ขอบเขตด้านสถานที่และระยะเวลาดำเนินการ</p>
                                         <div className="indent-8 whitespace-pre-wrap">
-                                            {chapter1Sections.scope_location_time || 'วิทยาลัยสารพัดช่างน่าน ภายในปีงบประมาณ'}
+                                            {safeString(chapter1Sections.scope_location_time) || 'วิทยาลัยสารพัดช่างน่าน ภายในปีงบประมาณ'}
                                         </div>
                                     </div>
                                 </div>
@@ -14453,11 +14488,11 @@ return (
                                 <div className="pl-4 space-y-2 text-sm text-slate-800">
                                     <div>
                                         <span className="font-bold text-slate-900">๑.๔.๑ ตัวชี้วัดเชิงปริมาณ: </span>
-                                        <span>{chapter1Sections.indicators_quantitative || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐'}</span>
+                                        <span>{safeString(chapter1Sections.indicators_quantitative) || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐'}</span>
                                     </div>
                                     <div>
                                         <span className="font-bold text-slate-900">๑.๔.๒ ตัวชี้วัดเชิงคุณภาพ: </span>
-                                        <span>{chapter1Sections.indicators_qualitative || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป ไม่น้อยกว่าร้อยละ ๘๐'}</span>
+                                        <span>{safeString(chapter1Sections.indicators_qualitative) || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป ไม่น้อยกว่าร้อยละ ๘๐'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -14468,18 +14503,18 @@ return (
                                     ๑.๕ ประโยชน์ที่คาดว่าจะได้รับ
                                 </h4>
                                 <div className="pl-6 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
-                                    {chapter1Sections.expected_benefits || 'เกิดประโยชน์สูงสุดแก่ผู้เรียนและสถานศึกษา'}
+                                    {safeString(chapter1Sections.expected_benefits) || 'เกิดประโยชน์สูงสุดแก่ผู้เรียนและสถานศึกษา'}
                                 </div>
                             </div>
 
                             {/* Section 1.6 */}
-                            {chapter1Sections.definitions && (
+                            {Boolean(chapter1Sections.definitions) && (
                                 <div className="space-y-3 mb-8">
                                     <h4 className="text-base font-bold text-slate-900">
                                         ๑.๖ นิยามศัพท์เฉพาะ
                                     </h4>
                                     <div className="text-justify indent-12 whitespace-pre-wrap text-sm text-slate-800 leading-relaxed">
-                                        {chapter1Sections.definitions}
+                                        {safeString(chapter1Sections.definitions)}
                                     </div>
                                 </div>
                             )}
@@ -14520,7 +14555,7 @@ return (
                                 </div>
                                 <textarea
                                     rows={7}
-                                    value={chapter1Sections.background}
+                                    value={safeString(chapter1Sections.background)}
                                     onChange={(e) => setChapter1Sections({ ...chapter1Sections, background: e.target.value })}
                                     className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
                                     placeholder="ระบุความเป็นมาและความสำคัญ..."
@@ -14538,7 +14573,7 @@ return (
                                 </div>
                                 <textarea
                                     rows={4}
-                                    value={chapter1Sections.objectives}
+                                    value={safeString(chapter1Sections.objectives)}
                                     onChange={(e) => setChapter1Sections({ ...chapter1Sections, objectives: e.target.value })}
                                     className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
                                     placeholder="๑. เพื่อ...\n๒. เพื่อ..."
@@ -14557,7 +14592,7 @@ return (
                                         <span className="text-xs font-bold text-slate-700 block">๑.๓.๑ ประชากรและกลุ่มเป้าหมาย</span>
                                         <textarea
                                             rows={3}
-                                            value={chapter1Sections.scope_target}
+                                            value={safeString(chapter1Sections.scope_target)}
                                             onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_target: e.target.value })}
                                             className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
                                             placeholder="กลุ่มเป้าหมาย จำนวนคน..."
@@ -14567,7 +14602,7 @@ return (
                                         <span className="text-xs font-bold text-slate-700 block">๑.๓.๒ เนื้อหาและกิจกรรมการดำเนินงาน</span>
                                         <textarea
                                             rows={3}
-                                            value={chapter1Sections.scope_content}
+                                            value={safeString(chapter1Sections.scope_content)}
                                             onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_content: e.target.value })}
                                             className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
                                             placeholder="กิจกรรมหลักที่ดำเนินการ..."
@@ -14577,7 +14612,7 @@ return (
                                         <span className="text-xs font-bold text-slate-700 block">๑.๓.๓ สถานที่และระยะเวลา</span>
                                         <textarea
                                             rows={3}
-                                            value={chapter1Sections.scope_location_time}
+                                            value={safeString(chapter1Sections.scope_location_time)}
                                             onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_location_time: e.target.value })}
                                             className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
                                             placeholder="สถานที่ วันเริ่มต้น-สิ้นสุด..."
@@ -14598,7 +14633,7 @@ return (
                                         <span className="text-xs font-bold text-slate-700 block">๑.๔.๑ เชิงปริมาณ (Quantitative)</span>
                                         <textarea
                                             rows={2}
-                                            value={chapter1Sections.indicators_quantitative}
+                                            value={safeString(chapter1Sections.indicators_quantitative)}
                                             onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_quantitative: e.target.value })}
                                             className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
                                             placeholder="ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐..."
@@ -14608,7 +14643,7 @@ return (
                                         <span className="text-xs font-bold text-slate-700 block">๑.๔.๒ เชิงคุณภาพ (Qualitative)</span>
                                         <textarea
                                             rows={2}
-                                            value={chapter1Sections.indicators_qualitative}
+                                            value={safeString(chapter1Sections.indicators_qualitative)}
                                             onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_qualitative: e.target.value })}
                                             className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
                                             placeholder="ระดับความพึงพอใจ ค่าเฉลี่ย ๓.๕๑ ขึ้นไป..."
@@ -14628,7 +14663,7 @@ return (
                                 </div>
                                 <textarea
                                     rows={4}
-                                    value={chapter1Sections.expected_benefits}
+                                    value={safeString(chapter1Sections.expected_benefits)}
                                     onChange={(e) => setChapter1Sections({ ...chapter1Sections, expected_benefits: e.target.value })}
                                     className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
                                     placeholder="๑. ผู้เรียนได้รับความรู้และทักษะ...\n๒. สถานศึกษามีผลสัมฤทธิ์..."
@@ -14646,7 +14681,7 @@ return (
                                 </div>
                                 <textarea
                                     rows={3}
-                                    value={chapter1Sections.definitions}
+                                    value={safeString(chapter1Sections.definitions)}
                                     onChange={(e) => setChapter1Sections({ ...chapter1Sections, definitions: e.target.value })}
                                     className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
                                     placeholder="ระบุนิยามศัพท์เฉพาะที่ใช้ในโครงการนี้..."
