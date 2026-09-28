@@ -863,6 +863,17 @@ export default function Dashboard({
     });
     const [isSavingChapter1, setIsSavingChapter1] = useState(false);
 
+    const [chapter2Sections, setChapter2Sections] = useState({
+        intro: '',
+        section_2_1: '',
+        section_2_2: '',
+        section_2_3: '',
+        references: ''
+    });
+    const [chapter2Analysis, setChapter2Analysis] = useState(null);
+    const [isAnalyzingChapter2, setIsAnalyzingChapter2] = useState(false);
+    const [isSavingChapter2, setIsSavingChapter2] = useState(false);
+
     const activeChapter1Project = React.useMemo(() => {
         if (!selectedChapter1ProjectId && chapter1Projects.length > 0) {
             return chapter1Projects[0];
@@ -979,6 +990,27 @@ export default function Dashboard({
         } else {
             populateChapter1FromProject(activeChapter1Project);
         }
+
+        // Chapter 2 populate
+        const savedCh2 = activeChapter1Project.chapter_2_sections;
+        if (savedCh2 && typeof savedCh2 === 'object' && Object.keys(savedCh2).length > 0) {
+            setChapter2Sections({
+                intro: safeString(savedCh2.intro),
+                section_2_1: safeString(savedCh2.section_2_1),
+                section_2_2: safeString(savedCh2.section_2_2),
+                section_2_3: safeString(savedCh2.section_2_3),
+                references: safeString(savedCh2.references),
+            });
+        } else {
+            setChapter2Sections({
+                intro: '',
+                section_2_1: '',
+                section_2_2: '',
+                section_2_3: '',
+                references: '',
+            });
+        }
+        setChapter2Analysis(null);
     }, [activeChapter1Project?.id]);
 
     const handleSaveChapter1 = async () => {
@@ -1036,6 +1068,124 @@ export default function Dashboard({
                 Swal.fire({ icon: 'success', title: 'ดึงข้อมูลเรียบร้อย', timer: 1200, showConfirmButton: false });
             }
         });
+    };
+
+    const handleAnalyzeChapter2 = async () => {
+        if (!activeChapter1Project) return;
+        setIsAnalyzingChapter2(true);
+        try {
+            const response = await window.axios.post(route('projects.chapter2.generate', activeChapter1Project.id));
+            if (response.data && response.data.success) {
+                setChapter2Analysis(response.data);
+                // If sections currently empty, populate automatically
+                if (!chapter2Sections.section_2_1 && !chapter2Sections.section_2_2) {
+                    if (response.data.sections) {
+                        setChapter2Sections({
+                            intro: response.data.sections.intro || '',
+                            section_2_1: response.data.sections.section_2_1 || '',
+                            section_2_2: response.data.sections.section_2_2 || '',
+                            section_2_3: response.data.sections.section_2_3 || '',
+                            references: response.data.sections.references || '',
+                        });
+                    }
+                }
+                Swal.fire({
+                    icon: 'success',
+                    title: 'วิเคราะห์ทฤษฎีสำเร็จ',
+                    text: `ระบบวิเคราะห์คำสำคัญและเชื่อมโยงทฤษฎีในหมวด "${response.data.domain}" เรียบร้อยแล้ว`,
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#059669',
+                    timer: 2500
+                });
+            }
+        } catch (error) {
+            console.error('Error analyzing Chapter 2:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการวิเคราะห์',
+                text: error.response?.data?.message || 'ไม่สามารถวิเคราะห์ทฤษฎีได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#ef4444'
+            });
+        } finally {
+            setIsAnalyzingChapter2(false);
+        }
+    };
+
+    const handleApplySynthesizedChapter2 = () => {
+        if (!chapter2Analysis?.sections) return;
+        Swal.fire({
+            title: 'นำเนื้อหาที่วิเคราะห์เข้าสู่แบบฟอร์ม?',
+            text: 'ข้อความในแบบฟอร์มบทที่ ๒ จะถูกอัปเดตด้วยผลการวิเคราะห์และสังเคราะห์ล่าสุด',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันนำเข้า',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#059669'
+        }).then((res) => {
+            if (res.isConfirmed) {
+                setChapter2Sections({
+                    intro: chapter2Analysis.sections.intro || '',
+                    section_2_1: chapter2Analysis.sections.section_2_1 || '',
+                    section_2_2: chapter2Analysis.sections.section_2_2 || '',
+                    section_2_3: chapter2Analysis.sections.section_2_3 || '',
+                    references: chapter2Analysis.sections.references || '',
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'นำเข้าเนื้อหาเรียบร้อย',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }
+        });
+    };
+
+    const handleSaveChapter2 = async () => {
+        if (!activeChapter1Project) return;
+        setIsSavingChapter2(true);
+        const fullContent = [
+            "บทที่ ๒",
+            "เอกสารและงานวิจัยที่เกี่ยวข้อง\n",
+            chapter2Sections.intro,
+            chapter2Sections.section_2_1,
+            chapter2Sections.section_2_2,
+            chapter2Sections.section_2_3,
+            chapter2Sections.references
+        ].filter(Boolean).join("\n\n");
+
+        try {
+            await window.axios.post(route('projects.chapter2.save', activeChapter1Project.id), {
+                sections: chapter2Sections,
+                chapter_2_sections: chapter2Sections,
+                full_content: fullContent,
+                chapter_2_content: fullContent
+            });
+
+            activeChapter1Project.chapter_2_sections = chapter2Sections;
+            activeChapter1Project.chapter_2_content = fullContent;
+
+            Swal.fire({
+                icon: 'success',
+                title: 'บันทึกบทที่ ๒ สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ ๒ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#059669',
+                timer: 2000,
+                timerProgressBar: true
+            });
+        } catch (error) {
+            console.error('Error saving Chapter 2:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการบันทึก',
+                text: error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#ef4444'
+            });
+        } finally {
+            setIsSavingChapter2(false);
+        }
     };
 
     const [executiveTableView, setExecutiveTableView] = useState('projects');
@@ -14618,21 +14768,20 @@ return (
             );
         }
 
-        const hasChapter2Content = Boolean(activeChapter1Project.chapter_2_content);
-
         return (
             <div className="space-y-6">
+                {/* Header Banner */}
                 <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-bold mb-2">
-                                <span>📗</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๒ (Related Literature)
+                                <span>📗</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๒ (Related Literature & Theories)
                             </div>
                             <h2 className="text-xl md:text-2xl font-black tracking-tight">
-                                บทที่ ๒: เอกสารและงานวิจัยที่เกี่ยวข้อง (AI สังเคราะห์)
+                                บทที่ ๒: เอกสาร ทฤษฎี และงานวิจัยที่เกี่ยวข้อง
                             </h2>
                             <p className="text-emerald-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
-                                สังเคราะห์เอกสาร ทฤษฎี นโยบาย สอศ. และงานวิจัยที่เกี่ยวข้องด้วย AI หรือปรับแต่งเนื้อหาด้วยตนเองตามโครงสร้างมาตรฐาน
+                                เครื่องมือวิเคราะห์คำสำคัญจากชื่อโครงการ วัตถุประสงค์ และตัวชี้วัด เพื่อสังเคราะห์ทฤษฎีและยุทธศาสตร์ สอศ. ที่สอดคล้อง พร้อมแบบฟอร์มปรับปรุงเนื้อหาและค้นคว้างานวิจัยเพิ่มเติม
                             </p>
                         </div>
 
@@ -14653,47 +14802,345 @@ return (
                     </div>
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
-                    <div className="max-w-3xl space-y-4">
+                {/* Theory & Keyword Analysis Engine Box */}
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-emerald-100 space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                         <div className="flex items-center gap-3">
-                            <span className="text-2xl">📋</span>
+                            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl font-bold shadow-inner">
+                                🧠
+                            </div>
                             <div>
-                                <h3 className="text-base font-bold text-slate-900">
-                                    สถานะบทที่ ๒: {hasChapter2Content ? '✅ สังเคราะห์เนื้อหาแล้ว' : '⏳ ยังไม่มีเนื้อหาบทที่ ๒'}
+                                <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    เครื่องมือวิเคราะห์ทฤษฎีและคำสำคัญที่เกี่ยวข้อง
+                                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium">
+                                        Smart Analysis Suite
+                                    </span>
                                 </h3>
                                 <p className="text-xs text-slate-500">
-                                    โครงการ: {activeChapter1Project.title}
+                                    ประมวลผลคำสำคัญจากชื่อโครงการ วัตถุประสงค์ และตัวชี้วัด เพื่อค้นหาและเชื่อมโยงทฤษฎี กรอบแนวคิด และนโยบายที่ตรงกับโครงการ
                                 </p>
                             </div>
                         </div>
 
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
-                            <p className="font-bold text-slate-900">โครงสร้างบทที่ ๒ ตามเกณฑ์ สอศ.:</p>
-                            <ul className="list-disc pl-5 space-y-1">
-                                <li>๒.๑ หลักการ แนวคิด และทฤษฎีที่เกี่ยวข้องกับโครงการ</li>
-                                <li>๒.๒ นโยบายและยุทธศาสตร์ของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)</li>
-                                <li>๒.๓ ข้อมูลบริบทสถานศึกษาและงานที่เกี่ยวข้อง</li>
-                                <li>๒.๔ งานวิจัยที่เกี่ยวข้องทั้งในประเทศและต่างประเทศ</li>
-                                <li>๒.๕ เอกสารอ้างอิงและบรรณานุกรม</li>
-                            </ul>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-3 pt-2">
-                            <Link
-                                href={route('projects.show', activeChapter1Project.id)}
-                                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-2"
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleAnalyzeChapter2}
+                                disabled={isAnalyzingChapter2}
+                                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition flex items-center gap-2 disabled:opacity-50"
                             >
-                                <span>🤖</span> เปิดเครื่องมือ AI สังเคราะห์บทที่ ๒ ในหน้ารายละเอียดโครงการ
-                            </Link>
+                                {isAnalyzingChapter2 ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>กำลังประมวลผลคำสำคัญและทฤษฎี...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>⚡</span>
+                                        <span>วิเคราะห์ทฤษฎีจากโครงการ</span>
+                                    </>
+                                )}
+                            </button>
+                            {chapter2Analysis && (
+                                <button
+                                    type="button"
+                                    onClick={handleApplySynthesizedChapter2}
+                                    className="px-4 py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-800 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center gap-1.5"
+                                    title="นำเนื้อหาทฤษฎีและงานวิจัยที่วิเคราะห์ได้ทั้งหมด ใส่ลงในแบบฟอร์มด้านล่าง"
+                                >
+                                    <span>📥</span>
+                                    <span>นำผลวิเคราะห์ลงแบบฟอร์ม</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
 
+                    {!chapter2Analysis ? (
+                        <div className="bg-slate-50 rounded-2xl p-6 border border-dashed border-slate-200 text-center space-y-3">
+                            <div className="inline-flex p-3 bg-white rounded-2xl shadow-sm text-slate-600 text-2xl">
+                                🔍
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-800">
+                                ยังไม่ได้เริ่มการวิเคราะห์ทฤษฎีสำหรับโครงการนี้
+                            </h4>
+                            <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed">
+                                กดปุ่ม <strong>"วิเคราะห์ทฤษฎีจากโครงการ"</strong> ด้านบน เพื่อให้ระบบอ่านชื่อโครงการ วัตถุประสงค์ ตัวชี้วัด และความเป็นมา จากนั้นจะจำแนกกลุ่มโครงการ แนะนำทฤษฎีที่สอดคล้อง ตลอดจนยุทธศาสตร์ สอศ. และงานวิจัยที่เกี่ยวข้อง
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-5">
+                            {/* Domain & Keywords Chips */}
+                            <div className="bg-emerald-50/60 rounded-2xl p-4 border border-emerald-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div>
+                                    <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider block mb-1">
+                                        กลุ่มสาระและประเด็นหลักที่ตรวจพบ (Domain Classification)
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg shadow-sm">
+                                            🏷️ {chapter2Analysis.domain}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="text-[11px] font-bold text-slate-600 block mb-1">
+                                        คำสำคัญที่ดึงมาจากโครงการ (Extracted Keywords):
+                                    </span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {chapter2Analysis.keywords?.map((kw, i) => (
+                                            <span key={i} className="px-2.5 py-0.5 bg-white border border-emerald-200 text-emerald-900 rounded-md text-[11px] font-medium shadow-2xs">
+                                                #{kw}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Theory Cards */}
+                            <div>
+                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <span>📚</span> ทฤษฎีและกรอบแนวคิดที่วิเคราะห์ได้ ({chapter2Analysis.theories?.length || 0} ทฤษฎี)
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {chapter2Analysis.theories?.map((theory, idx) => (
+                                        <div key={idx} className="bg-white rounded-2xl p-4 border border-slate-200 hover:border-emerald-300 hover:shadow-md transition space-y-2 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <h5 className="text-xs font-bold text-slate-900 leading-snug">
+                                                        {theory.name}
+                                                    </h5>
+                                                    <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded font-medium shrink-0">
+                                                        ทฤษฎีที่ {idx + 1}
+                                                    </span>
+                                                </div>
+                                                <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
+                                                    โดย: {theory.theorist}
+                                                </p>
+                                                <div className="mt-2 pt-2 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
+                                                    <p className="text-[11px] leading-relaxed">
+                                                        <strong className="text-slate-800">ความสอดคล้อง:</strong> {theory.relevance}
+                                                    </p>
+                                                    <p className="text-[11px] leading-relaxed text-slate-500">
+                                                        <strong className="text-slate-700">ประเด็นสำคัญ:</strong> {theory.key_point}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="pt-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const snippet = `\n\n• ${theory.name} (${theory.theorist}): ${theory.relevance} ${theory.key_point}`;
+                                                        setChapter2Sections(prev => ({
+                                                            ...prev,
+                                                            section_2_1: (prev.section_2_1 || '') + snippet
+                                                        }));
+                                                        Swal.fire({
+                                                            toast: true,
+                                                            position: 'top-end',
+                                                            icon: 'success',
+                                                            title: `เพิ่ม ${theory.name} ลงในข้อ ๒.๑ แล้ว`,
+                                                            showConfirmButton: false,
+                                                            timer: 1500
+                                                        });
+                                                    }}
+                                                    className="w-full py-1.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 text-[11px] font-bold rounded-lg border border-slate-200 transition flex items-center justify-center gap-1"
+                                                >
+                                                    <span>➕</span> แทรกทฤษฎีนี้ลงในข้อ ๒.๑
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Suggested topics for literature search */}
+                            {chapter2Analysis.suggested_topics?.length > 0 && (
+                                <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-start gap-3">
+                                    <span className="text-lg">💡</span>
+                                    <div className="text-xs text-amber-900 space-y-1">
+                                        <strong className="font-bold block">คำแนะนำหัวข้อที่ควรค้นคว้าเพิ่มเติม (Literature Search Recommendations):</strong>
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            {chapter2Analysis.suggested_topics.map((t, idx) => (
+                                                <span key={idx} className="px-2 py-1 bg-white border border-amber-200 text-amber-900 rounded-lg text-[11px]">
+                                                    🔍 {t}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Editable Form Suite */}
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                        <div>
+                            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                <span>📝</span> แบบฟอร์มเนื้อหาบทที่ ๒ (แก้ไขและพิมพ์รายงาน)
+                            </h3>
+                            <p className="text-xs text-slate-500">
+                                ท่านสามารถพิมพ์ ปรับแต่ง หรือค้นคว้าเอกสารและงานวิจัยเพิ่มเติมมาใส่ในแต่ละหัวข้อได้อย่างอิสระ
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
                             <a
                                 href={route('projects.chapter2.print', activeChapter1Project.id)}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                             >
-                                <span>🖨️</span> พิมพ์บทที่ ๒ (A4)
+                                <span>🖨️</span> ดูตัวอย่างและพิมพ์ A4
                             </a>
+                            <button
+                                type="button"
+                                onClick={handleSaveChapter2}
+                                disabled={isSavingChapter2}
+                                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {isSavingChapter2 ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>กำลังบันทึก...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>💾</span>
+                                        <span>บันทึกบทที่ ๒</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Section 1: Intro */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">บทนำ</span>
+                                ความนำบทที่ ๒ (เกริ่นนำภาพรวมของเอกสารและทฤษฎีที่ใช้)
+                            </label>
+                        </div>
+                        <textarea
+                            rows={3}
+                            value={safeString(chapter2Sections.intro)}
+                            onChange={(e) => setChapter2Sections({ ...chapter2Sections, intro: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
+                            placeholder="เกริ่นนำการศึกษาค้นคว้าเอกสาร ทฤษฎี และงานวิจัยที่เกี่ยวข้อง..."
+                        />
+                    </div>
+
+                    {/* Section 2.1 */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๑</span>
+                                แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง
+                            </label>
+                            <span className="text-[11px] text-slate-400">ระบุรายละเอียดทฤษฎี ผู้พัฒนา และการนำมาประยุกต์ใช้</span>
+                        </div>
+                        <textarea
+                            rows={8}
+                            value={safeString(chapter2Sections.section_2_1)}
+                            onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_1: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
+                            placeholder="๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง..."
+                        />
+                    </div>
+
+                    {/* Section 2.2 */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๒</span>
+                                ยุทธศาสตร์และนโยบายจุดเน้นของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.) ที่เกี่ยวข้อง
+                            </label>
+                            <span className="text-[11px] text-slate-400">ความสอดคล้องกับนโยบายเร่งด่วนและยุทธศาสตร์ สอศ.</span>
+                        </div>
+                        <textarea
+                            rows={6}
+                            value={safeString(chapter2Sections.section_2_2)}
+                            onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_2: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
+                            placeholder="๒.๒ ยุทธศาสตร์และนโยบาย สอศ. ที่เกี่ยวข้อง..."
+                        />
+                    </div>
+
+                    {/* Section 2.3 */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๓</span>
+                                เอกสารและงานวิจัยที่เกี่ยวข้อง
+                            </label>
+                            <span className="text-[11px] text-slate-400">ค้นคว้าเพิ่มเติมและระบุงานวิจัยทั้งในประเทศและต่างประเทศ</span>
+                        </div>
+                        <textarea
+                            rows={6}
+                            value={safeString(chapter2Sections.section_2_3)}
+                            onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_3: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
+                            placeholder="๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง..."
+                        />
+                    </div>
+
+                    {/* References */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">บรรณานุกรม</span>
+                                เอกสารอ้างอิงและบรรณานุกรม (APA Format)
+                            </label>
+                            <span className="text-[11px] text-slate-400">รายชื่อหนังสือ วารสาร งานวิจัย และเว็บไซต์อ้างอิง</span>
+                        </div>
+                        <textarea
+                            rows={5}
+                            value={safeString(chapter2Sections.references)}
+                            onChange={(e) => setChapter2Sections({ ...chapter2Sections, references: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
+                            placeholder="ระบุเอกสารอ้างอิงและบรรณานุกรม..."
+                        />
+                    </div>
+
+                    {/* Bottom Action Bar */}
+                    <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                        <button
+                            type="button"
+                            onClick={handleAnalyzeChapter2}
+                            disabled={isAnalyzingChapter2}
+                            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                            <span>🔄</span> วิเคราะห์ทฤษฎีใหม่อีกครั้ง
+                        </button>
+
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={route('projects.chapter2.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>🖨️</span> ดูตัวอย่างและพิมพ์ A4
+                            </a>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveChapter2}
+                                disabled={isSavingChapter2}
+                                className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {isSavingChapter2 ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>กำลังบันทึก...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>💾</span>
+                                        <span>บันทึกบทที่ ๒</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>
