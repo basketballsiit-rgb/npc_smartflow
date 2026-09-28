@@ -871,6 +871,7 @@ export default function Dashboard({
         references: ''
     });
     const [chapter2Analysis, setChapter2Analysis] = useState(null);
+    const [selectedTheoryIds, setSelectedTheoryIds] = useState([]);
     const [isAnalyzingChapter2, setIsAnalyzingChapter2] = useState(false);
     const [isSavingChapter2, setIsSavingChapter2] = useState(false);
 
@@ -1070,6 +1071,252 @@ export default function Dashboard({
         });
     };
 
+    const appendReference = (currentRefs, newRefText) => {
+        if (!newRefText) return currentRefs || '';
+        let refs = currentRefs ? currentRefs.trim() : '';
+        const newLines = newRefText.split('\n').map(l => l.trim()).filter(Boolean);
+        
+        for (const line of newLines) {
+            if (!refs.includes(line)) {
+                if (!refs.includes('เอกสารอ้างอิง') && !refs.includes('บรรณานุกรม')) {
+                    refs = 'เอกสารอ้างอิง\n\n' + refs;
+                }
+                refs = refs + (refs ? '\n\n' : '') + line;
+            }
+        }
+        return refs;
+    };
+
+    const handleToggleTheory = (theoryId) => {
+        setSelectedTheoryIds(prev => 
+            prev.includes(theoryId) 
+                ? prev.filter(id => id !== theoryId) 
+                : [...prev, theoryId]
+        );
+    };
+
+    const handleSelectAllTheories = (selectAll) => {
+        if (!chapter2Analysis?.theories) return;
+        if (selectAll) {
+            setSelectedTheoryIds(chapter2Analysis.theories.map(t => t.id || t.name));
+        } else {
+            setSelectedTheoryIds([]);
+        }
+    };
+
+    const handleInsertSingleTheory = (theory) => {
+        if (!theory) return;
+        const thaiSubNums = ['๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙', '๑๐'];
+        const existingCount = (chapter2Sections.section_2_1.match(/๒\.๑\.\d+/g) || []).length;
+        const nextNum = thaiSubNums[existingCount] || (existingCount + 1);
+
+        const heading = `๒.๑.${nextNum} ${theory.name}`;
+        const body = theory.content || `${theory.relevance} ${theory.key_point}`;
+
+        setChapter2Sections(prev => {
+            let updated2_1 = prev.section_2_1 ? prev.section_2_1.trim() : '';
+            if (!updated2_1) {
+                updated2_1 = `๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง\n\n${heading}\n${body}`;
+            } else {
+                updated2_1 = `${updated2_1}\n\n${heading}\n${body}`;
+            }
+            return {
+                ...prev,
+                section_2_1: updated2_1,
+                references: appendReference(prev.references, theory.reference)
+            };
+        });
+
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: `เพิ่ม ${theory.name} และรายการอ้างอิงแล้ว`,
+            showConfirmButton: false,
+            timer: 1800
+        });
+    };
+
+    const handleInsertSelectedTheories = () => {
+        if (!chapter2Analysis?.theories) return;
+        const selected = chapter2Analysis.theories.filter(t => selectedTheoryIds.includes(t.id || t.name));
+        if (selected.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ยังไม่ได้เลือกทฤษฎี',
+                text: 'กรุณาคลิกเลือกการ์ดทฤษฎีที่ต้องการนำไปใช้ด้านบนอย่างน้อย ๑ รายการ',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#f59e0b'
+            });
+            return;
+        }
+
+        const thaiSubNums = ['๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙', '๑๐'];
+        let text2_1 = `๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง\n\nในการวางแผนและดำเนินงานโครงการ "${activeChapter1Project?.title || ''}" ได้บูรณาการแนวคิดและทฤษฎีที่สำคัญ ดังนี้\n\n`;
+        let newRefs = chapter2Sections.references || 'เอกสารอ้างอิง\n\n';
+
+        selected.forEach((t, idx) => {
+            const num = thaiSubNums[idx] || (idx + 1);
+            text2_1 += `๒.๑.${num} ${t.name}\n${t.content || t.relevance}\n\n`;
+            newRefs = appendReference(newRefs, t.reference);
+        });
+
+        setChapter2Sections(prev => ({
+            ...prev,
+            section_2_1: text2_1.trim(),
+            references: newRefs.trim()
+        }));
+
+        Swal.fire({
+            icon: 'success',
+            title: 'นำทฤษฎีที่เลือกลงในข้อ ๒.๑ แล้ว',
+            text: `นำเข้า ${selected.length} ทฤษฎีที่เลือก พร้อมอัปเดตรายการอ้างอิงในบรรณานุกรมเรียบร้อยแล้ว`,
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#059669',
+            timer: 2000
+        });
+    };
+
+    const handleInsertSingleResearch = (research) => {
+        if (!research) return;
+        const thaiSubNums = ['๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙', '๑๐'];
+        const existingCount = (chapter2Sections.section_2_3.match(/๒\.๓\.\d+/g) || []).length;
+        const nextNum = thaiSubNums[existingCount] || (existingCount + 1);
+
+        const heading = `๒.๓.${nextNum} ${research.author}`;
+        const body = research.content;
+
+        setChapter2Sections(prev => {
+            let updated2_3 = prev.section_2_3 ? prev.section_2_3.trim() : '';
+            if (!updated2_3) {
+                updated2_3 = `๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง\n\nจากการสำรวจและรวบรวมงานวิจัยทางวิชาการที่เกี่ยวข้องกับโครงการ มีเอกสารและงานวิจัยที่สำคัญดังนี้\n\n${heading}\n${body}`;
+            } else {
+                updated2_3 = `${updated2_3}\n\n${heading}\n${body}`;
+            }
+            return {
+                ...prev,
+                section_2_3: updated2_3,
+                references: appendReference(prev.references, research.reference)
+            };
+        });
+
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: `เพิ่มงานวิจัย ${research.author} และรายการอ้างอิงแล้ว`,
+            showConfirmButton: false,
+            timer: 1800
+        });
+    };
+
+    const handleInsertAllResearches = () => {
+        if (!chapter2Analysis?.researches || chapter2Analysis.researches.length === 0) return;
+        const thaiSubNums = ['๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙', '๑๐'];
+        let text2_3 = `๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง\n\nจากการสำรวจและรวบรวมงานวิจัยทางวิชาการและเอกสารที่เกี่ยวข้องกับโครงการ มีเอกสารและงานวิจัยที่สำคัญดังนี้\n\n`;
+        let newRefs = chapter2Sections.references || 'เอกสารอ้างอิง\n\n';
+
+        chapter2Analysis.researches.forEach((r, idx) => {
+            const num = thaiSubNums[idx] || (idx + 1);
+            text2_3 += `๒.๓.${num} ${r.author}\n${r.content}\n\n`;
+            newRefs = appendReference(newRefs, r.reference);
+        });
+
+        setChapter2Sections(prev => ({
+            ...prev,
+            section_2_3: text2_3.trim(),
+            references: newRefs.trim()
+        }));
+
+        Swal.fire({
+            icon: 'success',
+            title: 'นำงานวิจัยทั้งหมดลงในข้อ ๒.๓ แล้ว',
+            text: `นำเข้า ${chapter2Analysis.researches.length} งานวิจัย พร้อมซิงค์รายการอ้างอิงเรียบร้อยแล้ว`,
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#059669',
+            timer: 2000
+        });
+    };
+
+    const handleSyncReferences = () => {
+        if (!chapter2Analysis) {
+            Swal.fire({
+                icon: 'info',
+                title: 'ยังไม่มีข้อมูลการวิเคราะห์',
+                text: 'กรุณากดปุ่ม "วิเคราะห์ทฤษฎีจากโครงการ" ก่อนทำการซิงค์รายการอ้างอิง',
+                confirmButtonText: 'ตกลง'
+            });
+            return;
+        }
+
+        const sec2_1 = chapter2Sections.section_2_1 || '';
+        const sec2_2 = chapter2Sections.section_2_2 || '';
+        const sec2_3 = chapter2Sections.section_2_3 || '';
+        const combined = `${sec2_1}\n${sec2_2}\n${sec2_3}`;
+
+        const collectedRefs = [];
+
+        // Check theories
+        if (chapter2Analysis.theories) {
+            chapter2Analysis.theories.forEach(t => {
+                const authorOnly = t.theorist?.split('(')[0]?.trim();
+                if (combined.includes(t.name) || (t.citation_key && combined.includes(t.citation_key)) || (authorOnly && combined.includes(authorOnly))) {
+                    if (t.reference) {
+                        t.reference.split('\n').map(l => l.trim()).filter(Boolean).forEach(r => collectedRefs.push(r));
+                    }
+                }
+            });
+        }
+
+        // Check researches
+        if (chapter2Analysis.researches) {
+            chapter2Analysis.researches.forEach(r => {
+                const authorOnly = r.author?.split('(')[0]?.trim();
+                if (combined.includes(r.author) || (r.title && combined.includes(r.title)) || (authorOnly && combined.includes(authorOnly))) {
+                    if (r.reference) {
+                        r.reference.split('\n').map(l => l.trim()).filter(Boolean).forEach(ref => collectedRefs.push(ref));
+                    }
+                }
+            });
+        }
+
+        // Check policy
+        if (sec2_2.includes('สอศ') || sec2_2.includes('สำนักงานคณะกรรมการการอาชีวศึกษา')) {
+            if (chapter2Analysis.policy_reference) {
+                collectedRefs.push(chapter2Analysis.policy_reference.trim());
+            }
+        }
+
+        // Parse any custom existing lines in references
+        const existingLines = (chapter2Sections.references || '')
+            .split('\n')
+            .map(l => l.trim())
+            .filter(l => l && !l.startsWith('เอกสารอ้างอิง') && !l.startsWith('บรรณานุกรม'));
+
+        const allUnique = Array.from(new Set([...collectedRefs, ...existingLines]));
+
+        // Sort Thai first, then English
+        const thaiRefs = allUnique.filter(r => /^[\u0E00-\u0E7F]/.test(r)).sort((a, b) => a.localeCompare(b, 'th'));
+        const engRefs = allUnique.filter(r => !/^[\u0E00-\u0E7F]/.test(r)).sort((a, b) => a.localeCompare(b, 'en'));
+        const finalSorted = [...thaiRefs, ...engRefs];
+
+        const finalReferencesText = "เอกสารอ้างอิง\n\n" + finalSorted.join("\n\n");
+
+        setChapter2Sections(prev => ({
+            ...prev,
+            references: finalReferencesText
+        }));
+
+        Swal.fire({
+            icon: 'success',
+            title: 'ซิงค์และตรวจสอบรายการอ้างอิงครบถ้วน',
+            text: `ระบบตรวจสอบเนื้อหาในข้อ ๒.๑, ๒.๒ และ ๒.๓ และรวบรวมรายการอ้างอิงตรงตามเนื้อหาทั้งหมด ${finalSorted.length} รายการ`,
+            confirmButtonText: 'ตกลง',
+            confirmButtonColor: '#059669',
+            timer: 2500
+        });
+    };
+
     const handleAnalyzeChapter2 = async () => {
         if (!activeChapter1Project) return;
         setIsAnalyzingChapter2(true);
@@ -1077,22 +1324,20 @@ export default function Dashboard({
             const response = await window.axios.post(route('projects.chapter2.generate', activeChapter1Project.id));
             if (response.data && response.data.success) {
                 setChapter2Analysis(response.data);
-                // If sections currently empty, populate automatically
-                if (!chapter2Sections.section_2_1 && !chapter2Sections.section_2_2) {
-                    if (response.data.sections) {
-                        setChapter2Sections({
-                            intro: response.data.sections.intro || '',
-                            section_2_1: response.data.sections.section_2_1 || '',
-                            section_2_2: response.data.sections.section_2_2 || '',
-                            section_2_3: response.data.sections.section_2_3 || '',
-                            references: response.data.sections.references || '',
-                        });
-                    }
-                }
+                // Do NOT write all theories into section_2_1! Let user select!
+                // Only fill intro and section_2_2 if currently blank
+                setChapter2Sections(prev => ({
+                    ...prev,
+                    intro: prev.intro || response.data.sections?.intro || '',
+                    section_2_2: prev.section_2_2 || response.data.sections?.section_2_2 || '',
+                }));
+                // Reset theory selections
+                setSelectedTheoryIds([]);
+
                 Swal.fire({
                     icon: 'success',
-                    title: 'วิเคราะห์ทฤษฎีสำเร็จ',
-                    text: `ระบบวิเคราะห์คำสำคัญและเชื่อมโยงทฤษฎีในหมวด "${response.data.domain}" เรียบร้อยแล้ว`,
+                    title: 'วิเคราะห์ทฤษฎีและคำสำคัญสำเร็จ',
+                    text: `ระบบวิเคราะห์คำสำคัญและจำแนกโครงการในหมวด "${response.data.domain}" เรียบร้อยแล้ว ท่านสามารถเลือกทฤษฎีที่ต้องการนำไปใช้ได้ด้านล่าง`,
                     confirmButtonText: 'ตกลง',
                     confirmButtonColor: '#059669',
                     timer: 2500
@@ -1115,11 +1360,11 @@ export default function Dashboard({
     const handleApplySynthesizedChapter2 = () => {
         if (!chapter2Analysis?.sections) return;
         Swal.fire({
-            title: 'นำเนื้อหาที่วิเคราะห์เข้าสู่แบบฟอร์ม?',
-            text: 'ข้อความในแบบฟอร์มบทที่ ๒ จะถูกอัปเดตด้วยผลการวิเคราะห์และสังเคราะห์ล่าสุด',
+            title: 'นำเนื้อหาที่วิเคราะห์ทั้งหมดเข้าสู่แบบฟอร์ม?',
+            text: 'ระบบจะนำทฤษฎีและงานวิจัยทั้งหมดที่วิเคราะห์ได้ พร้อมรายการอ้างอิงที่สอดคล้องครบถ้วน เข้าสู่แบบฟอร์มบทที่ ๒',
             icon: 'question',
             showCancelButton: true,
-            confirmButtonText: 'ยืนยันนำเข้า',
+            confirmButtonText: 'ยืนยันนำเข้าทั้งหมด',
             cancelButtonText: 'ยกเลิก',
             confirmButtonColor: '#059669'
         }).then((res) => {
@@ -1131,9 +1376,12 @@ export default function Dashboard({
                     section_2_3: chapter2Analysis.sections.section_2_3 || '',
                     references: chapter2Analysis.sections.references || '',
                 });
+                if (chapter2Analysis.theories) {
+                    setSelectedTheoryIds(chapter2Analysis.theories.map(t => t.id || t.name));
+                }
                 Swal.fire({
                     icon: 'success',
-                    title: 'นำเข้าเนื้อหาเรียบร้อย',
+                    title: 'นำเข้าเนื้อหาและรายการอ้างอิงครบถ้วน',
                     timer: 1500,
                     showConfirmButton: false
                 });
@@ -14895,62 +15143,163 @@ return (
                                 </div>
                             </div>
 
-                            {/* Theory Cards */}
-                            <div>
-                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <span>📚</span> ทฤษฎีและกรอบแนวคิดที่วิเคราะห์ได้ ({chapter2Analysis.theories?.length || 0} ทฤษฎี)
-                                </h4>
+                            {/* Theory Cards with Checkbox Selection */}
+                            <div className="space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div>
+                                        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                            <span>📚</span> ทฤษฎีและกรอบแนวคิดที่วิเคราะห์ได้ ({chapter2Analysis.theories?.length || 0} ทฤษฎี)
+                                        </h4>
+                                        <p className="text-[11px] text-slate-500">
+                                            ท่านสามารถเลือกทฤษฎีที่ต้องการนำมาประกอบโครงการ หรือคลิกแทรกทีละรายการได้
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSelectAllTheories(selectedTheoryIds.length !== (chapter2Analysis.theories?.length || 0))}
+                                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+                                        >
+                                            {selectedTheoryIds.length === (chapter2Analysis.theories?.length || 0) ? '⬜ ล้างการเลือก' : '☑️ เลือกทั้งหมด'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleInsertSelectedTheories}
+                                            disabled={selectedTheoryIds.length === 0}
+                                            className="px-3.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-40 flex items-center gap-1.5"
+                                        >
+                                            <span>📥</span>
+                                            <span>นำทฤษฎีที่เลือก ({selectedTheoryIds.length}) ใส่ในข้อ ๒.๑</span>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {chapter2Analysis.theories?.map((theory, idx) => (
-                                        <div key={idx} className="bg-white rounded-2xl p-4 border border-slate-200 hover:border-emerald-300 hover:shadow-md transition space-y-2 flex flex-col justify-between">
-                                            <div>
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <h5 className="text-xs font-bold text-slate-900 leading-snug">
-                                                        {theory.name}
-                                                    </h5>
-                                                    <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded font-medium shrink-0">
-                                                        ทฤษฎีที่ {idx + 1}
-                                                    </span>
+                                    {chapter2Analysis.theories?.map((theory, idx) => {
+                                        const isSelected = selectedTheoryIds.includes(theory.id || theory.name);
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={`rounded-2xl p-4 border transition space-y-2 flex flex-col justify-between ${
+                                                    isSelected 
+                                                        ? 'bg-emerald-50/40 border-emerald-500 shadow-md ring-2 ring-emerald-500/20' 
+                                                        : 'bg-white border-slate-200 hover:border-emerald-300'
+                                                }`}
+                                            >
+                                                <div>
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <label className="flex items-start gap-2 cursor-pointer select-none">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                onChange={() => handleToggleTheory(theory.id || theory.name)}
+                                                                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 mt-0.5 cursor-pointer"
+                                                            />
+                                                            <h5 className="text-xs font-bold text-slate-900 leading-snug">
+                                                                {theory.name}
+                                                            </h5>
+                                                        </label>
+                                                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] rounded font-medium shrink-0">
+                                                            ทฤษฎีที่ {idx + 1}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] text-emerald-700 font-medium mt-1">
+                                                        โดย: {theory.theorist}
+                                                    </p>
+                                                    <div className="mt-2 pt-2 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
+                                                        <p className="text-[11px] leading-relaxed">
+                                                            <strong className="text-slate-800">ความสอดคล้อง:</strong> {theory.relevance}
+                                                        </p>
+                                                        <p className="text-[11px] leading-relaxed text-slate-500">
+                                                            <strong className="text-slate-700">ประเด็นสำคัญ:</strong> {theory.key_point}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-[11px] text-emerald-700 font-medium mt-0.5">
-                                                    โดย: {theory.theorist}
-                                                </p>
-                                                <div className="mt-2 pt-2 border-t border-slate-100 space-y-1.5 text-xs text-slate-600">
-                                                    <p className="text-[11px] leading-relaxed">
-                                                        <strong className="text-slate-800">ความสอดคล้อง:</strong> {theory.relevance}
-                                                    </p>
-                                                    <p className="text-[11px] leading-relaxed text-slate-500">
-                                                        <strong className="text-slate-700">ประเด็นสำคัญ:</strong> {theory.key_point}
-                                                    </p>
+                                                <div className="pt-2 flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleToggleTheory(theory.id || theory.name)}
+                                                        className={`flex-1 py-1.5 text-[11px] font-bold rounded-lg border transition ${
+                                                            isSelected
+                                                                ? 'bg-emerald-600 text-white border-emerald-600'
+                                                                : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                                        }`}
+                                                    >
+                                                        {isSelected ? '✓ เลือกแล้ว' : 'คลิกเลือกทฤษฎีนี้'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleInsertSingleTheory(theory)}
+                                                        className="py-1.5 px-2.5 bg-white hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 hover:border-emerald-300 transition shrink-0"
+                                                        title="แทรกทฤษฎีนี้ลงในข้อ ๒.๑ ทันที พร้อมเพิ่มรายการอ้างอิง"
+                                                    >
+                                                        ➕ แทรกข้อ ๒.๑
+                                                    </button>
                                                 </div>
                                             </div>
-                                            <div className="pt-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const snippet = `\n\n• ${theory.name} (${theory.theorist}): ${theory.relevance} ${theory.key_point}`;
-                                                        setChapter2Sections(prev => ({
-                                                            ...prev,
-                                                            section_2_1: (prev.section_2_1 || '') + snippet
-                                                        }));
-                                                        Swal.fire({
-                                                            toast: true,
-                                                            position: 'top-end',
-                                                            icon: 'success',
-                                                            title: `เพิ่ม ${theory.name} ลงในข้อ ๒.๑ แล้ว`,
-                                                            showConfirmButton: false,
-                                                            timer: 1500
-                                                        });
-                                                    }}
-                                                    className="w-full py-1.5 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 text-[11px] font-bold rounded-lg border border-slate-200 transition flex items-center justify-center gap-1"
-                                                >
-                                                    <span>➕</span> แทรกทฤษฎีนี้ลงในข้อ ๒.๑
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
+
+                            {/* Relevant Researches Section */}
+                            {chapter2Analysis.researches?.length > 0 && (
+                                <div className="space-y-3 pt-4 border-t border-slate-100">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                                                <span>📖</span> เอกสารและงานวิจัยที่เกี่ยวข้อง ({chapter2Analysis.researches.length} รายการที่สอดคล้องกับโครงการ)
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500">
+                                                สังเคราะห์ตรงตามสาระของโครงการ พร้อมข้อมูลอ้างอิงและผลการศึกษาที่เกี่ยวข้อง
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleInsertAllResearches}
+                                            className="px-3 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-lg border border-teal-200 transition flex items-center gap-1.5 self-start sm:self-auto"
+                                        >
+                                            <span>📥</span>
+                                            <span>นำงานวิจัยทั้งหมดใส่ลงในข้อ ๒.๓</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {chapter2Analysis.researches.map((res, rIdx) => (
+                                            <div key={rIdx} className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-200 hover:border-emerald-300 transition space-y-2 flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <h5 className="text-xs font-bold text-slate-900 leading-snug">
+                                                            {res.author}
+                                                        </h5>
+                                                        <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] rounded font-semibold shrink-0">
+                                                            งานวิจัยที่ {rIdx + 1}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-[11px] text-emerald-700 font-medium italic mt-0.5">
+                                                        "{res.title}"
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-500">
+                                                        แหล่งเผยแพร่: {res.source}
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-600 mt-1 leading-relaxed">
+                                                        <strong className="text-slate-700">สาระสำคัญ:</strong> {res.relevance}
+                                                    </p>
+                                                </div>
+                                                <div className="pt-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleInsertSingleResearch(res)}
+                                                        className="w-full py-1.5 bg-white hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 hover:border-emerald-300 transition flex items-center justify-center gap-1"
+                                                    >
+                                                        <span>➕</span> แทรกงานวิจัยนี้ลงในข้อ ๒.๓ (พร้อมอ้างอิง)
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Suggested topics for literature search */}
                             {chapter2Analysis.suggested_topics?.length > 0 && (
@@ -15032,12 +15381,12 @@ return (
 
                     {/* Section 2.1 */}
                     <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
                                 <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๑</span>
                                 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง
                             </label>
-                            <span className="text-[11px] text-slate-400">ระบุรายละเอียดทฤษฎี ผู้พัฒนา และการนำมาประยุกต์ใช้</span>
+                            <span className="text-[11px] text-slate-400">เลือกทฤษฎีจากการ์ดด้านบนแล้วกดนำเข้า หรือพิมพ์ระบุเพิ่มเติม</span>
                         </div>
                         <textarea
                             rows={8}
@@ -15068,12 +15417,20 @@ return (
 
                     {/* Section 2.3 */}
                     <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
                                 <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๓</span>
                                 เอกสารและงานวิจัยที่เกี่ยวข้อง
                             </label>
-                            <span className="text-[11px] text-slate-400">ค้นคว้าเพิ่มเติมและระบุงานวิจัยทั้งในประเทศและต่างประเทศ</span>
+                            {chapter2Analysis?.researches?.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleInsertAllResearches}
+                                    className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline flex items-center gap-1 self-start sm:self-auto"
+                                >
+                                    <span>📥</span> นำงานวิจัยที่วิเคราะห์ได้ทั้งหมด ({chapter2Analysis.researches.length} เรื่อง) ใส่ลงในช่องนี้
+                                </button>
+                            )}
                         </div>
                         <textarea
                             rows={6}
@@ -15086,15 +15443,24 @@ return (
 
                     {/* References */}
                     <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
                                 <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">บรรณานุกรม</span>
                                 เอกสารอ้างอิงและบรรณานุกรม (APA Format)
                             </label>
-                            <span className="text-[11px] text-slate-400">รายชื่อหนังสือ วารสาร งานวิจัย และเว็บไซต์อ้างอิง</span>
+                            {chapter2Analysis && (
+                                <button
+                                    type="button"
+                                    onClick={handleSyncReferences}
+                                    className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-2xs self-start sm:self-auto"
+                                    title="ตรวจสอบข้อความในข้อ ๒.๑, ๒.๒ และ ๒.๓ แล้วดึงรายการอ้างอิงที่ตรงกันให้ครบถ้วนทุกรายการ"
+                                >
+                                    <span>✨</span> ตรวจสอบและซิงค์รายการอ้างอิงให้ครบถ้วน 100%
+                                </button>
+                            )}
                         </div>
                         <textarea
-                            rows={5}
+                            rows={6}
                             value={safeString(chapter2Sections.references)}
                             onChange={(e) => setChapter2Sections({ ...chapter2Sections, references: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
