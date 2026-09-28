@@ -1104,13 +1104,54 @@ export default function Dashboard({
         }
     };
 
+    const toThaiNumber = (num) => {
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return String(num).replace(/[0-9]/g, d => thaiDigits[d]);
+    };
+
+    const renumberSubsections = (text, prefix) => {
+        if (!text || typeof text !== 'string') return '';
+        const thaiPrefix = prefix === '๒.๑' ? '๒\\.๑' : '๒\\.๓';
+        const arabicPrefix = prefix === '๒.๑' ? '2\\.1' : '2\\.3';
+        const pattern = new RegExp('(^|\\n)[ \\t]*(?:' + thaiPrefix + '|' + arabicPrefix + ')\\.[๑-๙0-9]+[.\\s]*', 'g');
+        let idx = 0;
+        return text.replace(pattern, (match, p1) => {
+            idx++;
+            return `${p1}${prefix}.${toThaiNumber(idx)} `;
+        });
+    };
+
+    const handleAutoRenumberSection2_1 = () => {
+        if (!chapter2Sections.section_2_1) return;
+        const renumbered = renumberSubsections(chapter2Sections.section_2_1, '๒.๑');
+        setChapter2Sections(prev => ({ ...prev, section_2_1: renumbered }));
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'จัดเรียงลำดับหัวข้อย่อย ๒.๑.๑, ๒.๑.๒... สำเร็จ',
+            showConfirmButton: false,
+            timer: 1800
+        });
+    };
+
+    const handleAutoRenumberSection2_3 = () => {
+        if (!chapter2Sections.section_2_3) return;
+        const renumbered = renumberSubsections(chapter2Sections.section_2_3, '๒.๓');
+        setChapter2Sections(prev => ({ ...prev, section_2_3: renumbered }));
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'จัดเรียงลำดับหัวข้อย่อย ๒.๓.๑, ๒.๓.๒... สำเร็จ',
+            showConfirmButton: false,
+            timer: 1800
+        });
+    };
+
     const handleInsertSingleTheory = (theory) => {
         if (!theory) return;
-        const thaiSubNums = ['๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙', '๑๐'];
-        const existingCount = (chapter2Sections.section_2_1.match(/๒\.๑\.\d+/g) || []).length;
-        const nextNum = thaiSubNums[existingCount] || (existingCount + 1);
-
-        const heading = `๒.๑.${nextNum} ${theory.name}`;
+        const heading = `๒.๑.๑ ${theory.name}`;
         const body = theory.content || `${theory.relevance} ${theory.key_point}`;
 
         setChapter2Sections(prev => {
@@ -1120,6 +1161,9 @@ export default function Dashboard({
             } else {
                 updated2_1 = `${updated2_1}\n\n${heading}\n${body}`;
             }
+            // Automatically renumber ALL subsections consecutively (๒.๑.๑, ๒.๑.๒, ๒.๑.๓...)
+            updated2_1 = renumberSubsections(updated2_1, '๒.๑');
+
             return {
                 ...prev,
                 section_2_1: updated2_1,
@@ -1131,7 +1175,7 @@ export default function Dashboard({
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: `เพิ่ม ${theory.name} และรายการอ้างอิงแล้ว`,
+            title: `เพิ่ม ${theory.name} และจัดลำดับหัวข้อเรียบร้อยแล้ว`,
             showConfirmButton: false,
             timer: 1800
         });
@@ -1151,26 +1195,27 @@ export default function Dashboard({
             return;
         }
 
-        const thaiSubNums = ['๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙', '๑๐'];
         let text2_1 = `๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง\n\nในการวางแผนและดำเนินงานโครงการ "${activeChapter1Project?.title || ''}" ได้บูรณาการแนวคิดและทฤษฎีที่สำคัญ ดังนี้\n\n`;
         let newRefs = chapter2Sections.references || 'เอกสารอ้างอิง\n\n';
 
         selected.forEach((t, idx) => {
-            const num = thaiSubNums[idx] || (idx + 1);
+            const num = toThaiNumber(idx + 1);
             text2_1 += `๒.๑.${num} ${t.name}\n${t.content || t.relevance}\n\n`;
             newRefs = appendReference(newRefs, t.reference);
         });
 
+        const cleaned2_1 = renumberSubsections(text2_1.trim(), '๒.๑');
+
         setChapter2Sections(prev => ({
             ...prev,
-            section_2_1: text2_1.trim(),
+            section_2_1: cleaned2_1,
             references: newRefs.trim()
         }));
 
         Swal.fire({
             icon: 'success',
             title: 'นำทฤษฎีที่เลือกลงในข้อ ๒.๑ แล้ว',
-            text: `นำเข้า ${selected.length} ทฤษฎีที่เลือก พร้อมอัปเดตรายการอ้างอิงในบรรณานุกรมเรียบร้อยแล้ว`,
+            text: `นำเข้า ${selected.length} ทฤษฎีที่เลือก พร้อมจัดลำดับหัวข้อ ๒.๑.๑ - ๒.๑.${toThaiNumber(selected.length)} และอัปเดตรายการอ้างอิงเรียบร้อยแล้ว`,
             confirmButtonText: 'ตกลง',
             confirmButtonColor: '#059669',
             timer: 2000
@@ -1179,11 +1224,7 @@ export default function Dashboard({
 
     const handleInsertSingleResearch = (research) => {
         if (!research) return;
-        const thaiSubNums = ['๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙', '๑๐'];
-        const existingCount = (chapter2Sections.section_2_3.match(/๒\.๓\.\d+/g) || []).length;
-        const nextNum = thaiSubNums[existingCount] || (existingCount + 1);
-
-        const heading = `๒.๓.${nextNum} ${research.author}`;
+        const heading = `๒.๓.๑ ${research.author}`;
         const body = research.content;
 
         setChapter2Sections(prev => {
@@ -1193,6 +1234,9 @@ export default function Dashboard({
             } else {
                 updated2_3 = `${updated2_3}\n\n${heading}\n${body}`;
             }
+            // Automatically renumber ALL subsections consecutively (๒.๓.๑, ๒.๓.๒, ๒.๓.๓...)
+            updated2_3 = renumberSubsections(updated2_3, '๒.๓');
+
             return {
                 ...prev,
                 section_2_3: updated2_3,
@@ -1204,7 +1248,7 @@ export default function Dashboard({
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: `เพิ่มงานวิจัย ${research.author} และรายการอ้างอิงแล้ว`,
+            title: `เพิ่มงานวิจัย ${research.author} และจัดลำดับหัวข้อเรียบร้อยแล้ว`,
             showConfirmButton: false,
             timer: 1800
         });
@@ -1212,26 +1256,27 @@ export default function Dashboard({
 
     const handleInsertAllResearches = () => {
         if (!chapter2Analysis?.researches || chapter2Analysis.researches.length === 0) return;
-        const thaiSubNums = ['๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙', '๑๐'];
         let text2_3 = `๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง\n\nจากการสำรวจและรวบรวมงานวิจัยทางวิชาการและเอกสารที่เกี่ยวข้องกับโครงการ มีเอกสารและงานวิจัยที่สำคัญดังนี้\n\n`;
         let newRefs = chapter2Sections.references || 'เอกสารอ้างอิง\n\n';
 
         chapter2Analysis.researches.forEach((r, idx) => {
-            const num = thaiSubNums[idx] || (idx + 1);
+            const num = toThaiNumber(idx + 1);
             text2_3 += `๒.๓.${num} ${r.author}\n${r.content}\n\n`;
             newRefs = appendReference(newRefs, r.reference);
         });
 
+        const cleaned2_3 = renumberSubsections(text2_3.trim(), '๒.๓');
+
         setChapter2Sections(prev => ({
             ...prev,
-            section_2_3: text2_3.trim(),
+            section_2_3: cleaned2_3,
             references: newRefs.trim()
         }));
 
         Swal.fire({
             icon: 'success',
             title: 'นำงานวิจัยทั้งหมดลงในข้อ ๒.๓ แล้ว',
-            text: `นำเข้า ${chapter2Analysis.researches.length} งานวิจัย พร้อมซิงค์รายการอ้างอิงเรียบร้อยแล้ว`,
+            text: `นำเข้า ${chapter2Analysis.researches.length} งานวิจัย พร้อมจัดลำดับหัวข้อ ๒.๓.๑ - ๒.๓.${toThaiNumber(chapter2Analysis.researches.length)} เรียบร้อยแล้ว`,
             confirmButtonText: 'ตกลง',
             confirmButtonColor: '#059669',
             timer: 2000
@@ -1392,25 +1437,36 @@ export default function Dashboard({
     const handleSaveChapter2 = async () => {
         if (!activeChapter1Project) return;
         setIsSavingChapter2(true);
+
+        // Ensure all subsections in ๒.๑ and ๒.๓ are sequentially numbered
+        const cleanedSec2_1 = renumberSubsections(chapter2Sections.section_2_1, '๒.๑');
+        const cleanedSec2_3 = renumberSubsections(chapter2Sections.section_2_3, '๒.๓');
+        const updatedSections = {
+            ...chapter2Sections,
+            section_2_1: cleanedSec2_1,
+            section_2_3: cleanedSec2_3
+        };
+        setChapter2Sections(updatedSections);
+
         const fullContent = [
             "บทที่ ๒",
             "เอกสารและงานวิจัยที่เกี่ยวข้อง\n",
-            chapter2Sections.intro,
-            chapter2Sections.section_2_1,
-            chapter2Sections.section_2_2,
-            chapter2Sections.section_2_3,
-            chapter2Sections.references
+            updatedSections.intro,
+            updatedSections.section_2_1,
+            updatedSections.section_2_2,
+            updatedSections.section_2_3,
+            updatedSections.references
         ].filter(Boolean).join("\n\n");
 
         try {
             await window.axios.post(route('projects.chapter2.save', activeChapter1Project.id), {
-                sections: chapter2Sections,
-                chapter_2_sections: chapter2Sections,
+                sections: updatedSections,
+                chapter_2_sections: updatedSections,
                 full_content: fullContent,
                 chapter_2_content: fullContent
             });
 
-            activeChapter1Project.chapter_2_sections = chapter2Sections;
+            activeChapter1Project.chapter_2_sections = updatedSections;
             activeChapter1Project.chapter_2_content = fullContent;
 
             Swal.fire({
@@ -15386,7 +15442,18 @@ return (
                                 <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๑</span>
                                 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง
                             </label>
-                            <span className="text-[11px] text-slate-400">เลือกทฤษฎีจากการ์ดด้านบนแล้วกดนำเข้า หรือพิมพ์ระบุเพิ่มเติม</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleAutoRenumberSection2_1}
+                                    className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline flex items-center gap-1"
+                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น ๒.๑.๑, ๒.๑.๒, ๒.๑.๓... อัตโนมัติ"
+                                >
+                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (๒.๑.๑, ๒.๑.๒...)
+                                </button>
+                                <span className="text-[11px] text-slate-300 hidden sm:inline">|</span>
+                                <span className="text-[11px] text-slate-400">เลือกทฤษฎีจากการ์ดด้านบน หรือพิมพ์ระบุเพิ่มเติม</span>
+                            </div>
                         </div>
                         <textarea
                             rows={8}
@@ -15422,15 +15489,28 @@ return (
                                 <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๓</span>
                                 เอกสารและงานวิจัยที่เกี่ยวข้อง
                             </label>
-                            {chapter2Analysis?.researches?.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-2">
                                 <button
                                     type="button"
-                                    onClick={handleInsertAllResearches}
-                                    className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline flex items-center gap-1 self-start sm:self-auto"
+                                    onClick={handleAutoRenumberSection2_3}
+                                    className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline flex items-center gap-1"
+                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น ๒.๓.๑, ๒.๓.๒, ๒.๓.๓... อัตโนมัติ"
                                 >
-                                    <span>📥</span> นำงานวิจัยที่วิเคราะห์ได้ทั้งหมด ({chapter2Analysis.researches.length} เรื่อง) ใส่ลงในช่องนี้
+                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (๒.๓.๑, ๒.๓.๒...)
                                 </button>
-                            )}
+                                {chapter2Analysis?.researches?.length > 0 && (
+                                    <>
+                                        <span className="text-[11px] text-slate-300 hidden sm:inline">|</span>
+                                        <button
+                                            type="button"
+                                            onClick={handleInsertAllResearches}
+                                            className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline flex items-center gap-1 self-start sm:self-auto"
+                                        >
+                                            <span>📥</span> นำงานวิจัยทั้งหมด ({chapter2Analysis.researches.length} เรื่อง) ใส่ลงในช่องนี้
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                         <textarea
                             rows={6}
