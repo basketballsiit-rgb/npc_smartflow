@@ -58,26 +58,63 @@ export default function PrintChapter2({ project }) {
                     text-indent: -1.5cm !important;
                 }
 
+                .thai-indent {
+                    text-indent: 1.5cm !important;
+                }
+
+                .thai-hanging-indent {
+                    padding-left: 1.5cm !important;
+                    text-indent: -1.5cm !important;
+                }
+
+                .thai-content {
+                    text-align: justify !important;
+                    text-justify: inter-cluster !important;
+                    line-height: var(--doc-line-height) !important;
+                }
+
                 .print-doc-container {
                     font-size: var(--doc-font-size) !important;
                     line-height: var(--doc-line-height) !important;
-                    box-sizing: border-box;
+                    box-sizing: border-box !important;
+                    width: 210mm !important;
+                    max-width: 100% !important;
+                    min-height: 297mm;
+                    padding-left: 1in !important;
+                    padding-right: 1in !important;
+                    padding-top: 1in !important;
+                    padding-bottom: 1in !important;
+                    background: #ffffff !important;
+                }
+
+                @media (max-width: 768px) {
+                    .print-doc-container {
+                        padding-left: 0.5in !important;
+                        padding-right: 0.5in !important;
+                        padding-top: 0.5in !important;
+                        padding-bottom: 0.5in !important;
+                    }
                 }
 
                 .print-title {
                     font-size: var(--title-font-size) !important;
                     font-weight: bold !important;
+                    line-height: 1.3 !important;
                 }
 
                 .print-heading {
                     font-size: var(--heading-font-size) !important;
                     font-weight: bold !important;
+                    line-height: 1.4 !important;
                 }
 
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 1in !important;
+                        margin-top: 1in !important;
+                        margin-bottom: 1in !important;
+                        margin-left: 1in !important;
+                        margin-right: 1in !important;
                     }
                     html, body {
                         width: 100% !important;
@@ -98,6 +135,7 @@ export default function PrintChapter2({ project }) {
                         margin: 0 !important;
                         width: 100% !important;
                         max-width: 100% !important;
+                        min-height: auto !important;
                         border: none !important;
                         box-shadow: none !important;
                     }
@@ -190,16 +228,13 @@ export default function PrintChapter2({ project }) {
                 </div>
             </div>
 
-            {/* Document Container (A4 Portrait simulation on screen, 1in margins in print - Identical to Print.jsx) */}
-            <div className="print-doc-container font-sarabun max-w-4xl mx-auto bg-white p-8 md:p-12 shadow-md rounded-2xl print:p-0 print:m-0 print:shadow-none print:border-none print:rounded-none">
+            {/* Document Container */}
+            <div className="print-doc-container font-sarabun mx-auto bg-white shadow-md rounded-2xl print:p-0 print:m-0 print:shadow-none print:border-none print:rounded-none">
                 
                 {/* Chapter Heading */}
-                <div className="text-center mb-8 pb-4 border-b border-slate-200 print:border-none">
+                <div className="text-center mb-8">
                     <h2 className="print-title tracking-wide text-black mb-1">บทที่ ๒</h2>
                     <h1 className="print-title tracking-wide text-black">เอกสารและงานวิจัยที่เกี่ยวข้อง</h1>
-                    <p className="text-sm md:text-base font-semibold text-slate-700 print:text-black mt-2">
-                        โครงการ: {project.title}
-                    </p>
                 </div>
 
                 {/* Content Render */}
