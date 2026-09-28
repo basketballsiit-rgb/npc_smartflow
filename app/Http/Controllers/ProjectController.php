@@ -1430,11 +1430,17 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'sections' => 'nullable|array',
             'full_content' => 'nullable|string',
+            'chapter_1_sections' => 'nullable|array',
+            'chapter_1_content' => 'nullable|string',
         ]);
 
-        $project->chapter_1_sections = $validated['sections'] ?? $project->chapter_1_sections;
-        $project->chapter_1_content = $validated['full_content'] ?? $project->chapter_1_content;
+        $project->chapter_1_sections = $validated['sections'] ?? $validated['chapter_1_sections'] ?? $project->chapter_1_sections;
+        $project->chapter_1_content = $validated['full_content'] ?? $validated['chapter_1_content'] ?? $project->chapter_1_content;
         $project->save();
+
+        if ($request->header('X-Inertia')) {
+            return redirect()->back()->with('message', 'บันทึกเนื้อหาบทที่ ๑ เรียบร้อยแล้ว');
+        }
 
         return response()->json([
             'success' => true,
@@ -1462,11 +1468,17 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'sections' => 'nullable|array',
             'full_content' => 'nullable|string',
+            'chapter_2_sections' => 'nullable|array',
+            'chapter_2_content' => 'nullable|string',
         ]);
 
-        $project->chapter_2_sections = $validated['sections'] ?? $project->chapter_2_sections;
-        $project->chapter_2_content = $validated['full_content'] ?? $project->chapter_2_content;
+        $project->chapter_2_sections = $validated['sections'] ?? $validated['chapter_2_sections'] ?? $project->chapter_2_sections;
+        $project->chapter_2_content = $validated['full_content'] ?? $validated['chapter_2_content'] ?? $project->chapter_2_content;
         $project->save();
+
+        if ($request->header('X-Inertia')) {
+            return redirect()->back()->with('message', 'บันทึกเนื้อหาบทที่ ๒ เรียบร้อยแล้ว');
+        }
 
         return response()->json([
             'success' => true,

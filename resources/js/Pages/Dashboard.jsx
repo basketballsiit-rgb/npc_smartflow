@@ -850,7 +850,6 @@ export default function Dashboard({
     }, [allProjectsMaster, teacherData]);
 
     const [selectedChapter1ProjectId, setSelectedChapter1ProjectId] = useState('');
-    const [chapter1ViewMode, setChapter1ViewMode] = useState('preview'); // 'preview' | 'edit'
     const [chapter1Sections, setChapter1Sections] = useState({
         background: '',
         objectives: '',
@@ -982,34 +981,43 @@ export default function Dashboard({
         }
     }, [activeChapter1Project?.id]);
 
-    const handleSaveChapter1 = () => {
+    const handleSaveChapter1 = async () => {
         if (!activeChapter1Project) return;
         setIsSavingChapter1(true);
         const payload = {
             ...chapter1Sections,
             benefits: chapter1Sections.expected_benefits
         };
-        router.post(route('projects.chapter1.save', activeChapter1Project.id), {
-            chapter_1_sections: payload,
-            chapter_1_content: ''
-        }, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setIsSavingChapter1(false);
-                activeChapter1Project.chapter_1_sections = payload;
-                Swal.fire({
-                    icon: 'success',
-                    title: 'บันทึกบทที่ ๑ สำเร็จ',
-                    text: 'บันทึกข้อมูลรายงานบทที่ ๑ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
-                    timer: 1600,
-                    showConfirmButton: false
-                });
-            },
-            onError: (err) => {
-                setIsSavingChapter1(false);
-                Swal.fire('เกิดข้อผิดพลาด', Object.values(err)[0] || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
-            }
-        });
+
+        try {
+            await window.axios.post(route('projects.chapter1.save', activeChapter1Project.id), {
+                chapter_1_sections: payload,
+                sections: payload,
+                chapter_1_content: ''
+            });
+
+            activeChapter1Project.chapter_1_sections = payload;
+            Swal.fire({
+                icon: 'success',
+                title: 'บันทึกบทที่ ๑ สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ ๑ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#10b981',
+                timer: 2000,
+                timerProgressBar: true
+            });
+        } catch (error) {
+            console.error('Error saving Chapter 1:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการบันทึก',
+                text: error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#ef4444'
+            });
+        } finally {
+            setIsSavingChapter1(false);
+        }
     };
 
     const handleResetChapter1ToDefault = () => {
@@ -14322,30 +14330,10 @@ return (
 
                     {/* Toolbar / Actions */}
                     <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
-                        {/* View Mode Toggle */}
-                        <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
-                            <button
-                                type="button"
-                                onClick={() => setChapter1ViewMode('preview')}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                                    chapter1ViewMode === 'preview'
-                                        ? 'bg-white text-purple-950 shadow-md'
-                                        : 'text-white/80 hover:text-white hover:bg-white/10'
-                                }`}
-                            >
-                                <span>👁️</span> ตัวอย่างรายงาน (Preview)
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setChapter1ViewMode('edit')}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                                    chapter1ViewMode === 'edit'
-                                        ? 'bg-white text-purple-950 shadow-md'
-                                        : 'text-white/80 hover:text-white hover:bg-white/10'
-                                }`}
-                            >
-                                <span>✏️</span> แก้ไขเนื้อหา (Edit)
-                            </button>
+                        <div className="flex items-center gap-2">
+                            <span className="px-3.5 py-2 rounded-xl bg-white/10 text-white text-xs font-bold border border-white/15 flex items-center gap-1.5">
+                                <span>✏️</span> แบบฟอร์มจัดทำเนื้อหารายงาน บทที่ ๑ (บทนำ)
+                            </span>
                         </div>
 
                         {/* Right Buttons */}
@@ -14393,335 +14381,229 @@ return (
                                 rel="noopener noreferrer"
                                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-black transition shadow-md flex items-center gap-1.5"
                             >
-                                <span>🖨️</span> สั่งพิมพ์ A4 (บทที่ ๑)
+                                <span>🖨️</span> สั่งพิมพ์ / ดูตัวอย่าง A4 (บทที่ ๑)
                             </a>
                         </div>
                     </div>
                 </div>
 
-                {/* Main Content Area: Preview vs Edit */}
-                {chapter1ViewMode === 'preview' ? (
-                    <div className="space-y-4">
-                        {/* Notice & Quick Edit Link */}
-                        <div className="flex items-center justify-between bg-purple-50 border border-purple-200 px-4 py-3 rounded-2xl text-xs text-purple-900">
+                {/* Edit Mode Form */}
+                <div className="space-y-6">
+                    <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 gap-3">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <span>✏️</span> ปรับแต่งและแก้ไขข้อมูล บทที่ ๑ บทนำ
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    เนื้อหาด้านล่างนี้ถูกดึงมาจากแบบเสนอโครงการ (Proposal) อัตโนมัติ ท่านสามารถปรับภาษาให้เป็นเชิงวิชาการตามมาตรฐานรูปเล่ม ๕ บท
+                                </p>
+                            </div>
                             <div className="flex items-center gap-2">
-                                <span>💡</span>
-                                <span>รูปแบบการแสดงผลเสมือนเอกสารจริง (ระยะขอบ ๑ นิ้ว, เลขไทย, ย่อหน้าตามแบบมาตรฐานรายงานวิจัย สอศ.)</span>
-                            </div>
-                            <button
-                                onClick={() => setChapter1ViewMode('edit')}
-                                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-xs transition"
-                            >
-                                ✏️ แก้ไขเนื้อหาบทที่ ๑
-                            </button>
-                        </div>
-
-                        {/* Simulated Paper Document */}
-                        <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-8 md:p-14 border border-slate-200 text-slate-900 font-sans leading-relaxed">
-                            {/* Document Title Header */}
-                            <div className="text-center pb-6 mb-8 border-b border-slate-200">
-                                <h3 className="text-xl font-bold tracking-wide text-slate-900 mb-1">บทที่ ๑</h3>
-                                <h2 className="text-2xl font-black tracking-wide text-slate-900 mb-3">บทนำ</h2>
-                                <p className="text-base font-bold text-purple-950">
-                                    โครงการ: {activeChapter1Project.title}
-                                </p>
-                                <p className="text-sm text-slate-600 mt-1">
-                                    ประจำปีงบประมาณ พ.ศ. {toThaiNumerals(activeChapter1Project.academic_year || activeChapter1Project.fiscal_year || '2569')}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                    หน่วยงานผู้รับผิดชอบ: {activeChapter1Project.department?.name || 'วิทยาลัยสารพัดช่างน่าน'}
-                                </p>
-                            </div>
-
-                            {/* Section 1.1 */}
-                            <div className="space-y-3 mb-8">
-                                <h4 className="text-base font-bold text-slate-900">
-                                    ๑.๑ ความเป็นมาและความสำคัญของปัญหา
-                                </h4>
-                                <div className="text-justify indent-12 whitespace-pre-wrap text-sm text-slate-800 leading-relaxed">
-                                    {safeString(chapter1Sections.background) || safeString(activeChapter1Project.background_rationale) || 'ยังไม่ได้ระบุข้อมูลความเป็นมาและความสำคัญของปัญหา'}
-                                </div>
-                            </div>
-
-                            {/* Section 1.2 */}
-                            <div className="space-y-3 mb-8">
-                                <h4 className="text-base font-bold text-slate-900">
-                                    ๑.๒ วัตถุประสงค์ของโครงการ
-                                </h4>
-                                <div className="space-y-1.5 pl-6 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
-                                    {safeString(chapter1Sections.objectives) || 'ยังไม่ได้ระบุวัตถุประสงค์'}
-                                </div>
-                            </div>
-
-                            {/* Section 1.3 */}
-                            <div className="space-y-4 mb-8">
-                                <h4 className="text-base font-bold text-slate-900">
-                                    ๑.๓ ขอบเขตของโครงการ
-                                </h4>
-                                <div className="pl-4 space-y-3 text-sm text-slate-800">
-                                    <div>
-                                        <p className="font-bold text-slate-900 mb-1">๑.๓.๑ ขอบเขตด้านประชากรและกลุ่มเป้าหมาย</p>
-                                        <div className="indent-8 whitespace-pre-wrap">
-                                            {safeString(chapter1Sections.scope_target) || 'คณะครู บุคลากรทางการศึกษา และนักเรียน นักศึกษา'}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-slate-900 mb-1">๑.๓.๒ ขอบเขตด้านเนื้อหาและกิจกรรมการดำเนินงาน</p>
-                                        <div className="indent-8 whitespace-pre-wrap">
-                                            {safeString(chapter1Sections.scope_content) || 'การดำเนินกิจกรรมตามแผนปฏิบัติการที่กำหนด'}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-slate-900 mb-1">๑.๓.๓ ขอบเขตด้านสถานที่และระยะเวลาดำเนินการ</p>
-                                        <div className="indent-8 whitespace-pre-wrap">
-                                            {safeString(chapter1Sections.scope_location_time) || 'วิทยาลัยสารพัดช่างน่าน ภายในปีงบประมาณ'}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 1.4 */}
-                            <div className="space-y-3 mb-8">
-                                <h4 className="text-base font-bold text-slate-900">
-                                    ๑.๔ ตัวชี้วัดและเป้าหมายความสำเร็จ
-                                </h4>
-                                <div className="pl-4 space-y-2 text-sm text-slate-800">
-                                    <div>
-                                        <span className="font-bold text-slate-900">๑.๔.๑ ตัวชี้วัดเชิงปริมาณ: </span>
-                                        <span>{safeString(chapter1Sections.indicators_quantitative) || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-bold text-slate-900">๑.๔.๒ ตัวชี้วัดเชิงคุณภาพ: </span>
-                                        <span>{safeString(chapter1Sections.indicators_qualitative) || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป ไม่น้อยกว่าร้อยละ ๘๐'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 1.5 */}
-                            <div className="space-y-3 mb-8">
-                                <h4 className="text-base font-bold text-slate-900">
-                                    ๑.๕ ประโยชน์ที่คาดว่าจะได้รับ
-                                </h4>
-                                <div className="pl-6 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
-                                    {safeString(chapter1Sections.expected_benefits) || 'เกิดประโยชน์สูงสุดแก่ผู้เรียนและสถานศึกษา'}
-                                </div>
-                            </div>
-
-                            {/* Section 1.6 */}
-                            {Boolean(chapter1Sections.definitions) && (
-                                <div className="space-y-3 mb-8">
-                                    <h4 className="text-base font-bold text-slate-900">
-                                        ๑.๖ นิยามศัพท์เฉพาะ
-                                    </h4>
-                                    <div className="text-justify indent-12 whitespace-pre-wrap text-sm text-slate-800 leading-relaxed">
-                                        {safeString(chapter1Sections.definitions)}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    /* Edit Mode Form */
-                    <div className="space-y-6">
-                        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
-                            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                        <span>✏️</span> ปรับแต่งและแก้ไขข้อมูล บทที่ ๑ บทนำ
-                                    </h3>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        เนื้อหาด้านล่างนี้ถูกดึงมาจากแบบเสนอโครงการ (Proposal) อัตโนมัติ ท่านสามารถปรับภาษาให้เป็นเชิงวิชาการตามมาตรฐานรูปเล่ม ๕ บท
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleResetChapter1ToDefault}
-                                        className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
-                                    >
-                                        🔄 คืนค่าจากโครงการ
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* 1.1 ความเป็นมา */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๑</span>
-                                        ความเป็นมาและความสำคัญของปัญหา
-                                    </label>
-                                    <span className="text-[11px] text-slate-400">ระบุสภาพปัญหา เหตุผลความจำเป็น และหลักการในการจัดทำโครงการ</span>
-                                </div>
-                                <textarea
-                                    rows={7}
-                                    value={safeString(chapter1Sections.background)}
-                                    onChange={(e) => setChapter1Sections({ ...chapter1Sections, background: e.target.value })}
-                                    className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
-                                    placeholder="ระบุความเป็นมาและความสำคัญ..."
-                                />
-                            </div>
-
-                            {/* 1.2 วัตถุประสงค์ */}
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๒</span>
-                                        วัตถุประสงค์ของโครงการ
-                                    </label>
-                                    <span className="text-[11px] text-slate-400">พิมพ์แยกแต่ละข้อ เช่น ๑. เพื่อ... ๒. เพื่อ...</span>
-                                </div>
-                                <textarea
-                                    rows={4}
-                                    value={safeString(chapter1Sections.objectives)}
-                                    onChange={(e) => setChapter1Sections({ ...chapter1Sections, objectives: e.target.value })}
-                                    className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
-                                    placeholder="๑. เพื่อ...\n๒. เพื่อ..."
-                                />
-                            </div>
-
-                            {/* 1.3 ขอบเขตโครงการ */}
-                            <div className="space-y-3 pt-2">
-                                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๓</span>
-                                    ขอบเขตของโครงการ
-                                </label>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-0 md:pl-2">
-                                    <div className="space-y-1.5">
-                                        <span className="text-xs font-bold text-slate-700 block">๑.๓.๑ ประชากรและกลุ่มเป้าหมาย</span>
-                                        <textarea
-                                            rows={3}
-                                            value={safeString(chapter1Sections.scope_target)}
-                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_target: e.target.value })}
-                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
-                                            placeholder="กลุ่มเป้าหมาย จำนวนคน..."
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <span className="text-xs font-bold text-slate-700 block">๑.๓.๒ เนื้อหาและกิจกรรมการดำเนินงาน</span>
-                                        <textarea
-                                            rows={3}
-                                            value={safeString(chapter1Sections.scope_content)}
-                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_content: e.target.value })}
-                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
-                                            placeholder="กิจกรรมหลักที่ดำเนินการ..."
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <span className="text-xs font-bold text-slate-700 block">๑.๓.๓ สถานที่และระยะเวลา</span>
-                                        <textarea
-                                            rows={3}
-                                            value={safeString(chapter1Sections.scope_location_time)}
-                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_location_time: e.target.value })}
-                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
-                                            placeholder="สถานที่ วันเริ่มต้น-สิ้นสุด..."
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 1.4 ตัวชี้วัด */}
-                            <div className="space-y-3 pt-2">
-                                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๔</span>
-                                    ตัวชี้วัดและเป้าหมายความสำเร็จ
-                                </label>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-2">
-                                    <div className="space-y-1.5">
-                                        <span className="text-xs font-bold text-slate-700 block">๑.๔.๑ เชิงปริมาณ (Quantitative)</span>
-                                        <textarea
-                                            rows={2}
-                                            value={safeString(chapter1Sections.indicators_quantitative)}
-                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_quantitative: e.target.value })}
-                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
-                                            placeholder="ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐..."
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <span className="text-xs font-bold text-slate-700 block">๑.๔.๒ เชิงคุณภาพ (Qualitative)</span>
-                                        <textarea
-                                            rows={2}
-                                            value={safeString(chapter1Sections.indicators_qualitative)}
-                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_qualitative: e.target.value })}
-                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
-                                            placeholder="ระดับความพึงพอใจ ค่าเฉลี่ย ๓.๕๑ ขึ้นไป..."
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 1.5 ประโยชน์ที่คาดว่าจะได้รับ */}
-                            <div className="space-y-2 pt-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๕</span>
-                                        ประโยชน์ที่คาดว่าจะได้รับ
-                                    </label>
-                                    <span className="text-[11px] text-slate-400">ผลที่เกิดต่อผู้เรียน สถานศึกษา และหน่วยงาน</span>
-                                </div>
-                                <textarea
-                                    rows={4}
-                                    value={safeString(chapter1Sections.expected_benefits)}
-                                    onChange={(e) => setChapter1Sections({ ...chapter1Sections, expected_benefits: e.target.value })}
-                                    className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
-                                    placeholder="๑. ผู้เรียนได้รับความรู้และทักษะ...\n๒. สถานศึกษามีผลสัมฤทธิ์..."
-                                />
-                            </div>
-
-                            {/* 1.6 นิยามศัพท์เฉพาะ */}
-                            <div className="space-y-2 pt-2">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๖</span>
-                                        นิยามศัพท์เฉพาะ (ถ้ามี)
-                                    </label>
-                                    <span className="text-[11px] text-slate-400">คำศัพท์เฉพาะทางวิชาชีพหรือโครงการ</span>
-                                </div>
-                                <textarea
-                                    rows={3}
-                                    value={safeString(chapter1Sections.definitions)}
-                                    onChange={(e) => setChapter1Sections({ ...chapter1Sections, definitions: e.target.value })}
-                                    className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
-                                    placeholder="ระบุนิยามศัพท์เฉพาะที่ใช้ในโครงการนี้..."
-                                />
-                            </div>
-
-                            {/* Save Actions in Edit Mode */}
-                            <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
                                 <button
                                     type="button"
-                                    onClick={() => setChapter1ViewMode('preview')}
-                                    className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
+                                    onClick={handleResetChapter1ToDefault}
+                                    className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
                                 >
-                                    <span>👁️</span> ดูตัวอย่างรายงาน
+                                    🔄 คืนค่าจากโครงการ
                                 </button>
+                                <a
+                                    href={route('projects.chapter1.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-3.5 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
+                                >
+                                    <span>🖨️</span> ดูตัวอย่างรายงาน A4
+                                </a>
+                            </div>
+                        </div>
 
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={handleSaveChapter1}
-                                        disabled={isSavingChapter1}
-                                        className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
-                                    >
-                                        {isSavingChapter1 ? (
-                                            <>
-                                                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                                <span>กำลังบันทึก...</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span>💾</span>
-                                                <span>บันทึกบทที่ ๑</span>
-                                            </>
-                                        )}
-                                    </button>
+                        {/* 1.1 ความเป็นมา */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๑</span>
+                                    ความเป็นมาและความสำคัญของปัญหา
+                                </label>
+                                <span className="text-[11px] text-slate-400">ระบุสภาพปัญหา เหตุผลความจำเป็น และหลักการในการจัดทำโครงการ</span>
+                            </div>
+                            <textarea
+                                rows={7}
+                                value={safeString(chapter1Sections.background)}
+                                onChange={(e) => setChapter1Sections({ ...chapter1Sections, background: e.target.value })}
+                                className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                placeholder="ระบุความเป็นมาและความสำคัญ..."
+                            />
+                        </div>
+
+                        {/* 1.2 วัตถุประสงค์ */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๒</span>
+                                    วัตถุประสงค์ของโครงการ
+                                </label>
+                                <span className="text-[11px] text-slate-400">พิมพ์แยกแต่ละข้อ เช่น ๑. เพื่อ... ๒. เพื่อ...</span>
+                            </div>
+                            <textarea
+                                rows={4}
+                                value={safeString(chapter1Sections.objectives)}
+                                onChange={(e) => setChapter1Sections({ ...chapter1Sections, objectives: e.target.value })}
+                                className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                placeholder="๑. เพื่อ...\n๒. เพื่อ..."
+                            />
+                        </div>
+
+                        {/* 1.3 ขอบเขตโครงการ */}
+                        <div className="space-y-3 pt-2">
+                            <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๓</span>
+                                ขอบเขตของโครงการ
+                            </label>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-0 md:pl-2">
+                                <div className="space-y-1.5">
+                                    <span className="text-xs font-bold text-slate-700 block">๑.๓.๑ ประชากรและกลุ่มเป้าหมาย</span>
+                                    <textarea
+                                        rows={3}
+                                        value={safeString(chapter1Sections.scope_target)}
+                                        onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_target: e.target.value })}
+                                        className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                        placeholder="กลุ่มเป้าหมาย จำนวนคน..."
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <span className="text-xs font-bold text-slate-700 block">๑.๓.๒ เนื้อหาและกิจกรรมการดำเนินงาน</span>
+                                    <textarea
+                                        rows={3}
+                                        value={safeString(chapter1Sections.scope_content)}
+                                        onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_content: e.target.value })}
+                                        className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                        placeholder="กิจกรรมหลักที่ดำเนินการ..."
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <span className="text-xs font-bold text-slate-700 block">๑.๓.๓ สถานที่และระยะเวลา</span>
+                                    <textarea
+                                        rows={3}
+                                        value={safeString(chapter1Sections.scope_location_time)}
+                                        onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_location_time: e.target.value })}
+                                        className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                        placeholder="สถานที่ วันเริ่มต้น-สิ้นสุด..."
+                                    />
                                 </div>
                             </div>
                         </div>
+
+                        {/* 1.4 ตัวชี้วัด */}
+                        <div className="space-y-3 pt-2">
+                            <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๔</span>
+                                ตัวชี้วัดและเป้าหมายความสำเร็จ
+                            </label>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-2">
+                                <div className="space-y-1.5">
+                                    <span className="text-xs font-bold text-slate-700 block">๑.๔.๑ เชิงปริมาณ (Quantitative)</span>
+                                    <textarea
+                                        rows={2}
+                                        value={safeString(chapter1Sections.indicators_quantitative)}
+                                        onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_quantitative: e.target.value })}
+                                        className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                        placeholder="ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐..."
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <span className="text-xs font-bold text-slate-700 block">๑.๔.๒ เชิงคุณภาพ (Qualitative)</span>
+                                    <textarea
+                                        rows={2}
+                                        value={safeString(chapter1Sections.indicators_qualitative)}
+                                        onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_qualitative: e.target.value })}
+                                        className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                        placeholder="ระดับความพึงพอใจ ค่าเฉลี่ย ๓.๕๑ ขึ้นไป..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 1.5 ประโยชน์ที่คาดว่าจะได้รับ */}
+                        <div className="space-y-2 pt-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๕</span>
+                                    ประโยชน์ที่คาดว่าจะได้รับ
+                                </label>
+                                <span className="text-[11px] text-slate-400">ผลที่เกิดต่อผู้เรียน สถานศึกษา และหน่วยงาน</span>
+                            </div>
+                            <textarea
+                                rows={4}
+                                value={safeString(chapter1Sections.expected_benefits)}
+                                onChange={(e) => setChapter1Sections({ ...chapter1Sections, expected_benefits: e.target.value })}
+                                className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                placeholder="๑. ผู้เรียนได้รับความรู้และทักษะ...\n๒. สถานศึกษามีผลสัมฤทธิ์..."
+                            />
+                        </div>
+
+                        {/* 1.6 นิยามศัพท์เฉพาะ */}
+                        <div className="space-y-2 pt-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๖</span>
+                                    นิยามศัพท์เฉพาะ (ถ้ามี)
+                                </label>
+                                <span className="text-[11px] text-slate-400">คำศัพท์เฉพาะทางวิชาชีพหรือโครงการ</span>
+                            </div>
+                            <textarea
+                                rows={3}
+                                value={safeString(chapter1Sections.definitions)}
+                                onChange={(e) => setChapter1Sections({ ...chapter1Sections, definitions: e.target.value })}
+                                className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                placeholder="ระบุนิยามศัพท์เฉพาะที่ใช้ในโครงการนี้..."
+                            />
+                        </div>
+
+                        {/* Save Actions in Edit Mode */}
+                        <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                            <button
+                                type="button"
+                                onClick={handleResetChapter1ToDefault}
+                                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>🔄</span> ดึงข้อมูลตั้งต้นใหม่จากโครงการ
+                            </button>
+
+                            <div className="flex items-center gap-2">
+                                <a
+                                    href={route('projects.chapter1.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5"
+                                >
+                                    <span>🖨️</span> ดูตัวอย่างและพิมพ์ A4
+                                </a>
+
+                                <button
+                                    type="button"
+                                    onClick={handleSaveChapter1}
+                                    disabled={isSavingChapter1}
+                                    className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                                >
+                                    {isSavingChapter1 ? (
+                                        <>
+                                            <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            <span>กำลังบันทึก...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>💾</span>
+                                            <span>บันทึกบทที่ ๑</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                )}
+                </div>
             </div>
         );
     };
