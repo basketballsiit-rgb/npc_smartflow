@@ -202,6 +202,10 @@ Route::middleware('auth')->group(function () {
     // Final stitched report download
     Route::get('projects/{project}/download-report', [ProjectController::class, 'downloadReport'])->name('projects.download_report');
 
+    // Chapter 1 Content Save and Print
+    Route::post('projects/{project}/chapter-1/save', [ProjectController::class, 'saveChapter1'])->name('projects.chapter1.save');
+    Route::get('projects/{project}/chapter-1/print', [ProjectController::class, 'printChapter1'])->name('projects.chapter1.print');
+
     // Chapter 2 AI Generation, Save, and Print
     Route::post('projects/{project}/chapter-2/generate', [ProjectController::class, 'generateChapter2'])->name('projects.chapter2.generate');
     Route::post('projects/{project}/chapter-2/save', [ProjectController::class, 'saveChapter2'])->name('projects.chapter2.save');

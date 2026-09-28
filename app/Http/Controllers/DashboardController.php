@@ -30,7 +30,11 @@ class DashboardController extends Controller
                ($user->isDepartmentHead() ? 'department_head' : 'teacher')))));
 
         $requestedTab = $request->query('tab');
-        if (!$requestedTab) {
+        $requestedChapter = $request->query('chapter');
+
+        if ($requestedChapter) {
+            $activeTab = 'chapter_' . $requestedChapter;
+        } else if (!$requestedTab) {
             if ($user->isAdmin()) $activeTab = 'admin_users';
             else if ($user->isPlanHead()) $activeTab = 'budgets';
             else if ($user->isProcurementHead()) $activeTab = 'procurement';
@@ -44,6 +48,7 @@ class DashboardController extends Controller
         $data = [
             'role' => $role,
             'currentTab' => $activeTab,
+            'currentChapter' => $requestedChapter ? (int)$requestedChapter : null,
         ];
 
         // Auto-cleanup any residual duplicate/imported test departments
@@ -731,7 +736,7 @@ class DashboardController extends Controller
             || $user->isProcurementHead() || $user->isProcurementStaff() 
             || $user->isFinanceStaff() || $user->isExecutive();
 
-        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals'])) {
+        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5'])) {
             $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
                 ->latest();
 

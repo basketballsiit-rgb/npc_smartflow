@@ -1423,6 +1423,38 @@ class ProjectController extends Controller
     }
 
     /**
+     * Save Chapter 1 content.
+     */
+    public function saveChapter1(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'sections' => 'nullable|array',
+            'full_content' => 'nullable|string',
+        ]);
+
+        $project->chapter_1_sections = $validated['sections'] ?? $project->chapter_1_sections;
+        $project->chapter_1_content = $validated['full_content'] ?? $project->chapter_1_content;
+        $project->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'บันทึกเนื้อหาบทที่ ๑ เรียบร้อยแล้ว'
+        ]);
+    }
+
+    /**
+     * Display printable official Chapter 1 document.
+     */
+    public function printChapter1(Project $project)
+    {
+        $project->load(['department', 'user', 'fundingSource', 'budget.fundingSource']);
+
+        return Inertia::render('Projects/PrintChapter1', [
+            'project' => $project,
+        ]);
+    }
+
+    /**
      * Save Chapter 2 content.
      */
     public function saveChapter2(Request $request, Project $project)

@@ -30,7 +30,8 @@ export default function Dashboard({
     nextUnifiedDocNumber = '',
     divisionBudgetRequests = [],
     institutionalExpenditureProjections = null,
-    currentTab
+    currentTab,
+    currentChapter
 }) {
     const { auth, flash, departments_data } = usePage().props;
     const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
@@ -726,6 +727,11 @@ export default function Dashboard({
     }, [flash]);
 
     const getDefaultTab = () => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ch = urlParams.get('chapter');
+            if (ch) return `chapter_${ch}`;
+        }
         if (currentTab) {
             if (currentTab === 'proposals') return 'document_tracking';
             return currentTab;
@@ -765,6 +771,216 @@ export default function Dashboard({
     };
 
     const [activeTab, setActiveTab] = useState(getDefaultTab());
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ch = urlParams.get('chapter');
+            if (ch) {
+                setActiveTab(`chapter_${ch}`);
+                return;
+            }
+        }
+        if (currentChapter) {
+            setActiveTab(`chapter_${currentChapter}`);
+            return;
+        }
+        if (currentTab) {
+            setActiveTab(currentTab === 'proposals' ? 'document_tracking' : currentTab);
+        }
+    }, [currentTab, currentChapter]);
+
+    // ==========================================
+    // 5-Chapter Project Report State & Handlers
+    // ==========================================
+    const toThaiNumerals = (num) => {
+        if (num === null || num === undefined) return '';
+        const thDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return String(num).replace(/[0-9]/g, (d) => thDigits[parseInt(d, 10)]);
+    };
+
+    const chapter1Projects = React.useMemo(() => {
+        const masterList = Array.isArray(allProjectsMaster) ? allProjectsMaster : [];
+        const teacherList = Array.isArray(teacherData?.projects) ? teacherData.projects : [];
+        const map = new Map();
+        [...masterList, ...teacherList].forEach(p => {
+            if (p && p.id && !map.has(p.id)) {
+                map.set(p.id, p);
+            }
+        });
+        return Array.from(map.values());
+    }, [allProjectsMaster, teacherData]);
+
+    const [selectedChapter1ProjectId, setSelectedChapter1ProjectId] = useState('');
+    const [chapter1ViewMode, setChapter1ViewMode] = useState('preview'); // 'preview' | 'edit'
+    const [chapter1Sections, setChapter1Sections] = useState({
+        background: '',
+        objectives: '',
+        scope_target: '',
+        scope_content: '',
+        scope_location_time: '',
+        indicators_quantitative: '',
+        indicators_qualitative: '',
+        expected_benefits: '',
+        definitions: ''
+    });
+    const [isSavingChapter1, setIsSavingChapter1] = useState(false);
+
+    const activeChapter1Project = React.useMemo(() => {
+        if (!selectedChapter1ProjectId && chapter1Projects.length > 0) {
+            return chapter1Projects[0];
+        }
+        return chapter1Projects.find(p => String(p.id) === String(selectedChapter1ProjectId)) || chapter1Projects[0] || null;
+    }, [chapter1Projects, selectedChapter1ProjectId]);
+
+    const populateChapter1FromProject = (proj) => {
+        if (!proj) return;
+
+        // Parse objectives
+        let objsText = '';
+        if (Array.isArray(proj.objectives)) {
+            objsText = proj.objectives.map((o, idx) => {
+                const text = typeof o === 'string' ? o : (o?.title || o?.name || o?.text || '');
+                return `${toThaiNumerals(idx + 1)}. ${text}`;
+            }).filter(Boolean).join('\n');
+        } else if (typeof proj.objectives === 'string') {
+            objsText = proj.objectives;
+        }
+
+        // Parse targets/scope
+        let targetText = '';
+        if (typeof proj.targets === 'string') {
+            targetText = proj.targets;
+        } else if (Array.isArray(proj.targets)) {
+            targetText = proj.targets.map(t => typeof t === 'string' ? t : (t.description || t.title || t.name || '')).filter(Boolean).join(', ');
+        } else if (proj.targets && typeof proj.targets === 'object') {
+            const parts = [];
+            if (proj.targets.target_group) parts.push(`กลุ่มเป้าหมาย: ${proj.targets.target_group}`);
+            if (proj.targets.quantity) parts.push(`จำนวน: ${toThaiNumerals(proj.targets.quantity)} คน`);
+            if (proj.targets.details) parts.push(proj.targets.details);
+            targetText = parts.join('\n') || JSON.stringify(proj.targets);
+        }
+
+        // Parse activities/content
+        let contentText = '';
+        if (Array.isArray(proj.activities)) {
+            contentText = proj.activities.map((a, idx) => `${toThaiNumerals(idx + 1)}. ${a.name || a.title || a || ''}`).join('\n');
+        } else if (typeof proj.activities === 'string') {
+            contentText = proj.activities;
+        }
+
+        // Location & Time
+        const locTime = [
+            proj.location ? `สถานที่ดำเนินโครงการ: ${proj.location}` : 'สถานที่ดำเนินโครงการ: วิทยาลัยสารพัดช่างน่าน',
+            proj.start_date ? `ระยะเวลาดำเนินการ: ตั้งแต่วันที่ ${toThaiNumerals(proj.start_date)} ถึง ${toThaiNumerals(proj.end_date || proj.start_date)}` : ''
+        ].filter(Boolean).join('\n');
+
+        // Indicators
+        let quantInd = '';
+        let qualInd = '';
+        if (proj.indicators && typeof proj.indicators === 'object') {
+            quantInd = proj.indicators.quantitative || proj.indicators.quant || '';
+            qualInd = proj.indicators.qualitative || proj.indicators.qual || '';
+        } else if (typeof proj.indicators === 'string') {
+            quantInd = proj.indicators;
+        }
+
+        // Benefits
+        let benefitsText = '';
+        if (Array.isArray(proj.expected_benefits)) {
+            benefitsText = proj.expected_benefits.map((b, idx) => {
+                const text = typeof b === 'string' ? b : (b?.title || b?.name || b?.text || '');
+                return `${toThaiNumerals(idx + 1)}. ${text}`;
+            }).filter(Boolean).join('\n');
+        } else if (typeof proj.expected_benefits === 'string') {
+            benefitsText = proj.expected_benefits;
+        }
+
+        setChapter1Sections({
+            background: proj.background_rationale || '',
+            objectives: objsText || `๑. เพื่อพัฒนาทักษะวิชาชีพและการเรียนรู้ของผู้เรียนตามมาตรฐานการศึกษา\n๒. เพื่อเพิ่มประสิทธิภาพการปฏิบัติงานและการจัดการเรียนการสอน`,
+            scope_target: targetText || 'คณะครู บุคลากรทางการศึกษา และนักเรียน นักศึกษา วิทยาลัยสารพัดช่างน่าน',
+            scope_content: contentText || 'การดำเนินกิจกรรมตามแผนงาน การฝึกอบรมเชิงปฏิบัติการ และการประเมินผลสัมฤทธิ์',
+            scope_location_time: locTime || 'วิทยาลัยสารพัดช่างน่าน ภายในปีงบประมาณ',
+            indicators_quantitative: quantInd || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐ ของกลุ่มเป้าหมาย',
+            indicators_qualitative: qualInd || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป ไม่น้อยกว่าร้อยละ ๘๐ (ค่าเฉลี่ย ๓.๕๑ ขึ้นไป)',
+            expected_benefits: benefitsText || `๑. ผู้เข้าร่วมโครงการได้รับความรู้และทักษะตามวัตถุประสงค์\n๒. สถานศึกษามีผลสัมฤทธิ์ในการจัดการศึกษาที่มีคุณภาพตามมาตรฐานวิชาชีพ`,
+            definitions: ''
+        });
+    };
+
+    useEffect(() => {
+        if (!activeChapter1Project) return;
+        if (!selectedChapter1ProjectId && activeChapter1Project.id) {
+            setSelectedChapter1ProjectId(String(activeChapter1Project.id));
+        }
+
+        const saved = activeChapter1Project.chapter_1_sections;
+        if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
+            setChapter1Sections({
+                background: saved.background !== undefined ? saved.background : (activeChapter1Project.background_rationale || ''),
+                objectives: typeof saved.objectives === 'string' ? saved.objectives : (Array.isArray(saved.objectives) ? saved.objectives.join('\n') : ''),
+                scope_target: saved.scope_target || '',
+                scope_content: saved.scope_content || '',
+                scope_location_time: saved.scope_location_time || '',
+                indicators_quantitative: saved.indicators_quantitative || '',
+                indicators_qualitative: saved.indicators_qualitative || '',
+                expected_benefits: saved.expected_benefits !== undefined ? (typeof saved.expected_benefits === 'string' ? saved.expected_benefits : (Array.isArray(saved.expected_benefits) ? saved.expected_benefits.join('\n') : '')) : (saved.benefits ? (typeof saved.benefits === 'string' ? saved.benefits : (Array.isArray(saved.benefits) ? saved.benefits.join('\n') : '')) : ''),
+                definitions: saved.definitions || ''
+            });
+        } else {
+            populateChapter1FromProject(activeChapter1Project);
+        }
+    }, [activeChapter1Project?.id]);
+
+    const handleSaveChapter1 = () => {
+        if (!activeChapter1Project) return;
+        setIsSavingChapter1(true);
+        const payload = {
+            ...chapter1Sections,
+            benefits: chapter1Sections.expected_benefits
+        };
+        router.post(route('projects.chapter1.save', activeChapter1Project.id), {
+            chapter_1_sections: payload,
+            chapter_1_content: ''
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsSavingChapter1(false);
+                activeChapter1Project.chapter_1_sections = payload;
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกบทที่ ๑ สำเร็จ',
+                    text: 'บันทึกข้อมูลรายงานบทที่ ๑ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                    timer: 1600,
+                    showConfirmButton: false
+                });
+            },
+            onError: (err) => {
+                setIsSavingChapter1(false);
+                Swal.fire('เกิดข้อผิดพลาด', Object.values(err)[0] || 'ไม่สามารถบันทึกข้อมูลได้', 'error');
+            }
+        });
+    };
+
+    const handleResetChapter1ToDefault = () => {
+        if (!activeChapter1Project) return;
+        Swal.fire({
+            title: 'ดึงข้อมูลเริ่มต้นจากโครงการ?',
+            text: 'ระบบจะนำข้อมูลหลักการและเหตุผล วัตถุประสงค์ ตัวชี้วัด และกลุ่มเป้าหมายจากแบบเสนอโครงการฉบับเต็มมาเติมใหม่อีกครั้ง',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันดึงข้อมูลใหม่',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#8b5cf6'
+        }).then(res => {
+            if (res.isConfirmed) {
+                populateChapter1FromProject(activeChapter1Project);
+                Swal.fire({ icon: 'success', title: 'ดึงข้อมูลเรียบร้อย', timer: 1200, showConfirmButton: false });
+            }
+        });
+    };
+
     const [executiveTableView, setExecutiveTableView] = useState('projects');
 
     // API Connection Status & Mock Trigger
@@ -13997,6 +14213,813 @@ return (
         );
     };
 
+    // ==========================================
+    // 5-Chapter Project Report Renderers
+    // ==========================================
+    const renderChapter1Tab = () => {
+        if (!activeChapter1Project) {
+            return (
+                <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 text-center">
+                    <span className="text-4xl mb-3 block">📘</span>
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">ยังไม่พบโครงการที่สามารถจัดทำเล่มรายงาน</h3>
+                    <p className="text-sm text-slate-500 mb-4">กรุณาสร้างข้อเสนอโครงการหรือตรวจสอบสิทธิ์การเข้าถึงโครงการของคุณ</p>
+                    <button
+                        onClick={() => setActiveTab('proposals')}
+                        className="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition"
+                    >
+                        ไปที่รายการโครงการ
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-6">
+                {/* Header Action Banner */}
+                <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-purple-200 text-xs font-bold mb-2">
+                                <span>📘</span> เล่มรายงานโครงการ ๕ บท (PDCA Plan Phase)
+                            </div>
+                            <h2 className="text-xl md:text-2xl font-black tracking-tight">
+                                บทที่ ๑: บทนำ & ข้อมูลโครงการ (Introduction)
+                            </h2>
+                            <p className="text-purple-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
+                                จัดทำเนื้อหารายงานบทที่ ๑ ตามแบบมาตรฐาน สอศ. ระบบดึงข้อมูลจากแบบเสนอโครงการ (Proposal) โดยอัตโนมัติ สามารถปรับแต่งเนื้อหา สลับดูตัวอย่างเสมือนจริง และสั่งพิมพ์ A4
+                            </p>
+                        </div>
+
+                        {/* Project Switcher */}
+                        <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 min-w-[280px]">
+                            <label className="text-[11px] font-bold text-purple-200 block mb-1">เลือกโครงการที่ต้องการจัดทำ:</label>
+                            <select
+                                value={selectedChapter1ProjectId || activeChapter1Project.id}
+                                onChange={(e) => setSelectedChapter1ProjectId(e.target.value)}
+                                className="w-full bg-white text-slate-900 text-xs font-bold rounded-xl px-3 py-2 border-0 focus:ring-2 focus:ring-purple-400"
+                            >
+                                {chapter1Projects.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.code ? `[${p.code}] ` : ''}{p.title || p.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="flex items-center justify-between text-[11px] text-purple-200 mt-2 px-1">
+                                <span>ปีงบประมาณ: {toThaiNumerals(activeChapter1Project.academic_year || activeChapter1Project.fiscal_year || '2569')}</span>
+                                <span className="truncate max-w-[150px]">{activeChapter1Project.department?.name || 'สังกัดแผนกวิชา'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Toolbar / Actions */}
+                    <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
+                        {/* View Mode Toggle */}
+                        <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
+                            <button
+                                type="button"
+                                onClick={() => setChapter1ViewMode('preview')}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                                    chapter1ViewMode === 'preview'
+                                        ? 'bg-white text-purple-950 shadow-md'
+                                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                                <span>👁️</span> ตัวอย่างรายงาน (Preview)
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setChapter1ViewMode('edit')}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                                    chapter1ViewMode === 'edit'
+                                        ? 'bg-white text-purple-950 shadow-md'
+                                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                                <span>✏️</span> แก้ไขเนื้อหา (Edit)
+                            </button>
+                        </div>
+
+                        {/* Right Buttons */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleResetChapter1ToDefault}
+                                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition border border-white/20 flex items-center gap-1.5"
+                                title="ดึงข้อมูลจากแบบเสนอโครงการฉบับเต็มมาเติมใหม่อีกครั้ง"
+                            >
+                                <span>🔄</span> ดึงข้อมูลตั้งต้นใหม่
+                            </button>
+
+                            <a
+                                href={route('projects.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3.5 py-2 rounded-xl bg-purple-800/80 hover:bg-purple-800 text-purple-100 text-xs font-bold transition border border-purple-400/30 flex items-center gap-1.5"
+                            >
+                                <span>📄</span> ดูแบบเสนอโครงการ
+                            </a>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveChapter1}
+                                disabled={isSavingChapter1}
+                                className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {isSavingChapter1 ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>กำลังบันทึก...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>💾</span>
+                                        <span>บันทึกบทที่ ๑</span>
+                                    </>
+                                )}
+                            </button>
+
+                            <a
+                                href={route('projects.chapter1.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-black transition shadow-md flex items-center gap-1.5"
+                            >
+                                <span>🖨️</span> สั่งพิมพ์ A4 (บทที่ ๑)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Content Area: Preview vs Edit */}
+                {chapter1ViewMode === 'preview' ? (
+                    <div className="space-y-4">
+                        {/* Notice & Quick Edit Link */}
+                        <div className="flex items-center justify-between bg-purple-50 border border-purple-200 px-4 py-3 rounded-2xl text-xs text-purple-900">
+                            <div className="flex items-center gap-2">
+                                <span>💡</span>
+                                <span>รูปแบบการแสดงผลเสมือนเอกสารจริง (ระยะขอบ ๑ นิ้ว, เลขไทย, ย่อหน้าตามแบบมาตรฐานรายงานวิจัย สอศ.)</span>
+                            </div>
+                            <button
+                                onClick={() => setChapter1ViewMode('edit')}
+                                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-xs transition"
+                            >
+                                ✏️ แก้ไขเนื้อหาบทที่ ๑
+                            </button>
+                        </div>
+
+                        {/* Simulated Paper Document */}
+                        <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl p-8 md:p-14 border border-slate-200 text-slate-900 font-sans leading-relaxed">
+                            {/* Document Title Header */}
+                            <div className="text-center pb-6 mb-8 border-b border-slate-200">
+                                <h3 className="text-xl font-bold tracking-wide text-slate-900 mb-1">บทที่ ๑</h3>
+                                <h2 className="text-2xl font-black tracking-wide text-slate-900 mb-3">บทนำ</h2>
+                                <p className="text-base font-bold text-purple-950">
+                                    โครงการ: {activeChapter1Project.title}
+                                </p>
+                                <p className="text-sm text-slate-600 mt-1">
+                                    ประจำปีงบประมาณ พ.ศ. {toThaiNumerals(activeChapter1Project.academic_year || activeChapter1Project.fiscal_year || '2569')}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    หน่วยงานผู้รับผิดชอบ: {activeChapter1Project.department?.name || 'วิทยาลัยสารพัดช่างน่าน'}
+                                </p>
+                            </div>
+
+                            {/* Section 1.1 */}
+                            <div className="space-y-3 mb-8">
+                                <h4 className="text-base font-bold text-slate-900">
+                                    ๑.๑ ความเป็นมาและความสำคัญของปัญหา
+                                </h4>
+                                <div className="text-justify indent-12 whitespace-pre-wrap text-sm text-slate-800 leading-relaxed">
+                                    {chapter1Sections.background || activeChapter1Project.background_rationale || 'ยังไม่ได้ระบุข้อมูลความเป็นมาและความสำคัญของปัญหา'}
+                                </div>
+                            </div>
+
+                            {/* Section 1.2 */}
+                            <div className="space-y-3 mb-8">
+                                <h4 className="text-base font-bold text-slate-900">
+                                    ๑.๒ วัตถุประสงค์ของโครงการ
+                                </h4>
+                                <p className="text-sm text-slate-700 indent-8">
+                                    การดำเนินโครงการมีวัตถุประสงค์เพื่อ:
+                                </p>
+                                <div className="space-y-1.5 pl-6 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                                    {chapter1Sections.objectives || 'ยังไม่ได้ระบุวัตถุประสงค์'}
+                                </div>
+                            </div>
+
+                            {/* Section 1.3 */}
+                            <div className="space-y-4 mb-8">
+                                <h4 className="text-base font-bold text-slate-900">
+                                    ๑.๓ ขอบเขตของโครงการ
+                                </h4>
+                                <div className="pl-4 space-y-3 text-sm text-slate-800">
+                                    <div>
+                                        <p className="font-bold text-slate-900 mb-1">๑.๓.๑ ขอบเขตด้านประชากรและกลุ่มเป้าหมาย</p>
+                                        <div className="indent-8 whitespace-pre-wrap">
+                                            {chapter1Sections.scope_target || 'คณะครู บุคลากรทางการศึกษา และนักเรียน นักศึกษา'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-900 mb-1">๑.๓.๒ ขอบเขตด้านเนื้อหาและกิจกรรมการดำเนินงาน</p>
+                                        <div className="indent-8 whitespace-pre-wrap">
+                                            {chapter1Sections.scope_content || 'การดำเนินกิจกรรมตามแผนปฏิบัติการที่กำหนด'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-900 mb-1">๑.๓.๓ ขอบเขตด้านสถานที่และระยะเวลาดำเนินการ</p>
+                                        <div className="indent-8 whitespace-pre-wrap">
+                                            {chapter1Sections.scope_location_time || 'วิทยาลัยสารพัดช่างน่าน ภายในปีงบประมาณ'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 1.4 */}
+                            <div className="space-y-3 mb-8">
+                                <h4 className="text-base font-bold text-slate-900">
+                                    ๑.๔ ตัวชี้วัดและเป้าหมายความสำเร็จ
+                                </h4>
+                                <div className="pl-4 space-y-2 text-sm text-slate-800">
+                                    <div>
+                                        <span className="font-bold text-slate-900">๑.๔.๑ ตัวชี้วัดเชิงปริมาณ: </span>
+                                        <span>{chapter1Sections.indicators_quantitative || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐'}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-slate-900">๑.๔.๒ ตัวชี้วัดเชิงคุณภาพ: </span>
+                                        <span>{chapter1Sections.indicators_qualitative || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป ไม่น้อยกว่าร้อยละ ๘๐'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 1.5 */}
+                            <div className="space-y-3 mb-8">
+                                <h4 className="text-base font-bold text-slate-900">
+                                    ๑.๕ ประโยชน์ที่คาดว่าจะได้รับ
+                                </h4>
+                                <div className="pl-6 text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                                    {chapter1Sections.expected_benefits || 'เกิดประโยชน์สูงสุดแก่ผู้เรียนและสถานศึกษา'}
+                                </div>
+                            </div>
+
+                            {/* Section 1.6 */}
+                            {chapter1Sections.definitions && (
+                                <div className="space-y-3 mb-8">
+                                    <h4 className="text-base font-bold text-slate-900">
+                                        ๑.๖ นิยามศัพท์เฉพาะ
+                                    </h4>
+                                    <div className="text-justify indent-12 whitespace-pre-wrap text-sm text-slate-800 leading-relaxed">
+                                        {chapter1Sections.definitions}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Signatures */}
+                            <div className="mt-14 pt-8 border-t border-slate-200 flex justify-end">
+                                <div className="text-center w-72 text-sm">
+                                    <p className="mb-10 text-slate-400">ลงชื่อ..............................................................</p>
+                                    <p className="font-bold text-slate-900">
+                                        ({activeChapter1Project.responsible_person || activeChapter1Project.user?.name || '..............................................................'})
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-1">ผู้รับผิดชอบโครงการ</p>
+                                    <p className="text-xs text-slate-500">
+                                        {activeChapter1Project.department?.name || 'วิทยาลัยสารพัดช่างน่าน'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    /* Edit Mode Form */
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                        <span>✏️</span> ปรับแต่งและแก้ไขข้อมูล บทที่ ๑ บทนำ
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        เนื้อหาด้านล่างนี้ถูกดึงมาจากแบบเสนอโครงการ (Proposal) อัตโนมัติ ท่านสามารถปรับภาษาให้เป็นเชิงวิชาการตามมาตรฐานรูปเล่ม ๕ บท
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleResetChapter1ToDefault}
+                                        className="px-3 py-1.5 text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+                                    >
+                                        🔄 คืนค่าจากโครงการ
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* 1.1 ความเป็นมา */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๑</span>
+                                        ความเป็นมาและความสำคัญของปัญหา
+                                    </label>
+                                    <span className="text-[11px] text-slate-400">ระบุสภาพปัญหา เหตุผลความจำเป็น และหลักการในการจัดทำโครงการ</span>
+                                </div>
+                                <textarea
+                                    rows={7}
+                                    value={chapter1Sections.background}
+                                    onChange={(e) => setChapter1Sections({ ...chapter1Sections, background: e.target.value })}
+                                    className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                    placeholder="ระบุความเป็นมาและความสำคัญ..."
+                                />
+                            </div>
+
+                            {/* 1.2 วัตถุประสงค์ */}
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๒</span>
+                                        วัตถุประสงค์ของโครงการ
+                                    </label>
+                                    <span className="text-[11px] text-slate-400">พิมพ์แยกแต่ละข้อ เช่น ๑. เพื่อ... ๒. เพื่อ...</span>
+                                </div>
+                                <textarea
+                                    rows={4}
+                                    value={chapter1Sections.objectives}
+                                    onChange={(e) => setChapter1Sections({ ...chapter1Sections, objectives: e.target.value })}
+                                    className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                    placeholder="๑. เพื่อ...\n๒. เพื่อ..."
+                                />
+                            </div>
+
+                            {/* 1.3 ขอบเขตโครงการ */}
+                            <div className="space-y-3 pt-2">
+                                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๓</span>
+                                    ขอบเขตของโครงการ
+                                </label>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-0 md:pl-2">
+                                    <div className="space-y-1.5">
+                                        <span className="text-xs font-bold text-slate-700 block">๑.๓.๑ ประชากรและกลุ่มเป้าหมาย</span>
+                                        <textarea
+                                            rows={3}
+                                            value={chapter1Sections.scope_target}
+                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_target: e.target.value })}
+                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="กลุ่มเป้าหมาย จำนวนคน..."
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <span className="text-xs font-bold text-slate-700 block">๑.๓.๒ เนื้อหาและกิจกรรมการดำเนินงาน</span>
+                                        <textarea
+                                            rows={3}
+                                            value={chapter1Sections.scope_content}
+                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_content: e.target.value })}
+                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="กิจกรรมหลักที่ดำเนินการ..."
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <span className="text-xs font-bold text-slate-700 block">๑.๓.๓ สถานที่และระยะเวลา</span>
+                                        <textarea
+                                            rows={3}
+                                            value={chapter1Sections.scope_location_time}
+                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, scope_location_time: e.target.value })}
+                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="สถานที่ วันเริ่มต้น-สิ้นสุด..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 1.4 ตัวชี้วัด */}
+                            <div className="space-y-3 pt-2">
+                                <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๔</span>
+                                    ตัวชี้วัดและเป้าหมายความสำเร็จ
+                                </label>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-2">
+                                    <div className="space-y-1.5">
+                                        <span className="text-xs font-bold text-slate-700 block">๑.๔.๑ เชิงปริมาณ (Quantitative)</span>
+                                        <textarea
+                                            rows={2}
+                                            value={chapter1Sections.indicators_quantitative}
+                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_quantitative: e.target.value })}
+                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐..."
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <span className="text-xs font-bold text-slate-700 block">๑.๔.๒ เชิงคุณภาพ (Qualitative)</span>
+                                        <textarea
+                                            rows={2}
+                                            value={chapter1Sections.indicators_qualitative}
+                                            onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_qualitative: e.target.value })}
+                                            className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                            placeholder="ระดับความพึงพอใจ ค่าเฉลี่ย ๓.๕๑ ขึ้นไป..."
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 1.5 ประโยชน์ที่คาดว่าจะได้รับ */}
+                            <div className="space-y-2 pt-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๕</span>
+                                        ประโยชน์ที่คาดว่าจะได้รับ
+                                    </label>
+                                    <span className="text-[11px] text-slate-400">ผลที่เกิดต่อผู้เรียน สถานศึกษา และหน่วยงาน</span>
+                                </div>
+                                <textarea
+                                    rows={4}
+                                    value={chapter1Sections.expected_benefits}
+                                    onChange={(e) => setChapter1Sections({ ...chapter1Sections, expected_benefits: e.target.value })}
+                                    className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                    placeholder="๑. ผู้เรียนได้รับความรู้และทักษะ...\n๒. สถานศึกษามีผลสัมฤทธิ์..."
+                                />
+                            </div>
+
+                            {/* 1.6 นิยามศัพท์เฉพาะ */}
+                            <div className="space-y-2 pt-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๖</span>
+                                        นิยามศัพท์เฉพาะ (ถ้ามี)
+                                    </label>
+                                    <span className="text-[11px] text-slate-400">คำศัพท์เฉพาะทางวิชาชีพหรือโครงการ</span>
+                                </div>
+                                <textarea
+                                    rows={3}
+                                    value={chapter1Sections.definitions}
+                                    onChange={(e) => setChapter1Sections({ ...chapter1Sections, definitions: e.target.value })}
+                                    className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
+                                    placeholder="ระบุนิยามศัพท์เฉพาะที่ใช้ในโครงการนี้..."
+                                />
+                            </div>
+
+                            {/* Save Actions in Edit Mode */}
+                            <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setChapter1ViewMode('preview')}
+                                    className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
+                                >
+                                    <span>👁️</span> ดูตัวอย่างรายงาน
+                                </button>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveChapter1}
+                                        disabled={isSavingChapter1}
+                                        className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                                    >
+                                        {isSavingChapter1 ? (
+                                            <>
+                                                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                <span>กำลังบันทึก...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span>💾</span>
+                                                <span>บันทึกบทที่ ๑</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const renderChapter2Tab = () => {
+        if (!activeChapter1Project) {
+            return (
+                <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 text-center">
+                    <span className="text-4xl mb-3 block">📗</span>
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">ยังไม่พบโครงการที่สามารถสังเคราะห์บทที่ ๒</h3>
+                </div>
+            );
+        }
+
+        const hasChapter2Content = Boolean(activeChapter1Project.chapter_2_content);
+
+        return (
+            <div className="space-y-6">
+                <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-bold mb-2">
+                                <span>📗</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๒ (Related Literature)
+                            </div>
+                            <h2 className="text-xl md:text-2xl font-black tracking-tight">
+                                บทที่ ๒: เอกสารและงานวิจัยที่เกี่ยวข้อง (AI สังเคราะห์)
+                            </h2>
+                            <p className="text-emerald-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
+                                สังเคราะห์เอกสาร ทฤษฎี นโยบาย สอศ. และงานวิจัยที่เกี่ยวข้องด้วย AI หรือปรับแต่งเนื้อหาด้วยตนเองตามโครงสร้างมาตรฐาน
+                            </p>
+                        </div>
+
+                        <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 min-w-[280px]">
+                            <label className="text-[11px] font-bold text-emerald-200 block mb-1">เลือกโครงการ:</label>
+                            <select
+                                value={selectedChapter1ProjectId || activeChapter1Project.id}
+                                onChange={(e) => setSelectedChapter1ProjectId(e.target.value)}
+                                className="w-full bg-white text-slate-900 text-xs font-bold rounded-xl px-3 py-2 border-0 focus:ring-2 focus:ring-emerald-400"
+                            >
+                                {chapter1Projects.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.code ? `[${p.code}] ` : ''}{p.title || p.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+                    <div className="max-w-3xl space-y-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">📋</span>
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900">
+                                    สถานะบทที่ ๒: {hasChapter2Content ? '✅ สังเคราะห์เนื้อหาแล้ว' : '⏳ ยังไม่มีเนื้อหาบทที่ ๒'}
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    โครงการ: {activeChapter1Project.title}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
+                            <p className="font-bold text-slate-900">โครงสร้างบทที่ ๒ ตามเกณฑ์ สอศ.:</p>
+                            <ul className="list-disc pl-5 space-y-1">
+                                <li>๒.๑ หลักการ แนวคิด และทฤษฎีที่เกี่ยวข้องกับโครงการ</li>
+                                <li>๒.๒ นโยบายและยุทธศาสตร์ของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)</li>
+                                <li>๒.๓ ข้อมูลบริบทสถานศึกษาและงานที่เกี่ยวข้อง</li>
+                                <li>๒.๔ งานวิจัยที่เกี่ยวข้องทั้งในประเทศและต่างประเทศ</li>
+                                <li>๒.๕ เอกสารอ้างอิงและบรรณานุกรม</li>
+                            </ul>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 pt-2">
+                            <Link
+                                href={route('projects.show', activeChapter1Project.id)}
+                                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-2"
+                            >
+                                <span>🤖</span> เปิดเครื่องมือ AI สังเคราะห์บทที่ ๒ ในหน้ารายละเอียดโครงการ
+                            </Link>
+
+                            <a
+                                href={route('projects.chapter2.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>🖨️</span> พิมพ์บทที่ ๒ (A4)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const renderChapter3Tab = () => (
+        <div className="space-y-6">
+            <div className="bg-gradient-to-r from-amber-900 via-orange-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-200 text-xs font-bold mb-2">
+                            <span>📙</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๓ (Methodology)
+                        </div>
+                        <h2 className="text-xl md:text-2xl font-black tracking-tight">
+                            บทที่ ๓: วิธีดำเนินงาน & จัดซื้อจัดจ้าง (Do Phase)
+                        </h2>
+                        <p className="text-amber-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
+                            รวบรวมขั้นตอนการดำเนินกิจกรรมตามวงจร PDCA แผนการใช้จ่ายงบประมาณ การจัดซื้อจัดจ้างพัสดุ และเครื่องมือที่ใช้ในการประเมิน
+                        </p>
+                    </div>
+
+                    {activeChapter1Project && (
+                        <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 min-w-[280px]">
+                            <label className="text-[11px] font-bold text-amber-200 block mb-1">เลือกโครงการ:</label>
+                            <select
+                                value={selectedChapter1ProjectId || activeChapter1Project.id}
+                                onChange={(e) => setSelectedChapter1ProjectId(e.target.value)}
+                                className="w-full bg-white text-slate-900 text-xs font-bold rounded-xl px-3 py-2 border-0 focus:ring-2 focus:ring-amber-400"
+                            >
+                                {chapter1Projects.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.code ? `[${p.code}] ` : ''}{p.title || p.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div className="max-w-3xl space-y-4">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>📦</span> ข้อมูลและขั้นตอนการดำเนินงาน (PDCA Do-Phase)
+                    </h3>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
+                        <p className="font-bold text-slate-900">หัวข้อสำคัญในบทที่ ๓:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                            <li>๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย</li>
+                            <li>๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ (แบบสอบถามความพึงพอใจ, แบบทดสอบ)</li>
+                            <li>๓.๓ ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA</li>
+                            <li>๓.๔ การจัดหาพัสดุ ครุภัณฑ์ และการบริหารงบประมาณ</li>
+                            <li>๓.๕ การเก็บรวบรวมข้อมูลและสถิติที่ใช้ในการวิเคราะห์</li>
+                        </ul>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <button
+                            onClick={() => setActiveTab('procurement')}
+                            className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                            <span>🛒</span> ดูรายการจัดซื้อจัดจ้างพัสดุ
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('clearings')}
+                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                            <span>📑</span> ดูรายการเคลียร์เงิน/หลักฐานค่าใช้จ่าย
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderChapter4Tab = () => (
+        <div className="space-y-6">
+            <div className="bg-gradient-to-r from-rose-900 via-red-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-rose-200 text-xs font-bold mb-2">
+                            <span>📕</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๔ (Results & Analysis)
+                        </div>
+                        <h2 className="text-xl md:text-2xl font-black tracking-tight">
+                            บทที่ ๔: ผลการดำเนินงาน & ประเมินผล (Check Phase)
+                        </h2>
+                        <p className="text-rose-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
+                            นำเสนอผลการวิเคราะห์ข้อมูลทางสถิติ ผลสัมฤทธิ์ตามตัวชี้วัดเชิงปริมาณและเชิงคุณภาพ ตารางค่าเฉลี่ยความพึงพอใจ
+                        </p>
+                    </div>
+
+                    {activeChapter1Project && (
+                        <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 min-w-[280px]">
+                            <label className="text-[11px] font-bold text-rose-200 block mb-1">เลือกโครงการ:</label>
+                            <select
+                                value={selectedChapter1ProjectId || activeChapter1Project.id}
+                                onChange={(e) => setSelectedChapter1ProjectId(e.target.value)}
+                                className="w-full bg-white text-slate-900 text-xs font-bold rounded-xl px-3 py-2 border-0 focus:ring-2 focus:ring-rose-400"
+                            >
+                                {chapter1Projects.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.code ? `[${p.code}] ` : ''}{p.title || p.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
+                <div className="max-w-3xl space-y-4">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>📊</span> ผลการวิเคราะห์ข้อมูลและผลสัมฤทธิ์
+                    </h3>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
+                        <p className="font-bold text-slate-900">หัวข้อสำคัญในบทที่ ๔:</p>
+                        <ul className="list-disc pl-5 space-y-1">
+                            <li>๔.๑ ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม/กลุ่มเป้าหมาย</li>
+                            <li>๔.๒ ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ (ยอดผู้เข้าร่วม เทียบกับเป้าหมาย)</li>
+                            <li>๔.๓ ผลการประเมินความพึงพอใจเชิงคุณภาพ (ค่าเฉลี่ย x̄ และส่วนเบี่ยงเบนมาตรฐาน S.D.)</li>
+                            <li>๔.๔ ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน</li>
+                        </ul>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                        {activeChapter1Project && (
+                            <Link
+                                href={route('projects.show', activeChapter1Project.id)}
+                                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>📈</span> บันทึกและดูผลการประเมินในหน้ารายละเอียดโครงการ
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderChapter5Tab = () => (
+        <div className="space-y-6">
+            <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-purple-200 text-xs font-bold mb-2">
+                            <span>📓</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๕ (Conclusion & Report Book)
+                        </div>
+                        <h2 className="text-xl md:text-2xl font-black tracking-tight">
+                            บทที่ ๕: สรุปผล อภิปรายผล & พิมพ์รูปเล่ม (Act Phase)
+                        </h2>
+                        <p className="text-purple-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
+                            สรุปภาพรวมโครงการ อภิปรายผลเปรียบเทียบกับวัตถุประสงค์และงานวิจัย ข้อเสนอแนะเพื่อการพัฒนา และจัดพิมพ์เล่มรายงานโครงการ ๕ บท ฉบับสมบูรณ์
+                        </p>
+                    </div>
+
+                    {activeChapter1Project && (
+                        <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 min-w-[280px]">
+                            <label className="text-[11px] font-bold text-purple-200 block mb-1">เลือกโครงการ:</label>
+                            <select
+                                value={selectedChapter1ProjectId || activeChapter1Project.id}
+                                onChange={(e) => setSelectedChapter1ProjectId(e.target.value)}
+                                className="w-full bg-white text-slate-900 text-xs font-bold rounded-xl px-3 py-2 border-0 focus:ring-2 focus:ring-purple-400"
+                            >
+                                {chapter1Projects.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.code ? `[${p.code}] ` : ''}{p.title || p.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-4">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>📝</span> สาระสำคัญบทที่ ๕
+                    </h3>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
+                        <ul className="list-disc pl-5 space-y-1.5">
+                            <li>๕.๑ สรุปผลการดำเนินโครงการ</li>
+                            <li>๕.๒ การอภิปรายผล (เทียบเคียงกับทฤษฎีและงานวิจัยในบทที่ ๒)</li>
+                            <li>๕.๓ ปัญหา อุปสรรค และแนวทางแก้ไข</li>
+                            <li>๕.๔ ข้อเสนอแนะในการนำผลไปใช้ และข้อเสนอแนะสำหรับการจัดทำโครงการครั้งต่อไป</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-4">
+                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>📚</span> รวมชุดเอกสารและสั่งพิมพ์
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                        พิมพ์เอกสารแยกแต่ละบทหรือเปิดดูฉบับสมบูรณ์สำหรับโครงการ "{activeChapter1Project?.title || ''}"
+                    </p>
+
+                    <div className="space-y-2.5 pt-1">
+                        {activeChapter1Project && (
+                            <>
+                                <a
+                                    href={route('projects.chapter1.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-900 rounded-xl text-xs font-bold border border-purple-200 transition flex items-center justify-between"
+                                >
+                                    <span>📘 พิมพ์บทที่ ๑: บทนำ & ข้อมูลโครงการ (A4)</span>
+                                    <span>🖨️</span>
+                                </a>
+
+                                <a
+                                    href={route('projects.chapter2.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 rounded-xl text-xs font-bold border border-emerald-200 transition flex items-center justify-between"
+                                >
+                                    <span>📗 พิมพ์บทที่ ๒: เอกสารและงานวิจัยที่เกี่ยวข้อง (A4)</span>
+                                    <span>🖨️</span>
+                                </a>
+
+                                <a
+                                    href={route('projects.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full px-4 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-900 rounded-xl text-xs font-bold border border-slate-200 transition flex items-center justify-between"
+                                >
+                                    <span>📄 พิมพ์แบบเสนอโครงการฉบับเต็ม (Proposal)</span>
+                                    <span>🖨️</span>
+                                </a>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <AuthenticatedLayout
             header={
@@ -14012,6 +15035,11 @@ return (
                     
                     {/* Content Workspace Area (Full Width Clean Layout) */}
                     <div className="w-full">
+                        {activeTab === 'chapter_1' && renderChapter1Tab()}
+                        {activeTab === 'chapter_2' && renderChapter2Tab()}
+                        {activeTab === 'chapter_3' && renderChapter3Tab()}
+                        {activeTab === 'chapter_4' && renderChapter4Tab()}
+                        {activeTab === 'chapter_5' && renderChapter5Tab()}
                         {activeTab === 'admin_users' && renderAdminUsersTab()}
                         {activeTab === 'admin_strategies' && renderAdminStrategiesTab()}
                         {activeTab === 'admin_settings' && renderAdminSettingsTab()}
