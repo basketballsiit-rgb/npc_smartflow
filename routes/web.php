@@ -189,8 +189,11 @@ Route::middleware('auth')->group(function () {
     Route::put('travel-loans/{travelLoan}', [TravelLoanWebController::class, 'update'])->name('travel_loans.update');
     Route::delete('travel-loans/{travelLoan}', [TravelLoanWebController::class, 'destroy'])->name('travel_loans.destroy');
 
-    // Survey stats
+    // Survey stats & Questionnaire Builder
     Route::get('projects/{project}/survey/stats', [SurveyController::class, 'stats'])->name('surveys.stats');
+    Route::get('projects/{project}/survey/builder', [SurveyController::class, 'getBuilderData'])->name('surveys.builder_data');
+    Route::post('projects/{project}/survey/generate-questions', [SurveyController::class, 'generateAiQuestions'])->name('surveys.generate_questions');
+    Route::post('projects/{project}/survey/save-questions', [SurveyController::class, 'saveQuestions'])->name('surveys.save_questions');
     Route::post('projects/{project}/survey/generate-ai', [SurveyController::class, 'generateAiRecommendations'])->name('surveys.generate_ai');
 
     // Appendices & Photo Uploads

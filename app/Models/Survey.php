@@ -11,6 +11,7 @@ class Survey extends Model
         'survey_code',
         'title',
         'description',
+        'questions',
         'is_active',
         'act_recommendation',
     ];
@@ -21,6 +22,7 @@ class Survey extends Model
     protected function casts(): array
     {
         return [
+            'questions' => 'array',
             'is_active' => 'boolean',
         ];
     }

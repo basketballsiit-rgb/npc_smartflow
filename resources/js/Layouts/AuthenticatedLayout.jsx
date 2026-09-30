@@ -574,12 +574,21 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', chapter: 3 })}
-                                    className={getSubLinkClass(url.includes('chapter=3'))}
-                                    title="บทที่ 3: วิธีดำเนินงาน & จัดซื้อจัดจ้าง (Do Phase)"
+                                    className={getSubLinkClass(url.includes('chapter=3') && !url.includes('section=survey'))}
+                                    title="บทที่ 3: วิธีดำเนินงาน & แบบประเมิน (Do Phase)"
                                 >
-                                    <span className={getPrefixClass(url.includes('chapter=3'), 'text-emerald-300')}>└─</span>
+                                    <span className={getPrefixClass(url.includes('chapter=3') && !url.includes('section=survey'), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📙</span>
-                                    {isSidebarOpen && <span>บทที่ 3: วิธีดำเนินงาน & พัสดุ</span>}
+                                    {isSidebarOpen && <span>บทที่ 3: วิธีดำเนินงาน & แบบประเมิน</span>}
+                                </Link>
+                                <Link
+                                    href={route('dashboard', { tab: 'proposals', chapter: 3, section: 'survey' })}
+                                    className={getSubLinkClass(url.includes('section=survey'))}
+                                    title="การประเมินโครงการ: สร้างแบบสอบถาม AI & QR Code"
+                                >
+                                    <span className={getPrefixClass(url.includes('section=survey'), 'text-emerald-300')}>&nbsp;&nbsp;└─</span>
+                                    <span className="text-sm">📋</span>
+                                    {isSidebarOpen && <span className="text-emerald-200">ประเมินโครงการ (AI Survey & QR)</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', chapter: 4 })}

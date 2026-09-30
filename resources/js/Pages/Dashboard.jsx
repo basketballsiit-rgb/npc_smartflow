@@ -888,6 +888,19 @@ export default function Dashboard({
     const [isAnalyzingChapter3, setIsAnalyzingChapter3] = useState(false);
     const [isSavingChapter3, setIsSavingChapter3] = useState(false);
 
+    // Survey Questionnaire Builder & Chapter 4 Integration States
+    const [surveyQuestions, setSurveyQuestions] = useState([]);
+    const [surveyTitle, setSurveyTitle] = useState('');
+    const [surveyDescription, setSurveyDescription] = useState('');
+    const [surveyTotalResponses, setSurveyTotalResponses] = useState(0);
+    const [surveyEvaluationUrl, setSurveyEvaluationUrl] = useState('');
+    const [surveyQrCodeUrl, setSurveyQrCodeUrl] = useState('');
+    const [surveyStatsSummary, setSurveyStatsSummary] = useState(null);
+    const [isGeneratingSurveyAi, setIsGeneratingSurveyAi] = useState(false);
+    const [isSavingSurvey, setIsSavingSurvey] = useState(false);
+    const [isLoadingSurvey, setIsLoadingSurvey] = useState(false);
+    const [copiedSurveyLink, setCopiedSurveyLink] = useState(false);
+
     const activeChapter1Project = React.useMemo(() => {
         if (!selectedChapter1ProjectId && chapter1Projects.length > 0) {
             return chapter1Projects[0];
@@ -1048,6 +1061,9 @@ export default function Dashboard({
             });
         }
         setChapter3Analysis(null);
+        if (activeChapter1Project?.id) {
+            fetchSurveyData(activeChapter1Project.id);
+        }
     }, [activeChapter1Project?.id]);
 
     const handleSaveChapter1 = async () => {
@@ -1666,6 +1682,178 @@ export default function Dashboard({
         } finally {
             setIsSavingChapter3(false);
         }
+    };
+
+    // ==========================================
+    // Survey Builder & Chapter 4 Evaluation Functions
+    // ==========================================
+    const fetchSurveyData = async (projectId) => {
+        if (!projectId) return;
+        setIsLoadingSurvey(true);
+        try {
+            const res = await window.axios.get(route('surveys.builder_data', projectId));
+            if (res.data?.success) {
+                const s = res.data.survey;
+                setSurveyTitle(s?.title || `แบบประเมินความพึงพอใจโครงการ ${activeChapter1Project?.title || ''}`);
+                setSurveyDescription(s?.description || '');
+                setSurveyQuestions(Array.isArray(s?.questions) && s.questions.length > 0 ? s.questions : []);
+                setSurveyTotalResponses(res.data.totalResponses || 0);
+                setSurveyEvaluationUrl(res.data.evaluationUrl || '');
+                setSurveyQrCodeUrl(res.data.qrCodeUrl || '');
+                setSurveyStatsSummary(res.data.statsSummary || null);
+            }
+        } catch (e) {
+            console.error('Error fetching survey data', e);
+        } finally {
+            setIsLoadingSurvey(false);
+        }
+    };
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && activeTab === 'chapter_3') {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('section') === 'survey') {
+                setTimeout(() => {
+                    const el = document.getElementById('survey-builder');
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }, 400);
+            }
+        }
+    }, [activeTab]);
+
+    const handleGenerateAiSurveyQuestions = async () => {
+        if (!activeChapter1Project) return;
+        setIsGeneratingSurveyAi(true);
+        try {
+            const res = await window.axios.post(route('surveys.generate_questions', activeChapter1Project.id), {
+                save: false
+            });
+            if (res.data?.success && Array.isArray(res.data?.questions)) {
+                setSurveyQuestions(res.data.questions);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'AI สังเคราะห์ข้อคำถามสำเร็จ!',
+                    text: `สังเคราะห์ข้อคำถามตรงตามวัตถุประสงค์และตัวชี้วัดแล้ว ${res.data.questions.length} ข้อ สามารถตรวจสอบ แก้ไข เพิ่ม/ลด หรือจัดหมวดหมู่ก่อนบันทึก`,
+                    confirmButtonColor: '#7c3aed',
+                    confirmButtonText: 'ตกลง'
+                });
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'ไม่สามารถสังเคราะห์ข้อคำถามได้',
+                text: err.response?.data?.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ AI กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ตกลง'
+            });
+        } finally {
+            setIsGeneratingSurveyAi(false);
+        }
+    };
+
+    const handleAddSurveyQuestion = () => {
+        const nextId = surveyQuestions.length > 0 ? Math.max(...surveyQuestions.map(q => Number(q.id) || 0)) + 1 : 1;
+        setSurveyQuestions(prev => [
+            ...prev,
+            {
+                id: nextId,
+                category: 'ด้านกระบวนการจัดกิจกรรม (Process)',
+                question: ''
+            }
+        ]);
+    };
+
+    const handleUpdateSurveyQuestion = (index, field, val) => {
+        setSurveyQuestions(prev => {
+            const copy = [...prev];
+            copy[index] = { ...copy[index], [field]: val };
+            return copy;
+        });
+    };
+
+    const handleRemoveSurveyQuestion = (index) => {
+        if (surveyQuestions.length <= 1) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'ไม่สามารถลบได้',
+                text: 'แบบประเมินต้องมีข้อคำถามอย่างน้อย ๑ ข้อ',
+                confirmButtonColor: '#7c3aed',
+            });
+            return;
+        }
+        setSurveyQuestions(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSaveSurveyQuestions = async () => {
+        if (!activeChapter1Project) return;
+        if (!surveyQuestions || surveyQuestions.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณาเพิ่มข้อคำถาม',
+                text: 'ต้องมีข้อคำถามอย่างน้อย ๑ ข้อเพื่อบันทึกแบบประเมิน',
+                confirmButtonColor: '#7c3aed',
+            });
+            return;
+        }
+
+        const hasEmpty = surveyQuestions.some(q => !q.question || !q.question.trim());
+        if (hasEmpty) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'มีข้อคำถามที่ยังไม่ได้ระบุข้อความ',
+                text: 'กรุณากรอกข้อความคำถามให้ครบทุกข้อก่อนบันทึก',
+                confirmButtonColor: '#7c3aed',
+            });
+            return;
+        }
+
+        setIsSavingSurvey(true);
+        try {
+            const res = await window.axios.post(route('surveys.save_questions', activeChapter1Project.id), {
+                questions: surveyQuestions,
+                title: surveyTitle,
+                description: surveyDescription
+            });
+
+            if (res.data?.success) {
+                if (res.data.survey?.questions) {
+                    setSurveyQuestions(res.data.survey.questions);
+                }
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'บันทึกแบบประเมินโครงการสำเร็จแล้ว',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการบันทึก',
+                text: err.response?.data?.message || 'ไม่สามารถบันทึกแบบประเมินได้',
+                confirmButtonText: 'ตกลง'
+            });
+        } finally {
+            setIsSavingSurvey(false);
+        }
+    };
+
+    const handleCopySurveyLink = () => {
+        if (!surveyEvaluationUrl) return;
+        navigator.clipboard.writeText(surveyEvaluationUrl);
+        setCopiedSurveyLink(true);
+        setTimeout(() => setCopiedSurveyLink(false), 2000);
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'คัดลอกลิงก์แบบประเมินแล้ว!',
+            showConfirmButton: false,
+            timer: 1800
+        });
     };
 
     const [executiveTableView, setExecutiveTableView] = useState('projects');
@@ -16134,6 +16322,253 @@ return (
                         </div>
                     </div>
                 </div>
+
+                {/* ------------------------------------------------------------- */}
+                {/* ๓.๖ เครื่องมือประเมินโครงการ (Evaluation Questionnaire & QR) */}
+                {/* ------------------------------------------------------------- */}
+                <div id="survey-builder" className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-purple-200 space-y-6">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-purple-100">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center text-2xl font-bold shadow-md shadow-purple-500/20">
+                                📋
+                            </div>
+                            <div>
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[11px] font-bold mb-1">
+                                    <span>Do ➔ Check Phase Integration</span>
+                                </div>
+                                <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    เครื่องมือประเมินผลโครงการ (Evaluation Questionnaire & QR Generator)
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    สร้างและปรับแต่งแบบประเมินความพึงพอใจโครงการที่สอดคล้องกับวัตถุประสงค์และตัวชี้วัด พร้อมสร้าง QR Code และลิงก์ เพื่อนำผลไปวิเคราะห์ในบทที่ ๔
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleGenerateAiSurveyQuestions}
+                                disabled={isGeneratingSurveyAi}
+                                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-800 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {isGeneratingSurveyAi ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>AI กำลังสังเคราะห์ข้อคำถาม...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>🤖</span>
+                                        <span>ให้ AI สังเคราะห์ข้อคำถามตามวัตถุประสงค์และตัวชี้วัด</span>
+                                    </>
+                                )}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleAddSurveyQuestion}
+                                className="px-3.5 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>➕</span>
+                                <span>เพิ่มข้อคำถาม</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Meta info & Question Counter */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100 md:col-span-2 space-y-2">
+                            <label className="text-xs font-bold text-slate-700 block">
+                                หัวข้อแบบประเมินโครงการ (Survey Title):
+                            </label>
+                            <input
+                                type="text"
+                                value={surveyTitle}
+                                onChange={(e) => setSurveyTitle(e.target.value)}
+                                className="w-full text-xs font-bold rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
+                                placeholder="แบบประเมินความพึงพอใจโครงการ..."
+                            />
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col justify-center items-center text-center">
+                            <span className="text-[11px] font-bold text-slate-500">จำนวนข้อคำถามปัจจุบัน</span>
+                            <span className="text-2xl font-black text-purple-900 mt-0.5">
+                                {toThaiNumerals(surveyQuestions.length)} <span className="text-xs font-normal text-slate-500">ข้อ</span>
+                            </span>
+                            <span className="text-[11px] text-emerald-600 font-semibold mt-1">
+                                {surveyTotalResponses > 0 ? `มีผู้ตอบแล้ว ${toThaiNumerals(surveyTotalResponses)} คน` : 'ยังไม่มีผู้ตอบแบบประเมิน'}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Question List */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between pb-1">
+                            <span className="text-xs font-bold text-slate-800">
+                                รายการข้อคำถามแบบประเมิน (Likert Scale ๕ ระดับ)
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                                สามารถแก้ไขข้อความ เปลี่ยนหมวดหมู่ หรือลบ/เพิ่มข้อได้ตามต้องการ
+                            </span>
+                        </div>
+
+                        {surveyQuestions.map((q, idx) => (
+                            <div
+                                key={q.id || idx}
+                                className="p-4 rounded-2xl bg-slate-50 border border-slate-200 hover:border-purple-300 transition space-y-2.5"
+                            >
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs font-black flex items-center justify-center shadow-xs">
+                                            {toThaiNumerals(idx + 1)}
+                                        </span>
+                                        <input
+                                            type="text"
+                                            value={q.category || ''}
+                                            onChange={(e) => handleUpdateSurveyQuestion(idx, 'category', e.target.value)}
+                                            placeholder="หมวดหมู่ / ด้านการประเมิน..."
+                                            className="text-[11px] font-semibold text-purple-800 bg-purple-50/80 border border-purple-200 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-purple-500 min-w-[220px]"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveSurveyQuestion(idx)}
+                                        className="text-[11px] text-rose-600 hover:text-rose-800 font-bold px-2.5 py-1 rounded-lg hover:bg-rose-50 border border-transparent hover:border-rose-200 transition self-end sm:self-auto flex items-center gap-1"
+                                    >
+                                        <span>🗑️</span>
+                                        <span>ลบข้อนี้</span>
+                                    </button>
+                                </div>
+
+                                <textarea
+                                    rows={2}
+                                    value={q.question || ''}
+                                    onChange={(e) => handleUpdateSurveyQuestion(idx, 'question', e.target.value)}
+                                    placeholder="ระบุข้อความคำถามประเมิน..."
+                                    className="w-full text-xs font-medium rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed font-sans"
+                                />
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Bottom Save & Export Actions */}
+                    <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
+                        <button
+                            type="button"
+                            onClick={handleAddSurveyQuestion}
+                            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                            <span>➕ เพิ่มข้อคำถามใหม่</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleSaveSurveyQuestions}
+                            disabled={isSavingSurvey}
+                            className="px-6 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                            {isSavingSurvey ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>กำลังบันทึกแบบประเมิน...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>💾</span>
+                                    <span>บันทึกแบบประเมินโครงการ</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* Live Link & QR Code Distribution Panel */}
+                    <div className="mt-4 p-5 rounded-2xl bg-gradient-to-br from-purple-50/70 via-indigo-50/50 to-slate-50 border border-purple-200/90 space-y-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl">🌐</span>
+                            <h4 className="text-xs sm:text-sm font-bold text-purple-950">
+                                ช่องทางเผยแพร่แบบประเมินสำหรับผู้เข้าร่วมโครงการ (Public Link & QR Code)
+                            </h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                            {/* Left: Link & Copy */}
+                            <div className="md:col-span-2 space-y-3">
+                                <div>
+                                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                        ลิงก์สำหรับส่งให้ผู้ตอบแบบประเมิน (Public Evaluation URL):
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="text"
+                                            readOnly
+                                            value={surveyEvaluationUrl || route('surveys.evaluate', activeChapter1Project.id)}
+                                            className="w-full text-xs bg-white text-slate-800 rounded-xl border border-slate-300 px-3 py-2 select-all font-mono"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={handleCopySurveyLink}
+                                            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 shadow-sm ${
+                                                copiedSurveyLink
+                                                    ? 'bg-emerald-600 text-white'
+                                                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                                            }`}
+                                        >
+                                            <span>{copiedSurveyLink ? '✓' : '📋'}</span>
+                                            <span>{copiedSurveyLink ? 'คัดลอกแล้ว' : 'คัดลอกลิงก์'}</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2 pt-1">
+                                    <a
+                                        href={surveyEvaluationUrl || route('surveys.evaluate', activeChapter1Project.id)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-3.5 py-1.5 rounded-lg bg-white border border-purple-200 text-purple-700 hover:bg-purple-50 text-xs font-bold transition flex items-center gap-1.5"
+                                    >
+                                        <span>🔗</span>
+                                        <span>เปิดหน้าแบบประเมินจริง (ทดลองตอบ)</span>
+                                    </a>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setActiveTab('chapter_4');
+                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
+                                        className="px-3.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-bold transition flex items-center gap-1.5"
+                                    >
+                                        <span>📊</span>
+                                        <span>ดูการนำข้อมูลไปใช้ในบทที่ ๔ ➔</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Right: QR Code Preview */}
+                            <div className="flex flex-col items-center justify-center p-3 bg-white rounded-2xl border border-purple-100 shadow-xs">
+                                <img
+                                    src={surveyQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(surveyEvaluationUrl || route('surveys.evaluate', activeChapter1Project.id))}`}
+                                    alt="Evaluation QR Code"
+                                    className="w-32 h-32 rounded-xl object-contain border border-slate-100"
+                                />
+                                <span className="text-[10px] text-slate-500 mt-2 font-medium">สแกนเพื่อตอบแบบประเมิน</span>
+                                <a
+                                    href={surveyQrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(surveyEvaluationUrl || route('surveys.evaluate', activeChapter1Project.id))}`}
+                                    download={`QR_Evaluation_${activeChapter1Project.code || activeChapter1Project.id}.png`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="mt-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 underline flex items-center gap-1"
+                                >
+                                    <span>⬇️</span>
+                                    <span>ดาวน์โหลด QR Code</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     };
@@ -16173,18 +16608,210 @@ return (
                 </div>
             </div>
 
+            {/* Live Evaluation Statistics Card (Fed from Chapter 3 Survey responses) */}
+            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold mb-1">
+                            <span>ข้อมูลจริงจากการตอบแบบประเมิน</span>
+                        </div>
+                        <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span>📊</span> ตารางที่ ๔.๑ ผลการประเมินความพึงพอใจต่อการดำเนินโครงการ
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                            ข้อมูลประมวลผลจากการตอบแบบประเมินความพึงพอใจโครงการ "{activeChapter1Project?.title || ''}" (มาตราส่วน Best, 1977)
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (activeChapter1Project) fetchSurveyData(activeChapter1Project.id);
+                            }}
+                            className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                            <span>🔄</span>
+                            <span>รีเฟรชข้อมูล</span>
+                        </button>
+
+                        <a
+                            href={route('surveys.stats', activeChapter1Project?.id || 0)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                        >
+                            <span>📈</span>
+                            <span>ดูสถิติเชิงลึก & ข้อเสนอแนะ AI</span>
+                        </a>
+                    </div>
+                </div>
+
+                {/* Stat Overview Widgets */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-100 text-center">
+                        <span className="text-[11px] font-bold text-purple-700">จำนวนผู้ตอบแบบประเมิน (N)</span>
+                        <div className="text-2xl font-black text-purple-950 mt-1">
+                            {toThaiNumerals(surveyTotalResponses)} <span className="text-xs font-semibold text-purple-600">คน</span>
+                        </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-center">
+                        <span className="text-[11px] font-bold text-emerald-700">ค่าเฉลี่ยรวม (x̄)</span>
+                        <div className="text-2xl font-black text-emerald-950 mt-1">
+                            {toThaiNumerals(Number(surveyStatsSummary?.overallMean || 0).toFixed(2))}
+                            <span className="text-xs font-semibold text-emerald-600"> / ๕.๐๐</span>
+                        </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-teal-50/70 border border-teal-100 text-center">
+                        <span className="text-[11px] font-bold text-teal-700">ส่วนเบี่ยงเบนมาตรฐาน (S.D.)</span>
+                        <div className="text-2xl font-black text-teal-950 mt-1">
+                            {toThaiNumerals(Number(surveyStatsSummary?.overallSd || 0).toFixed(2))}
+                        </div>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-100 text-center">
+                        <span className="text-[11px] font-bold text-amber-700">ระดับความพึงพอใจ</span>
+                        <div className="text-base font-black text-amber-950 mt-2 truncate">
+                            {surveyStatsSummary?.overallLevel || 'ยังไม่มีข้อมูล'}
+                        </div>
+                        <span className="text-[10px] text-amber-700">
+                            ({toThaiNumerals(Number(surveyStatsSummary?.overallPercentage || 0).toFixed(1))}%)
+                        </span>
+                    </div>
+                </div>
+
+                {/* Table 4.1 Results */}
+                {surveyTotalResponses > 0 && surveyStatsSummary?.questionsStats?.length > 0 ? (
+                    <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                        <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                                    <th className="py-3 px-3 text-center w-12">ที่</th>
+                                    <th className="py-3 px-4">รายการประเมิน (ข้อคำถาม)</th>
+                                    <th className="py-3 px-3 text-center w-16">N</th>
+                                    <th className="py-3 px-3 text-center w-20">ค่าเฉลี่ย (x̄)</th>
+                                    <th className="py-3 px-3 text-center w-20">S.D.</th>
+                                    <th className="py-3 px-3 text-center w-20">ร้อยละ</th>
+                                    <th className="py-3 px-4 text-center w-28">ระดับความพึงพอใจ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-slate-700">
+                                {surveyStatsSummary.questionsStats.map((item, idx) => (
+                                    <tr key={item.id || idx} className="hover:bg-slate-50/80 transition">
+                                        <td className="py-2.5 px-3 text-center font-bold text-slate-500">
+                                            {toThaiNumerals(idx + 1)}
+                                        </td>
+                                        <td className="py-2.5 px-4">
+                                            {item.category && (
+                                                <span className="inline-block text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded mr-1.5">
+                                                    {item.category}
+                                                </span>
+                                            )}
+                                            <span className="font-medium text-slate-900">{item.question}</span>
+                                        </td>
+                                        <td className="py-2.5 px-3 text-center font-semibold">
+                                            {toThaiNumerals(item.count || surveyTotalResponses)}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-center font-bold text-purple-950">
+                                            {toThaiNumerals(Number(item.mean || 0).toFixed(2))}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-center font-medium text-slate-600">
+                                            {toThaiNumerals(Number(item.sd || 0).toFixed(2))}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-center font-medium text-slate-600">
+                                            {toThaiNumerals(Number(item.percentage || 0).toFixed(1))}%
+                                        </td>
+                                        <td className="py-2.5 px-4 text-center">
+                                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                                item.mean >= 4.50 ? 'bg-emerald-100 text-emerald-800' :
+                                                item.mean >= 3.50 ? 'bg-teal-100 text-teal-800' :
+                                                item.mean >= 2.50 ? 'bg-amber-100 text-amber-800' :
+                                                'bg-rose-100 text-rose-800'
+                                            }`}>
+                                                {item.level || 'ปานกลาง'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {/* Total Row */}
+                                <tr className="bg-purple-50/80 font-bold text-slate-900 border-t-2 border-purple-200">
+                                    <td colSpan={2} className="py-3 px-4 text-right">
+                                        รวมเฉลี่ยภาพรวมทั้งโครงการ
+                                    </td>
+                                    <td className="py-3 px-3 text-center">
+                                        {toThaiNumerals(surveyTotalResponses)}
+                                    </td>
+                                    <td className="py-3 px-3 text-center text-purple-950 text-sm">
+                                        {toThaiNumerals(Number(surveyStatsSummary.overallMean || 0).toFixed(2))}
+                                    </td>
+                                    <td className="py-3 px-3 text-center text-slate-700">
+                                        {toThaiNumerals(Number(surveyStatsSummary.overallSd || 0).toFixed(2))}
+                                    </td>
+                                    <td className="py-3 px-3 text-center text-slate-700">
+                                        {toThaiNumerals(Number(surveyStatsSummary.overallPercentage || 0).toFixed(1))}%
+                                    </td>
+                                    <td className="py-3 px-4 text-center">
+                                        <span className="inline-block px-3 py-1 rounded-full text-xs font-black bg-purple-600 text-white shadow-xs">
+                                            {surveyStatsSummary.overallLevel || 'มาก'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="p-8 rounded-2xl bg-amber-50/60 border border-amber-200 text-center space-y-3">
+                        <span className="text-3xl block">📋</span>
+                        <h4 className="text-sm font-bold text-amber-900">
+                            ยังไม่มีข้อมูลผลการตอบแบบประเมินสำหรับโครงการนี้
+                        </h4>
+                        <p className="text-xs text-amber-800 max-w-lg mx-auto leading-relaxed">
+                            คุณสามารถนำข้อคำถามที่สร้างขึ้นในส่วนท้ายของบทที่ ๓ ส่งเป็นลิงก์หรือแสดง QR Code ให้ผู้เข้าร่วมโครงการสแกนตอบแบบประเมิน เมื่อมีการตอบข้อมูล ระบบจะนำผลมาคำนวณสถิติ x̄ และ S.D. ในตารางนี้โดยอัตโนมัติ
+                        </p>
+                        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={handleCopySurveyLink}
+                                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                            >
+                                <span>📋</span>
+                                <span>คัดลอกลิงก์แบบประเมิน</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveTab('chapter_3');
+                                    setTimeout(() => {
+                                        const el = document.getElementById('survey-builder');
+                                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                                    }, 300);
+                                }}
+                                className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>📙</span>
+                                <span>ไปยังเครื่องมือสร้างแบบประเมินในบทที่ ๓</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Standard Chapter 4 Guidelines Card */}
             <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
                 <div className="max-w-3xl space-y-4">
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                        <span>📊</span> ผลการวิเคราะห์ข้อมูลและผลสัมฤทธิ์
+                        <span>📑</span> โครงสร้างรายงานผลการดำเนินงาน บทที่ ๔
                     </h3>
                     <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
-                        <p className="font-bold text-slate-900">หัวข้อสำคัญในบทที่ ๔:</p>
+                        <p className="font-bold text-slate-900">หัวข้อสำคัญในบทที่ ๔ (Check Phase):</p>
                         <ul className="list-disc pl-5 space-y-1">
-                            <li>๔.๑ ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม/กลุ่มเป้าหมาย</li>
-                            <li>๔.๒ ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ (ยอดผู้เข้าร่วม เทียบกับเป้าหมาย)</li>
-                            <li>๔.๓ ผลการประเมินความพึงพอใจเชิงคุณภาพ (ค่าเฉลี่ย x̄ และส่วนเบี่ยงเบนมาตรฐาน S.D.)</li>
-                            <li>๔.๔ ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน</li>
+                            <li>๔.๑ ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม/กลุ่มเป้าหมาย (เพศ สถานะ สาขาวิชา)</li>
+                            <li>๔.๒ ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ (ยอดผู้เข้าร่วม เทียบกับเป้าหมายที่ตั้งไว้)</li>
+                            <li>๔.๓ ผลการประเมินความพึงพอใจเชิงคุณภาพตามตารางที่ ๔.๑ (ค่าเฉลี่ย x̄ และส่วนเบี่ยงเบนมาตรฐาน S.D.)</li>
+                            <li>๔.๔ ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน (เบิกจ่ายจริง เทียบกับงบที่ได้รับอนุมัติ)</li>
                         </ul>
                     </div>
 
@@ -16192,7 +16819,7 @@ return (
                         {activeChapter1Project && (
                             <Link
                                 href={route('projects.show', activeChapter1Project.id)}
-                                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                             >
                                 <span>📈</span> บันทึกและดูผลการประเมินในหน้ารายละเอียดโครงการ
                             </Link>

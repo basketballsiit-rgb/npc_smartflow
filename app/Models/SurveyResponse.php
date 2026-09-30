@@ -12,6 +12,7 @@ class SurveyResponse extends Model
         'survey_id',
         'respondent_name',
         'respondent_type',
+        'ratings',
         'rating_q1',
         'rating_q2',
         'rating_q3',
@@ -27,6 +28,7 @@ class SurveyResponse extends Model
     protected function casts(): array
     {
         return [
+            'ratings' => 'array',
             'rating_q1' => 'integer',
             'rating_q2' => 'integer',
             'rating_q3' => 'integer',
@@ -49,6 +51,10 @@ class SurveyResponse extends Model
      */
     public function getAverageRatingAttribute(): float
     {
-        return ($this->rating_q1 + $this->rating_q2 + $this->rating_q3 + $this->rating_q4 + $this->rating_q5) / 5.0;
+        if (is_array($this->ratings) && count($this->ratings) > 0) {
+            $sum = array_sum($this->ratings);
+            return round($sum / count($this->ratings), 2);
+        }
+        return round(($this->rating_q1 + $this->rating_q2 + $this->rating_q3 + $this->rating_q4 + $this->rating_q5) / 5.0, 2);
     }
 }
