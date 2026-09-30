@@ -2300,11 +2300,25 @@ class ProjectController extends Controller
 
         // 4.2 Quantitative Section
         $targetQty = 0;
-        if (is_array($project->targets)) {
-            foreach ($project->targets as $t) {
-                if (is_numeric($t)) $targetQty = (int)$t;
-                elseif (preg_match('/(\d+)/', (string)$t, $m)) $targetQty = (int)$m[1];
+        $extractQty = function($val) use (&$extractQty, &$targetQty) {
+            if (is_numeric($val) && (int)$val > 0) {
+                $targetQty = max($targetQty, (int)$val);
+            } elseif (is_string($val)) {
+                if (preg_match('/(\d+)/', $val, $m)) {
+                    $targetQty = max($targetQty, (int)$m[1]);
+                }
+            } elseif (is_array($val) || is_object($val)) {
+                foreach ((array)$val as $item) {
+                    $extractQty($item);
+                }
             }
+        };
+
+        if (!empty($project->targets)) {
+            $extractQty($project->targets);
+        }
+        if (!empty($project->target_participants)) {
+            $targetQty = max($targetQty, (int)$project->target_participants);
         }
         if ($targetQty <= 0) $targetQty = max(30, $totalResponses);
         $actualQty = max($totalResponses, $targetQty);
@@ -2344,14 +2358,17 @@ class ProjectController extends Controller
             . "ผลการเบิกจ่ายงบประมาณเพื่อดำเนินกิจกรรมตามโครงการ ปรากฏว่า มีการเบิกจ่ายจริงเป็นจำนวนเงิน {$spentFmt} บาท งบประมาณคงเหลือส่งคืนคลังสถานศึกษาจำนวน {$remFmt} บาท คิดเป็นอัตราการเบิกจ่ายงบประมาณร้อยละ {$spentPct}%\n"
             . "การใช้จ่ายงบประมาณดังกล่าวเป็นไปอย่างถูกต้อง โปร่งใส ประหยัด คุ้มค่า และสอดคล้องตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. ๒๕๖๐ ทุกประการ";
 
+        $secIntro = "การดำเนินงานโครงการ \"{$title}\" ประจำปีการศึกษา {$year} ของ{$location} ได้ดำเนินการเสร็จสิ้นเรียบร้อยแล้ว คณะทำงานขอรายงานผลการดำเนินงานและการประเมินผลโครงการตามวงจรบริหารงานคุณภาพ PDCA จำแนกตามประเด็นสำคัญดังนี้";
+
         $fullContent = "บทที่ ๔\nผลการดำเนินงานโครงการ\n\n"
-            . "การดำเนินงานโครงการ \"{$title}\" ประจำปีการศึกษา {$year} ของ{$location} ได้ดำเนินการเสร็จสิ้นเรียบร้อยแล้ว คณะทำงานขอรายงานผลการดำเนินงานตามวงจรคุณภาพ PDCA ดังต่อไปนี้\n\n"
+            . $secIntro . "\n\n"
             . $sec4_1 . "\n\n"
             . $sec4_2 . "\n\n"
             . $sec4_3 . "\n\n"
             . $sec4_4;
 
         $sections = [
+            'intro' => $secIntro,
             'section_4_1' => $sec4_1,
             'section_4_2' => $sec4_2,
             'section_4_3' => $sec4_3,

@@ -285,11 +285,9 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                     <tr className="bg-slate-100 text-slate-900 border-b border-slate-800 font-bold">
                                         <th className="border border-slate-800 py-1.5 px-2 text-center w-10">ที่</th>
                                         <th className="border border-slate-800 py-1.5 px-3 text-left">รายการประเมิน</th>
-                                        <th className="border border-slate-800 py-1.5 px-2 text-center w-12">N</th>
-                                        <th className="border border-slate-800 py-1.5 px-2 text-center w-14">ค่าเฉลี่ย (x̄)</th>
-                                        <th className="border border-slate-800 py-1.5 px-2 text-center w-14">S.D.</th>
-                                        <th className="border border-slate-800 py-1.5 px-2 text-center w-14">ร้อยละ</th>
-                                        <th className="border border-slate-800 py-1.5 px-3 text-center w-24">ระดับความพึงพอใจ</th>
+                                        <th className="border border-slate-800 py-1.5 px-2 text-center w-16">ค่าเฉลี่ย (x̄)</th>
+                                        <th className="border border-slate-800 py-1.5 px-2 text-center w-16">S.D.</th>
+                                        <th className="border border-slate-800 py-1.5 px-3 text-center w-28">ระดับความพึงพอใจ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -301,7 +299,7 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                         return (
                                             <React.Fragment key={dimNum}>
                                                 <tr className="bg-slate-100/70 font-bold border border-slate-800">
-                                                    <td colSpan={7} className="py-1 px-3 border border-slate-800">
+                                                    <td colSpan={5} className="py-1 px-3 border border-slate-800">
                                                         {dimSummary?.title || `ด้านที่ ${toThaiNumerals(dimNum)}`}
                                                     </td>
                                                 </tr>
@@ -313,17 +311,11 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                                         <td className="py-1 px-3 pl-6 border border-slate-800">
                                                             {q.question}
                                                         </td>
-                                                        <td className="py-1 px-2 text-center border border-slate-800">
-                                                            {toThaiNumerals(q.count || totalResponses)}
-                                                        </td>
                                                         <td className="py-1 px-2 text-center border border-slate-800 font-bold">
                                                             {toThaiNumerals(Number(q.mean || 0).toFixed(2))}
                                                         </td>
                                                         <td className="py-1 px-2 text-center border border-slate-800">
                                                             {toThaiNumerals(Number(q.sd || 0).toFixed(2))}
-                                                        </td>
-                                                        <td className="py-1 px-2 text-center border border-slate-800">
-                                                            {toThaiNumerals(Number(q.percentage || 0).toFixed(1))}
                                                         </td>
                                                         <td className="py-1 px-3 text-center border border-slate-800">
                                                             {q.level || 'มากที่สุด'}
@@ -335,17 +327,11 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                                         <td colSpan={2} className="py-1 px-3 text-right italic border border-slate-800">
                                                             รวมเฉลี่ยด้านที่ {toThaiNumerals(dimNum)}
                                                         </td>
-                                                        <td className="py-1 px-2 text-center border border-slate-800">
-                                                            {toThaiNumerals(totalResponses)}
-                                                        </td>
                                                         <td className="py-1 px-2 text-center font-bold border border-slate-800">
                                                             {toThaiNumerals(Number(dimSummary.mean || 0).toFixed(2))}
                                                         </td>
                                                         <td className="py-1 px-2 text-center border border-slate-800">
                                                             {toThaiNumerals(Number(dimSummary.sd || 0).toFixed(2))}
-                                                        </td>
-                                                        <td className="py-1 px-2 text-center border border-slate-800">
-                                                            {toThaiNumerals(Number(dimSummary.percentage || 0).toFixed(1))}
                                                         </td>
                                                         <td className="py-1 px-3 text-center border border-slate-800 font-bold">
                                                             {dimSummary.level}
@@ -361,17 +347,11 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                         <td colSpan={2} className="py-1.5 px-3 text-right border border-slate-800">
                                             รวมเฉลี่ยภาพรวมทั้งโครงการ
                                         </td>
-                                        <td className="py-1.5 px-2 text-center border border-slate-800">
-                                            {toThaiNumerals(totalResponses)}
-                                        </td>
                                         <td className="py-1.5 px-2 text-center font-bold border border-slate-800">
                                             {toThaiNumerals(Number(surveyStats?.overallMean || 0).toFixed(2))}
                                         </td>
                                         <td className="py-1.5 px-2 text-center border border-slate-800">
                                             {toThaiNumerals(Number(surveyStats?.overallSd || 0).toFixed(2))}
-                                        </td>
-                                        <td className="py-1.5 px-2 text-center border border-slate-800">
-                                            {toThaiNumerals(Number(surveyStats?.overallPercentage || 0).toFixed(1))}
                                         </td>
                                         <td className="py-1.5 px-3 text-center font-bold border border-slate-800">
                                             {surveyStats?.overallLevel || 'มากที่สุด'}

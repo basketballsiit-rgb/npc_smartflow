@@ -16989,11 +16989,9 @@ return (
                                     <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
                                         <th className="py-3 px-3 text-center w-12">ที่</th>
                                         <th className="py-3 px-4">รายการประเมิน (ข้อคำถาม)</th>
-                                        <th className="py-3 px-3 text-center w-16">N</th>
-                                        <th className="py-3 px-3 text-center w-20">ค่าเฉลี่ย (x̄)</th>
-                                        <th className="py-3 px-3 text-center w-20">S.D.</th>
-                                        <th className="py-3 px-3 text-center w-20">ร้อยละ</th>
-                                        <th className="py-3 px-4 text-center w-28">ระดับความพึงพอใจ</th>
+                                        <th className="py-3 px-3 text-center w-24">ค่าเฉลี่ย (x̄)</th>
+                                        <th className="py-3 px-3 text-center w-24">S.D.</th>
+                                        <th className="py-3 px-4 text-center w-32">ระดับความพึงพอใจ</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -17006,7 +17004,7 @@ return (
                                             <React.Fragment key={dimNum}>
                                                 {/* Dimension Header */}
                                                 <tr className="bg-purple-50/70 font-bold text-purple-950 border-t border-purple-200">
-                                                    <td colSpan={7} className="py-2.5 px-4">
+                                                    <td colSpan={5} className="py-2.5 px-4">
                                                         <span>📁 {dimSummary?.title || `ด้านที่ ${toThaiNumerals(dimNum)}`}</span>
                                                     </td>
                                                 </tr>
@@ -17020,17 +17018,11 @@ return (
                                                         <td className="py-2.5 px-4 pl-6">
                                                             <span className="font-medium text-slate-900">{item.question}</span>
                                                         </td>
-                                                        <td className="py-2.5 px-3 text-center font-semibold">
-                                                            {toThaiNumerals(item.count || surveyTotalResponses)}
-                                                        </td>
                                                         <td className="py-2.5 px-3 text-center font-bold text-purple-950">
                                                             {toThaiNumerals(Number(item.mean || 0).toFixed(2))}
                                                         </td>
                                                         <td className="py-2.5 px-3 text-center font-medium text-slate-600">
                                                             {toThaiNumerals(Number(item.sd || 0).toFixed(2))}
-                                                        </td>
-                                                        <td className="py-2.5 px-3 text-center font-medium text-slate-600">
-                                                            {toThaiNumerals(Number(item.percentage || 0).toFixed(1))}%
                                                         </td>
                                                         <td className="py-2.5 px-4 text-center">
                                                             <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
@@ -17051,17 +17043,11 @@ return (
                                                         <td colSpan={2} className="py-2 px-4 text-right italic text-purple-900">
                                                             รวมเฉลี่ยด้านที่ {toThaiNumerals(dimNum)}
                                                         </td>
-                                                        <td className="py-2 px-3 text-center">
-                                                            {toThaiNumerals(surveyTotalResponses)}
-                                                        </td>
                                                         <td className="py-2 px-3 text-center text-purple-950 font-black">
                                                             {toThaiNumerals(Number(dimSummary.mean || 0).toFixed(2))}
                                                         </td>
                                                         <td className="py-2 px-3 text-center text-slate-700">
                                                             {toThaiNumerals(Number(dimSummary.sd || 0).toFixed(2))}
-                                                        </td>
-                                                        <td className="py-2 px-3 text-center text-slate-700">
-                                                            {toThaiNumerals(Number(dimSummary.percentage || 0).toFixed(1))}%
                                                         </td>
                                                         <td className="py-2 px-4 text-center">
                                                             <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-100 text-purple-900">
@@ -17079,17 +17065,11 @@ return (
                                         <td colSpan={2} className="py-3.5 px-4 text-right text-purple-950 text-xs">
                                             รวมเฉลี่ยภาพรวมทั้งโครงการ (Overall Satisfaction)
                                         </td>
-                                        <td className="py-3.5 px-3 text-center">
-                                            {toThaiNumerals(surveyTotalResponses)}
-                                        </td>
                                         <td className="py-3.5 px-3 text-center text-purple-950 text-sm font-black">
                                             {toThaiNumerals(Number(surveyStatsSummary.overallMean || 0).toFixed(2))}
                                         </td>
                                         <td className="py-3.5 px-3 text-center text-slate-800">
                                             {toThaiNumerals(Number(surveyStatsSummary.overallSd || 0).toFixed(2))}
-                                        </td>
-                                        <td className="py-3.5 px-3 text-center text-slate-800">
-                                            {toThaiNumerals(Number(surveyStatsSummary.overallPercentage || 0).toFixed(1))}%
                                         </td>
                                         <td className="py-3.5 px-4 text-center">
                                             <span className="inline-block px-3 py-1 rounded-full text-xs font-black bg-purple-700 text-white shadow-xs">
