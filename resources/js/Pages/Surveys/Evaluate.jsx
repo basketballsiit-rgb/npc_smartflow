@@ -177,11 +177,10 @@ export default function Evaluate({ project, survey }) {
                                     <label className="block text-xs font-bold text-purple-950">
                                         ๒. เพศ
                                     </label>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-2 gap-2">
                                         {[
                                             { key: 'male', label: '👨 ชาย' },
                                             { key: 'female', label: '👩 หญิง' },
-                                            { key: 'other', label: '⚧️ อื่นๆ / ไม่ระบุ' },
                                         ].map((item) => (
                                             <button
                                                 key={item.key}

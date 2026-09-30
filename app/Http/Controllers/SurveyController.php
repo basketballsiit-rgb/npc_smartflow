@@ -574,7 +574,6 @@ class SurveyController extends Controller
         $genderLabels = [
             'male' => 'ชาย',
             'female' => 'หญิง',
-            'other' => 'อื่นๆ / ไม่ระบุ',
         ];
 
         $educationLabels = [
@@ -593,7 +592,7 @@ class SurveyController extends Controller
             'public' => 'ประชาชน/ผู้ปกครอง',
         ];
 
-        $genderCounts = ['male' => 0, 'female' => 0, 'other' => 0];
+        $genderCounts = ['male' => 0, 'female' => 0];
         $educationCounts = ['voc_cert' => 0, 'high_voc_cert' => 0, 'bachelor' => 0, 'master' => 0, 'doctorate' => 0, 'other' => 0];
         $respondentTypeCounts = ['student' => 0, 'teacher' => 0, 'staff' => 0, 'public' => 0];
 
@@ -601,12 +600,10 @@ class SurveyController extends Controller
             foreach ($responses as $resp) {
                 // Gender
                 $g = $resp->gender;
-                if ($g === 'male' || $g === 'ชาย') {
-                    $genderCounts['male']++;
-                } elseif ($g === 'female' || $g === 'หญิง') {
+                if ($g === 'female' || $g === 'หญิง') {
                     $genderCounts['female']++;
                 } else {
-                    $genderCounts['other']++;
+                    $genderCounts['male']++;
                 }
 
                 // Education level
