@@ -1752,6 +1752,46 @@ export default function Dashboard({
         }
     };
 
+    const handleLoadStandard15Pattern = async () => {
+        if (!activeChapter1Project) return;
+        const confirm = await Swal.fire({
+            title: 'โหลดชุดคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ)?',
+            text: 'ระบบจะนำเข้าข้อคำถามมาตรฐาน ๑๕ ข้อ ครอบคลุม ๔ ด้าน (กระบวนการ, ปัจจัยนำเข้า, ผลผลิต/วัตถุประสงค์, ประโยชน์/ตัวชี้วัด) สอดคล้องกับโครงการนี้',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#7c3aed',
+            cancelButtonColor: '#94a3b8',
+            confirmButtonText: 'ยืนยันโหลดชุดคำถาม',
+            cancelButtonText: 'ยกเลิก'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        setIsGeneratingSurveyAi(true);
+        try {
+            const res = await window.axios.post(route('surveys.load_standard', activeChapter1Project.id));
+            if (res.data?.success && Array.isArray(res.data?.questions)) {
+                setSurveyQuestions(res.data.questions);
+                Swal.fire({
+                    icon: 'success',
+                    title: 'โหลดชุดคำถามมาตรฐานสำเร็จ!',
+                    text: 'นำเข้าข้อคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ) พร้อมปรับข้อความสอดคล้องกับวัตถุประสงค์และตัวชี้วัดโครงการเรียบร้อยแล้ว',
+                    confirmButtonColor: '#7c3aed',
+                    confirmButtonText: 'ตกลง'
+                });
+            }
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'ไม่สามารถโหลดชุดคำถามได้',
+                text: err.response?.data?.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ตกลง'
+            });
+        } finally {
+            setIsGeneratingSurveyAi(false);
+        }
+    };
+
     const handleAddSurveyQuestion = () => {
         const nextId = surveyQuestions.length > 0 ? Math.max(...surveyQuestions.map(q => Number(q.id) || 0)) + 1 : 1;
         setSurveyQuestions(prev => [
@@ -16349,6 +16389,17 @@ return (
                         <div className="flex flex-wrap items-center gap-2">
                             <button
                                 type="button"
+                                onClick={handleLoadStandard15Pattern}
+                                disabled={isGeneratingSurveyAi}
+                                className="px-3.5 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+                                title="นำเข้าชุดข้อคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ) ที่เชื่อมโยงวัตถุประสงค์ ตัวชี้วัด และประโยชน์ที่คาดว่าจะได้รับ"
+                            >
+                                <span>📋</span>
+                                <span>โหลดชุดคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ)</span>
+                            </button>
+
+                            <button
+                                type="button"
                                 onClick={handleGenerateAiSurveyQuestions}
                                 disabled={isGeneratingSurveyAi}
                                 className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-800 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
@@ -16369,7 +16420,7 @@ return (
                             <button
                                 type="button"
                                 onClick={handleAddSurveyQuestion}
-                                className="px-3.5 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-bold transition flex items-center gap-1.5"
+                                className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-bold transition flex items-center gap-1.5"
                             >
                                 <span>➕</span>
                                 <span>เพิ่มข้อคำถาม</span>
@@ -16407,10 +16458,10 @@ return (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between pb-1">
                             <span className="text-xs font-bold text-slate-800">
-                                รายการข้อคำถามแบบประเมิน (Likert Scale ๕ ระดับ)
+                                รายการข้อคำถามแบบประเมิน (มาตราส่วนประมาณค่า Likert Scale ๕ ระดับ)
                             </span>
                             <span className="text-[11px] text-slate-400">
-                                สามารถแก้ไขข้อความ เปลี่ยนหมวดหมู่ หรือลบ/เพิ่มข้อได้ตามต้องการ
+                                จัดกลุ่ม ๔ ด้าน (กระบวนการ, ปัจจัยนำเข้า, ผลผลิต/วัตถุประสงค์, ประโยชน์/ตัวชี้วัด) สามารถปรับแต่งได้อิสระ
                             </span>
                         </div>
 
@@ -16429,7 +16480,7 @@ return (
                                             value={q.category || ''}
                                             onChange={(e) => handleUpdateSurveyQuestion(idx, 'category', e.target.value)}
                                             placeholder="หมวดหมู่ / ด้านการประเมิน..."
-                                            className="text-[11px] font-semibold text-purple-800 bg-purple-50/80 border border-purple-200 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-purple-500 min-w-[220px]"
+                                            className="text-[11px] font-semibold text-purple-800 bg-purple-50/80 border border-purple-200 rounded-lg px-2.5 py-1 focus:ring-1 focus:ring-purple-500 min-w-[240px]"
                                         />
                                     </div>
 
@@ -16456,13 +16507,23 @@ return (
 
                     {/* Bottom Save & Export Actions */}
                     <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
-                        <button
-                            type="button"
-                            onClick={handleAddSurveyQuestion}
-                            className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
-                        >
-                            <span>➕ เพิ่มข้อคำถามใหม่</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleAddSurveyQuestion}
+                                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>➕ เพิ่มข้อคำถามใหม่</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleLoadStandard15Pattern}
+                                className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>🔄 รีเซ็ตเป็นชุด ๑๕ ข้อมาตรฐาน</span>
+                            </button>
+                        </div>
 
                         <button
                             type="button"
@@ -16585,7 +16646,7 @@ return (
                             บทที่ ๔: ผลการดำเนินงาน & ประเมินผล (Check Phase)
                         </h2>
                         <p className="text-rose-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
-                            นำเสนอผลการวิเคราะห์ข้อมูลทางสถิติ ผลสัมฤทธิ์ตามตัวชี้วัดเชิงปริมาณและเชิงคุณภาพ ตารางค่าเฉลี่ยความพึงพอใจ
+                            นำเสนอผลการวิเคราะห์ข้อมูลทางสถิติ ผลสัมฤทธิ์ตามตัวชี้วัดเชิงปริมาณและเชิงคุณภาพ และสรุปผลเปรียบเทียบย้อนกลับไปยังบทที่ ๑
                         </p>
                     </div>
 
@@ -16613,13 +16674,13 @@ return (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                     <div>
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold mb-1">
-                            <span>ข้อมูลจริงจากการตอบแบบประเมิน</span>
+                            <span>วิเคราะห์ข้อมูลจริงจากการตอบแบบประเมิน</span>
                         </div>
                         <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span>📊</span> ตารางที่ ๔.๑ ผลการประเมินความพึงพอใจต่อการดำเนินโครงการ
+                            <span>📊</span> ตารางที่ ๔.๑ ค่าเฉลี่ย ส่วนเบี่ยงเบนมาตรฐาน และระดับความพึงพอใจต่อการดำเนินโครงการ (จำแนกรายด้าน ๔ ด้าน)
                         </h3>
                         <p className="text-xs text-slate-500">
-                            ข้อมูลประมวลผลจากการตอบแบบประเมินความพึงพอใจโครงการ "{activeChapter1Project?.title || ''}" (มาตราส่วน Best, 1977)
+                            ข้อมูลประมวลผลจากการตอบแบบประเมินความพึงพอใจโครงการ "{activeChapter1Project?.title || ''}" (เกณฑ์ Best, 1977: ๕=มากที่สุด ถึง ๑=ปรับปรุง)
                         </p>
                     </div>
 
@@ -16642,7 +16703,7 @@ return (
                             className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                         >
                             <span>📈</span>
-                            <span>ดูสถิติเชิงลึก & ข้อเสนอแนะ AI</span>
+                            <span>ดูสถิติเชิงลึก & AI Recommendation</span>
                         </a>
                     </div>
                 </div>
@@ -16657,7 +16718,7 @@ return (
                     </div>
 
                     <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-center">
-                        <span className="text-[11px] font-bold text-emerald-700">ค่าเฉลี่ยรวม (x̄)</span>
+                        <span className="text-[11px] font-bold text-emerald-700">ค่าเฉลี่ยภาพรวมทั้งโครงการ (x̄)</span>
                         <div className="text-2xl font-black text-emerald-950 mt-1">
                             {toThaiNumerals(Number(surveyStatsSummary?.overallMean || 0).toFixed(2))}
                             <span className="text-xs font-semibold text-emerald-600"> / ๕.๐๐</span>
@@ -16672,7 +16733,7 @@ return (
                     </div>
 
                     <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-100 text-center">
-                        <span className="text-[11px] font-bold text-amber-700">ระดับความพึงพอใจ</span>
+                        <span className="text-[11px] font-bold text-amber-700">ระดับความพึงพอใจภาพรวม</span>
                         <div className="text-base font-black text-amber-950 mt-2 truncate">
                             {surveyStatsSummary?.overallLevel || 'ยังไม่มีข้อมูล'}
                         </div>
@@ -16682,84 +16743,203 @@ return (
                     </div>
                 </div>
 
-                {/* Table 4.1 Results */}
+                {/* Table 4.1 Results Grouped by 4 Dimensions */}
                 {surveyTotalResponses > 0 && surveyStatsSummary?.questionsStats?.length > 0 ? (
-                    <div className="overflow-x-auto rounded-2xl border border-slate-200">
-                        <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                                <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
-                                    <th className="py-3 px-3 text-center w-12">ที่</th>
-                                    <th className="py-3 px-4">รายการประเมิน (ข้อคำถาม)</th>
-                                    <th className="py-3 px-3 text-center w-16">N</th>
-                                    <th className="py-3 px-3 text-center w-20">ค่าเฉลี่ย (x̄)</th>
-                                    <th className="py-3 px-3 text-center w-20">S.D.</th>
-                                    <th className="py-3 px-3 text-center w-20">ร้อยละ</th>
-                                    <th className="py-3 px-4 text-center w-28">ระดับความพึงพอใจ</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-slate-700">
-                                {surveyStatsSummary.questionsStats.map((item, idx) => (
-                                    <tr key={item.id || idx} className="hover:bg-slate-50/80 transition">
-                                        <td className="py-2.5 px-3 text-center font-bold text-slate-500">
-                                            {toThaiNumerals(idx + 1)}
+                    <div className="space-y-4">
+                        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                                        <th className="py-3 px-3 text-center w-12">ที่</th>
+                                        <th className="py-3 px-4">รายการประเมิน (ข้อคำถาม)</th>
+                                        <th className="py-3 px-3 text-center w-16">N</th>
+                                        <th className="py-3 px-3 text-center w-20">ค่าเฉลี่ย (x̄)</th>
+                                        <th className="py-3 px-3 text-center w-20">S.D.</th>
+                                        <th className="py-3 px-3 text-center w-20">ร้อยละ</th>
+                                        <th className="py-3 px-4 text-center w-28">ระดับความพึงพอใจ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                    {[1, 2, 3, 4].map((dimNum) => {
+                                        const dimQuestions = surveyStatsSummary.questionsStats.filter(q => q.dimension === dimNum);
+                                        const dimSummary = surveyStatsSummary.dimensionStats?.[dimNum];
+                                        if (dimQuestions.length === 0) return null;
+
+                                        return (
+                                            <React.Fragment key={dimNum}>
+                                                {/* Dimension Header */}
+                                                <tr className="bg-purple-50/70 font-bold text-purple-950 border-t border-purple-200">
+                                                    <td colSpan={7} className="py-2.5 px-4">
+                                                        <span>📁 {dimSummary?.title || `ด้านที่ ${toThaiNumerals(dimNum)}`}</span>
+                                                    </td>
+                                                </tr>
+
+                                                {/* Dimension Questions */}
+                                                {dimQuestions.map((item, idx) => (
+                                                    <tr key={item.id || idx} className="hover:bg-slate-50/80 transition">
+                                                        <td className="py-2.5 px-3 text-center font-bold text-slate-500">
+                                                            {toThaiNumerals(item.id || idx + 1)}
+                                                        </td>
+                                                        <td className="py-2.5 px-4 pl-6">
+                                                            <span className="font-medium text-slate-900">{item.question}</span>
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-center font-semibold">
+                                                            {toThaiNumerals(item.count || surveyTotalResponses)}
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-center font-bold text-purple-950">
+                                                            {toThaiNumerals(Number(item.mean || 0).toFixed(2))}
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-center font-medium text-slate-600">
+                                                            {toThaiNumerals(Number(item.sd || 0).toFixed(2))}
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-center font-medium text-slate-600">
+                                                            {toThaiNumerals(Number(item.percentage || 0).toFixed(1))}%
+                                                        </td>
+                                                        <td className="py-2.5 px-4 text-center">
+                                                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                                                item.mean >= 4.50 ? 'bg-emerald-100 text-emerald-800' :
+                                                                item.mean >= 3.50 ? 'bg-teal-100 text-teal-800' :
+                                                                item.mean >= 2.50 ? 'bg-amber-100 text-amber-800' :
+                                                                'bg-rose-100 text-rose-800'
+                                                            }`}>
+                                                                {item.level || 'ปานกลาง'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+
+                                                {/* Dimension Subtotal Row */}
+                                                {dimSummary && (
+                                                    <tr className="bg-slate-100/80 font-bold text-slate-900 border-t border-b border-slate-200">
+                                                        <td colSpan={2} className="py-2 px-4 text-right italic text-purple-900">
+                                                            รวมเฉลี่ยด้านที่ {toThaiNumerals(dimNum)}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-center">
+                                                            {toThaiNumerals(surveyTotalResponses)}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-center text-purple-950 font-black">
+                                                            {toThaiNumerals(Number(dimSummary.mean || 0).toFixed(2))}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-center text-slate-700">
+                                                            {toThaiNumerals(Number(dimSummary.sd || 0).toFixed(2))}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-center text-slate-700">
+                                                            {toThaiNumerals(Number(dimSummary.percentage || 0).toFixed(1))}%
+                                                        </td>
+                                                        <td className="py-2 px-4 text-center">
+                                                            <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-100 text-purple-900">
+                                                                {dimSummary.level}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
+
+                                    {/* Overall Project Total Row */}
+                                    <tr className="bg-gradient-to-r from-purple-100 via-indigo-100 to-purple-100 font-black text-slate-900 border-t-2 border-purple-300">
+                                        <td colSpan={2} className="py-3.5 px-4 text-right text-purple-950 text-xs">
+                                            รวมเฉลี่ยภาพรวมทั้งโครงการ (Overall Satisfaction)
                                         </td>
-                                        <td className="py-2.5 px-4">
-                                            {item.category && (
-                                                <span className="inline-block text-[10px] font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded mr-1.5">
-                                                    {item.category}
-                                                </span>
-                                            )}
-                                            <span className="font-medium text-slate-900">{item.question}</span>
+                                        <td className="py-3.5 px-3 text-center">
+                                            {toThaiNumerals(surveyTotalResponses)}
                                         </td>
-                                        <td className="py-2.5 px-3 text-center font-semibold">
-                                            {toThaiNumerals(item.count || surveyTotalResponses)}
+                                        <td className="py-3.5 px-3 text-center text-purple-950 text-sm font-black">
+                                            {toThaiNumerals(Number(surveyStatsSummary.overallMean || 0).toFixed(2))}
                                         </td>
-                                        <td className="py-2.5 px-3 text-center font-bold text-purple-950">
-                                            {toThaiNumerals(Number(item.mean || 0).toFixed(2))}
+                                        <td className="py-3.5 px-3 text-center text-slate-800">
+                                            {toThaiNumerals(Number(surveyStatsSummary.overallSd || 0).toFixed(2))}
                                         </td>
-                                        <td className="py-2.5 px-3 text-center font-medium text-slate-600">
-                                            {toThaiNumerals(Number(item.sd || 0).toFixed(2))}
+                                        <td className="py-3.5 px-3 text-center text-slate-800">
+                                            {toThaiNumerals(Number(surveyStatsSummary.overallPercentage || 0).toFixed(1))}%
                                         </td>
-                                        <td className="py-2.5 px-3 text-center font-medium text-slate-600">
-                                            {toThaiNumerals(Number(item.percentage || 0).toFixed(1))}%
-                                        </td>
-                                        <td className="py-2.5 px-4 text-center">
-                                            <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                                                item.mean >= 4.50 ? 'bg-emerald-100 text-emerald-800' :
-                                                item.mean >= 3.50 ? 'bg-teal-100 text-teal-800' :
-                                                item.mean >= 2.50 ? 'bg-amber-100 text-amber-800' :
-                                                'bg-rose-100 text-rose-800'
-                                            }`}>
-                                                {item.level || 'ปานกลาง'}
+                                        <td className="py-3.5 px-4 text-center">
+                                            <span className="inline-block px-3 py-1 rounded-full text-xs font-black bg-purple-700 text-white shadow-xs">
+                                                {surveyStatsSummary.overallLevel || 'มาก'}
                                             </span>
                                         </td>
                                     </tr>
-                                ))}
-                                {/* Total Row */}
-                                <tr className="bg-purple-50/80 font-bold text-slate-900 border-t-2 border-purple-200">
-                                    <td colSpan={2} className="py-3 px-4 text-right">
-                                        รวมเฉลี่ยภาพรวมทั้งโครงการ
-                                    </td>
-                                    <td className="py-3 px-3 text-center">
-                                        {toThaiNumerals(surveyTotalResponses)}
-                                    </td>
-                                    <td className="py-3 px-3 text-center text-purple-950 text-sm">
-                                        {toThaiNumerals(Number(surveyStatsSummary.overallMean || 0).toFixed(2))}
-                                    </td>
-                                    <td className="py-3 px-3 text-center text-slate-700">
-                                        {toThaiNumerals(Number(surveyStatsSummary.overallSd || 0).toFixed(2))}
-                                    </td>
-                                    <td className="py-3 px-3 text-center text-slate-700">
-                                        {toThaiNumerals(Number(surveyStatsSummary.overallPercentage || 0).toFixed(1))}%
-                                    </td>
-                                    <td className="py-3 px-4 text-center">
-                                        <span className="inline-block px-3 py-1 rounded-full text-xs font-black bg-purple-600 text-white shadow-xs">
-                                            {surveyStatsSummary.overallLevel || 'มาก'}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* ------------------------------------------------------------- */}
+                        {/* ๔.๕ สรุปผลการประเมินเปรียบเทียบกับบทที่ ๑ (Design Alignment)  */}
+                        {/* ------------------------------------------------------------- */}
+                        <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-purple-50/60 to-slate-50 border border-indigo-200/90 space-y-4">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">💡</span>
+                                <div>
+                                    <h4 className="text-xs sm:text-sm font-bold text-indigo-950">
+                                        การวิเคราะห์ผลลัพธ์ย้อนกลับไปยังบทที่ ๑ (Objective, Expected Benefits & KPI Comparison)
+                                    </h4>
+                                    <p className="text-[11px] text-indigo-800">
+                                        จัดกลุ่มตารางเพื่อดึงตัวเลขไปสรุปเปรียบเทียบกับวัตถุประสงค์ ประโยชน์ที่คาดว่าจะได้รับ และตัวชี้วัดความสำเร็จในบทที่ ๑
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {/* 1. ตอบโจทย์วัตถุประสงค์ (ด้านที่ 3) */}
+                                <div className="p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-indigo-700 px-2 py-0.5 rounded-md bg-indigo-50">
+                                            ๑. ตอบโจทย์วัตถุประสงค์
                                         </span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                                        <span className="text-xs font-black text-indigo-950">
+                                            X̄ = {toThaiNumerals(Number(surveyStatsSummary.chapter1Comparison?.objectiveFulfillment?.mean || 0).toFixed(2))}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-700 leading-relaxed">
+                                        นำค่าเฉลี่ยของ <strong className="text-indigo-900">ด้านที่ ๓ (ข้อ ๙-๑๒)</strong> ไปรายงานสรุปผล:
+                                    </p>
+                                    <div className="p-2.5 rounded-lg bg-indigo-50/50 text-[11px] text-indigo-950 font-medium leading-relaxed border border-indigo-100">
+                                        "{surveyStatsSummary.chapter1Comparison?.objectiveFulfillment?.summary || 'อยู่ระหว่างเก็บข้อมูล'}"
+                                    </div>
+                                </div>
+
+                                {/* 2. ตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ (ด้านที่ 4) */}
+                                <div className="p-4 rounded-xl bg-white border border-emerald-100 shadow-2xs space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-emerald-700 px-2 py-0.5 rounded-md bg-emerald-50">
+                                            ๒. ตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ
+                                        </span>
+                                        <span className="text-xs font-black text-emerald-950">
+                                            X̄ = {toThaiNumerals(Number(surveyStatsSummary.chapter1Comparison?.benefitRealization?.mean || 0).toFixed(2))}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-700 leading-relaxed">
+                                        นำค่าเฉลี่ยของ <strong className="text-emerald-900">ด้านที่ ๔ (ข้อ ๑๓-๑๕)</strong> ไปอ้างอิงยืนยันผลกระทบเชิงบวก:
+                                    </p>
+                                    <div className="p-2.5 rounded-lg bg-emerald-50/50 text-[11px] text-emerald-950 font-medium leading-relaxed border border-emerald-100">
+                                        "{surveyStatsSummary.chapter1Comparison?.benefitRealization?.summary || 'อยู่ระหว่างเก็บข้อมูล'}"
+                                    </div>
+                                </div>
+
+                                {/* 3. ตอบโจทย์ตัวชี้วัด (KPIs) */}
+                                <div className="p-4 rounded-xl bg-white border border-purple-100 shadow-2xs space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold text-purple-700 px-2 py-0.5 rounded-md bg-purple-50">
+                                            ๓. ตอบโจทย์ตัวชี้วัด (KPIs)
+                                        </span>
+                                        <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                                            surveyStatsSummary.chapter1Comparison?.kpiAchievement?.isPassed
+                                                ? 'bg-emerald-100 text-emerald-800'
+                                                : 'bg-amber-100 text-amber-800'
+                                        }`}>
+                                            {surveyStatsSummary.chapter1Comparison?.kpiAchievement?.isPassed ? '✓ ผ่านเกณฑ์ KPI' : 'อยู่ระหว่างประเมิน'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-700 leading-relaxed">
+                                        เกณฑ์มาตรฐานขั้นต่ำ <strong className="text-purple-900">{surveyStatsSummary.chapter1Comparison?.kpiAchievement?.benchmark}</strong>:
+                                    </p>
+                                    <div className="p-2.5 rounded-lg bg-purple-50/50 text-[11px] text-purple-950 font-medium leading-relaxed border border-purple-100">
+                                        "{surveyStatsSummary.chapter1Comparison?.kpiAchievement?.summary || 'อยู่ระหว่างเก็บข้อมูล'}"
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     <div className="p-8 rounded-2xl bg-amber-50/60 border border-amber-200 text-center space-y-3">
@@ -16768,7 +16948,7 @@ return (
                             ยังไม่มีข้อมูลผลการตอบแบบประเมินสำหรับโครงการนี้
                         </h4>
                         <p className="text-xs text-amber-800 max-w-lg mx-auto leading-relaxed">
-                            คุณสามารถนำข้อคำถามที่สร้างขึ้นในส่วนท้ายของบทที่ ๓ ส่งเป็นลิงก์หรือแสดง QR Code ให้ผู้เข้าร่วมโครงการสแกนตอบแบบประเมิน เมื่อมีการตอบข้อมูล ระบบจะนำผลมาคำนวณสถิติ x̄ และ S.D. ในตารางนี้โดยอัตโนมัติ
+                            คุณสามารถนำชุดข้อคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ) ที่สร้างขึ้นในส่วนท้ายของบทที่ ๓ ส่งเป็นลิงก์หรือแสดง QR Code ให้ผู้เข้าร่วมโครงการสแกนตอบแบบประเมิน เมื่อมีการตอบข้อมูล ระบบจะนำผลมาจัดกลุ่ม ๔ ด้านและเปรียบเทียบกับบทที่ ๑ ในตารางนี้โดยอัตโนมัติ
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                             <button

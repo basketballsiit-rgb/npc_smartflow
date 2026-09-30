@@ -272,9 +272,22 @@ Write the report in Thai. Include sections for:
     }
 
     /**
-     * Fallback survey questions directly synthesized from project objectives and indicators.
+     * Fallback survey questions directly synthesized from project objectives and indicators,
+     * following the 4-dimension evaluation standard (15 questions).
      */
     public function getFallbackSurveyQuestions(\App\Models\Project $project): array
+    {
+        return $this->getStandard15PatternQuestions($project);
+    }
+
+    /**
+     * Standard 15-question pattern across 4 dimensions connecting directly to Chapter 1 & Chapter 4:
+     * ด้านที่ 1: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do) [ข้อ 1-4]
+     * ด้านที่ 2: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input) [ข้อ 5-8]
+     * ด้านที่ 3: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective) [ข้อ 9-12]
+     * ด้านที่ 4: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact) [ข้อ 13-15]
+     */
+    public function getStandard15PatternQuestions(\App\Models\Project $project): array
     {
         $title = $project->title ?: 'โครงการ';
 
@@ -296,83 +309,123 @@ Write the report in Thai. Include sections for:
             }
         }
 
-        // Extract indicators
-        $indicatorNote = '';
-        $rawIndicators = $project->indicators;
-        if (is_array($rawIndicators)) {
-            if (!empty($rawIndicators['qualitative'])) {
-                $indicatorNote = is_array($rawIndicators['qualitative']) ? implode(' ', $rawIndicators['qualitative']) : (string)$rawIndicators['qualitative'];
-            } elseif (!empty($rawIndicators['quantitative'])) {
-                $indicatorNote = is_array($rawIndicators['quantitative']) ? implode(' ', $rawIndicators['quantitative']) : (string)$rawIndicators['quantitative'];
-            }
-        } elseif (is_string($rawIndicators) && !empty($rawIndicators)) {
-            $indicatorNote = $rawIndicators;
+        // Extract expected benefits
+        $benefitText = '';
+        if (!empty($ch1['benefits'])) {
+            $benefitText = is_array($ch1['benefits']) ? implode(', ', $ch1['benefits']) : (string)$ch1['benefits'];
+        } elseif (!empty($project->expected_benefits)) {
+            $benefitText = is_array($project->expected_benefits) ? implode(', ', $project->expected_benefits) : (string)$project->expected_benefits;
+        }
+        $benefitClean = trim(preg_replace('/^[๐-๙0-9.\s\-]+/u', '', $benefitText));
+        if (mb_strlen($benefitClean) > 60) {
+            $benefitClean = mb_substr($benefitClean, 0, 60) . '...';
         }
 
-        $questions = [];
-        $idx = 1;
+        // Tailor objective questions
+        $obj1Note = !empty($objectives[0]) ? " ({$objectives[0]})" : "";
+        $obj2Note = !empty($objectives[1]) ? " ({$objectives[1]})" : (isset($objectives[0]) ? " ({$objectives[0]})" : "");
 
-        // Question 1: Objectives & Process
-        if (!empty($objectives[0])) {
-            $questions[] = [
-                'id' => $idx++,
-                'category' => 'ด้านกระบวนการและการจัดกิจกรรม (Process)',
-                'question' => "การจัดกิจกรรมมีความสอดคล้องและบรรลุตามวัตถุประสงค์โครงการ ({$objectives[0]})"
-            ];
-        } else {
-            $questions[] = [
-                'id' => $idx++,
-                'category' => 'ด้านกระบวนการและการจัดกิจกรรม (Process)',
-                'question' => "การดำเนินกิจกรรมมีความสอดคล้องกับวัตถุประสงค์และเป้าหมายของ{$title}"
-            ];
-        }
+        return [
+            // ด้านที่ 1: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)
+            [
+                'id' => 1,
+                'dimension' => 1,
+                'category' => 'ด้านที่ ๑: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
+                'question' => 'การประชาสัมพันธ์ข้อมูลข่าวสารของโครงการมีความทั่วถึงและรวดเร็ว',
+            ],
+            [
+                'id' => 2,
+                'dimension' => 1,
+                'category' => 'ด้านที่ ๑: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
+                'question' => 'ขั้นตอนและกระบวนการจัดกิจกรรมมีความเหมาะสม ไม่ซับซ้อน',
+            ],
+            [
+                'id' => 3,
+                'dimension' => 1,
+                'category' => 'ด้านที่ ๑: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
+                'question' => 'ระยะเวลาในการจัดกิจกรรมมีความเหมาะสม (ไม่สั้นหรือยาวจนเกินไป)',
+            ],
+            [
+                'id' => 4,
+                'dimension' => 1,
+                'category' => 'ด้านที่ ๑: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
+                'question' => 'ลำดับขั้นตอนของกิจกรรมดำเนินไปอย่างต่อเนื่องและราบรื่น',
+            ],
 
-        // Question 2: Second objective or Content/Knowledge
-        if (isset($objectives[1]) && !empty($objectives[1])) {
-            $questions[] = [
-                'id' => $idx++,
-                'category' => 'ด้านความรู้และทักษะตามวัตถุประสงค์ (Content & Skills)',
-                'question' => "ผู้เข้าร่วมโครงการได้รับความรู้ ความเข้าใจ และทักษะตามวัตถุประสงค์ ({$objectives[1]})"
-            ];
-        } else {
-            $questions[] = [
-                'id' => $idx++,
-                'category' => 'ด้านเนื้อหาสาระและวิทยากร (Content & Knowledge)',
-                'question' => "เนื้อหาสาระ เทคนิคการถ่ายทอดความรู้ และวิทยากรผู้ให้การอบรมมีความเหมาะสมและชัดเจน"
-            ];
-        }
+            // ด้านที่ 2: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)
+            [
+                'id' => 5,
+                'dimension' => 2,
+                'category' => 'ด้านที่ ๒: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
+                'question' => 'สถานที่จัดกิจกรรมมีความเหมาะสม สะอาด และเดินทางสะดวก (หรือระบบออนไลน์มีความเสถียร)',
+            ],
+            [
+                'id' => 6,
+                'dimension' => 2,
+                'category' => 'ด้านที่ ๒: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
+                'question' => 'สิ่งอำนวยความสะดวก อาหาร อาหารว่าง หรือวัสดุอุปกรณ์มีความพร้อมและเพียงพอ',
+            ],
+            [
+                'id' => 7,
+                'dimension' => 2,
+                'category' => 'ด้านที่ ๒: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
+                'question' => 'วิทยากร/ผู้ให้ความรู้ มีความเชี่ยวชาญ ถ่ายทอดเข้าใจง่าย และตอบคำถามได้ชัดเจน',
+            ],
+            [
+                'id' => 8,
+                'dimension' => 2,
+                'category' => 'ด้านที่ ๒: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
+                'question' => 'คณะทำงาน/เจ้าหน้าที่ ให้การต้อนรับ ดูแล และประสานงานอย่างสุภาพเรียบร้อย',
+            ],
 
-        // Question 3: Facilities, Materials & Timing
-        $questions[] = [
-            'id' => $idx++,
-            'category' => 'ด้านการบริหารจัดการและสิ่งอำนวยความสะดวก (Facilities & Timing)',
-            'question' => "ระยะเวลาการจัดกิจกรรม สถานที่ สื่อโสตทัศนูปกรณ์ และการประสานงานมีความพร้อมและเหมาะสม"
+            // ด้านที่ 3: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)
+            [
+                'id' => 9,
+                'dimension' => 3,
+                'category' => 'ด้านที่ ๓: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
+                'question' => 'ผู้เข้าร่วมโครงการมีความรู้ ความเข้าใจในเนื้อหา/ประเด็นของโครงการเพิ่มมากขึ้น (เทียบกับก่อนร่วมงาน)' . $obj1Note,
+            ],
+            [
+                'id' => 10,
+                'dimension' => 3,
+                'category' => 'ด้านที่ ๓: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
+                'question' => 'ผู้เข้าร่วมโครงการได้รับทักษะ หรือแนวคิดใหม่ๆ ที่สามารถนำไปใช้ปฏิบัติได้จริง' . $obj2Note,
+            ],
+            [
+                'id' => 11,
+                'dimension' => 3,
+                'category' => 'ด้านที่ ๓: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
+                'question' => 'เนื้อหาของโครงการมีความสอดคล้องกับวัตถุประสงค์ที่กำหนดไว้',
+            ],
+            [
+                'id' => 12,
+                'dimension' => 3,
+                'category' => 'ด้านที่ ๓: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
+                'question' => 'ภาพรวมของกิจกรรมบรรลุเป้าหมายตามที่ท่านคาดหวังไว้',
+            ],
+
+            // ด้านที่ 4: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)
+            [
+                'id' => 13,
+                'dimension' => 4,
+                'category' => 'ด้านที่ ๔: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)',
+                'question' => 'ท่านสามารถนำความรู้/ประโยชน์จากโครงการนี้ไปประยุกต์ใช้ในการทำงานหรือชีวิตประจำวันได้',
+            ],
+            [
+                'id' => 14,
+                'dimension' => 4,
+                'category' => 'ด้านที่ ๔: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)',
+                'question' => !empty($benefitClean)
+                    ? "โครงการนี้ช่วยแก้ปัญหา หรือพัฒนาหน่วยงาน/ชุมชน/ตัวท่านได้อย่างเป็นรูปธรรม ({$benefitClean})"
+                    : 'โครงการนี้ช่วยแก้ปัญหา หรือพัฒนาหน่วยงาน/ชุมชน/ตัวท่านได้อย่างเป็นรูปธรรม',
+            ],
+            [
+                'id' => 15,
+                'dimension' => 4,
+                'category' => 'ด้านที่ ๔: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)',
+                'question' => 'โครงการนี้มีความสำคัญ ประโยชน์ และควรจะมีการจัดในครั้งต่อไป',
+            ],
         ];
-
-        // Question 4: Indicator / Outcomes
-        if (!empty($indicatorNote)) {
-            $indicatorShort = mb_substr(trim(preg_replace('/^[๐-๙0-9.\s\-]+/u', '', $indicatorNote)), 0, 80);
-            $questions[] = [
-                'id' => $idx++,
-                'category' => 'ด้านประโยชน์และผลสัมฤทธิ์ตามตัวชี้วัด (Outcomes & Indicators)',
-                'question' => "ผลการเข้าร่วมกิจกรรมเป็นไปตามตัวชี้วัดความสำเร็จของโครงการ ({$indicatorShort})"
-            ];
-        } else {
-            $questions[] = [
-                'id' => $idx++,
-                'category' => 'ด้านประโยชน์และการนำไปใช้จริง (Outcomes & Benefits)',
-                'question' => "ความรู้และประสบการณ์ที่ได้รับสามารถนำไปประยุกต์ใช้ในการปฏิบัติงานหรือการเรียนรู้ได้จริง"
-            ];
-        }
-
-        // Question 5: Overall Satisfaction
-        $questions[] = [
-            'id' => $idx++,
-            'category' => 'ด้านความพึงพอใจในภาพรวม (Overall Satisfaction)',
-            'question' => "ความพึงพอใจในภาพรวมต่อการเข้าร่วมและการดำเนินงาน{$title}"
-        ];
-
-        return $questions;
     }
 }
 

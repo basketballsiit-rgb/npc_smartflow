@@ -193,9 +193,17 @@ class SurveyController extends Controller
         $cleanQuestions = [];
         $idx = 1;
         foreach ($validated['questions'] as $q) {
+            $dim = $q['dimension'] ?? null;
+            if (!$dim) {
+                if ($idx <= 4) $dim = 1;
+                elseif ($idx <= 8) $dim = 2;
+                elseif ($idx <= 12) $dim = 3;
+                else $dim = 4;
+            }
             $cleanQuestions[] = [
                 'id' => $idx++,
-                'category' => trim($q['category'] ?? "ด้านที่ {$idx}"),
+                'dimension' => (int)$dim,
+                'category' => trim($q['category'] ?? "ด้านที่ {$dim}"),
                 'question' => trim($q['question']),
             ];
         }
@@ -213,6 +221,33 @@ class SurveyController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'บันทึกแบบประเมินโครงการเรียบร้อยแล้ว',
+            'survey' => $survey,
+        ]);
+    }
+
+    /**
+     * Load the standard 15-question pattern across 4 dimensions into project survey.
+     */
+    public function loadStandardPattern(Request $request, Project $project, GeminiService $geminiService)
+    {
+        $questions = $geminiService->getStandard15PatternQuestions($project);
+
+        $survey = Survey::firstOrCreate(
+            ['project_id' => $project->id],
+            [
+                'survey_code' => 'SV-' . str_pad($project->id, 5, '0', STR_PAD_LEFT),
+                'title' => 'แบบประเมินความพึงพอใจโครงการ ' . $project->title,
+            ]
+        );
+
+        $survey->questions = $questions;
+        $survey->is_active = true;
+        $survey->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'โหลดชุดคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ) สอดคล้องกับวัตถุประสงค์และตัวชี้วัดเรียบร้อยแล้ว',
+            'questions' => $questions,
             'survey' => $survey,
         ]);
     }
@@ -308,7 +343,8 @@ class SurveyController extends Controller
     }
 
     /**
-     * Compute comprehensive statistical analysis for survey questions (Mean, S.D., Level).
+     * Compute comprehensive statistical analysis for survey questions (Mean, S.D., Level)
+     * and organize into 4 standard evaluation dimensions with Chapter 1 comparison synthesis.
      */
     public function calculateDetailedStats(?Survey $survey): array
     {
@@ -320,6 +356,8 @@ class SurveyController extends Controller
                 'overallPercentage' => 0.0,
                 'overallLevel' => 'ยังไม่มีข้อมูล',
                 'questionsStats' => [],
+                'dimensionStats' => [],
+                'chapter1Comparison' => null,
             ];
         }
 
@@ -334,6 +372,13 @@ class SurveyController extends Controller
             $survey->save();
         }
 
+        $dimensionTitles = [
+            1 => 'ด้านที่ ๑: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
+            2 => 'ด้านที่ ๒: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
+            3 => 'ด้านที่ ๓: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
+            4 => 'ด้านที่ ๔: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)',
+        ];
+
         if ($totalResponses === 0) {
             return [
                 'totalResponses' => 0,
@@ -341,10 +386,12 @@ class SurveyController extends Controller
                 'overallSd' => 0.0,
                 'overallPercentage' => 0.0,
                 'overallLevel' => 'ยังไม่มีข้อมูล',
-                'questionsStats' => array_map(function($q, $idx) {
+                'questionsStats' => array_map(function($q, $idx) use ($dimensionTitles) {
+                    $dim = $q['dimension'] ?? ($idx < 4 ? 1 : ($idx < 8 ? 2 : ($idx < 12 ? 3 : 4)));
                     return [
                         'id' => $q['id'] ?? ($idx + 1),
-                        'category' => $q['category'] ?? "ด้านที่ " . ($idx + 1),
+                        'dimension' => (int)$dim,
+                        'category' => $q['category'] ?? ($dimensionTitles[$dim] ?? "ด้านที่ {$dim}"),
                         'question' => $q['question'] ?? '',
                         'count' => 0,
                         'mean' => 0.0,
@@ -353,15 +400,28 @@ class SurveyController extends Controller
                         'level' => 'ยังไม่มีข้อมูล'
                     ];
                 }, $questions, array_keys($questions)),
+                'dimensionStats' => [],
+                'chapter1Comparison' => null,
             ];
         }
 
         $questionsStats = [];
         $allScores = [];
+        $dimensionScores = [1 => [], 2 => [], 3 => [], 4 => []];
 
         foreach ($questions as $index => $q) {
             $qId = (string)($q['id'] ?? ($index + 1));
             $scores = [];
+
+            // Determine dimension
+            $dim = $q['dimension'] ?? null;
+            if (!$dim) {
+                if ($index < 4) $dim = 1;
+                elseif ($index < 8) $dim = 2;
+                elseif ($index < 12) $dim = 3;
+                else $dim = 4;
+            }
+            $dim = (int)$dim;
 
             foreach ($responses as $resp) {
                 $val = null;
@@ -379,6 +439,7 @@ class SurveyController extends Controller
                 if (is_numeric($val) && $val >= 1 && $val <= 5) {
                     $scores[] = (float)$val;
                     $allScores[] = (float)$val;
+                    $dimensionScores[$dim][] = (float)$val;
                 }
             }
 
@@ -397,7 +458,8 @@ class SurveyController extends Controller
 
             $questionsStats[] = [
                 'id' => $q['id'] ?? ($index + 1),
-                'category' => $q['category'] ?? "ด้านที่ " . ($index + 1),
+                'dimension' => $dim,
+                'category' => $q['category'] ?? ($dimensionTitles[$dim] ?? "ด้านที่ {$dim}"),
                 'question' => $q['question'] ?? '',
                 'count' => $qCount,
                 'mean' => $mean,
@@ -407,6 +469,7 @@ class SurveyController extends Controller
             ];
         }
 
+        // Overall calculations
         $totalAll = count($allScores);
         $overallMean = $totalAll > 0 ? round(array_sum($allScores) / $totalAll, 2) : 0.0;
         $overallSd = 0.0;
@@ -420,6 +483,71 @@ class SurveyController extends Controller
         $overallPercentage = round(($overallMean / 5.0) * 100, 1);
         $overallLevel = $this->interpretLikert($overallMean);
 
+        // Dimension subtotals calculations
+        $dimensionStats = [];
+        foreach ([1, 2, 3, 4] as $dNum) {
+            $dScores = $dimensionScores[$dNum] ?? [];
+            $dCount = count($dScores);
+            $dMean = $dCount > 0 ? round(array_sum($dScores) / $dCount, 2) : 0.0;
+            $dSd = 0.0;
+            if ($dCount > 1) {
+                $variance = 0.0;
+                foreach ($dScores as $s) {
+                    $variance += pow($s - $dMean, 2);
+                }
+                $dSd = round(sqrt($variance / ($dCount - 1)), 2);
+            }
+            $dPct = round(($dMean / 5.0) * 100, 1);
+            $dLevel = $this->interpretLikert($dMean);
+
+            $dimensionStats[$dNum] = [
+                'dimension' => $dNum,
+                'title' => $dimensionTitles[$dNum],
+                'mean' => $dMean,
+                'sd' => $dSd,
+                'percentage' => $dPct,
+                'level' => $dLevel,
+            ];
+        }
+
+        // Chapter 1 Comparison Synthesis
+        $dim3 = $dimensionStats[3] ?? null;
+        $dim4 = $dimensionStats[4] ?? null;
+
+        $chapter1Comparison = [
+            'objectiveFulfillment' => [
+                'title' => '๑. การตอบโจทย์วัตถุประสงค์ของโครงการ (ดึงจากด้านที่ ๓: Output / Objective)',
+                'mean' => $dim3 ? $dim3['mean'] : 0.0,
+                'sd' => $dim3 ? $dim3['sd'] : 0.0,
+                'level' => $dim3 ? $dim3['level'] : 'ยังไม่มีข้อมูล',
+                'summary' => $dim3 && $dim3['mean'] > 0
+                    ? "โครงการบรรลุผลสำเร็จตามวัตถุประสงค์ในการให้ความรู้/พัฒนาทักษะ โดยมีผลการประเมินอยู่ในระดับ{$dim3['level']} (X̄ = {$dim3['mean']}, S.D. = {$dim3['sd']})"
+                    : "อยู่ระหว่างการเก็บรวบรวมข้อมูลแบบประเมิน",
+            ],
+            'benefitRealization' => [
+                'title' => '๒. การตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ (ดึงจากด้านที่ ๔: Outcome / Impact)',
+                'mean' => $dim4 ? $dim4['mean'] : 0.0,
+                'sd' => $dim4 ? $dim4['sd'] : 0.0,
+                'level' => $dim4 ? $dim4['level'] : 'ยังไม่มีข้อมูล',
+                'summary' => $dim4 && $dim4['mean'] > 0
+                    ? "การประเมินด้านประโยชน์และการนำไปใช้ประโยชน์อยู่ในระดับ{$dim4['level']} (X̄ = {$dim4['mean']}, S.D. = {$dim4['sd']}) ยืนยันว่าโครงการส่งผลกระทบเชิงบวกและเกิดความคุ้มค่าตามประโยชน์ที่คาดว่าจะได้รับ"
+                    : "อยู่ระหว่างการเก็บรวบรวมข้อมูลแบบประเมิน",
+            ],
+            'kpiAchievement' => [
+                'title' => '๓. การตอบโจทย์ตัวชี้วัดความสำเร็จ (KPIs) (เกณฑ์ความพึงพอใจภาพรวมไม่น้อยกว่าร้อยละ ๘๐ หรือ X̄ ≥ ๓.๕๑)',
+                'overallMean' => $overallMean,
+                'overallPercentage' => $overallPercentage,
+                'overallLevel' => $overallLevel,
+                'isPassed' => ($overallMean >= 3.51),
+                'benchmark' => 'ร้อยละ ๘๐.๐ (X̄ ≥ ๓.๕๑ ขึ้นไป)',
+                'summary' => $overallMean >= 3.51
+                    ? "คะแนนเฉลี่ยความพึงพอใจภาพรวมทั้งโครงการอยู่ที่ {$overallMean}/๕.๐๐ (ร้อยละ {$overallPercentage} ระดับ{$overallLevel}) ซึ่งสูงกว่าเกณฑ์ตัวชี้วัดขั้นต่ำ จึงถือว่า 'ผ่านเกณฑ์ตัวชี้วัดความสำเร็จ (KPI) ทุกประเด็น'"
+                    : ($overallMean > 0
+                        ? "คะแนนเฉลี่ยความพึงพอใจภาพรวมอยู่ที่ {$overallMean}/๕.๐๐ (ร้อยละ {$overallPercentage}) ซึ่งจำเป็นต้องเพิ่มประสิทธิภาพเพื่อบรรลุเกณฑ์ตัวชี้วัดเป้าหมาย"
+                        : "อยู่ระหว่างการเก็บรวบรวมข้อมูลแบบประเมิน"),
+            ],
+        ];
+
         return [
             'totalResponses' => $totalResponses,
             'overallMean' => $overallMean,
@@ -427,6 +555,8 @@ class SurveyController extends Controller
             'overallPercentage' => $overallPercentage,
             'overallLevel' => $overallLevel,
             'questionsStats' => $questionsStats,
+            'dimensionStats' => $dimensionStats,
+            'chapter1Comparison' => $chapter1Comparison,
         ];
     }
 

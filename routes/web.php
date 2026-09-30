@@ -193,6 +193,7 @@ Route::middleware('auth')->group(function () {
     Route::get('projects/{project}/survey/stats', [SurveyController::class, 'stats'])->name('surveys.stats');
     Route::get('projects/{project}/survey/builder', [SurveyController::class, 'getBuilderData'])->name('surveys.builder_data');
     Route::post('projects/{project}/survey/generate-questions', [SurveyController::class, 'generateAiQuestions'])->name('surveys.generate_questions');
+    Route::post('projects/{project}/survey/load-standard', [SurveyController::class, 'loadStandardPattern'])->name('surveys.load_standard');
     Route::post('projects/{project}/survey/save-questions', [SurveyController::class, 'saveQuestions'])->name('surveys.save_questions');
     Route::post('projects/{project}/survey/generate-ai', [SurveyController::class, 'generateAiRecommendations'])->name('surveys.generate_ai');
 
