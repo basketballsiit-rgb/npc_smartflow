@@ -61,25 +61,33 @@ class GeminiService
     {
         $suggestionsList = empty($suggestions) ? 'None' : implode("\n- ", $suggestions);
         
+        $dimDetails = '';
+        if (!empty($averages['dimensionStats']) && is_array($averages['dimensionStats'])) {
+            $dimDetails .= "\nEvaluation Results Across 4 Standard Dimensions:\n";
+            foreach ($averages['dimensionStats'] as $dNum => $d) {
+                $title = $d['title'] ?? "ด้านที่ {$dNum}";
+                $mean = $d['mean'] ?? 0;
+                $sd = $d['sd'] ?? 0;
+                $level = $d['level'] ?? '';
+                $pct = $d['percentage'] ?? 0;
+                $dimDetails .= "- {$title}: Mean={$mean}/5.0, SD={$sd}, Percentage={$pct}%, Level={$level}\n";
+            }
+        }
+
         return "You are an educational quality assurance AI evaluator. Analyze the following project evaluation survey results and write a comprehensive, professional project improvement proposal focusing on corrective actions and 'ACT' phase adjustments for Nan Polytechnic College.
 
 Survey Summary:
 - Total respondents: {$totalResponses}
-- Q1 Average (Objectives Met): {$averages['q1']}/5.0
-- Q2 Average (Appropriate Duration): {$averages['q2']}/5.0
-- Q3 Average (Facilities & Coordination): {$averages['q3']}/5.0
-- Q4 Average (Materials & Documentation): {$averages['q4']}/5.0
-- Q5 Average (Useful & Practical): {$averages['q5']}/5.0
-- Overall Satisfaction: {$averages['satisfaction_percentage']}%
-
-Textual Feedback / Suggestions:
+- Overall Satisfaction Mean: {$averages['overall']}/5.0 ({$averages['satisfaction_percentage']}%)
+{$dimDetails}
+Textual Feedback / Suggestions from Participants:
 - {$suggestionsList}
 
 Write the report in Thai. Include sections for:
-1. การวิเคราะห์สรุปผล (Executive Summary & Analysis)
-2. จุดแข็งที่ควรส่งเสริม (Strengths to Maintain)
-3. ข้อควรปรับปรุงเร่งด่วน (Priority Areas for Improvement)
-4. ข้อเสนอแนะเชิงรุกสำหรับโครงการครั้งถัดไป (ACT Phase Recommendations for Next Project Cycle)";
+1. การวิเคราะห์สรุปผลภาพรวมตามมิติ ๔ ด้าน (Executive Summary & Dimension Analysis)
+2. จุดแข็งที่ควรส่งเสริมและรักษามาตรฐาน (Strengths to Maintain)
+3. ประเด็นที่ควรปรับปรุงเร่งด่วนในรอบ PDCA ถัดไป (Priority Areas for Improvement)
+4. ข้อเสนอแนะเชิงรุกสำหรับการพัฒนาโครงการในรอบปีการศึกษาถัดไป (ACT Phase Recommendations)";
     }
 
     /**
@@ -90,44 +98,65 @@ Write the report in Thai. Include sections for:
         $strengths = [];
         $improvements = [];
 
-        if ($averages['q1'] >= 4.0) $strengths[] = "ความสอดคล้องของโครงการกับวัตถุประสงค์ (เฉลี่ย {$averages['q1']}/5.0) อยู่ในเกณฑ์ดีเลิศ";
-        if ($averages['q5'] >= 4.0) $strengths[] = "ผู้เข้าร่วมโครงการเห็นพ้องว่าโครงการนี้สามารถนำไปใช้งานได้จริงเป็นรูปธรรม (เฉลี่ย {$averages['q5']}/5.0)";
-        
-        if ($averages['q2'] < 4.0) $improvements[] = "ควรปรับปรุงด้านการบริหารเวลาและระยะเวลาดำเนินกิจกรรม (เฉลี่ย {$averages['q2']}/5.0) โดยเพิ่มเวลาสัมมนาเชิงปฏิบัติการ";
-        if ($averages['q3'] < 4.0) $improvements[] = "ควรพัฒนาด้านการอำนวยความสะดวก ประสานงาน และสถานที่จัดงาน (เฉลี่ย {$averages['q3']}/5.0)";
-        if ($averages['q4'] < 4.0) $improvements[] = "ควรปรับปรุงการจัดเตรียมเอกสาร สื่อประกอบการสอน และเครื่องมือปฏิบัติงานให้พร้อมก่อนเริ่มกิจกรรม (เฉลี่ย {$averages['q4']}/5.0)";
+        $dimStats = $averages['dimensionStats'] ?? [];
 
+        if (!empty($dimStats)) {
+            $d1 = $dimStats[1] ?? null;
+            $d2 = $dimStats[2] ?? null;
+            $d3 = $dimStats[3] ?? null;
+            $d4 = $dimStats[4] ?? null;
+
+            if ($d1 && $d1['mean'] >= 4.0) $strengths[] = "ด้านกระบวนการและขั้นตอนการดำเนินงาน (เฉลี่ย {$d1['mean']}/๕.๐๐) มีการบริหารจัดการที่ดี กระบวนการกระชับและไม่ซับซ้อน";
+            elseif ($d1 && $d1['mean'] < 3.8) $improvements[] = "ด้านกระบวนการ (เฉลี่ย {$d1['mean']}/๕.๐๐) ควรปรับปรุงการประชาสัมพันธ์ล่วงหน้า และจัดสรรช่วงเวลาจัดกิจกรรมให้กระชับเหมาะสมยิ่งขึ้น";
+
+            if ($d2 && $d2['mean'] >= 4.0) $strengths[] = "ด้านปัจจัยนำเข้าและสิ่งอำนวยความสะดวก (เฉลี่ย {$d2['mean']}/๕.๐๐) มีความพร้อมด้านสถานที่ สื่อวัสดุอุปกรณ์ และการดูแลสวัสดิการอย่างดียิ่ง";
+            elseif ($d2 && $d2['mean'] < 3.8) $improvements[] = "ด้านปัจจัยนำเข้า (เฉลี่ย {$d2['mean']}/๕.๐๐) ควรเพิ่มความพร้อมของเทคโนโลยี เอกสารประกอบ และตรวจสอบสถานที่ให้พร้อมก่อนเริ่มกิจกรรม";
+
+            if ($d3 && $d3['mean'] >= 4.0) $strengths[] = "ด้านผลผลิตและวัตถุประสงค์โครงการ (เฉลี่ย {$d3['mean']}/๕.๐๐) บรรลุผลสัมฤทธิ์อย่างเป็นรูปธรรม ผู้เข้าร่วมได้รับความรู้และทักษะตามเป้าหมาย";
+            elseif ($d3 && $d3['mean'] < 3.8) $improvements[] = "ด้านผลผลิตตามวัตถุประสงค์ (เฉลี่ย {$d3['mean']}/๕.๐๐) ควรเพิ่มสัดส่วนการฝึกปฏิบัติจริงเพื่อให้ผู้เรียนเกิดทักษะฝีมือตรงตามวัตถุประสงค์";
+
+            if ($d4 && $d4['mean'] >= 4.0) $strengths[] = "ด้านประโยชน์และการนำไปใช้ (เฉลี่ย {$d4['mean']}/๕.๐๐) เกิดความคุ้มค่าสูง สามารถนำความรู้และประสบการณ์ไปประยุกต์ใช้ในการเรียนและการปฏิบัติงานได้จริง";
+            elseif ($d4 && $d4['mean'] < 3.8) $improvements[] = "ด้านประโยชน์และการประยุกต์ใช้ (เฉลี่ย {$d4['mean']}/๕.๐๐) ควรส่งเสริมการนำผลงานไปต่อยอดสู่การใช้งานจริงหรือบูรณาการกับรายวิชา";
+        } else {
+            if (($averages['q1'] ?? 0) >= 4.0) $strengths[] = "ความสอดคล้องของโครงการกับวัตถุประสงค์อยู่ในเกณฑ์ดีเลิศ";
+            if (($averages['q5'] ?? 0) >= 4.0) $strengths[] = "ผู้เข้าร่วมโครงการเห็นพ้องว่าโครงการนี้สามารถนำไปใช้งานได้จริงเป็นรูปธรรม";
+            if (($averages['q2'] ?? 0) < 4.0) $improvements[] = "ควรปรับปรุงด้านการบริหารเวลาและระยะเวลาดำเนินกิจกรรม";
+            if (($averages['q3'] ?? 0) < 4.0) $improvements[] = "ควรพัฒนาด้านการอำนวยความสะดวก ประสานงาน และสถานที่จัดงาน";
+        }
+
+        if (empty($strengths)) {
+            $strengths[] = "โครงการสามารถดำเนินงานจนเสร็จสิ้นตามกรอบระยะเวลาที่กำหนด โดยได้รับความร่วมมือจากทุกฝ่าย";
+        }
         if (empty($improvements)) {
-            $improvements[] = "แนะนำให้คงประสิทธิภาพปัจจุบัน และเสริมการติดตามผลผู้เข้าร่วมโครงการระยะยาว (3-6 เดือน) เพื่อประเมินทักษะที่นำไปใช้ในการปฏิบัติงานจริง";
+            $improvements[] = "แนะนำให้คงประสิทธิภาพปัจจุบัน และเสริมการติดตามผลผู้เข้าร่วมโครงการระยะยาว (๓ - ๖ เดือน) เพื่อประเมินผลกระทบเชิงประจักษ์";
         }
 
         $improvementsText = implode("\n", array_map(fn($item) => "   - {$item}", $improvements));
-        $strengthsText = empty($strengths) 
-            ? "   - ผลสัมฤทธิ์ของโครงการโดยรวมอยู่ในระดับปานกลาง จำเป็นต้องเพิ่มประสิทธิภาพในทุกมิติของกิจกรรม"
-            : implode("\n", array_map(fn($item) => "   - {$item}", $strengths));
+        $strengthsText = implode("\n", array_map(fn($item) => "   - {$item}", $strengths));
 
         $suggestionsText = empty($suggestions) 
             ? "   - ไม่มีการระบุข้อเสนอแนะเพิ่มเติมจากผู้ประเมิน"
             : implode("\n", array_map(fn($item) => "   - \"{$item}\"", array_slice($suggestions, 0, 3)));
 
         return "### รายงานข้อเสนอแนะเพื่อการพัฒนาและปรับปรุงโครงการ (AI ACT Recommendations)
-*(ระบบวิเคราะห์ข้อมูลอัตโนมัติ SMART FLOW - จำลองผลวิเคราะห์ออฟไลน์)*
+*(ระบบวิเคราะห์ข้อมูลอัตโนมัติ SMART FLOW - สังเคราะห์ผลการประเมิน ๔ มิติ)*
 
-**1. สรุปภาพรวมการประเมิน (Executive Summary)**
-จากข้อมูลการตอบแบบสอบถามทั้งหมด {$totalResponses} ชุด โครงการมีค่าเฉลี่ยความพึงพอใจโดยรวมอยู่ที่ {$averages['overall']}/5.0 คิดเป็นอัตราความพึงพอใจ **{$averages['satisfaction_percentage']}%** อยู่ในเกณฑ์วิเคราะห์ทิศทางบวก
+**๑. สรุปภาพรวมผลการประเมิน (Executive Summary)**
+จากข้อมูลการตอบแบบประเมินทั้งหมด {$totalResponses} คน โครงการมีค่าเฉลี่ยความพึงพอใจภาพรวมอยู่ที่ {$averages['overall']}/๕.๐๐ คิดเป็นร้อยละ **{$averages['satisfaction_percentage']}%** อยู่ในระดับคุณภาพที่มีประสิทธิภาพสูงตามเกณฑ์มาตรฐาน
 
-**2. จุดเด่นและข้อดีของโครงการ (Strengths to Maintain)**
+**๒. จุดเด่นและข้อดีของโครงการ (Strengths to Maintain)**
 {$strengthsText}
 
-**3. ประเด็นที่ควรดำเนินงานปรับปรุงเร่งด่วน (Corrective Action Areas)**
+**๓. ประเด็นที่ควรปรับปรุงและพัฒนาในรอบถัดไป (Corrective Actions & Improvements)**
 {$improvementsText}
 
-**4. สรุปข้อเสนอแนะและทิศทางการวิเคราะห์จากผู้เข้าร่วมโครงการ**
+**๔. สรุปข้อเสนอแนะจากผู้เข้าร่วมโครงการ (Stakeholder Voice)**
 {$suggestionsText}
 
-**5. ข้อเสนอแนะเชิงรุกสำหรับรอบปีการศึกษาถัดไป (ACT Action Plan)**
-- **การวางแผนงบประมาณ**: ควรพิจารณาเพิ่ม/ลด สัดส่วนการจัดสรรตามจุดรับพัสดุและเวลาที่กำหนดให้กระชับ
-- **การปรับปรุงหลักสูตร**: ประสานงานวิชาการเพื่อนำเนื้อหาโครงการบรรจุเข้าในตารางสอนหลักสูตรปกติ เพื่อความยั่งยืนของทักษะผู้เรียน";
+**๕. แนวทางการปรับปรุงเชิงรุกสำหรับรอบปีการศึกษาถัดไป (ACT Phase Action Plan)**
+- **ด้านการวางแผน (Plan)**: นำผลคะแนนเฉลี่ยด้านที่ได้รับคะแนนน้อยที่สุดไปเป็นโจทย์ตั้งต้นในการปรับปรุงกิจกรรมโครงการรอบถัดไป
+- **ด้านการปฏิบัติ (Do)**: เน้นกระบวนการบูรณาการกับการเรียนการสอนจริงในแผนกวิชาเพื่อเสริมสร้างสมรรถนะผู้เรียนอย่างยั่งยืน
+- **ด้านการรายงานผล (Check & Act)**: นำข้อเสนอแนะไปสังเคราะห์บรรจุในรายงานผลการดำเนินงาน บทที่ ๕ อย่างเป็นรูปธรรม";
     }
 
     /**

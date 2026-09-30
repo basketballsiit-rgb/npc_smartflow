@@ -335,6 +335,7 @@ class SurveyController extends Controller
             'q5' => $detailedStats['questionsStats'][4]['mean'] ?? 0.0,
             'overall' => $detailedStats['overallMean'],
             'satisfaction_percentage' => $detailedStats['overallPercentage'],
+            'dimensionStats' => $detailedStats['dimensionStats'] ?? [],
         ];
 
         $commentsList = $responses->whereNotNull('comments')->pluck('comments')->toArray();
