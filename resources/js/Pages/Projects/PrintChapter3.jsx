@@ -1,0 +1,325 @@
+import { Head, Link } from '@inertiajs/react';
+import React, { useState } from 'react';
+
+export default function PrintChapter3({ project }) {
+    // Font size preset state: 'compact' (14px) | 'normal' (15px) | 'large' (16.5px) - Matches Print.jsx 1:1
+    const [fontSizePreset, setFontSizePreset] = useState('normal');
+
+    const sections = project?.chapter_3_sections || {};
+    const fullContent = project?.chapter_3_content || '';
+
+    // Convert Arabic digits to Thai digits
+    const toThaiNumerals = (val) => {
+        if (val === null || val === undefined) return '';
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return String(val).replace(/[0-9]/g, (digit) => thaiDigits[parseInt(digit, 10)]);
+    };
+
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const fontStyles = {
+        compact: { docSize: '14px', lineHeight: '1.45', titleSize: '18px', headingSize: '15px' },
+        normal: { docSize: '15px', lineHeight: '1.5', titleSize: '20px', headingSize: '16px' },
+        large: { docSize: '16.5px', lineHeight: '1.55', titleSize: '22px', headingSize: '17.5px' },
+    }[fontSizePreset];
+
+    return (
+        <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
+            <Head>
+                <title>{`รายงานผลโครงการ บทที่ ๓ - ${project.title}`}</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+            </Head>
+
+            {/* Dynamic CSS matching Screen & Print 1:1 with 1 Inch All-Around Page Margin (Matches Print.jsx) */}
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+
+                :root {
+                    --doc-font-size: ${fontStyles.docSize};
+                    --doc-line-height: ${fontStyles.lineHeight};
+                    --title-font-size: ${fontStyles.titleSize};
+                    --heading-font-size: ${fontStyles.headingSize};
+                }
+
+                .font-sarabun {
+                    font-family: 'TH Sarabun PSK', 'TH Sarabun Chula', 'THSarabunNew', 'Sarabun', sans-serif !important;
+                }
+
+                .thai-indent {
+                    text-indent: 1.5cm !important;
+                }
+
+                .thai-hanging-indent {
+                    padding-left: 1.5cm !important;
+                    text-indent: -1.5cm !important;
+                }
+
+                .thai-content {
+                    text-align: justify !important;
+                    text-justify: inter-cluster !important;
+                    line-height: var(--doc-line-height) !important;
+                }
+
+                .print-doc-container {
+                    font-size: var(--doc-font-size) !important;
+                    line-height: var(--doc-line-height) !important;
+                    box-sizing: border-box !important;
+                    width: 210mm !important;
+                    max-width: 100% !important;
+                    min-height: 297mm;
+                    padding-left: 1in !important;
+                    padding-right: 1in !important;
+                    padding-top: 1in !important;
+                    padding-bottom: 1in !important;
+                    background: #ffffff !important;
+                }
+
+                @media (max-width: 768px) {
+                    .print-doc-container {
+                        padding-left: 0.5in !important;
+                        padding-right: 0.5in !important;
+                        padding-top: 0.5in !important;
+                        padding-bottom: 0.5in !important;
+                    }
+                }
+
+                .print-title {
+                    font-size: var(--title-font-size) !important;
+                    font-weight: bold !important;
+                    line-height: 1.3 !important;
+                }
+
+                .print-heading {
+                    font-size: var(--heading-font-size) !important;
+                    font-weight: bold !important;
+                    line-height: 1.4 !important;
+                }
+
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin-top: 1in !important;
+                        margin-bottom: 1in !important;
+                        margin-left: 1in !important;
+                        margin-right: 1in !important;
+                    }
+                    html, body {
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #fff !important;
+                        font-family: 'TH Sarabun PSK', 'TH Sarabun Chula', 'THSarabunNew', 'Sarabun', sans-serif !important;
+                        font-size: var(--doc-font-size) !important;
+                        line-height: var(--doc-line-height) !important;
+                        color: #000 !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    .print-doc-container {
+                        font-size: var(--doc-font-size) !important;
+                        line-height: var(--doc-line-height) !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        min-height: auto !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+                    .print-break-inside-avoid {
+                        break-inside: avoid;
+                        page-break-inside: avoid;
+                    }
+                    h1, h2, h3, h4 {
+                        break-after: avoid;
+                        page-break-after: avoid;
+                    }
+                }
+            `}</style>
+
+            {/* Top Action Bar (Hidden when printing) */}
+            <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden font-sans">
+                <div>
+                    <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <span>📙</span> รายงานผลโครงการ: บทที่ ๓ วิธีดำเนินงานโครงการ (PDCA Methodology)
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                        ระยะขอบทุกด้าน ๑ นิ้ว | ฟอนต์ TH Sarabun PSK ขนาดมาตรฐาน 1:1 กับแบบเสนอโครงการ
+                    </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                    {/* Font Size Preset Switcher */}
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                        <span className="text-slate-500 px-1.5 text-[11px]">ขนาดฟอนต์:</span>
+                        <button
+                            type="button"
+                            onClick={() => setFontSizePreset('compact')}
+                            className={`px-2.5 py-1 rounded-lg transition-all ${
+                                fontSizePreset === 'compact' 
+                                    ? 'bg-amber-600 text-white shadow-xs' 
+                                    : 'text-slate-700 hover:bg-slate-200'
+                            }`}
+                            title="ขนาดกระทัดรัด (14px)"
+                        >
+                            กระทัดรัด
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFontSizePreset('normal')}
+                            className={`px-2.5 py-1 rounded-lg transition-all ${
+                                fontSizePreset === 'normal' 
+                                    ? 'bg-amber-600 text-white shadow-xs' 
+                                    : 'text-slate-700 hover:bg-slate-200'
+                            }`}
+                            title="ขนาดมาตรฐาน (15px)"
+                        >
+                            ปกติ
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFontSizePreset('large')}
+                            className={`px-2.5 py-1 rounded-lg transition-all ${
+                                fontSizePreset === 'large' 
+                                    ? 'bg-amber-600 text-white shadow-xs' 
+                                    : 'text-slate-700 hover:bg-slate-200'
+                            }`}
+                            title="ขนาดตัวโต (16.5px)"
+                        >
+                            ตัวโต
+                        </button>
+                    </div>
+
+                    <a
+                        href={route('projects.chapter2.print', project.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2 text-xs font-bold text-teal-700 hover:bg-teal-100 transition shadow-2xs"
+                        title="ดูรายงานผลโครงการ บทที่ ๒"
+                    >
+                        📗 ดูบทที่ ๒
+                    </a>
+
+                    <Link
+                        href={route('projects.show', project.id)}
+                        className="rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+                    >
+                        ← กลับหน้าโครงการ
+                    </Link>
+
+                    <button
+                        onClick={handlePrint}
+                        className="rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:from-amber-700 hover:to-orange-700 transition flex items-center gap-1.5 cursor-pointer"
+                    >
+                        <span>🖨️</span> สั่งพิมพ์ / บันทึกเป็น PDF
+                    </button>
+                </div>
+            </div>
+
+            {/* Document Container */}
+            <div className="print-doc-container font-sarabun mx-auto bg-white shadow-md rounded-2xl print:p-0 print:m-0 print:shadow-none print:border-none print:rounded-none">
+                
+                {/* Chapter Heading */}
+                <div className="text-center mb-8">
+                    <h2 className="print-title tracking-wide text-black mb-1">บทที่ ๓</h2>
+                    <h1 className="print-title tracking-wide text-black">วิธีดำเนินงานโครงการ</h1>
+                </div>
+
+                {/* Content Render */}
+                {sections && (sections.section_3_1 || sections.section_3_2 || sections.section_3_3) ? (
+                    <div className="space-y-6 text-justify text-black leading-relaxed">
+                        
+                        {/* Intro */}
+                        {sections.intro && (
+                            <div className="thai-indent whitespace-pre-line text-justify leading-relaxed">
+                                {sections.intro}
+                            </div>
+                        )}
+
+                        {/* 3.1 Population & Target Group */}
+                        {sections.section_3_1 && (
+                            <div className="pt-2">
+                                <h3 className="print-heading mb-2 text-black">
+                                    ๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย
+                                </h3>
+                                <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
+                                    {sections.section_3_1.replace(/^[๓3]\.[๑1]\s*ประชากร[^\n]*\n+/u, '')}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3.2 Evaluation Instruments */}
+                        {sections.section_3_2 && (
+                            <div className="pt-4">
+                                <h3 className="print-heading mb-2 text-black">
+                                    ๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ
+                                </h3>
+                                <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
+                                    {sections.section_3_2.replace(/^[๓3]\.[๒2]\s*เครื่องมือ[^\n]*\n+/u, '')}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3.3 PDCA Steps */}
+                        {sections.section_3_3 && (
+                            <div className="pt-4">
+                                <h3 className="print-heading mb-2 text-black">
+                                    ๓.๓ ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA
+                                </h3>
+                                <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
+                                    {sections.section_3_3.replace(/^[๓3]\.[๓3]\s*ขั้นตอน[^\n]*\n+/u, '')}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3.4 Data Collection */}
+                        {sections.section_3_4 && (
+                            <div className="pt-4">
+                                <h3 className="print-heading mb-2 text-black">
+                                    ๓.๔ การเก็บรวบรวมข้อมูล
+                                </h3>
+                                <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
+                                    {sections.section_3_4.replace(/^[๓3]\.[๔4]\s*การเก็บรวบรวม[^\n]*\n+/u, '')}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 3.5 Statistical Analysis */}
+                        {sections.section_3_5 && (
+                            <div className="pt-4">
+                                <h3 className="print-heading mb-2 text-black">
+                                    ๓.๕ สถิติที่ใช้ในการวิเคราะห์ข้อมูล
+                                </h3>
+                                <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
+                                    {sections.section_3_5.replace(/^[๓3]\.[๕5]\s*สถิติ[^\n]*\n+/u, '')}
+                                </div>
+                            </div>
+                        )}
+
+                    </div>
+                ) : fullContent ? (
+                    <div className="whitespace-pre-line text-justify text-black leading-relaxed space-y-4 thai-indent">
+                        {fullContent}
+                    </div>
+                ) : (
+                    <div className="p-8 bg-amber-50 rounded-2xl border border-amber-200 text-center font-sans print:hidden">
+                        <p className="text-amber-800 font-bold">ยังไม่มีเนื้อหาบทที่ ๓ ในระบบ</p>
+                        <p className="text-xs text-amber-600 mt-1">
+                            กรุณากลับไปที่หน้ารายงานผลโครงการ แท็บ "บทที่ ๓ (Methodology)" และกดปุ่ม "🤖 ใช้ AI วิเคราะห์และช่วยเขียนบทที่ ๓"
+                        </p>
+                        <Link
+                            href={route('dashboard', { chapter: 3 })}
+                            className="mt-4 inline-block px-4 py-2 bg-amber-700 text-white font-bold text-xs rounded-xl shadow"
+                        >
+                            กลับไปสร้างเนื้อหาบทที่ ๓
+                        </Link>
+                    </div>
+                )}
+
+            </div>
+        </div>
+    );
+}

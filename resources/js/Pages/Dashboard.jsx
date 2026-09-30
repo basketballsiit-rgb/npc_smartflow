@@ -875,6 +875,19 @@ export default function Dashboard({
     const [isAnalyzingChapter2, setIsAnalyzingChapter2] = useState(false);
     const [isSavingChapter2, setIsSavingChapter2] = useState(false);
 
+    // Chapter 3 States
+    const [chapter3Sections, setChapter3Sections] = useState({
+        intro: '',
+        section_3_1: '',
+        section_3_2: '',
+        section_3_3: '',
+        section_3_4: '',
+        section_3_5: ''
+    });
+    const [chapter3Analysis, setChapter3Analysis] = useState(null);
+    const [isAnalyzingChapter3, setIsAnalyzingChapter3] = useState(false);
+    const [isSavingChapter3, setIsSavingChapter3] = useState(false);
+
     const activeChapter1Project = React.useMemo(() => {
         if (!selectedChapter1ProjectId && chapter1Projects.length > 0) {
             return chapter1Projects[0];
@@ -1012,6 +1025,29 @@ export default function Dashboard({
             });
         }
         setChapter2Analysis(null);
+
+        // Chapter 3 populate
+        const savedCh3 = activeChapter1Project.chapter_3_sections;
+        if (savedCh3 && typeof savedCh3 === 'object' && Object.keys(savedCh3).length > 0) {
+            setChapter3Sections({
+                intro: safeString(savedCh3.intro),
+                section_3_1: safeString(savedCh3.section_3_1),
+                section_3_2: safeString(savedCh3.section_3_2),
+                section_3_3: safeString(savedCh3.section_3_3),
+                section_3_4: safeString(savedCh3.section_3_4),
+                section_3_5: safeString(savedCh3.section_3_5),
+            });
+        } else {
+            setChapter3Sections({
+                intro: '',
+                section_3_1: '',
+                section_3_2: '',
+                section_3_3: '',
+                section_3_4: '',
+                section_3_5: '',
+            });
+        }
+        setChapter3Analysis(null);
     }, [activeChapter1Project?.id]);
 
     const handleSaveChapter1 = async () => {
@@ -1111,8 +1147,9 @@ export default function Dashboard({
 
     const renumberSubsections = (text, prefix) => {
         if (!text || typeof text !== 'string') return '';
-        const thaiPrefix = prefix === '๒.๑' ? '๒\\.๑' : '๒\\.๓';
-        const arabicPrefix = prefix === '๒.๑' ? '2\\.1' : '2\\.3';
+        const thaiPrefix = prefix.replace(/\./g, '\\.');
+        const arabicDigits = { '๐': 0, '๑': 1, '๒': 2, '๓': 3, '๔': 4, '๕': 5, '๖': 6, '๗': 7, '๘': 8, '๙': 9 };
+        const arabicPrefix = prefix.replace(/[๐-๙]/g, d => arabicDigits[d]).replace(/\./g, '\\.');
         const pattern = new RegExp('(^|\\n)[ \\t]*(?:' + thaiPrefix + '|' + arabicPrefix + ')\\.[๑-๙0-9]+[.\\s]*', 'g');
         let idx = 0;
         return text.replace(pattern, (match, p1) => {
@@ -1489,6 +1526,145 @@ export default function Dashboard({
             });
         } finally {
             setIsSavingChapter2(false);
+        }
+    };
+
+    // Chapter 3 Handlers
+    const handleAnalyzeChapter3 = async () => {
+        if (!activeChapter1Project) return;
+        setIsAnalyzingChapter3(true);
+        try {
+            const response = await window.axios.post(route('projects.chapter3.generate', activeChapter1Project.id));
+            if (response.data.success && response.data.sections) {
+                setChapter3Analysis(response.data);
+                
+                const secs = response.data.sections;
+                // If form is currently blank or has default skeleton, fill with synthesized content
+                setChapter3Sections(prev => {
+                    const isBlank = !prev.section_3_1 && !prev.section_3_2 && !prev.section_3_3;
+                    if (isBlank) {
+                        return {
+                            intro: secs.intro || '',
+                            section_3_1: secs.section_3_1 || '',
+                            section_3_2: secs.section_3_2 || '',
+                            section_3_3: secs.section_3_3 || '',
+                            section_3_4: secs.section_3_4 || '',
+                            section_3_5: secs.section_3_5 || '',
+                        };
+                    }
+                    return prev;
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'วิเคราะห์และร่างเนื้อหาบทที่ ๓ สำเร็จ',
+                    text: `AI ประมวลผลข้อมูลจากบทที่ ๑ (วัตถุประสงค์ ตัวชี้วัด), บทที่ ๒ (ทฤษฎี นโยบาย) และโครงการฉบับเต็ม พร้อมสังเคราะห์วิธีดำเนินงานตามวงจร PDCA ให้เรียบร้อยแล้ว`,
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#059669',
+                    timer: 2500
+                });
+            }
+        } catch (error) {
+            console.error('Error analyzing Chapter 3:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการวิเคราะห์',
+                text: error.response?.data?.message || 'ไม่สามารถวิเคราะห์ข้อมูลบทที่ ๓ ได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ตกลง'
+            });
+        } finally {
+            setIsAnalyzingChapter3(false);
+        }
+    };
+
+    const handleApplySynthesizedChapter3 = () => {
+        if (!chapter3Analysis?.sections) return;
+        const secs = chapter3Analysis.sections;
+        setChapter3Sections({
+            intro: secs.intro || '',
+            section_3_1: secs.section_3_1 || '',
+            section_3_2: secs.section_3_2 || '',
+            section_3_3: secs.section_3_3 || '',
+            section_3_4: secs.section_3_4 || '',
+            section_3_5: secs.section_3_5 || '',
+        });
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'นำเนื้อหาที่ AI วิเคราะห์ใส่ลงในแบบฟอร์มแล้ว',
+            showConfirmButton: false,
+            timer: 1800
+        });
+    };
+
+    const handleAutoRenumberSection3_3 = () => {
+        if (!chapter3Sections.section_3_3) return;
+        const renumbered = renumberSubsections(chapter3Sections.section_3_3, '๓.๓');
+        setChapter3Sections(prev => ({ ...prev, section_3_3: renumbered }));
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'จัดเรียงลำดับหัวข้อย่อย ๓.๓.๑, ๓.๓.๒... สำเร็จ',
+            showConfirmButton: false,
+            timer: 1800
+        });
+    };
+
+    const handleSaveChapter3 = async () => {
+        if (!activeChapter1Project) return;
+        setIsSavingChapter3(true);
+
+        const cleanedSec3_3 = renumberSubsections(chapter3Sections.section_3_3, '๓.๓');
+        const updatedSections = {
+            ...chapter3Sections,
+            section_3_3: cleanedSec3_3
+        };
+        setChapter3Sections(updatedSections);
+
+        const fullContent = [
+            "บทที่ ๓",
+            "วิธีดำเนินงานโครงการ\n",
+            updatedSections.intro,
+            updatedSections.section_3_1,
+            updatedSections.section_3_2,
+            updatedSections.section_3_3,
+            updatedSections.section_3_4,
+            updatedSections.section_3_5
+        ].filter(Boolean).join("\n\n");
+
+        try {
+            await window.axios.post(route('projects.chapter3.save', activeChapter1Project.id), {
+                sections: updatedSections,
+                chapter_3_sections: updatedSections,
+                full_content: fullContent,
+                chapter_3_content: fullContent
+            });
+
+            activeChapter1Project.chapter_3_sections = updatedSections;
+            activeChapter1Project.chapter_3_content = fullContent;
+
+            Swal.fire({
+                icon: 'success',
+                title: 'บันทึกบทที่ ๓ สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ ๓ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#059669',
+                timer: 2000,
+                timerProgressBar: true
+            });
+        } catch (error) {
+            console.error('Error saving Chapter 3:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการบันทึก',
+                text: error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#ef4444'
+            });
+        } finally {
+            setIsSavingChapter3(false);
         }
     };
 
@@ -15594,23 +15770,34 @@ return (
         );
     };
 
-    const renderChapter3Tab = () => (
-        <div className="space-y-6">
-            <div className="bg-gradient-to-r from-amber-900 via-orange-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-200 text-xs font-bold mb-2">
-                            <span>📙</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๓ (Methodology)
-                        </div>
-                        <h2 className="text-xl md:text-2xl font-black tracking-tight">
-                            บทที่ ๓: วิธีดำเนินงาน & จัดซื้อจัดจ้าง (Do Phase)
-                        </h2>
-                        <p className="text-amber-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
-                            รวบรวมขั้นตอนการดำเนินกิจกรรมตามวงจร PDCA แผนการใช้จ่ายงบประมาณ การจัดซื้อจัดจ้างพัสดุ และเครื่องมือที่ใช้ในการประเมิน
-                        </p>
-                    </div>
+    const renderChapter3Tab = () => {
+        if (!activeChapter1Project) {
+            return (
+                <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 text-center">
+                    <span className="text-4xl mb-3 block">📙</span>
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">ยังไม่พบโครงการที่สามารถสังเคราะห์บทที่ ๓</h3>
+                    <p className="text-sm text-slate-500 mb-4">กรุณาสร้างข้อเสนอโครงการหรือตรวจสอบสิทธิ์การเข้าถึงโครงการของคุณ</p>
+                </div>
+            );
+        }
 
-                    {activeChapter1Project && (
+        return (
+            <div className="space-y-6">
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-amber-900 via-orange-900 to-slate-900 rounded-3xl p-6 text-white shadow-xl">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-200 text-xs font-bold mb-2">
+                                <span>📙</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๓ (Methodology)
+                            </div>
+                            <h2 className="text-xl md:text-2xl font-black tracking-tight">
+                                บทที่ ๓: วิธีดำเนินงานโครงการ (Do Phase)
+                            </h2>
+                            <p className="text-amber-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
+                                ระเบียบวิธีและขั้นตอนการดำเนินงานตามวงจรบริหารงานคุณภาพ PDCA ประชากรและกลุ่มตัวอย่าง เครื่องมือประเมินผล และสถิติที่ใช้ในการวิเคราะห์ข้อมูล
+                            </p>
+                        </div>
+
                         <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 min-w-[280px]">
                             <label className="text-[11px] font-bold text-amber-200 block mb-1">เลือกโครงการ:</label>
                             <select
@@ -15625,44 +15812,331 @@ return (
                                 ))}
                             </select>
                         </div>
+                    </div>
+                </div>
+
+                {/* AI Assistant & PDCA Engine Box */}
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-amber-100 space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-2xl font-bold shadow-inner">
+                                🤖
+                            </div>
+                            <div>
+                                <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    AI ช่วยเขียนและค้นหาข้อมูลบทที่ ๓ (PDCA Methodology Engine)
+                                    <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">
+                                        Smart PDCA Synthesizer
+                                    </span>
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    ดึงข้อมูลตั้งต้นจากบทที่ ๑ (วัตถุประสงค์ ตัวชี้วัด), บทที่ ๒ (ทฤษฎี นโยบาย) และโครงการฉบับเต็ม (กิจกรรม แผนปฏิบัติการ) เพื่อร่างเนื้อหาบทที่ ๓
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleAnalyzeChapter3}
+                                disabled={isAnalyzingChapter3}
+                                className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 transition flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {isAnalyzingChapter3 ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>AI กำลังวิเคราะห์และร่างบทที่ ๓...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>⚡</span>
+                                        <span>ใช้ AI วิเคราะห์และช่วยเขียนบทที่ ๓</span>
+                                    </>
+                                )}
+                            </button>
+                            {chapter3Analysis && (
+                                <button
+                                    type="button"
+                                    onClick={handleApplySynthesizedChapter3}
+                                    className="px-4 py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-xl text-xs font-bold border border-amber-200 transition flex items-center gap-1.5"
+                                    title="นำเนื้อหาที่ AI สังเคราะห์ใส่ลงในแบบฟอร์มด้านล่างทั้งหมด"
+                                >
+                                    <span>📥</span>
+                                    <span>นำผลวิเคราะห์ลงแบบฟอร์ม</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {!chapter3Analysis ? (
+                        <div className="bg-amber-50/40 rounded-2xl p-6 border border-dashed border-amber-200 text-center space-y-3">
+                            <div className="inline-flex p-3 bg-white rounded-2xl shadow-sm text-amber-600 text-2xl">
+                                📑
+                            </div>
+                            <h4 className="text-sm font-bold text-slate-800">
+                                หัวข้อมาตรฐานในบทที่ ๓ วิธีดำเนินงานโครงการ (ตัดหัวข้อจัดหาพัสดุออกแล้ว)
+                            </h4>
+                            <div className="flex flex-wrap justify-center gap-2 text-xs text-slate-600 max-w-2xl mx-auto">
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๓ ขั้นตอนการดำเนินงานตามวงจรคุณภาพ PDCA</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๔ การเก็บรวบรวมข้อมูล</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๕ สถิติที่ใช้ในการวิเคราะห์ข้อมูล</span>
+                            </div>
+                            <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed pt-1">
+                                กดปุ่ม <strong>"ใช้ AI วิเคราะห์และช่วยเขียนบทที่ ๓"</strong> ด้านบน เพื่อให้ระบบอ่านข้อมูลจากบทที่ ๑, บทที่ ๒ และกิจกรรมในโครงการฉบับเต็มมาร่างเนื้อหาให้โดยอัตโนมัติ
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Analysis Summary Chips */}
+                            <div className="bg-amber-50/60 rounded-2xl p-4 border border-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div>
+                                    <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider block mb-1">
+                                        แหล่งข้อมูลตั้งต้นที่นำมาสังเคราะห์ (Data Sources Integrated)
+                                    </span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-lg border border-purple-200">
+                                            📘 บทที่ ๑: {chapter3Analysis.analyzed_sources?.chapter_1?.objectives_count || 0} วัตถุประสงค์ & ตัวชี้วัด
+                                        </span>
+                                        <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-200">
+                                            📗 บทที่ ๒: กรอบทฤษฎี & นโยบาย สอศ.
+                                        </span>
+                                        <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-lg border border-blue-200">
+                                            📋 เล่มโครงการ: {chapter3Analysis.analyzed_sources?.full_project?.activities_count || 0} กิจกรรม
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span className="text-[11px] font-bold text-slate-600 block mb-1">
+                                        การจำแนกกิจกรรมตามวงจร PDCA:
+                                    </span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        <span className="px-2.5 py-0.5 bg-white border border-amber-200 text-amber-900 rounded-md text-[11px] font-medium shadow-2xs">
+                                            Plan: {chapter3Analysis.pdca_summary?.plan_count || 0} ขั้นตอน
+                                        </span>
+                                        <span className="px-2.5 py-0.5 bg-white border border-amber-200 text-amber-900 rounded-md text-[11px] font-medium shadow-2xs">
+                                            Do: {chapter3Analysis.pdca_summary?.do_count || 0} ขั้นตอน
+                                        </span>
+                                        <span className="px-2.5 py-0.5 bg-white border border-amber-200 text-amber-900 rounded-md text-[11px] font-medium shadow-2xs">
+                                            Check: {chapter3Analysis.pdca_summary?.check_count || 0} ขั้นตอน
+                                        </span>
+                                        <span className="px-2.5 py-0.5 bg-white border border-amber-200 text-amber-900 rounded-md text-[11px] font-medium shadow-2xs">
+                                            Act: {chapter3Analysis.pdca_summary?.act_count || 0} ขั้นตอน
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
-            </div>
 
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
-                <div className="max-w-3xl space-y-4">
-                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                        <span>📦</span> ข้อมูลและขั้นตอนการดำเนินงาน (PDCA Do-Phase)
-                    </h3>
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
-                        <p className="font-bold text-slate-900">หัวข้อสำคัญในบทที่ ๓:</p>
-                        <ul className="list-disc pl-5 space-y-1">
-                            <li>๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย</li>
-                            <li>๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ (แบบสอบถามความพึงพอใจ, แบบทดสอบ)</li>
-                            <li>๓.๓ ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA</li>
-                            <li>๓.๔ การจัดหาพัสดุ ครุภัณฑ์ และการบริหารงบประมาณ</li>
-                            <li>๓.๕ การเก็บรวบรวมข้อมูลและสถิติที่ใช้ในการวิเคราะห์</li>
-                        </ul>
+                {/* Main Chapter 3 Form */}
+                <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 gap-3">
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <span>✏️</span> ปรับแต่งและแก้ไขข้อมูล บทที่ ๓ วิธีดำเนินงานโครงการ
+                            </h3>
+                            <p className="text-xs text-slate-500">
+                                ปรับแก้เนื้อหาแต่ละหัวข้อตามบริบทจริงของโครงการ (ตัดเฉพาะหัวข้อจัดหาพัสดุออกเรียบร้อยแล้ว)
+                            </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <a
+                                href={route('projects.chapter3.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>🖨️</span> สั่งพิมพ์ / ดูตัวอย่าง A4 (บทที่ ๓)
+                            </a>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveChapter3}
+                                disabled={isSavingChapter3}
+                                className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {isSavingChapter3 ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>กำลังบันทึก...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>💾</span>
+                                        <span>บันทึกบทที่ ๓</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 pt-2">
+                    {/* Intro */}
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">บทนำ</span>
+                                ความนำบทที่ ๓ (เกริ่นนำกระบวนการและวงจรบริหารงานคุณภาพ PDCA)
+                            </label>
+                        </div>
+                        <textarea
+                            rows={4}
+                            value={safeString(chapter3Sections.intro)}
+                            onChange={(e) => setChapter3Sections({ ...chapter3Sections, intro: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
+                            placeholder="เกริ่นนำระเบียบวิธีและขั้นตอนการดำเนินงานตามวงจรบริหารงานคุณภาพ PDCA..."
+                        />
+                    </div>
+
+                    {/* Section 3.1 */}
+                    <div className="space-y-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๑</span>
+                                ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย
+                            </label>
+                            <span className="text-[11px] text-slate-400">ประชากร, กลุ่มตัวอย่าง, วิธีการคัดเลือก, เป้าหมายเชิงปริมาณและคุณภาพ</span>
+                        </div>
+                        <textarea
+                            rows={7}
+                            value={safeString(chapter3Sections.section_3_1)}
+                            onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_1: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
+                            placeholder="๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย..."
+                        />
+                    </div>
+
+                    {/* Section 3.2 */}
+                    <div className="space-y-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๒</span>
+                                เครื่องมือที่ใช้ในการประเมินผลโครงการ
+                            </label>
+                            <span className="text-[11px] text-slate-400">แบบประเมินความพึงพอใจ ๕ ระดับ (Likert Scale), การตรวจสอบ IOC</span>
+                        </div>
+                        <textarea
+                            rows={8}
+                            value={safeString(chapter3Sections.section_3_2)}
+                            onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_2: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
+                            placeholder="๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ..."
+                        />
+                    </div>
+
+                    {/* Section 3.3 */}
+                    <div className="space-y-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๓</span>
+                                ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA
+                            </label>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleAutoRenumberSection3_3}
+                                    className="text-[11px] text-amber-700 hover:text-amber-900 font-bold underline flex items-center gap-1"
+                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น ๓.๓.๑, ๓.๓.๒, ๓.๓.๓, ๓.๓.๔ อัตโนมัติ"
+                                >
+                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (๓.๓.๑, ๓.๓.๒...)
+                                </button>
+                                <span className="text-[11px] text-slate-300 hidden sm:inline">|</span>
+                                <span className="text-[11px] text-slate-400">Plan (P), Do (D), Check (C), Action (A)</span>
+                            </div>
+                        </div>
+                        <textarea
+                            rows={10}
+                            value={safeString(chapter3Sections.section_3_3)}
+                            onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_3: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
+                            placeholder="๓.๓ ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA..."
+                        />
+                    </div>
+
+                    {/* Section 3.4 */}
+                    <div className="space-y-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๔</span>
+                                การเก็บรวบรวมข้อมูล
+                            </label>
+                            <span className="text-[11px] text-slate-400">ขั้นตอนการแจก รวบรวม และตรวจสอบความถูกต้องครบถ้วนของแบบประเมิน</span>
+                        </div>
+                        <textarea
+                            rows={5}
+                            value={safeString(chapter3Sections.section_3_4)}
+                            onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_4: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
+                            placeholder="๓.๔ การเก็บรวบรวมข้อมูล..."
+                        />
+                    </div>
+
+                    {/* Section 3.5 */}
+                    <div className="space-y-1.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๕</span>
+                                สถิติที่ใช้ในการวิเคราะห์ข้อมูล
+                            </label>
+                            <span className="text-[11px] text-slate-400">ค่าร้อยละ, ค่าเฉลี่ย x̄, ส่วนเบี่ยงเบนมาตรฐาน S.D., เกณฑ์ Best (1977)</span>
+                        </div>
+                        <textarea
+                            rows={8}
+                            value={safeString(chapter3Sections.section_3_5)}
+                            onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_5: e.target.value })}
+                            className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
+                            placeholder="๓.๕ สถิติที่ใช้ในการวิเคราะห์ข้อมูล..."
+                        />
+                    </div>
+
+                    {/* Bottom Action Bar */}
+                    <div className="pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
                         <button
-                            onClick={() => setActiveTab('procurement')}
-                            className="px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                            type="button"
+                            onClick={handleAnalyzeChapter3}
+                            disabled={isAnalyzingChapter3}
+                            className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
                         >
-                            <span>🛒</span> ดูรายการจัดซื้อจัดจ้างพัสดุ
+                            <span>🔄</span> สังเคราะห์ด้วย AI ใหม่อีกครั้ง
                         </button>
-                        <button
-                            onClick={() => setActiveTab('clearings')}
-                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
-                        >
-                            <span>📑</span> ดูรายการเคลียร์เงิน/หลักฐานค่าใช้จ่าย
-                        </button>
+
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={route('projects.chapter3.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5"
+                            >
+                                <span>🖨️</span> ดูตัวอย่างและพิมพ์ A4 (บทที่ ๓)
+                            </a>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveChapter3}
+                                disabled={isSavingChapter3}
+                                className="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                                {isSavingChapter3 ? (
+                                    <>
+                                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>กำลังบันทึก...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>💾</span>
+                                        <span>บันทึกบทที่ ๓</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderChapter4Tab = () => (
         <div className="space-y-6">

@@ -1950,6 +1950,300 @@ class ProjectController extends Controller
     }
 
     /**
+     * Convert digits to Thai numerals.
+     */
+    private function toThaiNumber($num): string
+    {
+        $thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return preg_replace_callback('/[0-9]/', function ($matches) use ($thaiDigits) {
+            return $thaiDigits[(int)$matches[0]];
+        }, (string)$num);
+    }
+
+    /**
+     * Generate Chapter 3 content (Methodology & PDCA Implementation)
+     * Synthesizes data from Chapter 1, Chapter 2, and full project details.
+     */
+    public function generateChapter3(Request $request, Project $project)
+    {
+        $project->load(['department', 'user', 'fundingSource', 'ovecStrategy']);
+
+        $title = $project->title ?: 'โครงการพัฒนาทักษะวิชาชีพและการจัดการเรียนการสอน';
+        $departmentName = $project->department?->name ?: 'วิทยาลัยสารพัดช่างน่าน';
+        $academicYear = $project->academic_year ?: '2569';
+        $thaiYear = $this->toThaiNumber($academicYear);
+        $responsiblePerson = $project->responsible_person ?: ($project->user?->name ?: 'ผู้รับผิดชอบโครงการ');
+        $location = $project->location ?: 'วิทยาลัยสารพัดช่างน่าน';
+
+        // 1. Extract Chapter 1 Data
+        $ch1 = is_array($project->chapter_1_sections) ? $project->chapter_1_sections : [];
+        $rawBg = $ch1['background'] ?? ($project->background_rationale ?: '');
+        
+        // Objectives
+        $rawObjectives = [];
+        if (!empty($ch1['objectives'])) {
+            $rawObjectives = is_array($ch1['objectives']) ? $ch1['objectives'] : explode("\n", $ch1['objectives']);
+        } elseif (is_array($project->objectives)) {
+            $rawObjectives = $project->objectives;
+        } elseif (is_string($project->objectives)) {
+            $rawObjectives = explode("\n", $project->objectives);
+        }
+        $cleanObjectives = [];
+        foreach ($rawObjectives as $obj) {
+            $text = is_array($obj) ? ($obj['title'] ?? $obj['name'] ?? $obj['text'] ?? '') : (string)$obj;
+            $text = trim(preg_replace('/^[๐-๙0-9.\s]+/u', '', trim($text)));
+            if (!empty($text)) $cleanObjectives[] = $text;
+        }
+
+        // Targets & Scope
+        $scopeTarget = $ch1['scope_target'] ?? '';
+        $targets = $project->targets ?: [];
+        $indQuant = $ch1['indicators_quantitative'] ?? (is_array($project->indicators) ? ($project->indicators['quantitative'] ?? '') : '');
+        if (is_array($indQuant)) $indQuant = ($indQuant['text'] ?? '') . ' ' . ($indQuant['unit'] ?? '');
+        $indQual = $ch1['indicators_qualitative'] ?? (is_array($project->indicators) ? ($project->indicators['qualitative'] ?? '') : '');
+        if (is_array($indQual)) $indQual = ($indQual['text'] ?? '') . ' ' . ($indQual['unit'] ?? '');
+
+        // 2. Extract Chapter 2 Data
+        $ch2 = is_array($project->chapter_2_sections) ? $project->chapter_2_sections : [];
+        $theoriesText = $ch2['section_2_1'] ?? '';
+        $policyText = $ch2['section_2_2'] ?? '';
+        $researchesText = $ch2['section_2_3'] ?? '';
+
+        // 3. Extract Activities / Action Plan
+        $activities = [];
+        if (is_array($project->activities) && count($project->activities) > 0) {
+            $activities = $project->activities;
+        } elseif (is_array($project->action_plan) && count($project->action_plan) > 0) {
+            $activities = $project->action_plan;
+        }
+
+        // Synthesize Intro
+        $objSummary = count($cleanObjectives) > 0 ? implode(' และ', array_slice($cleanObjectives, 0, 2)) : 'เพื่อพัฒนาคุณภาพและประสิทธิภาพการดำเนินงาน';
+        $intro = "การดำเนินงานโครงการ \"{$title}\" ประจำปีการศึกษา {$thaiYear} ของ{$departmentName} มีวัตถุประสงค์{$objSummary} โดยผู้รับผิดชอบโครงการได้กำหนดระเบียบวิธีและขั้นตอนการดำเนินงานตามวงจรบริหารงานคุณภาพ (PDCA Cycle) ของเดมิ่ง (Deming, 1986) ซึ่งได้บูรณาการร่วมกับกรอบแนวคิด หลักการ และทฤษฎีที่เกี่ยวข้องในบทที่ ๒ เพื่อให้การดำเนินงานบรรลุผลสำเร็จตามตัวชี้วัดความสำเร็จที่กำหนดไว้อย่างมีประสิทธิภาพ โดยมีสาระสำคัญในการดำเนินงานจำแนกตามหัวข้อ ดังนี้\n\n"
+               . "๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย\n"
+               . "๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ\n"
+               . "๓.๓ ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA\n"
+               . "๓.๔ การเก็บรวบรวมข้อมูล\n"
+               . "๓.๕ สถิติที่ใช้ในการวิเคราะห์ข้อมูล";
+
+        // Synthesize 3.1 Population & Target Group
+        $sec3_1 = "๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย\n\n"
+                . "ในการดำเนินโครงการ \"{$title}\" ผู้รับผิดชอบโครงการได้กำหนดประชากรและกลุ่มเป้าหมายในการดำเนินงานและประเมินผลโครงการ ดังนี้\n\n"
+                . "๓.๑.๑ ประชากร (Population)\n";
+        
+        if (!empty($scopeTarget)) {
+            $sec3_1 .= "ประชากรที่ใช้ในการดำเนินโครงการ ได้แก่ " . trim($scopeTarget) . "\n\n";
+        } elseif (!empty($indQuant)) {
+            $sec3_1 .= "ประชากรที่ใช้ในการดำเนินโครงการ ได้แก่ นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษาของ{$departmentName} ที่เกี่ยวข้องกับโครงการ โดยมีเป้าหมายเชิงปริมาณ คือ " . trim($indQuant) . "\n\n";
+        } else {
+            $sec3_1 .= "ประชากรที่ใช้ในการดำเนินโครงการ ได้แก่ นักเรียน นักศึกษา ครู บุคลากรทางการศึกษา และผู้รับบริการของ{$departmentName}\n\n";
+        }
+
+        $sec3_1 .= "๓.๑.๒ กลุ่มตัวอย่าง / กลุ่มเป้าหมาย (Sample / Target Group)\n"
+                 . "กลุ่มเป้าหมายที่ใช้ในการประเมินผลสัมฤทธิ์และความพึงพอใจต่อโครงการ ได้แก่ ผู้เข้าร่วมกิจกรรมโครงการจริง โดยใช้วิธีการเลือกแบบเจาะจง (Purposive Sampling) หรือสุ่มกลุ่มตัวอย่างตามขนาดประชากร โดยจำแนกตามตัวชี้วัดความสำเร็จ ดังนี้\n"
+                 . "๑) ด้านเชิงปริมาณ: " . ($indQuant ? trim($indQuant) : "ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐ ของกลุ่มเป้าหมายที่กำหนด") . "\n"
+                 . "๒) ด้านเชิงคุณภาพ: " . ($indQual ? trim($indQual) : "ผู้เข้าร่วมโครงการมีความพึงพอใจต่อการดำเนินงานและผลลัพธ์ของโครงการในระดับดีขึ้นไป (ค่าเฉลี่ยไม่น้อยกว่า ๓.๕๑)");
+
+        // Synthesize 3.2 Evaluation Instruments
+        $sec3_2 = "๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ\n\n"
+                . "เครื่องมือที่ใช้ในการเก็บรวบรวมข้อมูลเพื่อประเมินผลสัมฤทธิ์ของโครงการ \"{$title}\" ประกอบด้วยแบบประเมินความพึงพอใจ ซึ่งสร้างขึ้นตามวัตถุประสงค์และตัวชี้วัดของโครงการ โดยมีรายละเอียดดังนี้\n\n"
+                . "๓.๒.๑ ลักษณะของเครื่องมือ\n"
+                . "แบบสอบถามประเมินความพึงพอใจในการดำเนินงานโครงการ แบ่งโครงสร้างออกเป็น ๓ ตอน ได้แก่\n"
+                . "ตอนที่ ๑ แบบสอบถามข้อมูลทั่วไปของผู้ตอบแบบสอบถาม เช่น เพศ ระดับการศึกษา สถานะผู้เข้าร่วมโครงการ มีลักษณะเป็นแบบตรวจสอบรายการ (Checklist)\n"
+                . "ตอนที่ ๒ แบบสอบถามวัดระดับความพึงพอใจต่อโครงการ มีลักษณะเป็นมาตราส่วนประมาณค่า ๕ ระดับ (Rating Scale) ตามวิธีของลิเคิร์ท (Likert Scale) ประกอบด้วย ๔ ด้าน ได้แก่\n"
+                . "  - ด้านการวางแผนและการเตรียมความพร้อม (Plan)\n"
+                . "  - ด้านกระบวนการและการจัดกิจกรรมการดำเนินงาน (Do)\n"
+                . "  - ด้านการติดตาม ประเมินผล และการอำนวยความสะดวก (Check)\n"
+                . "  - ด้านประโยชน์ที่ได้รับและการนำไปประยุกต์ใช้ (Action)\n"
+                . "ตอนที่ ๓ แบบสอบถามปลายเปิด (Open-ended) สำหรับให้ผู้ตอบแบบสอบถามแสดงความคิดเห็น ข้อเสนอแนะ และแนวทางการพัฒนาปรับปรุงเพิ่มเติม\n\n"
+                . "๓.๒.๒ การสร้างและการหาคุณภาพของเครื่องมือ\n"
+                . "๑) ศึกษาวัตถุประสงค์ ตัวชี้วัด และกรอบแนวคิดทฤษฎีจากบทที่ ๑ และบทที่ ๒ เพื่อกำหนดนิยามเชิงปฏิบัติการและโครงสร้างข้อคำถาม\n"
+                . "๒) ยกร่างแบบสอบถามประเมินความพึงพอใจให้ครอบคลุมทุกประเด็นตัวชี้วัด\n"
+                . "๓) นำแบบสอบถามเสนอต่อผู้ทรงคุณวุฒิหรือคณะกรรมการประเมินโครงการ เพื่อตรวจสอบความเที่ยงตรงเชิงเนื้อหา (Content Validity) โดยพิจารณาค่าดัชนีความสอดคล้องระหว่างข้อคำถามกับวัตถุประสงค์ (Item-Objective Congruence Index : IOC) โดยคัดเลือกข้อคำถามที่มีค่า IOC ตั้งแต่ ๐.๕๐ ขึ้นไป\n"
+                . "๔) ปรับปรุงแก้ไขตามข้อเสนอแนะของผู้ทรงคุณวุฒิ และจัดพิมพ์แบบสอบถามฉบับสมบูรณ์เพื่อนำไปใช้ในการเก็บรวบรวมข้อมูล";
+
+        // Synthesize 3.3 PDCA Operational Steps
+        $planActs = [];
+        $doActs = [];
+        $checkActs = [];
+        $actActs = [];
+
+        if (count($activities) > 0) {
+            foreach ($activities as $act) {
+                $actName = is_array($act) ? ($act['name'] ?? $act['title'] ?? $act['activity_name'] ?? '') : (string)$act;
+                $actName = trim($actName);
+                if (empty($actName)) continue;
+
+                if (preg_match('/(เสนอ|วางแผน|ประชุม|แต่งตั้ง|เตรียม|สำรวจ|ออกแบบ|จัดทำแผน)/u', $actName)) {
+                    $planActs[] = $actName;
+                } elseif (preg_match('/(ประเมิน|ติดตาม|นิเทศ|ตรวจสอบ|วัดผล)/u', $actName)) {
+                    $checkActs[] = $actName;
+                } elseif (preg_match('/(สรุป|รายงาน|ปรับปรุง|ถอดบทเรียน|เผยแพร่)/u', $actName)) {
+                    $actActs[] = $actName;
+                } else {
+                    $doActs[] = $actName;
+                }
+            }
+        }
+
+        // Defaults if activities not specified
+        if (empty($planActs)) {
+            $planActs = [
+                "สำรวจสภาพปัญหาและความต้องการจำเป็นเพื่อจัดทำร่างโครงการ",
+                "ประชุมชี้แจงคณะทำงานและแต่งตั้งคณะกรรมการดำเนินงานโครงการ",
+                "จัดทำแผนปฏิบัติการ (Action Plan) กำหนดระยะเวลา และงบประมาณดำเนินงาน"
+            ];
+        }
+        if (empty($doActs)) {
+            $doActs = [
+                "ประสานงานและจัดเตรียมสถานที่ วัสดุอุปกรณ์ และสื่อการดำเนินงาน",
+                "ดำเนินการจัดกิจกรรมโครงการตามแผนปฏิบัติการที่กำหนด ณ {$location}",
+                "อำนวยความสะดวกและดูแลการดำเนินกิจกรรมให้เป็นไปตามมาตรฐานความปลอดภัย"
+            ];
+        }
+        if (empty($checkActs)) {
+            $checkActs = [
+                "ติดตามและสังเกตการณ์การดำเนินกิจกรรมของผู้เข้าร่วมโครงการอย่างต่อเนื่อง",
+                "แจกและรวบรวมแบบประเมินความพึงพอใจและแบบวัดผลสัมฤทธิ์จากกลุ่มเป้าหมาย",
+                "ตรวจสอบความสมบูรณ์ของข้อมูลและเปรียบเทียบผลการดำเนินงานกับตัวชี้วัดในบทที่ ๑"
+            ];
+        }
+        if (empty($actActs)) {
+            $actActs = [
+                "ประมวลผลและวิเคราะห์ข้อมูลทางสถิติเพื่อสรุปผลสัมฤทธิ์ของโครงการ",
+                "ประชุมถอดบทเรียน (AAR) วิเคราะห์จุดเด่น ปัญหา และอุปสรรคเพื่อกำหนดแนวทางแก้ไข",
+                "จัดทำรูปเล่มรายงานโครงการ ๕ บท ฉบับสมบูรณ์ เสนอต่อผู้บริหารและเผยแพร่ผลงาน"
+            ];
+        }
+
+        $sec3_3 = "๓.๓ ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA\n\n"
+                . "การดำเนินงานโครงการ \"{$title}\" ได้ประยุกต์ใช้วงจรบริหารงานคุณภาพ PDCA (Deming Cycle) เพื่อควบคุมคุณภาพและพัฒนากระบวนการทำงานอย่างต่อเนื่อง ๔ ขั้นตอน ดังนี้\n\n"
+                . "๓.๓.๑ ขั้นวางแผน (Plan : P)\n";
+        foreach ($planActs as $i => $pa) {
+            $sec3_3 .= $this->toThaiNumber($i + 1) . ") {$pa}\n";
+        }
+        $sec3_3 .= "\n๓.๓.๒ ขั้นปฏิบัติตามแผน (Do : D)\n";
+        foreach ($doActs as $i => $da) {
+            $sec3_3 .= $this->toThaiNumber($i + 1) . ") {$da}\n";
+        }
+        $sec3_3 .= "\n๓.๓.๓ ขั้นตรวจสอบและประเมินผล (Check : C)\n";
+        foreach ($checkActs as $i => $ca) {
+            $sec3_3 .= $this->toThaiNumber($i + 1) . ") {$ca}\n";
+        }
+        $sec3_3 .= "\n๓.๓.๔ ขั้นปรับปรุงและพัฒนา (Action : A)\n";
+        foreach ($actActs as $i => $aa) {
+            $sec3_3 .= $this->toThaiNumber($i + 1) . ") {$aa}\n";
+        }
+        $sec3_3 = trim($sec3_3);
+
+        // Synthesize 3.4 Data Collection
+        $sec3_4 = "๓.๔ การเก็บรวบรวมข้อมูล\n\n"
+                . "ผู้รับผิดชอบโครงการได้ดำเนินการเก็บรวบรวมข้อมูลตามขั้นตอนอย่างเป็นระบบ ดังนี้\n"
+                . "๑) ประสานงานกลุ่มเป้าหมายเพื่อชี้แจงวัตถุประสงค์และวิธีการตอบแบบประเมิน\n"
+                . "๒) ดำเนินการแจกแบบสอบถามประเมินความพึงพอใจทั้งในรูปแบบเอกสารและแบบออนไลน์ (Google Forms) ให้แก่กลุ่มเป้าหมายภายหลังเสร็จสิ้นกิจกรรมโครงการ\n"
+                . "๓) ติดตามรวบรวมแบบสอบถามจากกลุ่มเป้าหมายให้ได้จำนวนครบถ้วนตามเกณฑ์ตัวชี้วัด\n"
+                . "๔) ตรวจสอบความสมบูรณ์ ถูกต้อง ครบถ้วนของแบบสอบถามทุกฉบับก่อนนำเข้าสู่กระบวนการประมวลผลข้อมูลทางสถิติ";
+
+        // Synthesize 3.5 Statistical Analysis
+        $sec3_5 = "๓.๕ สถิติที่ใช้ในการวิเคราะห์ข้อมูล\n\n"
+                . "การวิเคราะห์ข้อมูลโครงการ ใช้โปรแกรมคอมพิวเตอร์สำเร็จรูปสำหรับการประมวลผลข้อมูลทางสถิติ โดยมีสถิติที่ใช้ดังนี้\n\n"
+                . "๓.๕.๑ สถิติพื้นฐาน\n"
+                . "๑) ค่าความถี่ (Frequency) และค่าร้อยละ (Percentage) เพื่อใช้วิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม และผลสัมฤทธิ์เชิงปริมาณ\n\n"
+                . "๓.๕.๒ สถิติที่ใช้ในการวัดแนวโน้มเข้าสู่ส่วนกลางและการกระจายของข้อมูล\n"
+                . "๑) ค่าเฉลี่ยเลขคณิต (Mean : x̄) ใช้วัดระดับความพึงพอใจของผู้เข้าร่วมโครงการในแต่ละด้านและภาพรวม\n"
+                . "๒) ส่วนเบี่ยงเบนมาตรฐาน (Standard Deviation : S.D.) ใช้วัดการกระจายตัวของคะแนนระดับความพึงพอใจ\n\n"
+                . "๓.๕.๓ เกณฑ์การแปลความหมายระดับคะแนนความพึงพอใจ\n"
+                . "การแปลความหมายค่าเฉลี่ยระดับความพึงพอใจ ใช้เกณฑ์การให้คะแนนแบบมาตราส่วนประมาณค่า ๕ ระดับตามวิธีของเบสท์ (Best, 1977) ดังนี้\n"
+                . "ค่าเฉลี่ย ๔.๕๑ - ๕.๐๐ หมายถึง มีความพึงพอใจอยู่ในระดับมากที่สุด\n"
+                . "ค่าเฉลี่ย ๓.๕๑ - ๔.๕๐ หมายถึง มีความพึงพอใจอยู่ในระดับมาก\n"
+                . "ค่าเฉลี่ย ๒.๕๑ - ๓.๕๐ หมายถึง มีความพึงพอใจอยู่ในระดับปานกลาง\n"
+                . "ค่าเฉลี่ย ๑.๕๑ - ๒.๕๐ หมายถึง มีความพึงพอใจอยู่ในระดับน้อย\n"
+                . "ค่าเฉลี่ย ๑.๐๐ - ๑.๕๐ หมายถึง มีความพึงพอใจอยู่ในระดับน้อยที่สุด\n\n"
+                . "๓.๕.๔ เกณฑ์การตัดสินผลสัมฤทธิ์ของโครงการ\n"
+                . "โครงการจะถือว่าประสบผลสำเร็จตามเป้าหมายเมื่อผลการดำเนินงานเป็นไปตามเกณฑ์ตัวชี้วัด ดังนี้\n"
+                . "๑) ด้านปริมาณ: มีจำนวนผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐ ของเป้าหมายที่กำหนด\n"
+                . "๒) ด้านคุณภาพ: ค่าเฉลี่ยความพึงพอใจในภาพรวมของโครงการไม่ต่ำกว่าระดับมาก (ค่าเฉลี่ยตั้งแต่ ๓.๕๑ ขึ้นไป)";
+
+        $sections = [
+            'intro' => $intro,
+            'section_3_1' => $sec3_1,
+            'section_3_2' => $sec3_2,
+            'section_3_3' => $sec3_3,
+            'section_3_4' => $sec3_4,
+            'section_3_5' => $sec3_5,
+        ];
+
+        return response()->json([
+            'success' => true,
+            'project_id' => $project->id,
+            'project_title' => $title,
+            'analyzed_sources' => [
+                'chapter_1' => [
+                    'objectives_count' => count($cleanObjectives),
+                    'has_quantitative_target' => !empty($indQuant),
+                    'has_qualitative_target' => !empty($indQual),
+                ],
+                'chapter_2' => [
+                    'has_theories' => !empty($theoriesText),
+                    'has_policy' => !empty($policyText),
+                    'has_researches' => !empty($researchesText),
+                ],
+                'full_project' => [
+                    'activities_count' => count($activities),
+                    'academic_year' => $academicYear,
+                    'department' => $departmentName,
+                    'location' => $location,
+                ],
+            ],
+            'pdca_summary' => [
+                'plan_count' => count($planActs),
+                'do_count' => count($doActs),
+                'check_count' => count($checkActs),
+                'act_count' => count($actActs),
+            ],
+            'sections' => $sections,
+        ]);
+    }
+
+    /**
+     * Save Chapter 3 content.
+     */
+    public function saveChapter3(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'sections' => 'nullable|array',
+            'full_content' => 'nullable|string',
+            'chapter_3_sections' => 'nullable|array',
+            'chapter_3_content' => 'nullable|string',
+        ]);
+
+        $project->chapter_3_sections = $validated['sections'] ?? $validated['chapter_3_sections'] ?? $project->chapter_3_sections;
+        $project->chapter_3_content = $validated['full_content'] ?? $validated['chapter_3_content'] ?? $project->chapter_3_content;
+        $project->save();
+
+        if ($request->header('X-Inertia')) {
+            return redirect()->back()->with('message', 'บันทึกเนื้อหาบทที่ ๓ เรียบร้อยแล้ว');
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'บันทึกเนื้อหาบทที่ ๓ เรียบร้อยแล้ว'
+        ]);
+    }
+
+    /**
+     * Display printable official Chapter 3 document.
+     */
+    public function printChapter3(Project $project)
+    {
+        $project->load(['department', 'user', 'ovecStrategy', 'fundingSource']);
+
+        return Inertia::render('Projects/PrintChapter3', [
+            'project' => $project,
+        ]);
+    }
+
+    /**
      * AI Assistant for drafting proposal rationale, objectives, and targets.
      */
     public function generateAiContent(Request $request)
