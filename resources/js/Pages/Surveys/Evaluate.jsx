@@ -26,6 +26,8 @@ export default function Evaluate({ project, survey }) {
         ratings: initialRatings,
         respondent_name: '',
         respondent_type: 'student',
+        gender: 'male',
+        education_level: 'voc_cert',
         comments: '',
     });
 
@@ -131,32 +133,102 @@ export default function Evaluate({ project, survey }) {
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-6">
                             
-                            {/* Respondent Type Selector */}
-                            <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 space-y-2">
-                                <label className="block text-xs font-bold text-purple-950">
-                                    👤 สถานะของผู้ตอบแบบประเมิน
-                                </label>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    {[
-                                        { key: 'student', label: 'นักเรียน/นักศึกษา' },
-                                        { key: 'teacher', label: 'ครู/อาจารย์' },
-                                        { key: 'staff', label: 'บุคลากร/เจ้าหน้าที่' },
-                                        { key: 'public', label: 'ประชาชน/ผู้ปกครอง' },
-                                    ].map((type) => (
-                                        <button
-                                            key={type.key}
-                                            type="button"
-                                            onClick={() => setData('respondent_type', type.key)}
-                                            className={`py-2 px-3 rounded-xl text-xs font-bold transition text-center border ${
-                                                data.respondent_type === type.key
-                                                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-purple-50'
-                                            }`}
-                                        >
-                                            {type.label}
-                                        </button>
-                                    ))}
+                            {/* Part 1: Demographic Information */}
+                            <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-4 shadow-2xs">
+                                <div className="border-b border-purple-200/80 pb-2">
+                                    <h2 className="text-sm font-bold text-purple-950 flex items-center gap-1.5">
+                                        <span>👤</span> ตอนที่ ๑: ข้อมูลทั่วไปของผู้ตอบแบบประเมิน (General Information)
+                                    </h2>
+                                    <p className="text-[11px] text-purple-800 mt-0.5">
+                                        โปรดเลือกข้อมูลสถานะ เพศ และระดับการศึกษาของท่านตามความเป็นจริง
+                                    </p>
                                 </div>
+
+                                {/* 1.1 สถานะผู้ตอบ */}
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-bold text-purple-950">
+                                        ๑. สถานะของผู้ตอบแบบประเมิน
+                                    </label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                        {[
+                                            { key: 'student', label: 'นักเรียน/นักศึกษา' },
+                                            { key: 'teacher', label: 'ครู/อาจารย์' },
+                                            { key: 'staff', label: 'บุคลากร/เจ้าหน้าที่' },
+                                            { key: 'public', label: 'ประชาชน/ผู้ปกครอง' },
+                                        ].map((type) => (
+                                            <button
+                                                key={type.key}
+                                                type="button"
+                                                onClick={() => setData('respondent_type', type.key)}
+                                                className={`py-2 px-3 rounded-xl text-xs font-bold transition text-center border ${
+                                                    data.respondent_type === type.key
+                                                        ? 'bg-purple-600 text-white border-purple-600 shadow-sm ring-1 ring-purple-300'
+                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-purple-100/50'
+                                                }`}
+                                            >
+                                                {type.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 1.2 เพศ */}
+                                <div className="space-y-2 pt-2 border-t border-purple-100">
+                                    <label className="block text-xs font-bold text-purple-950">
+                                        ๒. เพศ
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { key: 'male', label: '👨 ชาย' },
+                                            { key: 'female', label: '👩 หญิง' },
+                                            { key: 'other', label: '⚧️ อื่นๆ / ไม่ระบุ' },
+                                        ].map((item) => (
+                                            <button
+                                                key={item.key}
+                                                type="button"
+                                                onClick={() => setData('gender', item.key)}
+                                                className={`py-2 px-3 rounded-xl text-xs font-bold transition text-center border ${
+                                                    data.gender === item.key
+                                                        ? 'bg-purple-600 text-white border-purple-600 shadow-sm ring-1 ring-purple-300'
+                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-purple-100/50'
+                                                }`}
+                                            >
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 1.3 ระดับการศึกษา */}
+                                <div className="space-y-2 pt-2 border-t border-purple-100">
+                                    <label className="block text-xs font-bold text-purple-950">
+                                        ๓. ระดับการศึกษา
+                                    </label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                        {[
+                                            { key: 'voc_cert', label: 'ปวช.' },
+                                            { key: 'high_voc_cert', label: 'ปวส.' },
+                                            { key: 'bachelor', label: 'ป.ตรี' },
+                                            { key: 'master', label: 'ป.โท' },
+                                            { key: 'doctorate', label: 'ป.เอก' },
+                                            { key: 'other', label: 'อื่นๆ' },
+                                        ].map((edu) => (
+                                            <button
+                                                key={edu.key}
+                                                type="button"
+                                                onClick={() => setData('education_level', edu.key)}
+                                                className={`py-2 px-3 rounded-xl text-xs font-bold transition text-center border ${
+                                                    data.education_level === edu.key
+                                                        ? 'bg-purple-600 text-white border-purple-600 shadow-sm ring-1 ring-purple-300'
+                                                        : 'bg-white text-slate-700 border-slate-200 hover:bg-purple-100/50'
+                                                }`}
+                                            >
+                                                {edu.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                             </div>
 
                             {/* Question List */}

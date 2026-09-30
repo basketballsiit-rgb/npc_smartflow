@@ -12,6 +12,8 @@ class SurveyResponse extends Model
         'survey_id',
         'respondent_name',
         'respondent_type',
+        'gender',
+        'education_level',
         'ratings',
         'rating_q1',
         'rating_q2',

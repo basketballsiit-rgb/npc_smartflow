@@ -71,6 +71,8 @@ class SurveyController extends Controller
             'rating_q5' => 'nullable|integer|min:1|max:5',
             'respondent_name' => 'nullable|string|max:255',
             'respondent_type' => 'nullable|string|max:50',
+            'gender' => 'nullable|string|max:50',
+            'education_level' => 'nullable|string|max:50',
             'comments' => 'nullable|string|max:1000',
         ]);
 
@@ -96,6 +98,8 @@ class SurveyController extends Controller
         $survey->responses()->create([
             'respondent_name' => $validated['respondent_name'] ?? null,
             'respondent_type' => $validated['respondent_type'] ?? 'student',
+            'gender' => $validated['gender'] ?? 'male',
+            'education_level' => $validated['education_level'] ?? 'voc_cert',
             'ratings' => !empty($ratings) ? $ratings : [$q1, $q2, $q3, $q4, $q5],
             'rating_q1' => $q1,
             'rating_q2' => $q2,
@@ -402,6 +406,7 @@ class SurveyController extends Controller
                 }, $questions, array_keys($questions)),
                 'dimensionStats' => [],
                 'chapter1Comparison' => null,
+                'demographicStats' => $this->computeDemographicStats($responses, 0),
             ];
         }
 
@@ -557,6 +562,97 @@ class SurveyController extends Controller
             'questionsStats' => $questionsStats,
             'dimensionStats' => $dimensionStats,
             'chapter1Comparison' => $chapter1Comparison,
+            'demographicStats' => $this->computeDemographicStats($responses, $totalResponses),
+        ];
+    }
+
+    /**
+     * Compute demographic statistics for gender, education level, and respondent type.
+     */
+    private function computeDemographicStats($responses, int $totalResponses): array
+    {
+        $genderLabels = [
+            'male' => 'ชาย',
+            'female' => 'หญิง',
+            'other' => 'อื่นๆ / ไม่ระบุ',
+        ];
+
+        $educationLabels = [
+            'voc_cert' => 'ประกาศนียบัตรวิชาชีพ (ปวช.)',
+            'high_voc_cert' => 'ประกาศนียบัตรวิชาชีพชั้นสูง (ปวส.)',
+            'bachelor' => 'ปริญญาตรี (ป.ตรี)',
+            'master' => 'ปริญญาโท (ป.โท)',
+            'doctorate' => 'ปริญญาเอก (ป.เอก)',
+            'other' => 'อื่นๆ',
+        ];
+
+        $respondentTypeLabels = [
+            'student' => 'นักเรียน/นักศึกษา',
+            'teacher' => 'ครู/อาจารย์',
+            'staff' => 'บุคลากร/เจ้าหน้าที่',
+            'public' => 'ประชาชน/ผู้ปกครอง',
+        ];
+
+        $genderCounts = ['male' => 0, 'female' => 0, 'other' => 0];
+        $educationCounts = ['voc_cert' => 0, 'high_voc_cert' => 0, 'bachelor' => 0, 'master' => 0, 'doctorate' => 0, 'other' => 0];
+        $respondentTypeCounts = ['student' => 0, 'teacher' => 0, 'staff' => 0, 'public' => 0];
+
+        if ($responses) {
+            foreach ($responses as $resp) {
+                // Gender
+                $g = $resp->gender;
+                if ($g === 'male' || $g === 'ชาย') {
+                    $genderCounts['male']++;
+                } elseif ($g === 'female' || $g === 'หญิง') {
+                    $genderCounts['female']++;
+                } else {
+                    $genderCounts['other']++;
+                }
+
+                // Education level
+                $e = $resp->education_level;
+                if ($e === 'voc_cert' || str_contains($e ?? '', 'ปวช')) {
+                    $educationCounts['voc_cert']++;
+                } elseif ($e === 'high_voc_cert' || str_contains($e ?? '', 'ปวส')) {
+                    $educationCounts['high_voc_cert']++;
+                } elseif ($e === 'bachelor' || str_contains($e ?? '', 'ตรี')) {
+                    $educationCounts['bachelor']++;
+                } elseif ($e === 'master' || str_contains($e ?? '', 'โท')) {
+                    $educationCounts['master']++;
+                } elseif ($e === 'doctorate' || str_contains($e ?? '', 'เอก')) {
+                    $educationCounts['doctorate']++;
+                } else {
+                    $educationCounts['other']++;
+                }
+
+                // Respondent type
+                $rt = $resp->respondent_type;
+                if (isset($respondentTypeCounts[$rt])) {
+                    $respondentTypeCounts[$rt]++;
+                } else {
+                    $respondentTypeCounts['student']++;
+                }
+            }
+        }
+
+        $formatGroup = function(array $counts, array $labels) use ($totalResponses) {
+            $result = [];
+            foreach ($counts as $k => $c) {
+                $pct = $totalResponses > 0 ? round(($c / $totalResponses) * 100, 1) : 0.0;
+                $result[] = [
+                    'key' => $k,
+                    'label' => $labels[$k] ?? $k,
+                    'count' => $c,
+                    'percentage' => $pct,
+                ];
+            }
+            return $result;
+        };
+
+        return [
+            'gender' => $formatGroup($genderCounts, $genderLabels),
+            'education_level' => $formatGroup($educationCounts, $educationLabels),
+            'respondent_type' => $formatGroup($respondentTypeCounts, $respondentTypeLabels),
         ];
     }
 

@@ -16743,6 +16743,92 @@ return (
                     </div>
                 </div>
 
+                {/* Table 4.0: Demographic Information (ตอนที่ ๑) */}
+                {surveyTotalResponses > 0 && surveyStatsSummary?.demographicStats && (
+                    <div className="space-y-3 pt-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1 border-b border-slate-100">
+                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <span>👤</span> ตอนที่ ๑: ข้อมูลทั่วไปของผู้ตอบแบบประเมิน (ตารางที่ ๔.๐)
+                            </h4>
+                            <span className="text-[11px] font-medium text-slate-500">
+                                ประมวลผลจากกลุ่มตัวอย่างทั้งหมด N = {toThaiNumerals(surveyTotalResponses)} คน
+                            </span>
+                        </div>
+                        <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200">
+                                        <th className="py-2.5 px-4 w-1/2">ข้อมูลทั่วไป (Demographic Profile)</th>
+                                        <th className="py-2.5 px-4 text-center w-1/4">จำนวน (คน)</th>
+                                        <th className="py-2.5 px-4 text-center w-1/4">ร้อยละ (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                    {/* 1. เพศ */}
+                                    <tr className="bg-purple-50/70 font-bold text-purple-950">
+                                        <td colSpan={3} className="py-2 px-4">
+                                            ๑. เพศ (Gender)
+                                        </td>
+                                    </tr>
+                                    {surveyStatsSummary.demographicStats.gender?.map((g) => (
+                                        <tr key={g.key} className="hover:bg-slate-50/80 transition">
+                                            <td className="py-2 px-4 pl-8 font-medium text-slate-900">
+                                                {g.label}
+                                            </td>
+                                            <td className="py-2 px-4 text-center font-bold text-purple-950">
+                                                {toThaiNumerals(g.count)}
+                                            </td>
+                                            <td className="py-2 px-4 text-center font-medium text-slate-600">
+                                                {toThaiNumerals(Number(g.percentage || 0).toFixed(1))}%
+                                            </td>
+                                        </tr>
+                                    ))}
+
+                                    {/* 2. ระดับการศึกษา */}
+                                    <tr className="bg-purple-50/70 font-bold text-purple-950 border-t border-purple-200">
+                                        <td colSpan={3} className="py-2 px-4">
+                                            ๒. ระดับการศึกษา (Education Level)
+                                        </td>
+                                    </tr>
+                                    {surveyStatsSummary.demographicStats.education_level?.map((edu) => (
+                                        <tr key={edu.key} className="hover:bg-slate-50/80 transition">
+                                            <td className="py-2 px-4 pl-8 font-medium text-slate-900">
+                                                {edu.label}
+                                            </td>
+                                            <td className="py-2 px-4 text-center font-bold text-purple-950">
+                                                {toThaiNumerals(edu.count)}
+                                            </td>
+                                            <td className="py-2 px-4 text-center font-medium text-slate-600">
+                                                {toThaiNumerals(Number(edu.percentage || 0).toFixed(1))}%
+                                            </td>
+                                        </tr>
+                                    ))}
+
+                                    {/* 3. สถานะผู้ตอบ */}
+                                    <tr className="bg-purple-50/70 font-bold text-purple-950 border-t border-purple-200">
+                                        <td colSpan={3} className="py-2 px-4">
+                                            ๓. สถานะของผู้ตอบแบบประเมิน (Respondent Status)
+                                        </td>
+                                    </tr>
+                                    {surveyStatsSummary.demographicStats.respondent_type?.map((rt) => (
+                                        <tr key={rt.key} className="hover:bg-slate-50/80 transition">
+                                            <td className="py-2 px-4 pl-8 font-medium text-slate-900">
+                                                {rt.label}
+                                            </td>
+                                            <td className="py-2 px-4 text-center font-bold text-purple-950">
+                                                {toThaiNumerals(rt.count)}
+                                            </td>
+                                            <td className="py-2 px-4 text-center font-medium text-slate-600">
+                                                {toThaiNumerals(Number(rt.percentage || 0).toFixed(1))}%
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
                 {/* Table 4.1 Results Grouped by 4 Dimensions */}
                 {surveyTotalResponses > 0 && surveyStatsSummary?.questionsStats?.length > 0 ? (
                     <div className="space-y-4">
