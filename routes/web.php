@@ -220,6 +220,11 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/chapter-3/save', [ProjectController::class, 'saveChapter3'])->name('projects.chapter3.save');
     Route::get('projects/{project}/chapter-3/print', [ProjectController::class, 'printChapter3'])->name('projects.chapter3.print');
 
+    // Chapter 4 AI Generation, Save, and Print
+    Route::post('projects/{project}/chapter-4/generate', [ProjectController::class, 'generateChapter4'])->name('projects.chapter4.generate');
+    Route::post('projects/{project}/chapter-4/save', [ProjectController::class, 'saveChapter4'])->name('projects.chapter4.save');
+    Route::get('projects/{project}/chapter-4/print', [ProjectController::class, 'printChapter4'])->name('projects.chapter4.print');
+
     // Expense & Loan Clearing Routes (With Loan & Direct Reimbursement)
     Route::post('/clearings', [\App\Http\Controllers\ExpenseClearingController::class, 'store'])->name('clearings.store');
     Route::post('/clearings/{clearing}/plan-approve', [\App\Http\Controllers\ExpenseClearingController::class, 'planApprove'])->name('clearings.plan_approve');

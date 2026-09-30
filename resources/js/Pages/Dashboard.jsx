@@ -888,6 +888,18 @@ export default function Dashboard({
     const [isAnalyzingChapter3, setIsAnalyzingChapter3] = useState(false);
     const [isSavingChapter3, setIsSavingChapter3] = useState(false);
 
+    // Chapter 4 States
+    const [chapter4Sections, setChapter4Sections] = useState({
+        intro: '',
+        section_4_1: '',
+        section_4_2: '',
+        section_4_3: '',
+        section_4_4: '',
+    });
+    const [chapter4Analysis, setChapter4Analysis] = useState(null);
+    const [isAnalyzingChapter4, setIsAnalyzingChapter4] = useState(false);
+    const [isSavingChapter4, setIsSavingChapter4] = useState(false);
+
     // Survey Questionnaire Builder & Chapter 4 Integration States
     const [surveyQuestions, setSurveyQuestions] = useState([]);
     const [surveyTitle, setSurveyTitle] = useState('');
@@ -1061,6 +1073,28 @@ export default function Dashboard({
             });
         }
         setChapter3Analysis(null);
+
+        // Chapter 4 populate
+        const savedCh4 = activeChapter1Project.chapter_4_sections;
+        if (savedCh4 && typeof savedCh4 === 'object' && Object.keys(savedCh4).length > 0) {
+            setChapter4Sections({
+                intro: safeString(savedCh4.intro),
+                section_4_1: safeString(savedCh4.section_4_1),
+                section_4_2: safeString(savedCh4.section_4_2),
+                section_4_3: safeString(savedCh4.section_4_3),
+                section_4_4: safeString(savedCh4.section_4_4),
+            });
+        } else {
+            setChapter4Sections({
+                intro: '',
+                section_4_1: '',
+                section_4_2: '',
+                section_4_3: '',
+                section_4_4: '',
+            });
+        }
+        setChapter4Analysis(null);
+
         if (activeChapter1Project?.id) {
             fetchSurveyData(activeChapter1Project.id);
         }
@@ -1681,6 +1715,121 @@ export default function Dashboard({
             });
         } finally {
             setIsSavingChapter3(false);
+        }
+    };
+
+    // Chapter 4 Handlers
+    const handleAnalyzeChapter4 = async () => {
+        if (!activeChapter1Project) return;
+        setIsAnalyzingChapter4(true);
+        try {
+            const response = await window.axios.post(route('projects.chapter4.generate', activeChapter1Project.id));
+            if (response.data.success && response.data.sections) {
+                setChapter4Analysis(response.data);
+                const secs = response.data.sections;
+                setChapter4Sections(prev => {
+                    const isBlank = !prev.section_4_1 && !prev.section_4_2 && !prev.section_4_3 && !prev.section_4_4;
+                    if (isBlank) {
+                        return {
+                            intro: secs.intro || '',
+                            section_4_1: secs.section_4_1 || '',
+                            section_4_2: secs.section_4_2 || '',
+                            section_4_3: secs.section_4_3 || '',
+                            section_4_4: secs.section_4_4 || '',
+                        };
+                    }
+                    return prev;
+                });
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'วิเคราะห์และร่างเนื้อหาบทที่ ๔ สำเร็จ',
+                    text: 'AI ประมวลผลข้อมูลสถิติจากแบบประเมินจริง ตัวชี้วัดเชิงปริมาณ และผลการเบิกจ่ายงบประมาณ พร้อมสังเคราะห์เนื้อหาบทที่ ๔ ให้เรียบร้อยแล้ว',
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#e11d48',
+                    timer: 2500
+                });
+            }
+        } catch (error) {
+            console.error('Error analyzing Chapter 4:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการวิเคราะห์',
+                text: error.response?.data?.message || 'ไม่สามารถวิเคราะห์ข้อมูลบทที่ ๔ ได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ตกลง'
+            });
+        } finally {
+            setIsAnalyzingChapter4(false);
+        }
+    };
+
+    const handleApplySynthesizedChapter4 = () => {
+        if (!chapter4Analysis?.sections) return;
+        const secs = chapter4Analysis.sections;
+        setChapter4Sections({
+            intro: secs.intro || '',
+            section_4_1: secs.section_4_1 || '',
+            section_4_2: secs.section_4_2 || '',
+            section_4_3: secs.section_4_3 || '',
+            section_4_4: secs.section_4_4 || '',
+        });
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'นำเนื้อหาที่ AI วิเคราะห์ใส่ลงในแบบฟอร์มแล้ว',
+            showConfirmButton: false,
+            timer: 1800
+        });
+    };
+
+    const handleSaveChapter4 = async () => {
+        if (!activeChapter1Project) return;
+        setIsSavingChapter4(true);
+
+        const updatedSections = { ...chapter4Sections };
+
+        const fullContent = [
+            "บทที่ ๔",
+            "ผลการดำเนินงานและการประเมินผลโครงการ\n",
+            updatedSections.intro,
+            updatedSections.section_4_1,
+            updatedSections.section_4_2,
+            updatedSections.section_4_3,
+            updatedSections.section_4_4
+        ].filter(Boolean).join("\n\n");
+
+        try {
+            await window.axios.post(route('projects.chapter4.save', activeChapter1Project.id), {
+                sections: updatedSections,
+                chapter_4_sections: updatedSections,
+                full_content: fullContent,
+                chapter_4_content: fullContent
+            });
+
+            activeChapter1Project.chapter_4_sections = updatedSections;
+            activeChapter1Project.chapter_4_content = fullContent;
+
+            Swal.fire({
+                icon: 'success',
+                title: 'บันทึกบทที่ ๔ สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ ๔ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#e11d48',
+                timer: 2000,
+                timerProgressBar: true
+            });
+        } catch (error) {
+            console.error('Error saving Chapter 4:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการบันทึก',
+                text: error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#ef4444'
+            });
+        } finally {
+            setIsSavingChapter4(false);
         }
     };
 
@@ -16696,15 +16845,17 @@ return (
                             <span>รีเฟรชข้อมูล</span>
                         </button>
 
-                        <a
-                            href={route('surveys.stats', activeChapter1Project?.id || 0)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-                        >
-                            <span>📈</span>
-                            <span>ดูสถิติเชิงลึก & AI Recommendation</span>
-                        </a>
+                        {activeChapter1Project && (
+                            <a
+                                href={route('projects.chapter4.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                            >
+                                <span>🖨️</span>
+                                <span>พิมพ์บทที่ ๔ (A4)</span>
+                            </a>
+                        )}
                     </div>
                 </div>
 
@@ -17065,31 +17216,252 @@ return (
                 )}
             </div>
 
-            {/* Standard Chapter 4 Guidelines Card */}
-            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200">
-                <div className="max-w-3xl space-y-4">
-                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                        <span>📑</span> โครงสร้างรายงานผลการดำเนินงาน บทที่ ๔
-                    </h3>
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
-                        <p className="font-bold text-slate-900">หัวข้อสำคัญในบทที่ ๔ (Check Phase):</p>
-                        <ul className="list-disc pl-5 space-y-1">
-                            <li>๔.๑ ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม/กลุ่มเป้าหมาย (เพศ สถานะ สาขาวิชา)</li>
-                            <li>๔.๒ ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ (ยอดผู้เข้าร่วม เทียบกับเป้าหมายที่ตั้งไว้)</li>
-                            <li>๔.๓ ผลการประเมินความพึงพอใจเชิงคุณภาพตามตารางที่ ๔.๑ (ค่าเฉลี่ย x̄ และส่วนเบี่ยงเบนมาตรฐาน S.D.)</li>
-                            <li>๔.๔ ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน (เบิกจ่ายจริง เทียบกับงบที่ได้รับอนุมัติ)</li>
-                        </ul>
+            {/* AI Synthesizer & Content Drafter for Chapter 4 */}
+            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold mb-1">
+                            <span>🤖 AI Research & Data Synthesis</span>
+                        </div>
+                        <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span>✨</span> ผู้ช่วย AI สังเคราะห์และวิเคราะห์ผลการประเมิน บทที่ ๔
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                            ระบบจะนำสถิติตอบแบบสอบถามจริง ๔ ด้าน, เป้าหมายเชิงปริมาณในบทที่ ๑, และข้อมูลงบประมาณมาวิเคราะห์สรุปเป็นข้อความทางวิชาการ
+                        </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 pt-2">
-                        {activeChapter1Project && (
-                            <Link
-                                href={route('projects.show', activeChapter1Project.id)}
-                                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleAnalyzeChapter4}
+                            disabled={isAnalyzingChapter4}
+                            className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                        >
+                            {isAnalyzingChapter4 ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>กำลังวิเคราะห์ข้อมูลสถิติ...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>⚡</span>
+                                    <span>ใช้ AI วิเคราะห์และช่วยเขียนบทที่ ๔</span>
+                                </>
+                            )}
+                        </button>
+                        {chapter4Analysis && (
+                            <button
+                                type="button"
+                                onClick={handleApplySynthesizedChapter4}
+                                className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-xl text-xs font-bold border border-rose-200 transition flex items-center gap-1.5"
+                                title="นำเนื้อหาที่ AI สังเคราะห์ใส่ลงในแบบฟอร์มด้านล่างทั้งหมด"
                             >
-                                <span>📈</span> บันทึกและดูผลการประเมินในหน้ารายละเอียดโครงการ
-                            </Link>
+                                <span>📥</span>
+                                <span>นำผลวิเคราะห์ลงแบบฟอร์ม</span>
+                            </button>
                         )}
+                    </div>
+                </div>
+
+                {chapter4Analysis && (
+                    <div className="bg-rose-50/60 rounded-2xl p-4 border border-rose-200 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div>
+                            <span className="text-[11px] font-bold text-rose-800 uppercase tracking-wider block mb-1">
+                                สถิติและข้อมูลที่นำมาสังเคราะห์เรียบร้อยแล้ว
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-lg border border-purple-200">
+                                    👥 ผู้ตอบแบบประเมิน N = {toThaiNumerals(chapter4Analysis.analysis?.total_responses || surveyTotalResponses)} คน
+                                </span>
+                                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-200">
+                                    ⭐ ค่าเฉลี่ย x̄ = {toThaiNumerals(Number(chapter4Analysis.analysis?.overall_mean || 0).toFixed(2))} ({chapter4Analysis.analysis?.overall_level || 'มาก'})
+                                </span>
+                                <span className="px-2.5 py-1 bg-teal-100 text-teal-800 text-xs font-bold rounded-lg border border-teal-200">
+                                    🎯 เป้าหมาย = {toThaiNumerals(chapter4Analysis.analysis?.target_participants || 0)} คน
+                                </span>
+                                <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-lg border border-amber-200">
+                                    💰 งบอนุมัติ {toThaiNumerals(Number(chapter4Analysis.analysis?.budget_plan || 0).toLocaleString())} บาท
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Chapter 4 Content Editor Form */}
+            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold mb-1">
+                            <span>✏️ แก้ไขและบันทึกรายงาน</span>
+                        </div>
+                        <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span>📝</span> เนื้อหารายละเอียดรายงานผลการดำเนินงาน บทที่ ๔
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                            แก้ไข ปรับปรุง และบันทึกเนื้อหาบทที่ ๔ สำหรับพิมพ์ออกทางเครื่องพิมพ์ (A4) หรือจัดทำเล่มรายงาน ๕ บท
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        {activeChapter1Project && (
+                            <a
+                                href={route('projects.chapter4.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                            >
+                                <span>🖨️</span>
+                                <span>พิมพ์บทที่ ๔ (A4)</span>
+                            </a>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={handleSaveChapter4}
+                            disabled={isSavingChapter4}
+                            className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                            {isSavingChapter4 ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>กำลังบันทึก...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>💾</span>
+                                    <span>บันทึกเนื้อหาบทที่ ๔</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Intro */}
+                <div className="space-y-1.5">
+                    <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">บทนำ</span>
+                        ความนำบทที่ ๔ (เกริ่นนำกระบวนการประเมินผลและการเก็บรวบรวมข้อมูล)
+                    </label>
+                    <textarea
+                        rows={4}
+                        value={safeString(chapter4Sections.intro)}
+                        onChange={(e) => setChapter4Sections({ ...chapter4Sections, intro: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
+                        placeholder="เกริ่นนำการดำเนินโครงการและการประเมินผล..."
+                    />
+                </div>
+
+                {/* Section 4.1 */}
+                <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">๔.๑</span>
+                            ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม (Demographic Profile)
+                        </label>
+                        <span className="text-[11px] text-slate-400">จำแนกตามเพศ ระดับการศึกษา และสถานะผู้ตอบ</span>
+                    </div>
+                    <textarea
+                        rows={7}
+                        value={safeString(chapter4Sections.section_4_1)}
+                        onChange={(e) => setChapter4Sections({ ...chapter4Sections, section_4_1: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
+                        placeholder="๔.๑ ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม..."
+                    />
+                </div>
+
+                {/* Section 4.2 */}
+                <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">๔.๒</span>
+                            ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ (Quantitative Achievements)
+                        </label>
+                        <span className="text-[11px] text-slate-400">เปรียบเทียบยอดผู้เข้าร่วมจริง กับเป้าหมายที่กำหนดในบทที่ ๑</span>
+                    </div>
+                    <textarea
+                        rows={6}
+                        value={safeString(chapter4Sections.section_4_2)}
+                        onChange={(e) => setChapter4Sections({ ...chapter4Sections, section_4_2: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
+                        placeholder="๔.๒ ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ..."
+                    />
+                </div>
+
+                {/* Section 4.3 */}
+                <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">๔.๓</span>
+                            ผลการประเมินความพึงพอใจเชิงคุณภาพตามตารางที่ ๔.๑ (Qualitative Satisfaction Evaluation)
+                        </label>
+                        <span className="text-[11px] text-slate-400">บรรยายสรุปค่าเฉลี่ย x̄, ส่วนเบี่ยงเบนมาตรฐาน S.D. รายด้าน ๔ ด้าน และภาพรวม</span>
+                    </div>
+                    <textarea
+                        rows={10}
+                        value={safeString(chapter4Sections.section_4_3)}
+                        onChange={(e) => setChapter4Sections({ ...chapter4Sections, section_4_3: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
+                        placeholder="๔.๓ ผลการประเมินความพึงพอใจเชิงคุณภาพ..."
+                    />
+                </div>
+
+                {/* Section 4.4 */}
+                <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">๔.๔</span>
+                            ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน (Budget Utilization)
+                        </label>
+                        <span className="text-[11px] text-slate-400">งบประมาณที่ได้รับอนุมัติ งบประมาณที่เบิกจ่ายจริง และผลการประหยัด</span>
+                    </div>
+                    <textarea
+                        rows={6}
+                        value={safeString(chapter4Sections.section_4_4)}
+                        onChange={(e) => setChapter4Sections({ ...chapter4Sections, section_4_4: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
+                        placeholder="๔.๔ ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน..."
+                    />
+                </div>
+
+                {/* Bottom Action Bar */}
+                <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <p className="text-xs text-slate-500">
+                        เมื่อบันทึกข้อมูลเรียบร้อยแล้ว สามารถกดปุ่มพิมพ์ A4 เพื่อเปิดหน้าพิมพ์เอกสารบทที่ ๔ พร้อมตาราง ๔.๐ และ ๔.๑ ได้ทันที
+                    </p>
+
+                    <div className="flex items-center gap-3">
+                        {activeChapter1Project && (
+                            <a
+                                href={route('projects.chapter4.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                            >
+                                <span>🖨️</span>
+                                <span>ดูตัวอย่างและพิมพ์ A4 (บทที่ ๔)</span>
+                            </a>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={handleSaveChapter4}
+                            disabled={isSavingChapter4}
+                            className="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                            {isSavingChapter4 ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>กำลังบันทึก...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>💾</span>
+                                    <span>บันทึกเนื้อหาบทที่ ๔</span>
+                                </>
+                            )}
+                        </button>
                     </div>
                 </div>
             </div>
