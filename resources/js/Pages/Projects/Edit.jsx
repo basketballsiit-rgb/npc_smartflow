@@ -762,9 +762,28 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         }).then((result) => {
             if (result.isConfirmed) {
                 setIsSubmitting(true);
+                Swal.fire({
+                    title: 'กำลังส่งเรื่องขออนุมัติ...',
+                    text: 'ระบบกำลังบันทึกและส่งต่อไปยังขั้นตอนที่ 2 กรุณารอสักครู่',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
                 router.patch(route('projects.update', project.id), prepareSubmitData(true), {
+                    onSuccess: () => {
+                        Swal.close();
+                    },
                     onFinish: () => setIsSubmitting(false),
-                    onError: () => setIsSubmitting(false),
+                    onError: (errors) => {
+                        setIsSubmitting(false);
+                        Swal.fire({
+                            title: 'บันทึกไม่สำเร็จ',
+                            text: 'กรุณาตรวจสอบข้อมูลที่จำเป็นในแบบฟอร์มอีกครั้ง',
+                            icon: 'error',
+                            confirmButtonText: 'ตกลง'
+                        });
+                    },
                 });
             }
         });
@@ -3086,13 +3105,13 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                         >
                                             💾 บันทึกแบบร่าง
                                         </button>
-                                        {project.status === 'pending_approval' ? (
+                                        {project.status === 'pending_approval' || (project.current_approval_step && project.current_approval_step > 1) ? (
                                             <button
                                                 type="button"
                                                 disabled={true}
-                                                className="rounded-xl bg-slate-200 border border-slate-300 px-6 py-2.5 text-sm font-bold text-slate-500 cursor-not-allowed flex items-center gap-2 shadow-inner"
+                                                className="rounded-xl bg-emerald-50 border border-emerald-300 px-6 py-2.5 text-sm font-extrabold text-emerald-800 cursor-not-allowed flex items-center gap-2 shadow-xs"
                                             >
-                                                <span>✅</span> ยื่นขออนุมัติแล้ว (อยู่ระหว่างขั้นตอนที่ 2: รอตรวจสอบ)
+                                                <span>✅</span> ยื่นขออนุมัติแล้ว (อยู่ระหว่างขั้นตอนที่ {project.current_approval_step || 2}: รอตรวจสอบ)
                                             </button>
                                         ) : (
                                             <button
@@ -3282,21 +3301,27 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                         >
                             💾 บันทึกแบบร่าง
                         </button>
-                        {!isApprovedOrCompleted && project.status !== 'pending_approval' && (
-                            <button
-                                type="button"
-                                onClick={handleSaveAndSubmit}
-                                disabled={processing || isSubmitting || isActionPlanOverBudget}
-                                className={`px-4 py-2 rounded-xl text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-1.5 ${
-                                    isActionPlanOverBudget
-                                        ? 'bg-slate-400 cursor-not-allowed opacity-60'
-                                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-600/25 hover:scale-102 active:scale-95 cursor-pointer'
-                                }`}
-                                title={isActionPlanOverBudget ? 'ไม่สามารถส่งได้เนื่องจากงบประมาณในแผนปฏิบัติงานเกินวงเงินจัดสรร' : 'ส่งต่อขั้นที่ 2'}
-                            >
-                                <span>🚀</span>
-                                <span>ส่งต่อขั้นที่ 2</span>
-                            </button>
+                        {project.status === 'pending_approval' || (project.current_approval_step && project.current_approval_step > 1) ? (
+                            <span className="px-3.5 py-2 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-xs flex items-center gap-1.5 shadow-2xs">
+                                <span>✅</span> ยื่นขออนุมัติแล้ว (ขั้นที่ {project.current_approval_step || 2})
+                            </span>
+                        ) : (
+                            !isApprovedOrCompleted && (
+                                <button
+                                    type="button"
+                                    onClick={handleSaveAndSubmit}
+                                    disabled={processing || isSubmitting || isActionPlanOverBudget}
+                                    className={`px-4 py-2 rounded-xl text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-1.5 ${
+                                        isActionPlanOverBudget
+                                            ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                                            : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-600/25 hover:scale-102 active:scale-95 cursor-pointer'
+                                    }`}
+                                    title={isActionPlanOverBudget ? 'ไม่สามารถส่งได้เนื่องจากงบประมาณในแผนปฏิบัติงานเกินวงเงินจัดสรร' : 'ส่งต่อขั้นที่ 2'}
+                                >
+                                    <span>{isSubmitting ? '⏳' : '🚀'}</span>
+                                    <span>{isSubmitting ? 'กำลังส่ง...' : 'ส่งต่อขั้นที่ 2'}</span>
+                                </button>
+                            )
                         )}
                     </div>
                 </div>
