@@ -39,6 +39,42 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     const expandAll = () => setOpenGroups({ g1: true, g2: true, g3: true, g4: true });
     const collapseAll = () => setOpenGroups({ g1: false, g2: false, g3: false, g4: false });
 
+    // Dynamic Strategy Categories Collapsible State (Section 2.4)
+    const [expandedStrategies, setExpandedStrategies] = useState(() => {
+        const initial = {};
+        strategyCategories.forEach(cat => {
+            initial[cat.id] = true;
+        });
+        return initial;
+    });
+    const [collapsedStrategyGroups, setCollapsedStrategyGroups] = useState({});
+
+    const toggleStrategyCategory = (catId) => {
+        setExpandedStrategies(prev => ({
+            ...prev,
+            [catId]: !prev[catId]
+        }));
+    };
+
+    const expandAllStrategies = () => {
+        const all = {};
+        strategyCategories.forEach(cat => { all[cat.id] = true; });
+        setExpandedStrategies(all);
+    };
+
+    const collapseAllStrategies = () => {
+        const none = {};
+        strategyCategories.forEach(cat => { none[cat.id] = false; });
+        setExpandedStrategies(none);
+    };
+
+    const toggleStrategyGroup = (groupKey) => {
+        setCollapsedStrategyGroups(prev => ({
+            ...prev,
+            [groupKey]: !prev[groupKey]
+        }));
+    };
+
     const initialQuant = Array.isArray(project?.targets?.quantitative) && project.targets.quantitative.length > 0
         ? project.targets.quantitative
         : ['นักเรียน นักศึกษา และผู้เข้าร่วมโครงการ จำนวนไม่น้อยกว่า 50 คน', 'มีการจัดกิจกรรมและการดำเนินงานตามโครงการ จำนวน 1 โครงการ'];
@@ -1221,10 +1257,40 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
                                 {/* Dynamic Strategy Checklists */}
                                 <div className="pt-2">
-                                    <h4 className="text-xs font-bold text-purple-900 mb-2">2.4 สอดคล้องกับยุทธศาสตร์ นโยบาย และมาตรฐานการอาชีวศึกษา (ติ๊กเลือกข้อที่เกี่ยวข้องได้มากกว่า 1 ข้อ):</h4>
-                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
+                                        <div>
+                                            <h4 className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                                                <span>🎯</span>
+                                                <span>2.4 สอดคล้องกับยุทธศาสตร์ นโยบาย และมาตรฐานการอาชีวศึกษา (ติ๊กเลือกข้อที่เกี่ยวข้องได้มากกว่า 1 ข้อ):</span>
+                                            </h4>
+                                            <p className="text-[11px] text-slate-500 mt-0.5">
+                                                คลิกแถบหัวข้อเพื่อยุบ/กางในแต่ละด้าน และเลือกข้อที่สอดคล้องกับโครงการ
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center">
+                                            <button
+                                                type="button"
+                                                onClick={expandAllStrategies}
+                                                className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-200 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                                                title="กางออกทุกด้าน"
+                                            >
+                                                <span>⊞</span> กางทั้งหมด
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={collapseAllStrategies}
+                                                className="text-[11px] font-bold text-slate-600 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 transition shadow-2xs cursor-pointer flex items-center gap-1"
+                                                title="ยุบเก็บทุกด้าน"
+                                            >
+                                                <span>⊟</span> ยุบทั้งหมด
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 items-start">
                                         {strategyCategories.map((cat, catIdx) => {
                                             const selectedIds = data.strategy_selections[cat.id] || [];
+                                            const isExpanded = !!expandedStrategies[cat.id];
                                             const groupedItems = [];
                                             const groupMap = new Map();
                                             (cat.items || []).forEach(item => {
@@ -1238,53 +1304,117 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                             });
 
                                             return (
-                                                <div key={cat.id} className="space-y-2 bg-white p-3.5 rounded-xl border border-purple-100 shadow-2xs">
-                                                    <div className="flex justify-between items-center mb-1">
-                                                        <label className="block text-xs font-bold text-purple-950">
-                                                            {catIdx + 1}. {toArabic(cat.name)}
-                                                        </label>
-                                                        <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">
-                                                            เลือก {selectedIds.length} ข้อ
-                                                        </span>
-                                                    </div>
-                                                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                                                        {groupedItems.map((group, gIdx) => (
-                                                            <div key={gIdx} className="space-y-1">
-                                                                {group.name ? (
-                                                                    <div className="text-[11px] font-bold text-purple-900 bg-purple-50/80 px-2.5 py-1 rounded-md mt-1 flex items-center gap-1.5 border border-purple-100/60">
-                                                                        <span>📂</span>
-                                                                        <span>{toArabic(group.name)}</span>
-                                                                    </div>
-                                                                ) : null}
-                                                                <div className={`space-y-1 ${group.name ? 'pl-2' : ''}`}>
-                                                                    {group.items.map(item => {
-                                                                        const isChecked = selectedIds.includes(item.id);
-                                                                        return (
-                                                                            <label
-                                                                                key={item.id}
-                                                                                className={`flex items-start gap-x-2 p-2 rounded-lg border transition-all cursor-pointer text-xs ${
-                                                                                    isChecked
-                                                                                        ? 'bg-purple-100/80 border-purple-400 font-bold text-purple-950'
-                                                                                        : 'bg-slate-50/50 border-purple-50 text-slate-700 hover:bg-purple-50'
-                                                                                }`}
-                                                                            >
-                                                                                <input
-                                                                                    type="checkbox"
-                                                                                    checked={isChecked}
-                                                                                    onChange={() => toggleDynamicStrategy(cat.id, item.id)}
-                                                                                    className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-3.5 w-3.5"
-                                                                                />
-                                                                                <span>{toArabic(item.name)}</span>
-                                                                            </label>
-                                                                        );
-                                                                    })}
-                                                                </div>
+                                                <div 
+                                                    key={cat.id} 
+                                                    className={`rounded-2xl border transition-all duration-200 overflow-hidden shadow-2xs ${
+                                                        isExpanded 
+                                                            ? 'bg-white border-purple-200 ring-1 ring-purple-100' 
+                                                            : 'bg-purple-50/30 border-purple-100 hover:border-purple-300 hover:bg-purple-50/50'
+                                                    }`}
+                                                >
+                                                    {/* Collapsible Card Header - Always shows title, selected count, and chevron */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleStrategyCategory(cat.id)}
+                                                        className="w-full p-3 sm:p-3.5 flex items-center justify-between text-left transition hover:bg-purple-50/60 cursor-pointer select-none"
+                                                    >
+                                                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                                                            <span className="text-base shrink-0">
+                                                                {catIdx === 0 ? '🛡️' : catIdx === 1 ? '🏛️' : catIdx === 2 ? '📋' : '🏆'}
+                                                            </span>
+                                                            <div className="min-w-0">
+                                                                <span className="block text-xs font-bold text-purple-950 truncate">
+                                                                    {catIdx + 1}. {toArabic(cat.name)}
+                                                                </span>
+                                                                {cat.description && (
+                                                                    <span className="block text-[10px] text-slate-500 truncate mt-0.5">
+                                                                        {toArabic(cat.description)}
+                                                                    </span>
+                                                                )}
                                                             </div>
-                                                        ))}
-                                                        {(!cat.items || cat.items.length === 0) && (
-                                                            <p className="text-slate-400 text-xs italic py-2 text-center">ไม่มีตัวเลือกในหมวดนี้</p>
-                                                        )}
-                                                    </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            {selectedIds.length > 0 ? (
+                                                                <span className="text-[11px] text-purple-800 font-extrabold bg-purple-100 border border-purple-300 px-2.5 py-0.5 rounded-full shadow-2xs">
+                                                                    ✓ เลือกแล้ว {selectedIds.length} ข้อ
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+                                                                    ยังไม่ได้เลือก
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs font-bold text-purple-600 w-4 text-center">
+                                                                {isExpanded ? '▲' : '▼'}
+                                                            </span>
+                                                        </div>
+                                                    </button>
+
+                                                    {/* Collapsible Card Body */}
+                                                    {isExpanded && (
+                                                        <div className="px-3.5 pb-3.5 pt-1 border-t border-purple-100 space-y-2.5 max-h-72 overflow-y-auto pr-1 animate-in fade-in duration-150">
+                                                            {groupedItems.map((group, gIdx) => {
+                                                                const groupKey = `${cat.id}-${gIdx}`;
+                                                                const isGroupCollapsed = !!collapsedStrategyGroups[groupKey];
+                                                                const groupSelectedCount = group.items.filter(item => selectedIds.includes(item.id)).length;
+
+                                                                return (
+                                                                    <div key={gIdx} className="space-y-1.5">
+                                                                        {group.name ? (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => toggleStrategyGroup(groupKey)}
+                                                                                className="w-full text-left text-[11px] font-bold text-purple-900 bg-purple-50/80 hover:bg-purple-100/80 px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-1.5 border border-purple-100/80 transition cursor-pointer"
+                                                                            >
+                                                                                <div className="flex items-center gap-1.5 min-w-0 pr-2">
+                                                                                    <span>📂</span>
+                                                                                    <span className="truncate">{toArabic(group.name)}</span>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                                                    {groupSelectedCount > 0 && (
+                                                                                        <span className="text-[10px] font-bold text-purple-800 bg-purple-200/70 px-1.5 py-0.2 rounded">
+                                                                                            เลือก {groupSelectedCount} ข้อ
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span className="text-[10px] text-purple-600">
+                                                                                        {isGroupCollapsed ? '▼' : '▲'}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </button>
+                                                                        ) : null}
+
+                                                                        {!isGroupCollapsed && (
+                                                                            <div className={`space-y-1 ${group.name ? 'pl-2' : ''}`}>
+                                                                                {group.items.map(item => {
+                                                                                    const isChecked = selectedIds.includes(item.id);
+                                                                                    return (
+                                                                                        <label
+                                                                                            key={item.id}
+                                                                                            className={`flex items-start gap-x-2.5 p-2 rounded-xl border transition-all cursor-pointer text-xs ${
+                                                                                                isChecked
+                                                                                                    ? 'bg-purple-100/90 border-purple-400 font-bold text-purple-950 shadow-2xs'
+                                                                                                    : 'bg-slate-50/60 border-purple-100/60 text-slate-700 hover:bg-purple-50 hover:border-purple-200'
+                                                                                            }`}
+                                                                                        >
+                                                                                            <input
+                                                                                                type="checkbox"
+                                                                                                checked={isChecked}
+                                                                                                onChange={() => toggleDynamicStrategy(cat.id, item.id)}
+                                                                                                className="mt-0.5 rounded border-purple-300 text-purple-600 focus:ring-purple-500 h-3.5 w-3.5 cursor-pointer"
+                                                                                            />
+                                                                                            <span className="leading-snug">{toArabic(item.name)}</span>
+                                                                                        </label>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                            {(!cat.items || cat.items.length === 0) && (
+                                                                <p className="text-slate-400 text-xs italic py-3 text-center">ไม่มีตัวเลือกในหมวดนี้</p>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
