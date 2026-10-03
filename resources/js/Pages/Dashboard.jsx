@@ -4245,7 +4245,7 @@ export default function Dashboard({
                                 }`}
                             >
                                 <span>📋</span>
-                                <span>กระดานคันบัน (Kanban)</span>
+                                <span>กระดาน (Kanban)</span>
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-900/60 text-amber-200 font-semibold">ใหม่</span>
                             </button>
                             <button
@@ -15731,10 +15731,10 @@ return (
                                         ? 'bg-purple-700 text-white shadow-xs'
                                         : 'text-slate-600 hover:text-slate-900'
                                 }`}
-                                title="มุมมองกระดานคันบัน (Kanban Board) สไตล์ Trello"
+                                title="มุมมองกระดาน (Kanban Board) สไตล์ Trello"
                             >
                                 <span>📋</span>
-                                <span className="hidden sm:inline">คันบัน (Kanban)</span>
+                                <span className="hidden sm:inline">Kanban</span>
                             </button>
                             <button
                                 type="button"
