@@ -1,7 +1,50 @@
 import React, { useMemo } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 
 export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
+    const getSecureUrl = (rawUrl) => {
+        if (!rawUrl) return '#';
+        let url = rawUrl;
+        if (typeof window !== 'undefined') {
+            if (window.location.protocol === 'https:' && url.startsWith('http://')) {
+                url = url.replace('http://', 'https://');
+            }
+            try {
+                const currentOrigin = window.location.origin;
+                const parsed = new URL(url, currentOrigin);
+                if (parsed.hostname === 'localhost' || parsed.hostname !== window.location.hostname) {
+                    const prefix = window.location.pathname.startsWith('/npc_smartflow') ? '/npc_smartflow' : '';
+                    const cleanPath = parsed.pathname.startsWith('/npc_smartflow') ? parsed.pathname : `${prefix}${parsed.pathname}`;
+                    url = currentOrigin + cleanPath + parsed.search + parsed.hash;
+                } else if (window.location.pathname.startsWith('/npc_smartflow') && !parsed.pathname.startsWith('/npc_smartflow')) {
+                    url = currentOrigin + '/npc_smartflow' + parsed.pathname + parsed.search + parsed.hash;
+                }
+            } catch (e) {
+                // fallback
+            }
+        }
+        return url;
+    };
+
+    const getSecureProjectShowUrl = (id) => {
+        if (!id) return '#';
+        try {
+            return getSecureUrl(route('projects.show', id));
+        } catch (e) {
+            return `/npc_smartflow/projects/${id}`;
+        }
+    };
+
+    const navigateToProject = (e, id) => {
+        e.preventDefault();
+        const url = getSecureProjectShowUrl(id);
+        try {
+            router.visit(url);
+        } catch (err) {
+            window.location.href = url;
+        }
+    };
+
     const formatCurrency = (val) => {
         return new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB', maximumFractionDigits: 0 }).format(val || 0);
     };
@@ -205,13 +248,14 @@ export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
 
                                                 {/* Card Title */}
                                                 <div>
-                                                    <Link
-                                                        href={route('projects.show', item.id)}
-                                                        className="font-black text-slate-900 hover:text-purple-700 text-xs sm:text-sm line-clamp-2 leading-snug transition-colors"
+                                                    <a
+                                                        href={getSecureProjectShowUrl(item.id)}
+                                                        onClick={(e) => navigateToProject(e, item.id)}
+                                                        className="font-black text-slate-900 hover:text-purple-700 text-xs sm:text-sm line-clamp-2 leading-snug transition-colors cursor-pointer block"
                                                         title={item.title}
                                                     >
                                                         {item.title}
-                                                    </Link>
+                                                    </a>
                                                     <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
                                                         <span>👤 {item.user?.name || item.responsible_person || 'ผู้เสนอ'}</span>
                                                         {item.department?.name && (
@@ -246,7 +290,7 @@ export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
                                                     <div className="flex items-center gap-1.5">
                                                         {item.hasLoanComponent && item.loanAmount > 0 && (
                                                             <a
-                                                                href={route('procurements.download_document', [item.id, 'loan_contract'])}
+                                                                href={getSecureUrl(route('procurements.download_document', [item.id, 'loan_contract']))}
                                                                 target="_blank"
                                                                 rel="noreferrer"
                                                                 className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] transition"
@@ -256,12 +300,13 @@ export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
                                                             </a>
                                                         )}
 
-                                                        <Link
-                                                            href={route('projects.show', item.id)}
-                                                            className="px-2.5 py-1 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-bold text-[11px] shadow-2xs transition"
+                                                        <a
+                                                            href={getSecureProjectShowUrl(item.id)}
+                                                            onClick={(e) => navigateToProject(e, item.id)}
+                                                            className="px-2.5 py-1 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-bold text-[11px] shadow-2xs transition inline-block cursor-pointer"
                                                         >
                                                             ดูงาน ➔
-                                                        </Link>
+                                                        </a>
                                                     </div>
                                                 </div>
                                             </div>

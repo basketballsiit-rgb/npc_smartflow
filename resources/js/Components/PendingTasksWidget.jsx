@@ -1,7 +1,40 @@
 import React from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 
 export default function PendingTasksWidget({ allProjectsMaster = [], user, onOpenProject }) {
+    const getSecureUrl = (rawUrl) => {
+        if (!rawUrl) return '#';
+        let url = rawUrl;
+        if (typeof window !== 'undefined') {
+            if (window.location.protocol === 'https:' && url.startsWith('http://')) {
+                url = url.replace('http://', 'https://');
+            }
+            try {
+                const currentOrigin = window.location.origin;
+                const parsed = new URL(url, currentOrigin);
+                if (parsed.hostname === 'localhost' || parsed.hostname !== window.location.hostname) {
+                    const prefix = window.location.pathname.startsWith('/npc_smartflow') ? '/npc_smartflow' : '';
+                    const cleanPath = parsed.pathname.startsWith('/npc_smartflow') ? parsed.pathname : `${prefix}${parsed.pathname}`;
+                    url = currentOrigin + cleanPath + parsed.search + parsed.hash;
+                } else if (window.location.pathname.startsWith('/npc_smartflow') && !parsed.pathname.startsWith('/npc_smartflow')) {
+                    url = currentOrigin + '/npc_smartflow' + parsed.pathname + parsed.search + parsed.hash;
+                }
+            } catch (e) {
+                // fallback
+            }
+        }
+        return url;
+    };
+
+    const getSecureProjectShowUrl = (id) => {
+        if (!id) return '#';
+        try {
+            return getSecureUrl(route('projects.show', id));
+        } catch (e) {
+            return `/npc_smartflow/projects/${id}`;
+        }
+    };
+
     const projects = Array.isArray(allProjectsMaster) ? allProjectsMaster : [];
 
     // Filter projects that need approval or review
@@ -24,7 +57,7 @@ export default function PendingTasksWidget({ allProjectsMaster = [], user, onOpe
                     </div>
                 </div>
                 <Link
-                    href={route('dashboard', { tab: 'reviews' })}
+                    href={getSecureUrl(route('dashboard', { tab: 'reviews' }))}
                     className="text-xs font-bold text-emerald-800 hover:text-emerald-950 bg-white px-3 py-1.5 rounded-xl border border-emerald-200 shadow-2xs hover:bg-emerald-50 transition"
                 >
                     ดูคิวงานทั้งหมด ➔
@@ -62,7 +95,7 @@ export default function PendingTasksWidget({ allProjectsMaster = [], user, onOpe
                 {pendingProjects.map((p) => (
                     <Link
                         key={p.id}
-                        href={route('projects.show', p.id)}
+                        href={getSecureProjectShowUrl(p.id)}
                         className="rounded-xl border border-amber-200/90 bg-white p-3 space-y-1.5 hover:shadow-md hover:border-amber-400 transition-all group cursor-pointer"
                     >
                         <div className="flex items-center justify-between text-[10px]">

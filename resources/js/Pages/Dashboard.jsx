@@ -42,10 +42,22 @@ export default function Dashboard({
     const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
     const fiscalYear = systemSettings?.find(s => s.key === 'current_fiscal_year')?.value || '2569';
     const getSecureProjectShowUrl = (id) => {
+        if (!id) return '#';
         try {
             let url = route('projects.show', id);
-            if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
-                url = url.replace('http://', 'https://');
+            if (typeof window !== 'undefined') {
+                if (window.location.protocol === 'https:' && url.startsWith('http://')) {
+                    url = url.replace('http://', 'https://');
+                }
+                const currentOrigin = window.location.origin;
+                const parsed = new URL(url, currentOrigin);
+                if (parsed.hostname === 'localhost' || parsed.hostname !== window.location.hostname) {
+                    const prefix = window.location.pathname.startsWith('/npc_smartflow') ? '/npc_smartflow' : '';
+                    const cleanPath = parsed.pathname.startsWith('/npc_smartflow') ? parsed.pathname : `${prefix}${parsed.pathname}`;
+                    url = currentOrigin + cleanPath + parsed.search + parsed.hash;
+                } else if (window.location.pathname.startsWith('/npc_smartflow') && !parsed.pathname.startsWith('/npc_smartflow')) {
+                    url = currentOrigin + '/npc_smartflow' + parsed.pathname + parsed.search + parsed.hash;
+                }
             }
             return url;
         } catch (e) {
@@ -15805,7 +15817,7 @@ return (
                                             <td className="px-3 py-2.5 align-top">
                                                 <div className="space-y-1">
                                                     <Link
-                                                        href={route('projects.show', item.id)}
+                                                        href={getSecureProjectShowUrl(item.id)}
                                                         className="text-xs sm:text-sm font-bold text-purple-950 hover:text-purple-700 transition line-clamp-3 leading-snug break-words"
                                                         title={item.title}
                                                     >
@@ -16142,7 +16154,7 @@ return (
                                                                         รอจัดสรรงบ
                                                                     </span>
                                                                     <Link
-                                                                        href={route('projects.show', item.id)}
+                                                                        href={getSecureProjectShowUrl(item.id)}
                                                                         className="w-full inline-flex items-center justify-center gap-1 px-3 py-1 bg-slate-100 hover:bg-purple-100 text-purple-950 font-bold text-xs rounded-xl transition"
                                                                     >
                                                                         <span>ดูรายละเอียด</span>
