@@ -414,6 +414,17 @@ class User extends Authenticatable
     }
 
     /**
+     * ตรวจสอบว่าเป็นผู้บริหารที่กำกับดูแลฝ่ายของโครงการนั้นหรือไม่ (หรือเป็นผู้บริหารระดับสูง)
+     */
+    public function isExecutiveForDepartment(?int $departmentId = null): bool
+    {
+        if ($this->isAdmin()) return true;
+        if ($this->isDirector()) return true;
+        if ($this->isDeputyDirectorForDepartment($departmentId)) return true;
+        return $this->isDeputyDirector();
+    }
+
+    /**
      * ดึง ID ฝ่ายทั้งหมดที่ผู้ใช้รายนี้รับผิดชอบ (จากทุกตำแหน่งใน user_positions)
      */
     public function getResponsibleDepartmentIds(): array

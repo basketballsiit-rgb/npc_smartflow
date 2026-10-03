@@ -93,26 +93,25 @@ class NotificationService
             case 4: // Executive supervising that department
                 $execs = User::all()->filter(function ($u) use ($project) {
                     return $u->isExecutiveForDepartment($project->department_id) && 
-                           str_contains($u->position ?? '', 'รองผู้อำนวยการ');
+                           ($u->isDeputyDirector() || str_contains($u->position ?? '', 'รองผู้อำนวยการ'));
                 });
+                if ($execs->isEmpty()) {
+                    $execs = User::all()->filter(fn($u) => $u->isDeputyDirector());
+                }
                 $recipientIds = $execs->pluck('id')->toArray();
                 break;
 
             case 5: // Deputy Director of Planning & Cooperation
                 $planExecs = User::all()->filter(function ($u) {
-                    $pos = $u->position ?? '';
-                    return $u->isExecutive() && 
-                           (str_contains($pos, 'แผน') || str_contains($pos, 'ยุทธศาสตร์'));
+                    return $u->isDeputyDirectorStrategy() || ($u->isExecutive() && 
+                           (str_contains($u->position ?? '', 'แผน') || str_contains($u->position ?? '', 'ยุทธศาสตร์')));
                 });
                 $recipientIds = $planExecs->pluck('id')->toArray();
                 break;
 
             case 6: // College Director
                 $directors = User::all()->filter(function ($u) {
-                    $pos = $u->position ?? '';
-                    return $u->isExecutive() && 
-                           str_contains($pos, 'ผู้อำนวยการวิทยาลัย') && 
-                           !str_contains($pos, 'รอง');
+                    return $u->isDirector();
                 });
                 $recipientIds = $directors->pluck('id')->toArray();
                 break;
@@ -203,11 +202,11 @@ class NotificationService
                     $isTarget = true;
                 } elseif ($step === 3 && ($user->isPlanHead() || $user->isPlanStaff())) {
                     $isTarget = true;
-                } elseif ($step === 4 && $user->isExecutiveForDepartment($project->department_id) && str_contains($user->position ?? '', 'รองผู้อำนวยการ')) {
+                } elseif ($step === 4 && $user->isExecutiveForDepartment($project->department_id) && ($user->isDeputyDirector() || str_contains($user->position ?? '', 'รองผู้อำนวยการ'))) {
                     $isTarget = true;
-                } elseif ($step === 5 && $user->isExecutive() && (str_contains($user->position ?? '', 'แผน') || str_contains($user->position ?? '', 'ยุทธศาสตร์'))) {
+                } elseif ($step === 5 && ($user->isDeputyDirectorStrategy() || ($user->isExecutive() && (str_contains($user->position ?? '', 'แผน') || str_contains($user->position ?? '', 'ยุทธศาสตร์'))))) {
                     $isTarget = true;
-                } elseif ($step === 6 && $user->isExecutive() && str_contains($user->position ?? '', 'ผู้อำนวยการวิทยาลัย') && !str_contains($user->position ?? '', 'รอง')) {
+                } elseif ($step === 6 && $user->isDirector()) {
                     $isTarget = true;
                 }
 
