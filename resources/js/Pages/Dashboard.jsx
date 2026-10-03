@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
 import React, { useState, useEffect, Fragment } from 'react';
 import Swal from 'sweetalert2';
+import WorkflowKanbanBoard from '@/Components/WorkflowKanbanBoard';
 
 export default function Dashboard({ 
     role, 
@@ -2360,6 +2361,7 @@ export default function Dashboard({
     
     // Document & Loan Tracking States
     const [docTrackingFilter, setDocTrackingFilter] = useState('all');
+    const [trackingViewMode, setTrackingViewMode] = useState('kanban'); // 'kanban' | 'table'
     const [selectedApprovalProject, setSelectedApprovalProject] = useState(null); // all, at_procurement, at_finance, with_borrower, completed
     const [selectedFinanceDocDetails, setSelectedFinanceDocDetails] = useState(null);
     const [docTrackingSearch, setDocTrackingSearch] = useState('');
@@ -14284,21 +14286,56 @@ return (
                         )}
                     </div>
 
-                    <div className="relative min-w-[240px]">
-                        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
-                        <input
-                            type="text"
-                            value={docTrackingSearch}
-                            onChange={(e) => setDocTrackingSearch(e.target.value)}
-                            placeholder={isStrictFinanceUser ? "ค้นหาชื่อโครงการ, ผู้เสนอ, เลขที่รับ กง, เลขคุม..." : "ค้นหาชื่อโครงการ, ผู้เสนอ, เลขที่ PR, เลขคุม..."}
-                            className="w-full pl-9 pr-3.5 py-2 text-xs sm:text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
-                        />
+                    <div className="flex flex-wrap items-center gap-2">
+                        {/* View Mode Toggle: Kanban vs Table */}
+                        <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+                            <button
+                                type="button"
+                                onClick={() => setTrackingViewMode('kanban')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                    trackingViewMode === 'kanban'
+                                        ? 'bg-purple-700 text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                                title="มุมมองกระดานคัมบัง (Kanban Board) สไตล์ Trello"
+                            >
+                                <span>📋</span>
+                                <span className="hidden sm:inline">คัมบัง (Kanban)</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setTrackingViewMode('table')}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                                    trackingViewMode === 'table'
+                                        ? 'bg-purple-700 text-white shadow-xs'
+                                        : 'text-slate-600 hover:text-slate-900'
+                                }`}
+                                title="มุมมองตารางรายการแบบละเอียด"
+                            >
+                                <span>📊</span>
+                                <span className="hidden sm:inline">ตาราง (Table)</span>
+                            </button>
+                        </div>
+
+                        <div className="relative min-w-[200px] sm:min-w-[240px]">
+                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
+                            <input
+                                type="text"
+                                value={docTrackingSearch}
+                                onChange={(e) => setDocTrackingSearch(e.target.value)}
+                                placeholder={isStrictFinanceUser ? "ค้นหาชื่อโครงการ, ผู้เสนอ, เลขที่รับ กง, เลขคุม..." : "ค้นหาชื่อโครงการ, ผู้เสนอ, เลขที่ PR, เลขคุม..."}
+                                className="w-full pl-9 pr-3.5 py-2 text-xs sm:text-sm rounded-xl border-slate-200 focus:border-purple-500 focus:ring-purple-500"
+                            />
+                        </div>
                     </div>
                 </div>
 
-                {/* Tracking Data Table */}
-                <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-                    <div className="overflow-x-auto">
+                {/* Tracking View: Kanban Board vs Table */}
+                {trackingViewMode === 'kanban' ? (
+                    <WorkflowKanbanBoard items={filtered} onOpenDocDetails={setSelectedFinanceDocDetails} />
+                ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+                        <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/90 border-b border-slate-200 text-xs font-bold text-slate-700 tracking-wide">
@@ -14787,6 +14824,7 @@ return (
                         </table>
                     </div>
                 </div>
+                )}
             
                 {/* Document Numbering Settings Modal */}
                 {isDocNumberModalOpen && (

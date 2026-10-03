@@ -8,11 +8,13 @@ use App\Models\OvecStrategy;
 use App\Models\Department;
 use App\Models\ProjectApproval;
 use App\Models\Budget;
+use App\Models\AuditLog;
 use App\Jobs\StitchProjectDocumentsJob;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use App\Services\NotificationService;
 
 class ProjectController extends Controller
@@ -163,6 +165,13 @@ class ProjectController extends Controller
         $project->current_approval_step = 1;
         $project->save();
 
+        AuditLog::record(
+            action: 'CREATED',
+            auditable: $project,
+            stepNumber: 1,
+            notes: 'สร้างแบบร่างโครงการใหม่'
+        );
+
         return redirect()->route('dashboard')->with('message', 'Project draft created successfully.');
     }
 
@@ -283,6 +292,13 @@ class ProjectController extends Controller
             'status' => 'pending',
             'comments' => 'ยื่นเสนอคำของบประมาณโครงการเบื้องต้น (Preliminary Budget Request)',
         ]);
+
+        AuditLog::record(
+            action: 'CREATED_PRELIMINARY',
+            auditable: $project,
+            stepNumber: 1,
+            notes: 'ยื่นเสนอคำของบประมาณโครงการเบื้องต้น'
+        );
 
         return redirect()->back()->with('success', 'บันทึกเสนอชื่อโครงการและงบประมาณเบื้องต้นเรียบร้อยแล้ว รอการพิจารณาจัดสรรงบจากงานแผนงาน/คณะกรรมการ');
     }
@@ -491,7 +507,7 @@ class ProjectController extends Controller
      */
     public function show(Project $project)
     {
-        $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items']);
+        $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items', 'auditLogs.user']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
         
         // Deduplicate approvals and sort by step (latest record per step with signature details)
@@ -645,7 +661,32 @@ class ProjectController extends Controller
             }
         }
 
+        // Capture raw original state before update for audit trail diff
+        $originalAttributes = $project->getRawOriginal();
+
         $project->update($validated);
+
+        // Record Audit Log with old vs new diff
+        $changes = $project->getChanges();
+        $oldDiff = [];
+        $newDiff = [];
+        foreach ($changes as $k => $newV) {
+            if (in_array($k, ['updated_at'])) continue;
+            $oldDiff[$k] = $originalAttributes[$k] ?? null;
+            $newDiff[$k] = $newV;
+        }
+
+        if (!empty($newDiff)) {
+            $isPostApproval = ($project->current_approval_step > 1 || in_array($project->status, ['approved', 'in_progress', 'completed']));
+            AuditLog::record(
+                action: $isPostApproval ? 'MODIFIED_AFTER_APPROVAL' : 'UPDATED',
+                auditable: $project,
+                stepNumber: $project->current_approval_step,
+                oldValues: $oldDiff,
+                newValues: $newDiff,
+                notes: $isPostApproval ? 'มีการแก้ไขข้อมูลโครงการหลังจากผ่านการอนุมัติตามสายงานหรือเริ่มดำเนินงานแล้ว' : 'แก้ไขข้อมูลโครงการ'
+            );
+        }
 
         $disbursementType = $request->input('disbursement_type', $project->disbursement_type ?? 'procurement');
         if ($project->budget) {
@@ -1051,15 +1092,45 @@ class ProjectController extends Controller
             'signed_at' => $now,
         ]);
 
+        // Record audit trail log for step approval
+        AuditLog::record(
+            action: 'APPROVE_STEP',
+            model: $project,
+            stepNumber: $project->current_approval_step,
+            notes: $request->input('comments', 'ลงนามอนุมัติขั้นตอนที่ ' . $project->current_approval_step)
+        );
+
         if ($project->current_approval_step >= 6) {
             // Final step: Director approval. Lock project and set approved state
             $project->status = 'approved';
             $project->approved_at = now();
+
+            // Digital Sealing & Verification Hash
+            $project->sealed_at = now();
+            $project->verification_code = 'NPC-' . strtoupper(Str::random(4)) . '-' . ($project->academic_year ?: date('Y')) . '-' . sprintf('%04d', $project->id);
+            $sealPayload = implode('|', [
+                $project->id,
+                $project->title,
+                $project->allocated_budget ?: $project->estimated_budget,
+                $project->user_id,
+                $project->approved_at?->toIso8601String(),
+                $project->sealed_at?->toIso8601String(),
+                $sigHash,
+                config('app.key')
+            ]);
+            $project->digital_seal_hash = hash('sha256', $sealPayload);
             $project->save();
+
+            AuditLog::record(
+                action: 'SEALED',
+                model: $project,
+                stepNumber: 6,
+                notes: "เอกสารผ่านการลงนามอนุมัติครบ 6 ขั้นตอน และได้รับการประทับตรารับรองดิจิทัล (Digital Sealing) รหัส {$project->verification_code}"
+            );
 
             NotificationService::notifyProjectResult($project, 'approved');
 
-            return redirect()->route('dashboard')->with('message', 'โครงการได้รับการลงนามอนุมัติครบถ้วนสมบูรณ์แล้ว');
+            return redirect()->route('dashboard')->with('message', 'โครงการได้รับการลงนามอนุมัติครบถ้วนสมบูรณ์แล้ว และได้รับการประทับตรารับรองดิจิทัล');
         }
 
         // Advance to next step
@@ -1120,9 +1191,31 @@ class ProjectController extends Controller
             $project->status = 'approved';
             $project->current_approval_step = 6;
             $project->approved_at = now();
+
+            // Digital Sealing & Verification Hash
+            $project->sealed_at = now();
+            $project->verification_code = 'NPC-' . strtoupper(Str::random(4)) . '-' . ($project->academic_year ?: date('Y')) . '-' . sprintf('%04d', $project->id);
+            $sealPayload = implode('|', [
+                $project->id,
+                $project->title,
+                $project->allocated_budget ?: $project->estimated_budget,
+                $project->user_id,
+                $project->approved_at?->toIso8601String(),
+                $project->sealed_at?->toIso8601String(),
+                $adminSig ? hash('sha256', (string)$adminSig) : 'ADMIN',
+                config('app.key')
+            ]);
+            $project->digital_seal_hash = hash('sha256', $sealPayload);
             $project->save();
 
-            return redirect()->back()->with('message', 'ผู้ดูแลระบบอนุมัติโครงการสมบูรณ์เรียบร้อยแล้ว (Approved)');
+            AuditLog::record(
+                action: 'SEALED',
+                model: $project,
+                stepNumber: 6,
+                notes: "ผู้ดูแลระบบอนุมัติโครงการสมบูรณ์ (Admin Full Override) และประทับตรารับรองดิจิทัล รหัส {$project->verification_code}"
+            );
+
+            return redirect()->back()->with('message', 'ผู้ดูแลระบบอนุมัติโครงการสมบูรณ์เรียบร้อยแล้ว (Approved & Digitally Sealed)');
         }
 
         // Single step advance
@@ -1169,9 +1262,37 @@ class ProjectController extends Controller
             'signed_at' => now(),
         ]);
 
+        AuditLog::record(
+            action: 'APPROVE_STEP',
+            model: $project,
+            stepNumber: $project->current_approval_step,
+            notes: 'อนุมัติขั้นตอนที่ ' . $project->current_approval_step . ' ผ่านสิทธิ์ผู้ดูแลระบบ (Admin Override)'
+        );
+
         if ($project->current_approval_step >= 6) {
             $project->status = 'approved';
             $project->approved_at = now();
+
+            $project->sealed_at = now();
+            $project->verification_code = 'NPC-' . strtoupper(Str::random(4)) . '-' . ($project->academic_year ?: date('Y')) . '-' . sprintf('%04d', $project->id);
+            $sealPayload = implode('|', [
+                $project->id,
+                $project->title,
+                $project->allocated_budget ?: $project->estimated_budget,
+                $project->user_id,
+                $project->approved_at?->toIso8601String(),
+                $project->sealed_at?->toIso8601String(),
+                $adminSig ? hash('sha256', (string)$adminSig) : 'ADMIN',
+                config('app.key')
+            ]);
+            $project->digital_seal_hash = hash('sha256', $sealPayload);
+
+            AuditLog::record(
+                action: 'SEALED',
+                model: $project,
+                stepNumber: 6,
+                notes: "เอกสารผ่านการลงนามอนุมัติครบ 6 ขั้นตอน และได้รับการประทับตรารับรองดิจิทัล รหัส {$project->verification_code}"
+            );
         } else {
             $project->current_approval_step += 1;
             $project->status = 'pending_approval';
@@ -1194,8 +1315,17 @@ class ProjectController extends Controller
             'status' => 'required|in:draft,submitted,pending_approval,approved,in_progress,evaluating,completed',
         ]);
 
+        $oldStatus = $project->status;
         $project->status = $validated['status'];
         $project->save();
+
+        AuditLog::record(
+            action: 'STATUS_CHANGED',
+            model: $project,
+            oldValues: ['status' => $oldStatus],
+            newValues: ['status' => $validated['status']],
+            notes: 'เปลี่ยนสถานะโครงการเป็น: ' . $validated['status']
+        );
 
         return redirect()->back()->with('message', 'อัปเดตสถานะความก้าวหน้าการดำเนินโครงการเรียบร้อยแล้ว');
     }
@@ -2697,4 +2827,71 @@ class ProjectController extends Controller
 
         return redirect()->route('projects.edit', $project->id)->with('success', 'ปลดล็อคโครงการเรียบร้อยแล้ว ท่านสามารถเข้าแก้ไขประเภทการเบิกจ่ายและรายละเอียดโครงการได้ทันที');
     }
+
+    /**
+     * AI Smart Budget Routing: Suggest vocational funding source for project.
+     */
+    public function aiRecommendFunding(Request $request, \App\Services\GeminiService $geminiService)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string',
+            'objectives' => 'nullable|string',
+            'items' => 'nullable|array',
+            'budget' => 'nullable|numeric',
+        ]);
+
+        $recommendation = $geminiService->recommendFundingSource(
+            title: $validated['title'],
+            objectives: $validated['objectives'] ?? '',
+            items: $validated['items'] ?? [],
+            budget: isset($validated['budget']) ? (float)$validated['budget'] : null
+        );
+
+        return response()->json($recommendation);
+    }
+
+    /**
+     * Public Document Digital Verification Portal.
+     */
+    public function verifyPublicDocument($code)
+    {
+        $project = Project::with([
+            'department',
+            'user',
+            'approvals' => function($q) {
+                $q->with('user')->orderBy('step_number', 'asc');
+            },
+            'auditLogs' => function($q) {
+                $q->with('user')->orderBy('created_at', 'desc');
+            }
+        ])->where('verification_code', $code)->first();
+
+        return Inertia::render('Projects/Verify', [
+            'verificationCode' => $code,
+            'isValid' => $project !== null && !empty($project->sealed_at),
+            'project' => $project ? [
+                'id' => $project->id,
+                'title' => $project->title,
+                'academic_year' => $project->academic_year,
+                'responsible_person' => $project->responsible_person,
+                'department_name' => $project->department?->name ?? 'ไม่ระบุ',
+                'estimated_budget' => (float)$project->estimated_budget,
+                'status' => $project->status,
+                'sealed_at' => $project->sealed_at ? $project->sealed_at->format('Y-m-d H:i:s') : null,
+                'verification_code' => $project->verification_code,
+                'digital_seal_hash' => $project->digital_seal_hash,
+                'current_approval_step' => $project->current_approval_step,
+                'approvals' => $project->approvals->map(fn($a) => [
+                    'step_number' => $a->step_number,
+                    'status' => $a->status,
+                    'user_name' => $a->user?->name,
+                    'role' => $a->user?->role,
+                    'updated_at' => $a->updated_at ? $a->updated_at->format('Y-m-d H:i:s') : null,
+                    'comments' => $a->comments,
+                ]),
+                'audit_logs_count' => $project->auditLogs->count(),
+            ] : null,
+        ]);
+    }
 }
+

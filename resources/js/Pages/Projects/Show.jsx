@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Swal from 'sweetalert2';
 import ProjectWorkflowStepper from '@/Components/ProjectWorkflowStepper';
 import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
+import AuditTrailSection from '@/Components/AuditTrailSection';
+import TorStudioModal from '@/Components/TorStudioModal';
 
 export default function Show({ project, strategyCategories = [], fundingSources = [], allUsers = [], canApprove }) {
     const { auth } = usePage().props;
@@ -24,6 +26,7 @@ export default function Show({ project, strategyCategories = [], fundingSources 
     };
 
     const [activeTab, setActiveTab] = useState('plan');
+    const [torModalOpen, setTorModalOpen] = useState(false);
     const [appendixTitle, setAppendixTitle] = useState('');
     const [appendixFile, setAppendixFile] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -1472,6 +1475,19 @@ ${itemsListText}
                                 <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">🔒 รออนุมัติ</span>
                             )}
                         </button>
+                        <button
+                            onClick={() => setActiveTab('audit')}
+                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                                activeTab === 'audit'
+                                    ? 'border-purple-600 text-purple-900 bg-purple-50/40'
+                                    : 'border-transparent text-slate-500 hover:text-purple-700'
+                            }`}
+                        >
+                            <span>🛡️ แท็บที่ 5: ประวัติ & ตรารับรอง (Audit Trail)</span>
+                            {project.sealed_at && (
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">✓ ตรารับรองแล้ว</span>
+                            )}
+                        </button>
                     </div>
 
                     {/* Tab 1: Plan & Details */}
@@ -1835,6 +1851,19 @@ ${itemsListText}
                                             <span>✏️</span>
                                             <span>แก้ไขโครงการ / รายการ</span>
                                         </Link>
+                                    )}
+
+                                    {/* AI-Assisted TOR Studio Button */}
+                                    {disbType !== 'loan' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setTorModalOpen(true)}
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-800 hover:to-indigo-700 text-white rounded-xl text-xs font-black shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                            title="เครื่องมือ AI ช่วยร่างขอบเขตของงานและตรวจสอบสเปกไม่ให้ผิดระเบียบล็อกสเปกภาครัฐ"
+                                        >
+                                            <span>🤖</span>
+                                            <span>AI ร่าง & ตรวจสอบสเปก TOR</span>
+                                        </button>
                                     )}
 
                                     {/* Procurement mode buttons */}
@@ -2921,6 +2950,11 @@ ${itemsListText}
                         </div>
                         )
                     )}
+
+                    {/* Tab 5: Audit Trail & Digital Verification */}
+                    {activeTab === 'audit' && (
+                        <AuditTrailSection project={project} />
+                    )}
                 </div>
 
             {/* 6-Step Digital Signature Modal */}
@@ -2936,6 +2970,24 @@ ${itemsListText}
                 fundingSourceId={data.funding_source_id}
                 allocatedAmount={data.allocated_amount}
                 processing={processing}
+            />
+
+            {/* AI-Assisted TOR Studio Modal */}
+            <TorStudioModal
+                isOpen={torModalOpen}
+                onClose={() => setTorModalOpen(false)}
+                defaultItemName={project.title}
+                defaultBudget={project.estimated_budget}
+                onApplySpec={(specText) => {
+                    navigator.clipboard.writeText(specText);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'คัดลอกสเปก TOR เรียบร้อยแล้ว',
+                        text: 'ระบบได้คัดลอกข้อกำหนด TOR สู่คลิปบอร์ดแล้ว ท่านสามารถนำไปวางในรายละเอียดพัสดุได้ทันที',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                }}
             />
         </AuthenticatedLayout>
     );

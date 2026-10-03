@@ -70,6 +70,9 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 Route::get('projects/{project}/survey/evaluate', [SurveyController::class, 'evaluate'])->name('surveys.evaluate');
 Route::post('projects/{project}/survey/submit', [SurveyController::class, 'submitResponse'])->name('surveys.submit_response');
 
+// Public Document Verification (Digital Seal & Signature Verification)
+Route::get('/verify/{code}', [ProjectController::class, 'verifyPublicDocument'])->name('projects.verify');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -158,6 +161,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('projects', ProjectController::class)->except(['index']);
     Route::get('projects/{project}/print', [ProjectController::class, 'print'])->name('projects.print');
     Route::post('projects/generate-ai-content', [ProjectController::class, 'generateAiContent'])->name('projects.generate_ai_content');
+    Route::post('projects/ai/recommend-funding', [ProjectController::class, 'aiRecommendFunding'])->name('projects.ai.recommend_funding');
     Route::post('projects/{project}/submit', [ProjectController::class, 'submit'])->name('projects.submit');
     Route::post('projects/{project}/approve', [ProjectController::class, 'approve'])->name('projects.approve');
     Route::post('projects/{project}/update-status', [ProjectController::class, 'updateStatus'])->name('projects.update_status');
@@ -179,6 +183,8 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/procurement/finance-clear', [ProcurementController::class, 'financeClear'])->name('procurements.finance_clear');
     Route::post('projects/{project}/procurement/rollback', [ProcurementController::class, 'rollbackStatus'])->name('procurements.rollback');
     Route::get('projects/{project}/procurement/document/{type}', [ProcurementController::class, 'downloadDocument'])->name('procurements.download_document');
+    Route::post('procurements/ai/draft-tor', [ProcurementController::class, 'aiDraftTor'])->name('procurements.ai.draft_tor');
+    Route::post('procurements/ai/check-tor', [ProcurementController::class, 'aiCheckTorCompliance'])->name('procurements.ai.check_tor');
 
     // External Travel Loans (npc_eleve / npc_hr integration)
     Route::post('travel-loans/{travelLoan}/plan-cut', [TravelLoanWebController::class, 'planCut'])->name('travel_loans.plan_cut');
@@ -196,6 +202,7 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/survey/load-standard', [SurveyController::class, 'loadStandardPattern'])->name('surveys.load_standard');
     Route::post('projects/{project}/survey/save-questions', [SurveyController::class, 'saveQuestions'])->name('surveys.save_questions');
     Route::post('projects/{project}/survey/generate-ai', [SurveyController::class, 'generateAiRecommendations'])->name('surveys.generate_ai');
+    Route::post('projects/{project}/survey/ai-sentiment', [SurveyController::class, 'aiAnalyzeSentiment'])->name('surveys.ai_sentiment');
 
     // Appendices & Photo Uploads
     Route::post('projects/{project}/appendices', [AppendixController::class, 'store'])->name('appendices.store');

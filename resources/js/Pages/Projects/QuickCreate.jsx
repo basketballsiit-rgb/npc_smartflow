@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, Link } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 import axios from 'axios';
+import SmartBudgetRouterModal from '@/Components/SmartBudgetRouterModal';
 
 export default function QuickCreate({ 
     auth, 
@@ -33,6 +34,7 @@ export default function QuickCreate({
     });
 
     const [generatingAi, setGeneratingAi] = useState(false);
+    const [budgetRouterModalOpen, setBudgetRouterModalOpen] = useState(false);
     const [activeTabSection, setActiveTabSection] = useState('all'); // 'all' or active accordion section
 
     const { data, setData, post, processing, errors } = useForm({
@@ -361,7 +363,18 @@ export default function QuickCreate({
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">วงเงินงบประมาณที่ขอเสนอ (บาท) *</label>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="block text-xs font-bold text-slate-700">วงเงินงบประมาณที่ขอเสนอ (บาท) *</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setBudgetRouterModalOpen(true)}
+                                                className="inline-flex items-center gap-1 text-[11px] font-black text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2 py-0.5 rounded-lg border border-purple-200 transition cursor-pointer"
+                                                title="ให้ AI วิเคราะห์ว่าควรใช้แหล่งเงินประเภทใดตามระเบียบ สอศ."
+                                            >
+                                                <span>✨</span>
+                                                <span>AI แนะนำแหล่งเงิน</span>
+                                            </button>
+                                        </div>
                                         <input
                                             type="number"
                                             step="0.01"
@@ -785,6 +798,27 @@ export default function QuickCreate({
                     </div>
                 </div>
             </div>
+
+            {/* Smart Budget Routing Modal */}
+            <SmartBudgetRouterModal
+                isOpen={budgetRouterModalOpen}
+                onClose={() => setBudgetRouterModalOpen(false)}
+                projectTitle={data.title}
+                projectObjectives={data.objectives}
+                projectBudget={data.proposed_budget}
+                onApplySource={(sourceName, rec) => {
+                    // Prepend recommendation note to background rationale
+                    const note = `[AI แนะนำแหล่งเงิน: ${sourceName} (${rec.reasoning})]`;
+                    setData('background_rationale', data.background_rationale ? `${note}\n\n${data.background_rationale}` : note);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'ปรับใช้แหล่งเงินที่แนะนำเรียบร้อย',
+                        text: `ระบบได้บันทึกคำแนะนำ "${sourceName}" ลงในส่วนเหตุผลความจำเป็นแล้ว`,
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                }}
+            />
         </AuthenticatedLayout>
     );
 }

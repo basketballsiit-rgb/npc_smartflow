@@ -348,6 +348,32 @@ class SurveyController extends Controller
     }
 
     /**
+     * AI Survey Analytics: Sentiment analysis & qualitative feedback clustering.
+     */
+    public function aiAnalyzeSentiment(Project $project, GeminiService $geminiService, Request $request)
+    {
+        $survey = Survey::where('project_id', $project->id)->first();
+        if (!$survey) {
+            $survey = Survey::create([
+                'project_id' => $project->id,
+                'survey_code' => 'SV-' . str_pad($project->id, 5, '0', STR_PAD_LEFT),
+                'title' => 'แบบประเมินความพึงพอใจโครงการ ' . $project->title
+            ]);
+        }
+
+        $responses = $survey->responses;
+        $commentsList = $responses->whereNotNull('comments')->pluck('comments')->filter(fn($c) => !empty(trim((string)$c)))->values()->toArray();
+
+        $sentimentResult = $geminiService->analyzeSurveySentiment($commentsList);
+
+        if ($request->wantsJson() || $request->ajax() || $request->is('api/*')) {
+            return response()->json($sentimentResult);
+        }
+
+        return response()->json($sentimentResult);
+    }
+
+    /**
      * Compute comprehensive statistical analysis for survey questions (Mean, S.D., Level)
      * and organize into 4 standard evaluation dimensions with Chapter 1 comparison synthesis.
      */

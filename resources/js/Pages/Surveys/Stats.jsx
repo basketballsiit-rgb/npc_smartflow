@@ -1,15 +1,31 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import React, { useState } from 'react';
+import axios from 'axios';
 
 export default function Stats({ project, totalResponses, detailedStats, comments, actRecommendation, evaluationUrl }) {
     const [generating, setGenerating] = useState(false);
+    const [analyzingSentiment, setAnalyzingSentiment] = useState(false);
+    const [sentimentData, setSentimentData] = useState(null);
 
     const handleGenerateAi = () => {
         setGenerating(true);
         router.post(route('surveys.generate_ai', project.id), {}, {
             onFinish: () => setGenerating(false)
         });
+    };
+
+    const handleAnalyzeSentiment = async () => {
+        setAnalyzingSentiment(true);
+        try {
+            const res = await axios.post(route('surveys.ai_sentiment', project.id));
+            setSentimentData(res.data);
+        } catch (err) {
+            console.error('Sentiment analysis error:', err);
+            alert('เกิดข้อผิดพลาดในการวิเคราะห์ความรู้สึก กรุณาลองใหม่อีกครั้ง');
+        } finally {
+            setAnalyzingSentiment(false);
+        }
     };
 
     // Standardize all numerals to Arabic numerals
@@ -461,11 +477,109 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                         )}
                     </div>
 
-                    {/* 7. ข้อเสนอแนะเพิ่มเติมจากผู้ตอบแบบประเมิน (Comments Log) */}
-                    <div className="rounded-3xl border border-purple-100 bg-white p-6 sm:p-8 shadow-sm space-y-4">
-                        <h3 className="text-base sm:text-lg font-black text-purple-950 flex items-center gap-2">
-                            <span>💬</span> ข้อเสนอแนะเพิ่มเติมจากผู้ตอบแบบประเมิน ({toArabicNumerals(comments?.length || 0)} รายการ)
-                        </h3>
+                    {/* 7. ข้อเสนอแนะเพิ่มเติมและการวิเคราะห์ความรู้สึก (AI Sentiment & Qualitative Analytics) */}
+                    <div className="rounded-3xl border border-purple-100 bg-white p-6 sm:p-8 shadow-sm space-y-5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-purple-100">
+                            <div>
+                                <h3 className="text-base sm:text-lg font-black text-purple-950 flex items-center gap-2">
+                                    <span>💬</span> ข้อเสนอแนะเพิ่มเติมจากผู้ตอบแบบประเมิน ({toArabicNumerals(comments?.length || 0)} รายการ)
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    รวบรวมข้อคิดเห็นเชิงคุณภาพจากผู้เข้าร่วมโครงการ
+                                </p>
+                            </div>
+
+                            {comments && comments.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={handleAnalyzeSentiment}
+                                    disabled={analyzingSentiment}
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-800 hover:to-indigo-700 text-white font-black text-xs shadow-md transition disabled:opacity-50 cursor-pointer"
+                                >
+                                    {analyzingSentiment ? '⌛ AI กำลังวิเคราะห์ความรู้สึก...' : '✨ AI วิเคราะห์ความรู้สึก (Sentiment Analysis)'}
+                                </button>
+                            )}
+                        </div>
+
+                        {/* AI Sentiment Analysis Card */}
+                        {sentimentData && (
+                            <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/60 via-purple-50/60 to-white border border-indigo-200 space-y-4 text-xs">
+                                <div className="flex items-center justify-between pb-2 border-b border-indigo-200">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xl">🤖</span>
+                                        <h4 className="font-black text-indigo-950 text-sm">
+                                            ผลการวิเคราะห์ความรู้สึกและข้อเสนอแนะเชิงลึก (AI Sentiment Analytics)
+                                        </h4>
+                                    </div>
+                                    <span className="text-[11px] text-indigo-700 font-bold">
+                                        ประมวลผลจาก {comments.length} ข้อความ
+                                    </span>
+                                </div>
+
+                                {/* Sentiment Distribution Bars */}
+                                {sentimentData.sentiment_distribution && (
+                                    <div className="space-y-1.5">
+                                        <div className="text-[11px] font-bold text-slate-600">สัดส่วนความรู้สึกของผู้ตอบแบบสอบถาม (Sentiment Ratio):</div>
+                                        <div className="w-full h-4 rounded-full bg-slate-200 overflow-hidden flex">
+                                            <div
+                                                style={{ width: `${sentimentData.sentiment_distribution.positive_pct}%` }}
+                                                className="bg-emerald-500 h-full text-[9px] text-white font-bold flex items-center justify-center"
+                                                title={`เชิงบวก / ชื่นชม: ${sentimentData.sentiment_distribution.positive_pct}%`}
+                                            >
+                                                {sentimentData.sentiment_distribution.positive_pct > 10 ? `${sentimentData.sentiment_distribution.positive_pct}%` : ''}
+                                            </div>
+                                            <div
+                                                style={{ width: `${sentimentData.sentiment_distribution.neutral_pct}%` }}
+                                                className="bg-slate-400 h-full text-[9px] text-white font-bold flex items-center justify-center"
+                                                title={`เป็นกลาง / ทั่วไป: ${sentimentData.sentiment_distribution.neutral_pct}%`}
+                                            >
+                                                {sentimentData.sentiment_distribution.neutral_pct > 10 ? `${sentimentData.sentiment_distribution.neutral_pct}%` : ''}
+                                            </div>
+                                            <div
+                                                style={{ width: `${sentimentData.sentiment_distribution.negative_pct}%` }}
+                                                className="bg-amber-500 h-full text-[9px] text-white font-bold flex items-center justify-center"
+                                                title={`ข้อเสนอแนะเพื่อการพัฒนา: ${sentimentData.sentiment_distribution.negative_pct}%`}
+                                            >
+                                                {sentimentData.sentiment_distribution.negative_pct > 10 ? `${sentimentData.sentiment_distribution.negative_pct}%` : ''}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-[10px] text-slate-500 pt-0.5">
+                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> เชิงบวก/ประทับใจ ({sentimentData.sentiment_distribution.positive_pct}%)</span>
+                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span> เป็นกลาง ({sentimentData.sentiment_distribution.neutral_pct}%)</span>
+                                            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> ข้อเสนอแนะเชิงพัฒนา ({sentimentData.sentiment_distribution.negative_pct}%)</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Executive Qualitative Summary */}
+                                {sentimentData.executive_summary && (
+                                    <div className="p-3.5 rounded-xl bg-white border border-indigo-100 text-slate-800 leading-relaxed shadow-2xs">
+                                        <strong className="text-indigo-950 block mb-1">📝 สรุปข้อคิดเห็นเชิงคุณภาพสำหรับรายงาน บทที่ 4 และ 5:</strong>
+                                        <p>{sentimentData.executive_summary}</p>
+                                    </div>
+                                )}
+
+                                {/* Key Themes */}
+                                {sentimentData.key_themes?.length > 0 && (
+                                    <div>
+                                        <strong className="text-slate-900 block mb-1.5">🎯 ประเด็นหลักที่ผู้เข้าร่วมกล่าวถึง (Key Themes):</strong>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {sentimentData.key_themes.map((theme, idx) => (
+                                                <div key={idx} className="p-2.5 rounded-xl bg-white border border-purple-100 text-[11px]">
+                                                    <div className="flex items-center justify-between font-bold text-purple-950">
+                                                        <span>{theme.theme}</span>
+                                                        <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px]">{theme.count} ความเห็น</span>
+                                                    </div>
+                                                    {theme.sample && (
+                                                        <p className="text-slate-500 italic mt-1">"{theme.sample}"</p>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {(!comments || comments.length === 0) ? (
                             <p className="text-xs text-slate-400 py-6 text-center italic">

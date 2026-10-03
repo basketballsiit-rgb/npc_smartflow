@@ -456,5 +456,382 @@ Write the report in Thai. Include sections for:
             ],
         ];
     }
+
+    /**
+     * Smart Budget Routing: Recommend optimal vocational funding source based on project details.
+     */
+    public function recommendFundingSource(string $title, string $objectives = '', array $items = [], ?float $budget = null): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_recommendations', true);
+
+        $itemListStr = !empty($items) ? implode(', ', array_map(fn($i) => is_array($i) ? ($i['name'] ?? $i['description'] ?? '') : (string)$i, $items)) : 'ไม่ได้ระบุ';
+        $budgetText = $budget ? number_format($budget, 2) . ' บาท' : 'ไม่ระบุวงเงิน';
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $prompt = "คุณคือผู้เชี่ยวชาญด้านระบบการเงินและงบประมาณของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)
+วิเคราะห์ข้อมูลโครงการและแนะนำ 'แหล่งเงินงบประมาณ' (Funding Source) ที่ถูกต้องตามระเบียบพัสดุและการเงิน สอศ.
+ข้อมูลโครงการ:
+- ชื่อโครงการ: {$title}
+- วัตถุประสงค์: {$objectives}
+- รายการวัสดุ/ครุภัณฑ์/กิจกรรม: {$itemListStr}
+- วงเงินงบประมาณ: {$budgetText}
+
+แหล่งเงินงบประมาณหลักของวิทยาลัยอาชีวศึกษา:
+1. เงินอุดหนุนการจัดการเรียนการสอน (เงินอุดหนุนพัฒนาผู้เรียน / กิจกรรมพัฒนาคุณภาพผู้เรียน)
+2. เงินบำรุงการศึกษา (หมวดค่าตอบแทน ใช้สอย และวัสดุ)
+3. เงินรายได้สถานศึกษา
+4. เงินงบประมาณแผ่นดิน (งบดำเนินงาน / งบลงทุน)
+5. เงินบริจาค / กองทุนส่งเสริมการศึกษา
+
+ตอบกลับเป็น JSON Object เท่านั้น:
+{
+  \"recommended_source\": \"ชื่อแหล่งเงินที่เหมาะสมที่สุด\",
+  \"category\": \"หมวดรายจ่าย เช่น ค่าตอบแทนใช้สอยและวัสดุ หรือ ค่าครุภัณฑ์\",
+  \"confidence\": 95,
+  \"reasoning\": \"เหตุผลความสอดคล้องตามระเบียบอย่างกระชับ\",
+  \"alternative_sources\": [\"แหล่งเงินทางเลือกที่ 1\", \"แหล่งเงินทางเลือกที่ 2\"],
+  \"compliance_tips\": \"ข้อควรระวังหรือเงื่อนไขการเบิกจ่ายตามระเบียบ สอศ.\"
+}";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(20)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $prompt]]]]
+                    ]);
+
+                if ($response->successful()) {
+                    $rawText = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/ui', '', trim($rawText));
+                    $decoded = json_decode($cleanJson, true);
+                    if (is_array($decoded) && !empty($decoded['recommended_source'])) {
+                        return $decoded;
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini recommendFundingSource failed: ' . $e->getMessage());
+            }
+        }
+
+        // Rule-based vocational education fallback
+        $text = mb_strtolower($title . ' ' . $objectives . ' ' . $itemListStr);
+
+        if (preg_match('/(คอมพิวเตอร์|เซิร์ฟเวอร์|เครื่องปรับอากาศ|ยานยนต์|เครื่องจักร|ครุภัณฑ์|ลิฟต์|อาคาร|ปรับปรุงห้อง)/ui', $text)) {
+            return [
+                'recommended_source' => 'เงินบำรุงการศึกษา (หมวดค่าครุภัณฑ์ ที่ดินและสิ่งก่อสร้าง)',
+                'category' => 'งบลงทุน / ครุภัณฑ์',
+                'confidence' => 90,
+                'reasoning' => 'โครงการมีรายการจัดซื้อหรือปรับปรุงครุภัณฑ์/สิ่งก่อสร้าง จึงควรเบิกจ่ายจากงบหมวดค่าครุภัณฑ์ หรือเงินบำรุงการศึกษาที่มีรายการจัดซื้อรองรับ',
+                'alternative_sources' => ['เงินงบประมาณแผ่นดิน (งบลงทุน)', 'เงินรายได้สถานศึกษา'],
+                'compliance_tips' => 'ต้องจัดทำเอกสาร TOR และมีเกณฑ์เปรียบเทียบราคาตามระเบียบพัสดุภาครัฐ'
+            ];
+        }
+
+        if (preg_match('/(นักเรียน|นักศึกษา|ผู้เรียน|ทักษะ|อบรม|ค่าย|ศึกษาดูงาน|ทัศนศึกษา|สิ่งประดิษฐ์|แข่งขันทักษะ|ลูกเสือ|คุณธรรม)/ui', $text)) {
+            return [
+                'recommended_source' => 'เงินอุดหนุนการจัดการเรียนการสอน (กิจกรรมพัฒนาคุณภาพผู้เรียน)',
+                'category' => 'งบพัฒนาผู้เรียน (อุดหนุนรายหัว)',
+                'confidence' => 92,
+                'reasoning' => 'กิจกรรมมุ่งเน้นการพัฒนาทักษะวิชาชีพ คุณธรรม หรือศักยภาพผู้เรียนโดยตรง สอดคล้องกับระเบียบการใช้จ่ายเงินอุดหนุนรายหัวผู้เรียนของ สอศ.',
+                'alternative_sources' => ['เงินบำรุงการศึกษา', 'เงินรายได้สถานศึกษา'],
+                'compliance_tips' => 'ตรวจสอบว่าผู้เข้าร่วมเป็นนักเรียน/นักศึกษาที่มีสิทธิ์ และมีหลักฐานลายมือชื่อเข้าร่วมโครงการครบถ้วน'
+            ];
+        }
+
+        return [
+            'recommended_source' => 'เงินบำรุงการศึกษา (หมวดค่าตอบแทน ใช้สอยและวัสดุ)',
+            'category' => 'งบดำเนินงาน',
+            'confidence' => 85,
+            'reasoning' => 'โครงการเป็นการดำเนินงานตามภารกิจปกติของแผนก/งาน สามารถเบิกจ่ายจากเงินบำรุงการศึกษาในหมวดค่าใช้สอยหรือวัสดุได้ตามความจำเป็น',
+            'alternative_sources' => ['เงินรายได้สถานศึกษา', 'เงินอุดหนุนการจัดการเรียนการสอน'],
+            'compliance_tips' => 'ควรมีเอกสารใบเสนอราคาหรือประมาณการค่าใช้จ่ายประกอบการเสนอขออนุมัติโครงการ'
+        ];
+    }
+
+    /**
+     * AI-Assisted TOR Studio: Draft government standard Terms of Reference (TOR) specifications.
+     */
+    public function draftTor(string $itemName, string $category = 'วัสดุ/ครุภัณฑ์', float $estimatedPrice = 0, array $requirements = []): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_recommendations', true);
+        $reqStr = !empty($requirements) ? implode(', ', $requirements) : 'ตามมาตรฐานทางวิชาการและระเบียบพัสดุ';
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $prompt = "คุณคือนักวิชาการพัสดุมืออาชีพและผู้เชี่ยวชาญด้านระเบียบการจัดซื้อจัดจ้างภาครัฐ (พ.ร.บ. การจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560)
+ร่างขอบเขตของงานและรายละเอียดคุณลักษณะเฉพาะ (TOR) สำหรับ:
+- รายการพัสดุ/งาน: {$itemName}
+- หมวดหมู่: {$category}
+- วงเงินงบประมาณโดยประมาณ: " . number_format($estimatedPrice, 2) . " บาท
+- ความต้องการเบื้องต้น: {$reqStr}
+
+ข้อกำหนดสำคัญ:
+1. ห้ามระบุยี่ห้อสินค้า เว้นแต่มีคำว่า 'หรือเทียบเท่า' หรือ 'หรือมีคุณสมบัติดีกว่า' ตามระเบียบมาตรา 9
+2. กำหนดเกณฑ์คุณลักษณะเฉพาะเชิงฟังก์ชันการใช้งานอย่างชัดเจน
+3. ระบุระยะเวลารับประกันและการส่งมอบ
+
+ส่งคืนรูปแบบ JSON Object เท่านั้น:
+{
+  \"title\": \"ขอบเขตของงานและรายละเอียดคุณลักษณะเฉพาะ {$itemName}\",
+  \"purpose\": \"วัตถุประสงค์ของการจัดซื้อจัดจ้าง...\",
+  \"qualifications\": [\"คุณสมบัติผู้ยื่นข้อเสนอข้อที่ 1\", \"คุณสมบัติผู้ยื่นข้อเสนอข้อที่ 2\"],
+  \"specifications\": [
+    {\"label\": \"คุณลักษณะทั่วไป\", \"details\": \"รายละเอียดคุณลักษณะ...\"},
+    {\"label\": \"คุณลักษณะเฉพาะทางเทคนิค\", \"details\": \"รายละเอียดทางเทคนิค (ไม่ล็อกสเปก)...\"},
+    {\"label\": \"มาตรฐานความปลอดภัยและการรับรอง\", \"details\": \"มี มอก. หรือมาตรฐานสากลรับรอง\"}
+  ],
+  \"warranty\": \"รับประกันการใช้งานไม่น้อยกว่า 1 ปี พร้อมบริการตรวจเช็ค\",
+  \"delivery_days\": 30,
+  \"testing_and_acceptance\": \"ตรวจรับโดยคณะกรรมการตรวจรับพัสดุ เมื่อทดสอบการใช้งานสมบูรณ์ 100%\"
+}";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(25)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $prompt]]]]
+                    ]);
+
+                if ($response->successful()) {
+                    $rawText = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/ui', '', trim($rawText));
+                    $decoded = json_decode($cleanJson, true);
+                    if (is_array($decoded) && !empty($decoded['title'])) {
+                        return $decoded;
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini draftTor failed: ' . $e->getMessage());
+            }
+        }
+
+        // Rule-based fallback
+        return [
+            'title' => "ขอบเขตของงานและรายละเอียดคุณลักษณะเฉพาะ (TOR) {$itemName}",
+            'purpose' => "เพื่อจัดหา {$itemName} สำหรับใช้ในการเรียนการสอนและฝึกทักษะวิชาชีพของนักศึกษาให้มีคุณภาพตามมาตรฐาน",
+            'qualifications' => [
+                'เป็นนิติบุคคลหรือบุคคลธรรมดาที่มีอาชีพขายหรือรับจ้างพัสดุตามประกาศนี้',
+                'ไม่เป็นผู้ถูกระบุชื่อไว้ในบัญชีรายชื่อผู้ทิ้งงานของทางราชการ',
+                'มีประวัติการให้บริการและพร้อมดูแลหลังการขายตามเงื่อนไขที่กำหนด'
+            ],
+            'specifications' => [
+                [
+                    'label' => 'คุณลักษณะทั่วไป',
+                    'details' => "พัสดุ {$itemName} เป็นของใหม่ 100% ไม่เคยผ่านการใช้งานหรือการปรับสภาพมาก่อน มีความแข็งแรงทนทานตามมาตรฐานอุตสาหกรรม"
+                ],
+                [
+                    'label' => 'คุณลักษณะทางเทคนิคและสมรรถนะ',
+                    'details' => "มีความสามารถและประสิทธิภาพรองรับงานตามมาตรฐานการอาชีวศึกษา มีอุปกรณ์ประกอบการใช้งานครบชุดพร้อมใช้งานได้ทันที"
+                ],
+                [
+                    'label' => 'คู่มือและการฝึกอบรม',
+                    'details' => "มีคู่มือการใช้งานและบำรุงรักษาภาษาไทยหรือภาษาอังกฤษ พร้อมมีผู้เชี่ยวชาญสาธิตการใช้งานให้แก่บุคลากรผู้รับผิดชอบ"
+                ]
+            ],
+            'warranty' => 'รับประกันคุณภาพและความชำรุดบกพร่องไม่น้อยกว่า 1 ปี นับถัดจากวันตรวจรับมอบพัสดุ',
+            'delivery_days' => 30,
+            'testing_and_acceptance' => 'คณะกรรมการตรวจรับพัสดุจะดำเนินการทดสอบระบบและการใช้งานจนถูกต้องครบถ้วนสมบูรณ์ก่อนลงนามตรวจรับ'
+        ];
+    }
+
+    /**
+     * AI Compliance Check: Verify TOR text against Government Anti-Lock-in Regulations.
+     */
+    public function checkTorCompliance(string $torText): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_recommendations', true);
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $prompt = "คุณคือผู้ตรวจสอบพัสดุและนิติกรผู้เชี่ยวชาญด้านระเบียบการจัดซื้อจัดจ้างภาครัฐ (พ.ร.บ. การจัดซื้อจัดจ้างฯ พ.ศ. 2560 มาตรา 9)
+ตรวจสอบข้อความข้อกำหนดพัสดุ (TOR) ด้านล่างว่ามีความเสี่ยงในการ 'ล็อกสเปก' (Restricted Specification) หรือขัดต่อระเบียบหรือไม่:
+
+ข้อความ TOR:
+\"\"\"
+{$torText}
+\"\"\"
+
+เกณฑ์การตรวจสอบ:
+1. มีการระบุชื่อยี่ห้อ ตราสินค้า หรือรุ่นเฉพาะเจาะจง โดยไม่มีคำว่า 'หรือเทียบเท่า' หรือไม่
+2. มีการกำหนดขนาด มิติ หรือฟีเจอร์ที่เข้าข่ายมีผู้ผลิตเพียงรายเดียวในท้องตลาด (Exclusive Lock-in) หรือไม่
+3. เงื่อนไขการรับประกันและระยะเวลาส่งมอบมีความเป็นธรรมและเปิดกว้างต่อการแข่งขันหรือไม่
+
+ส่งคืนเป็น JSON Object เท่านั้น:
+{
+  \"compliance_status\": \"pass\" หรือ \"warning\" หรือ \"fail\",
+  \"compliance_score\": 90,
+  \"summary\": \"สรุปผลการตรวจสอบโดยรวมอย่างกระชับ\",
+  \"identified_risks\": [\"ข้อสังเกตจุดที่ 1\", \"ข้อสังเกตจุดที่ 2\"],
+  \"suggested_revisions\": [\"ข้อเสนอแนะในการปรับปรุงข้อความให้รัดกุม\"]
+}";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(25)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $prompt]]]]
+                    ]);
+
+                if ($response->successful()) {
+                    $rawText = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/ui', '', trim($rawText));
+                    $decoded = json_decode($cleanJson, true);
+                    if (is_array($decoded) && isset($decoded['compliance_status'])) {
+                        return $decoded;
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini checkTorCompliance failed: ' . $e->getMessage());
+            }
+        }
+
+        // Rule-based fallback check
+        $risks = [];
+        $suggestions = [];
+        $score = 95;
+        $status = 'pass';
+
+        // Check common brand names without 'หรือเทียบเท่า'
+        $brands = ['apple', 'intel', 'microsoft', 'dell', 'hp', 'cisco', 'sony', 'canon', 'toyota', 'honda', 'samsung'];
+        foreach ($brands as $brand) {
+            if (stripos($torText, $brand) !== false && stripos($torText, 'หรือเทียบเท่า') === false) {
+                $risks[] = "พบการระบุชื่อยี่ห้อ '{$brand}' โดยไม่มีข้อความ 'หรือเทียบเท่า' กำกับ ซึ่งอาจเข้าข่ายฝ่าฝืนมาตรา 9 แห่ง พ.ร.บ. การจัดซื้อจัดจ้างฯ 2560";
+                $suggestions[] = "เติมข้อความ 'หรือเทียบเท่า หรือมีคุณสมบัติดีกว่า' ต่อท้ายการระบุยี่ห้อ หรือเปลี่ยนไปใช้คุณลักษณะทางเทคนิคเชิงสมรรถนะแทน";
+                $score -= 20;
+            }
+        }
+
+        if (mb_strlen(trim($torText)) < 30) {
+            $risks[] = "ข้อความรายละเอียดสเปกสั้นเกินไป อาจทำให้ขาดความชัดเจนในการตรวจรับพัสดุ";
+            $suggestions[] = "เพิ่มรายละเอียดคุณลักษณะทางเทคนิคและเงื่อนไขการรับประกันให้ครอบคลุม";
+            $score -= 15;
+        }
+
+        if ($score < 70) {
+            $status = 'fail';
+        } elseif ($score < 90) {
+            $status = 'warning';
+        }
+
+        return [
+            'compliance_status' => $status,
+            'compliance_score' => max(0, $score),
+            'summary' => $status === 'pass'
+                ? 'สเปกมีความเป็นกลาง สอดคล้องกับระเบียบจัดซื้อจัดจ้างภาครัฐ ไม่พบความเสี่ยงการล็อกสเปกที่ชัดเจน'
+                : 'พบประเด็นความเสี่ยงที่อาจเข้าข่ายการกำหนดคุณลักษณะเฉพาะเจาะจง แนะนำให้ปรับปรุงตามข้อเสนอแนะ',
+            'identified_risks' => $risks,
+            'suggested_revisions' => $suggestions,
+        ];
+    }
+
+    /**
+     * AI Survey Analytics: Sentiment Analysis & Qualitative Clustering of Participant Feedback.
+     */
+    public function analyzeSurveySentiment(array $suggestions, array $ratings = []): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_recommendations', true);
+
+        $validSuggestions = array_values(array_filter($suggestions, fn($s) => !empty(trim((string)$s))));
+
+        if ($aiEnabled && !empty($apiKey) && !empty($validSuggestions)) {
+            $textList = implode("\n- ", array_slice($validSuggestions, 0, 40));
+            $prompt = "คุณคือนักวิจัยและผู้เชี่ยวชาญด้านการวิเคราะห์ความรู้สึก (Sentiment Analysis) และการประเมินโครงการทางการศึกษา
+วิเคราะห์ข้อคิดเห็นและข้อเสนอแนะของผู้เข้าร่วมโครงการด้านล่าง:
+- ข้อคิดเห็น:
+- {$textList}
+
+วิเคราะห์และตอบกลับในรูปแบบ JSON Object:
+{
+  \"sentiment_distribution\": {
+    \"positive_pct\": 75,
+    \"neutral_pct\": 15,
+    \"negative_pct\": 10
+  },
+  \"key_themes\": [
+    {\"theme\": \"ความพึงพอใจด้านเนื้อหา/วิทยากร\", \"sentiment\": \"positive\", \"count\": 12, \"sample\": \"วิทยากรถ่ายทอดได้เข้าใจง่ายมาก\"},
+    {\"theme\": \"การบริหารเวลาและสถานที่\", \"sentiment\": \"suggestion\", \"count\": 5, \"sample\": \"อยากให้เพิ่มเวลาในการฝึกปฏิบัติ\"}
+  ],
+  \"executive_summary\": \"สรุปข้อคิดเห็นเชิงคุณภาพสำหรับใส่ในรายงานการประเมินโครงการ บทที่ 4 และบทที่ 5...\",
+  \"actionable_recommendations\": [\"ข้อเสนอแนะเชิงรุกข้อที่ 1\", \"ข้อเสนอแนะเชิงรุกข้อที่ 2\"]
+}";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(25)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $prompt]]]]
+                    ]);
+
+                if ($response->successful()) {
+                    $rawText = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $cleanJson = preg_replace('/^```(?:json)?\s*|\s*```$/ui', '', trim($rawText));
+                    $decoded = json_decode($cleanJson, true);
+                    if (is_array($decoded) && isset($decoded['sentiment_distribution'])) {
+                        return $decoded;
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini analyzeSurveySentiment failed: ' . $e->getMessage());
+            }
+        }
+
+        // Rule-based sentiment analysis fallback
+        $total = count($validSuggestions);
+        if ($total === 0) {
+            return [
+                'sentiment_distribution' => ['positive_pct' => 100, 'neutral_pct' => 0, 'negative_pct' => 0],
+                'key_themes' => [],
+                'executive_summary' => 'ยังไม่มีข้อคิดเห็นเพิ่มเติมจากผู้ตอบแบบสอบถามในระบบ',
+                'actionable_recommendations' => ['เปิดช่องทางรับฟังความคิดเห็นเพิ่มเติมจากกลุ่มเป้าหมายในกิจกรรมครั้งถัดไป']
+            ];
+        }
+
+        $posCount = 0;
+        $sugCount = 0;
+        $neuCount = 0;
+
+        foreach ($validSuggestions as $text) {
+            if (preg_match('/(ดี|ยอดเยี่ยม|ชอบ|ประทับใจ|มีประโยชน์|เข้าใจง่าย|คุ้มค่า|ขอบคุณ)/ui', $text)) {
+                $posCount++;
+            } elseif (preg_match('/(ควร|อยากให้|ปรับปรุง|เพิ่ม|ช้า|ไม่พอ|น้อย|ติดขัด|แก้ไข)/ui', $text)) {
+                $sugCount++;
+            } else {
+                $neuCount++;
+            }
+        }
+
+        $posPct = round(($posCount / $total) * 100);
+        $sugPct = round(($sugCount / $total) * 100);
+        $neuPct = max(0, 100 - $posPct - $sugPct);
+
+        return [
+            'sentiment_distribution' => [
+                'positive_pct' => $posPct,
+                'neutral_pct' => $neuPct,
+                'negative_pct' => $sugPct,
+            ],
+            'key_themes' => [
+                [
+                    'theme' => 'ความพึงพอใจต่อผลสัมฤทธิ์และกิจกรรม',
+                    'sentiment' => 'positive',
+                    'count' => $posCount,
+                    'sample' => $validSuggestions[0] ?? 'กิจกรรมมีประโยชน์และสามารถนำไปใช้ได้จริง'
+                ],
+                [
+                    'theme' => 'ข้อเสนอแนะในการต่อยอดและพัฒนา',
+                    'sentiment' => 'suggestion',
+                    'count' => $sugCount,
+                    'sample' => 'เสนอให้จัดกิจกรรมต่อเนื่องและเพิ่มระยะเวลาปฏิบัติงานจริง'
+                ]
+            ],
+            'executive_summary' => "จากการวิเคราะห์ข้อคิดเห็นเชิงคุณภาพของผู้ตอบแบบสอบถามจำนวน {$total} ข้อความ พบว่าผู้เข้าร่วมโครงการส่วนใหญ่มีความรู้สึกเชิงบวกในสัดส่วนร้อยละ {$posPct}% สะท้อนความพึงพอใจในกระบวนการจัดกิจกรรมและเนื้อหาที่ได้รับ โดยมีข้อเสนอแนะเชิงพัฒนาคิดเป็นร้อยละ {$sugPct}% ซึ่งมุ่งเน้นการต่อยอดระยะเวลาจัดกิจกรรมและการนำไปประยุกต์ใช้ในการปฏิบัติงานจริง",
+            'actionable_recommendations' => [
+                'นำผลการประเมินเชิงบวกเป็นแนวทางในการรักษามาตรฐานกระบวนการดำเนินงาน',
+                'บูรณาการข้อเสนอแนะเชิงพัฒนาเข้าสู่การวางแผนโครงการในรอบปีการศึกษาถัดไปตามวงจร PDCA'
+            ]
+        ];
+    }
 }
 

@@ -6,7 +6,9 @@ use App\Models\Project;
 use App\Models\Procurement;
 use App\Models\ProcurementItem;
 use App\Models\RoutineBudgetPlan;
+use App\Models\AuditLog;
 use App\Services\DocumentNumberService;
+use App\Services\GeminiService;
 use Illuminate\Http\Request;
 
 class ProcurementController extends Controller
@@ -739,4 +741,41 @@ class ProcurementController extends Controller
             'inspectionCommittee' => $inspectionCommittee,
         ]);
     }
+
+    /**
+     * AI-Assisted TOR Studio: Draft Terms of Reference (TOR) technical specs.
+     */
+    public function aiDraftTor(Request $request, GeminiService $geminiService)
+    {
+        $validated = $request->validate([
+            'item_name' => 'required|string',
+            'category' => 'nullable|string',
+            'estimated_price' => 'nullable|numeric',
+            'requirements' => 'nullable|array',
+        ]);
+
+        $torData = $geminiService->draftTor(
+            itemName: $validated['item_name'],
+            category: $validated['category'] ?? 'วัสดุ/ครุภัณฑ์',
+            estimatedPrice: (float)($validated['estimated_price'] ?? 0),
+            requirements: $validated['requirements'] ?? []
+        );
+
+        return response()->json($torData);
+    }
+
+    /**
+     * AI Compliance Check: Verify TOR text against Anti-Lock-in Regulations.
+     */
+    public function aiCheckTorCompliance(Request $request, GeminiService $geminiService)
+    {
+        $validated = $request->validate([
+            'tor_text' => 'required|string',
+        ]);
+
+        $complianceResult = $geminiService->checkTorCompliance($validated['tor_text']);
+
+        return response()->json($complianceResult);
+    }
 }
+

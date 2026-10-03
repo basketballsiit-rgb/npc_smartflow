@@ -56,6 +56,9 @@ class Project extends Model
         'status',
         'current_approval_step',
         'approved_at',
+        'sealed_at',
+        'digital_seal_hash',
+        'verification_code',
     ];
 
     /**
@@ -86,8 +89,17 @@ class Project extends Model
             'allocated_budget' => 'decimal:2',
             'budget_approved_at' => 'datetime',
             'approved_at' => 'datetime',
+            'sealed_at' => 'datetime',
             'current_approval_step' => 'integer',
         ];
+    }
+
+    /**
+     * Get all audit trail logs for this project.
+     */
+    public function auditLogs()
+    {
+        return $this->morphMany(AuditLog::class, 'auditable')->latest('created_at');
     }
 
     /**
