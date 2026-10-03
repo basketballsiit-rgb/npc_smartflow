@@ -335,15 +335,19 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                 targets: data.targets,
                 action_plan: data.action_plan,
                 activities: data.activities,
+                allocated_budget: allocatedBudget || data.estimated_budget,
                 estimated_budget: allocatedBudget || data.estimated_budget,
             });
-            if (res.data?.success) {
-                setAuditResult(res.data.audit);
+            const auditData = res.data?.audit || res.data?.result;
+            if (res.data?.success && auditData) {
+                setAuditResult(auditData);
             } else {
+                setIsAuditModalOpen(false);
                 Swal.fire('แจ้งเตือน', res.data?.message || 'ไม่สามารถวิเคราะห์ความสอดคล้องได้', 'warning');
             }
         } catch (err) {
             console.error('Audit consistency error:', err);
+            setIsAuditModalOpen(false);
             Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อ AI Auditor กรุณาลองใหม่อีกครั้ง', 'error');
         } finally {
             setIsAuditing(false);

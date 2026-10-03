@@ -1160,11 +1160,11 @@ Write the report in Thai. Include sections for:
         $targets = (array)($projectData['targets'] ?? []);
         $allocatedBudget = (float)($projectData['allocated_budget'] ?? 0);
 
-        if ($this->apiKey) {
-            try {
-                $client = $this->createHttpClient();
-                $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$this->apiKey}";
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
 
+        if ($aiEnabled && !empty($apiKey)) {
+            try {
                 $prompt = "คุณคือผู้เชี่ยวชาญการตรวจสอบและประเมินคุณภาพข้อเสนอโครงการ (Project Proposal Auditor) ของสถานศึกษา สังกัดสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)\n"
                     . "จงวิเคราะห์ความสอดคล้องเชิงตรรกะ (Consistency & Logical Alignment) ของข้อเสนอโครงการนี้:\n"
                     . "- ชื่อโครงการ: {$title}\n"
@@ -1196,28 +1196,30 @@ Write the report in Thai. Include sections for:
                     . "  ]\n"
                     . "}";
 
-                $response = $client->post($url, [
-                    'json' => [
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->withoutVerifying()
+                    ->timeout(25)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
                         'contents' => [
                             ['parts' => [['text' => $prompt]]]
                         ],
                         'generationConfig' => [
                             'temperature' => 0.2,
-                            'maxOutputTokens' => 1200,
+                            'maxOutputTokens' => 1500,
                             'responseMimeType' => 'application/json'
                         ]
-                    ]
-                ]);
+                    ]);
 
-                if ($response->getStatusCode() === 200) {
-                    $body = json_decode($response->getBody(), true);
+                if ($response->successful()) {
+                    $body = $response->json();
                     $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
-                    $decoded = json_decode($text, true);
+                    $clean = preg_replace('/```(?:json)?\s*([\s\S]*?)\s*```/', '$1', trim($text));
+                    $decoded = json_decode($clean, true);
                     if ($decoded && is_array($decoded) && isset($decoded['score'])) {
                         return $decoded;
                     }
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::warning('Gemini Consistency Auditor Error: ' . $e->getMessage());
             }
         }
@@ -1378,11 +1380,11 @@ Write the report in Thai. Include sections for:
         $targetStr = !empty($targets['quantitative'][0]) ? $targets['quantitative'][0] : 'นักเรียน นักศึกษา และบุคลากร จำนวน 50 คน';
         $locationStr = !empty($location) ? $location : 'ณ วิทยาลัยสารพัดช่างน่าน';
 
-        if ($this->apiKey) {
-            try {
-                $client = $this->createHttpClient();
-                $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$this->apiKey}";
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
 
+        if ($aiEnabled && !empty($apiKey)) {
+            try {
                 $prompt = "คุณคือผู้เชี่ยวชาญการเขียนโครงการของสถานศึกษา สังกัดสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)\n"
                     . "จงปรับปรุงข้อความ '4 ขั้นตอนมาตรฐานวงจรคุณภาพ PDCA' ให้เข้ากับบริบทของโครงการนี้อย่างสมบูรณ์แบบ:\n"
                     . "- ชื่อโครงการ: {$title}\n"
@@ -1402,8 +1404,10 @@ Write the report in Thai. Include sections for:
                     . "  {\"step_name\": \"...\", \"q1\": false, \"q2\": false, \"q3\": false, \"q4\": true, \"target_count\": \"รายงาน 1 เล่ม\", \"location_name\": \"...\", \"budget_operating\": 0, \"budget_investment\": 0, \"budget_other\": 0, \"budget_subsidy\": 0}\n"
                     . "]";
 
-                $response = $client->post($url, [
-                    'json' => [
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->withoutVerifying()
+                    ->timeout(20)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
                         'contents' => [
                             ['parts' => [['text' => $prompt]]]
                         ],
@@ -1412,18 +1416,18 @@ Write the report in Thai. Include sections for:
                             'maxOutputTokens' => 1000,
                             'responseMimeType' => 'application/json'
                         ]
-                    ]
-                ]);
+                    ]);
 
-                if ($response->getStatusCode() === 200) {
-                    $body = json_decode($response->getBody(), true);
+                if ($response->successful()) {
+                    $body = $response->json();
                     $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
-                    $decoded = json_decode($text, true);
+                    $clean = preg_replace('/```(?:json)?\s*([\s\S]*?)\s*```/', '$1', trim($text));
+                    $decoded = json_decode($clean, true);
                     if ($decoded && is_array($decoded) && count($decoded) >= 4) {
                         return $decoded;
                     }
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 Log::warning('Gemini Contextual Standard Plan Error: ' . $e->getMessage());
             }
         }

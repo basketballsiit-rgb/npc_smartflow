@@ -2979,23 +2979,40 @@ class ProjectController extends Controller
      */
     public function auditConsistency(Request $request)
     {
-        $projectData = $request->validate([
-            'title' => 'required|string',
-            'objectives' => 'nullable|array',
-            'indicators' => 'nullable|array',
-            'action_plan' => 'nullable|array',
-            'activities' => 'nullable|array',
-            'targets' => 'nullable|array',
-            'allocated_budget' => 'nullable|numeric',
-        ]);
+        try {
+            $projectData = $request->all();
+            
+            // Allow title from request or fallback
+            if (empty($projectData['title']) && !empty($projectData['project_id'])) {
+                $p = Project::find($projectData['project_id']);
+                if ($p) {
+                    $projectData['title'] = $p->title;
+                }
+            }
 
-        $geminiService = app(\App\Services\GeminiService::class);
-        $result = $geminiService->auditProjectConsistency($projectData);
+            if (empty($projectData['title'])) {
+                $projectData['title'] = 'ข้อเสนอโครงการ';
+            }
 
-        return response()->json([
-            'success' => true,
-            'result' => $result,
-        ]);
+            if (!isset($projectData['allocated_budget']) && isset($projectData['estimated_budget'])) {
+                $projectData['allocated_budget'] = (float)$projectData['estimated_budget'];
+            }
+
+            $geminiService = app(\App\Services\GeminiService::class);
+            $result = $geminiService->auditProjectConsistency($projectData);
+
+            return response()->json([
+                'success' => true,
+                'audit' => $result,
+                'result' => $result,
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('auditConsistency Controller error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการตรวจสอบ: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
