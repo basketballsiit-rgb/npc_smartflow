@@ -1334,7 +1334,7 @@ ${itemsListText}
                                     : 'border-transparent text-slate-500 hover:text-purple-700 hover:bg-slate-50'
                             }`}
                         >
-                            <span>🛡️ แท็บที่ 5: ประวัติ & ตรารับรอง (Audit Trail)</span>
+                            <span>🛡️ แท็บที่ 3: ประวัติ & ตรารับรอง (Audit Trail)</span>
                             {project.sealed_at && (
                                 <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">✓ ตรารับรองแล้ว</span>
                             )}
@@ -2339,7 +2339,7 @@ ${itemsListText}
                         )
                     )}
 
-                    {/* Tab 5: Audit Trail & Digital Verification */}
+                    {/* Tab 3: Audit Trail & Digital Verification */}
                     {activeTab === 'audit' && (
                         <AuditTrailSection project={project} />
                     )}
