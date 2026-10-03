@@ -315,10 +315,10 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         const prevThaiYear = thaiYear - 1;
         
         const qLabels = {
-            1: `ไตรมาสที่ ๑ (ต.ค. - ธ.ค. ${prevThaiYear})`,
-            2: `ไตรมาสที่ ๒ (ม.ค. - มี.ค. ${thaiYear})`,
-            3: `ไตรมาสที่ ๓ (เม.ย. - มิ.ย. ${thaiYear})`,
-            4: `ไตรมาสที่ ๔ (ก.ค. - ก.ย. ${thaiYear})`,
+            1: `ไตรมาสที่ 1 (ต.ค. - ธ.ค. ${prevThaiYear})`,
+            2: `ไตรมาสที่ 2 (ม.ค. - มี.ค. ${thaiYear})`,
+            3: `ไตรมาสที่ 3 (เม.ย. - มิ.ย. ${thaiYear})`,
+            4: `ไตรมาสที่ 4 (ก.ค. - ก.ย. ${thaiYear})`,
         };
 
         if (qList.length === 1) {
@@ -330,26 +330,26 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         const startText = minQ === 1 ? `ต.ค. ${prevThaiYear}` : minQ === 2 ? `ม.ค. ${thaiYear}` : minQ === 3 ? `เม.ย. ${thaiYear}` : `ก.ค. ${thaiYear}`;
         const endText = maxQ === 1 ? `ธ.ค. ${prevThaiYear}` : maxQ === 2 ? `มี.ค. ${thaiYear}` : maxQ === 3 ? `มิ.ย. ${thaiYear}` : `ก.ย. ${thaiYear}`;
 
-        const qNumbersThai = qList.map(q => q === 1 ? '๑' : q === 2 ? '๒' : q === 3 ? '๓' : '๔').join(', ');
-        return `${startText} – ${endText} (ไตรมาสที่ ${qNumbersThai})`;
+        const qNumbers = qList.join(', ');
+        return `${startText} – ${endText} (ไตรมาสที่ ${qNumbers})`;
     };
 
     const applyQuarterToTimeIndicator = () => {
         const periodText = computeQuarterPeriodText();
         if (!periodText) {
-            Swal.fire('แจ้งเตือน', 'กรุณาติ๊กเลือกไตรมาส (๑, ๒, ๓, ๔) ในตารางแผนการปฏิบัติงาน (ข้อ ๑๑) ก่อนทำการเชื่อมโยง', 'info');
+            Swal.fire('แจ้งเตือน', 'กรุณาติ๊กเลือกไตรมาส (1, 2, 3, 4) ในตารางแผนการปฏิบัติงาน (ข้อ 11) ก่อนทำการเชื่อมโยง', 'info');
             return;
         }
         setData('indicators', {
             ...data.indicators,
             time: {
                 ...(data.indicators?.time || {}),
-                text: `ระยะเวลาดำเนินโครงการ: ${periodText} หรือดำเนินกิจกรรมให้แล้วเสร็จตามกำหนดเวลา ร้อยละ ๑๐๐`
+                text: `ระยะเวลาดำเนินโครงการ: ${periodText} หรือดำเนินกิจกรรมให้แล้วเสร็จตามกำหนดเวลา ร้อยละ 100`
             }
         });
         Swal.fire({
             title: '✨ เชื่อมโยงระยะเวลาสำเร็จ!',
-            text: `อัปเดตตัวชี้วัดด้านเวลา (ข้อ ๑๐.๓) เป็น "${periodText}" เรียบร้อยแล้ว`,
+            text: `อัปเดตตัวชี้วัดด้านเวลา (ข้อ 10.3) เป็น "${periodText}" เรียบร้อยแล้ว`,
             icon: 'success',
             timer: 2000,
             showConfirmButton: false
@@ -407,7 +407,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             });
             if (res.data?.success && res.data.action_plan) {
                 setData('action_plan', res.data.action_plan);
-                Swal.fire('✨ AI ปรับแต่งแผนปฏิบัติงานสำเร็จ!', 'ปรับปรุง ๔ ขั้นตอนตามบริบทโครงการ พร้อมใส่ประมาณการงบประมาณเรียบร้อยแล้ว', 'success');
+                Swal.fire('✨ AI ปรับแต่งแผนปฏิบัติงานสำเร็จ!', 'ปรับปรุง 4 ขั้นตอนตามบริบทโครงการ พร้อมใส่ประมาณการงบประมาณเรียบร้อยแล้ว', 'success');
             } else {
                 Swal.fire('แจ้งเตือน', 'ไม่สามารถปรับแต่งแผนได้ในขณะนี้', 'warning');
             }
@@ -713,7 +713,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         if (isActionPlanOverBudget) {
             Swal.fire({
                 title: '⚠️ งบประมาณในแผนปฏิบัติงานเกินวงเงินจัดสรร!',
-                html: `ยอดรวมในแผนปฏิบัติงาน (ข้อ ๑๑) คือ <b style="color: #e11d48;">${actionPlanTotal.toLocaleString()}</b> บาท<br/>เกินกว่าวงเงินที่ได้รับการจัดสรร <b style="color: #047857;">${allocatedBudget.toLocaleString()}</b> บาท (เกินอยู่ <b style="color: #e11d48;">${(actionPlanTotal - allocatedBudget).toLocaleString()}</b> บาท)<br/><br/>กรุณาปรับลดงบประมาณในข้อ ๑๑ ให้ไม่เกินวงเงินที่จัดสรรก่อนบันทึก`,
+                html: `ยอดรวมในแผนปฏิบัติงาน (ข้อ 11) คือ <b style="color: #e11d48;">${actionPlanTotal.toLocaleString()}</b> บาท<br/>เกินกว่าวงเงินที่ได้รับการจัดสรร <b style="color: #047857;">${allocatedBudget.toLocaleString()}</b> บาท (เกินอยู่ <b style="color: #e11d48;">${(actionPlanTotal - allocatedBudget).toLocaleString()}</b> บาท)<br/><br/>กรุณาปรับลดงบประมาณในข้อ 11 ให้ไม่เกินวงเงินที่จัดสรรก่อนบันทึก`,
                 icon: 'error',
                 confirmButtonColor: '#ef4444',
                 confirmButtonText: 'รับทราบและกลับไปแก้ไข'
@@ -743,7 +743,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         if (isActionPlanOverBudget) {
             Swal.fire({
                 title: '⚠️ ไม่สามารถยื่นขออนุมัติได้!',
-                html: `ยอดรวมในแผนปฏิบัติงาน (ข้อ ๑๑) คือ <b style="color: #e11d48;">${actionPlanTotal.toLocaleString()}</b> บาท<br/>เกินกว่าวงเงินที่ได้รับการจัดสรร <b style="color: #047857;">${allocatedBudget.toLocaleString()}</b> บาท (เกินอยู่ <b style="color: #e11d48;">${(actionPlanTotal - allocatedBudget).toLocaleString()}</b> บาท)<br/><br/>กรุณาปรับลดงบประมาณในข้อ ๑๑ ให้ไม่เกินวงเงินที่จัดสรรก่อนยื่นเสนอ`,
+                html: `ยอดรวมในแผนปฏิบัติงาน (ข้อ 11) คือ <b style="color: #e11d48;">${actionPlanTotal.toLocaleString()}</b> บาท<br/>เกินกว่าวงเงินที่ได้รับการจัดสรร <b style="color: #047857;">${allocatedBudget.toLocaleString()}</b> บาท (เกินอยู่ <b style="color: #e11d48;">${(actionPlanTotal - allocatedBudget).toLocaleString()}</b> บาท)<br/><br/>กรุณาปรับลดงบประมาณในข้อ 11 ให้ไม่เกินวงเงินที่จัดสรรก่อนยื่นเสนอ`,
                 icon: 'error',
                 confirmButtonColor: '#ef4444',
                 confirmButtonText: 'รับทราบและกลับไปแก้ไข'
@@ -945,7 +945,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     }}
                                     className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${openGroups.g1 ? 'bg-purple-100 border-purple-300 text-purple-900 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                                 >
-                                    ๑. ข้อมูลทั่วไป & ยุทธศาสตร์ (๑-๓)
+                                    1. ข้อมูลทั่วไป & ยุทธศาสตร์ (1-3)
                                 </button>
                                 <button
                                     type="button"
@@ -955,7 +955,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     }}
                                     className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${openGroups.g2 ? 'bg-purple-100 border-purple-300 text-purple-900 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                                 >
-                                    ๒. วัตถุประสงค์ & กลุ่มเป้าหมาย (๔-๗)
+                                    2. วัตถุประสงค์ & กลุ่มเป้าหมาย (4-7)
                                 </button>
                                 <button
                                     type="button"
@@ -965,7 +965,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     }}
                                     className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${openGroups.g3 ? 'bg-purple-100 border-purple-300 text-purple-900 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                                 >
-                                    ๓. แผนงาน & งบประมาณ (๘-๑๒)
+                                    3. แผนงาน & งบประมาณ (8-12)
                                 </button>
                                 <button
                                     type="button"
@@ -975,7 +975,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     }}
                                     className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${openGroups.g4 ? 'bg-purple-100 border-purple-300 text-purple-900 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                                 >
-                                    ๔. การประเมิน & ลงนาม (๑๓-๑๔)
+                                    4. การประเมิน & ลงนาม (13-14)
                                 </button>
                             </div>
 
@@ -1000,7 +1000,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <fieldset className="space-y-6 border-0 p-0 m-0">
 
-                            {/* Accordion Group 1: ข้อมูลทั่วไป ยุทธศาสตร์ และหลักการ (หัวข้อ ๑ - ๓) */}
+                            {/* Accordion Group 1: ข้อมูลทั่วไป ยุทธศาสตร์ และหลักการ (หัวข้อ 1 - 3) */}
                             <div id="group-g1" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
                                 <button
                                     type="button"
@@ -1009,20 +1009,20 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className="w-9 h-9 rounded-2xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                                            ๑
+                                            1
                                         </span>
                                         <div>
                                             <h3 className="text-base font-black text-purple-950">
-                                                กลุ่มที่ ๑ : ข้อมูลทั่วไป ยุทธศาสตร์ และหลักการและเหตุผล
+                                                กลุ่มที่ 1 : ข้อมูลทั่วไป ยุทธศาสตร์ และหลักการและเหตุผล
                                             </h3>
                                             <p className="text-xs text-purple-700">
-                                                หัวข้อที่ ๑ (ข้อมูลพื้นฐาน & ผู้เสนอ) • หัวข้อที่ ๒ (ยุทธศาสตร์) • หัวข้อที่ ๓ (หลักการและเหตุผล)
+                                                หัวข้อที่ 1 (ข้อมูลพื้นฐาน & ผู้เสนอ) • หัวข้อที่ 2 (ยุทธศาสตร์) • หัวข้อที่ 3 (หลักการและเหตุผล)
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hidden sm:inline-block">
-                                            หัวข้อ ๑ - ๓
+                                            หัวข้อ 1 - 3
                                         </span>
                                         <span className="w-8 h-8 rounded-full bg-white border border-purple-200 text-purple-800 flex items-center justify-center text-sm font-bold shadow-2xs">
                                             {openGroups.g1 ? '▲' : '▼'}
@@ -1451,7 +1451,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             )}
                             </div>
 
-                            {/* Accordion Group 2: วัตถุประสงค์ ตัวชี้วัด และกลุ่มเป้าหมาย (หัวข้อ ๔ - ๗) */}
+                            {/* Accordion Group 2: วัตถุประสงค์ ตัวชี้วัด และกลุ่มเป้าหมาย (หัวข้อ 4 - 7) */}
                             <div id="group-g2" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
                                 <button
                                     type="button"
@@ -1460,20 +1460,20 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className="w-9 h-9 rounded-2xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                                            ๒
+                                            2
                                         </span>
                                         <div>
                                             <h3 className="text-base font-black text-purple-950">
-                                                กลุ่มที่ ๒ : วัตถุประสงค์ ผลผลิต ผลลัพธ์ และกลุ่มเป้าหมาย
+                                                กลุ่มที่ 2 : วัตถุประสงค์ ผลผลิต ผลลัพธ์ และกลุ่มเป้าหมาย
                                             </h3>
                                             <p className="text-xs text-purple-700">
-                                                หัวข้อที่ ๔ (วัตถุประสงค์) • หัวข้อที่ ๕ (ผลผลิต) • หัวข้อที่ ๖ (ผลลัพธ์) • หัวข้อที่ ๗ (กลุ่มเป้าหมาย ปริมาณ & คุณภาพ)
+                                                หัวข้อที่ 4 (วัตถุประสงค์) • หัวข้อที่ 5 (ผลผลิต) • หัวข้อที่ 6 (ผลลัพธ์) • หัวข้อที่ 7 (กลุ่มเป้าหมาย ปริมาณ & คุณภาพ)
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hidden sm:inline-block">
-                                            หัวข้อ ๔ - ๗
+                                            หัวข้อ 4 - 7
                                         </span>
                                         <span className="w-8 h-8 rounded-full bg-white border border-purple-200 text-purple-800 flex items-center justify-center text-sm font-bold shadow-2xs">
                                             {openGroups.g2 ? '▲' : '▼'}
@@ -1740,7 +1740,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             )}
                             </div>
 
-                            {/* Accordion Group 3: สถานที่ ประโยชน์ แผน และงบประมาณ (หัวข้อ ๘ - ๑๒) */}
+                            {/* Accordion Group 3: สถานที่ ประโยชน์ แผน และงบประมาณ (หัวข้อ 8 - 12) */}
                             <div id="group-g3" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
                                 <button
                                     type="button"
@@ -1749,11 +1749,11 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className="w-9 h-9 rounded-2xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                                            ๓
+                                            3
                                         </span>
                                         <div>
                                             <h3 className="text-base font-black text-purple-950 flex items-center gap-2">
-                                                <span>กลุ่มที่ ๓ : แผนงาน ตัวชี้วัด 4 มิติ และรายละเอียดงบประมาณ</span>
+                                                <span>กลุ่มที่ 3 : แผนงาน ตัวชี้วัด 4 มิติ และรายละเอียดงบประมาณ</span>
                                                 {isActionPlanOverBudget && (
                                                     <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 animate-pulse">
                                                         ⚠️ งบแผนเกินวงเงิน
@@ -1761,13 +1761,13 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 )}
                                             </h3>
                                             <p className="text-xs text-purple-700">
-                                                หัวข้อที่ ๘ (สถานที่) • หัวข้อที่ ๙ (ผลที่คาดว่าจะได้รับ) • หัวข้อที่ ๑๐ (ตัวชี้วัด ๔ มิติ) • หัวข้อที่ ๑๑ (ตารางแผนปฏิบัติงาน & ไตรมาส) • หัวข้อที่ ๑๒ (หมวดเงิน & สัญญายืมเงิน/จัดซื้อ)
+                                                หัวข้อที่ 8 (สถานที่) • หัวข้อที่ 9 (ผลที่คาดว่าจะได้รับ) • หัวข้อที่ 10 (ตัวชี้วัด 4 มิติ) • หัวข้อที่ 11 (ตารางแผนปฏิบัติงาน & ไตรมาส) • หัวข้อที่ 12 (หมวดเงิน & สัญญายืมเงิน/จัดซื้อ)
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hidden sm:inline-block">
-                                            หัวข้อ ๘ - ๑๒
+                                            หัวข้อ 8 - 12
                                         </span>
                                         <span className="w-8 h-8 rounded-full bg-white border border-purple-200 text-purple-800 flex items-center justify-center text-sm font-bold shadow-2xs">
                                             {openGroups.g3 ? '▲' : '▼'}
@@ -1981,7 +1981,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                     การวิเคราะห์ช่วงเวลาดำเนินโครงการจากไตรมาส (Quarter Mapping)
                                                 </h4>
                                                 <p className="text-[11px] text-slate-500">
-                                                    คำนวณช่วงเวลาดำเนินโครงการอัตโนมัติตามไตรมาสที่ติ๊กเลือก (๑, ๒, ๓, ๔) ในตาราง
+                                                    คำนวณช่วงเวลาดำเนินโครงการอัตโนมัติตามไตรมาสที่ติ๊กเลือก (1, 2, 3, 4) ในตาราง
                                                 </p>
                                             </div>
                                         </div>
@@ -1989,9 +1989,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                             type="button"
                                             onClick={applyQuarterToTimeIndicator}
                                             className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-                                            title="อัปเดตระยะเวลาเข้าสู่ตัวชี้วัดข้อ ๑๐.๓ เชิงเวลา อัตโนมัติ"
+                                            title="อัปเดตระยะเวลาเข้าสู่ตัวชี้วัดข้อ 10.3 เชิงเวลา อัตโนมัติ"
                                         >
-                                            <span>✨</span> เชื่อมโยงไตรมาสสู่ตัวชี้วัดด้านเวลา (ข้อ ๑๐.๓)
+                                            <span>✨</span> เชื่อมโยงไตรมาสสู่ตัวชี้วัดด้านเวลา (ข้อ 10.3)
                                         </button>
                                     </div>
 
@@ -2009,7 +2009,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                                 : 'bg-slate-100 text-slate-400 border-slate-200 opacity-60'
                                                         }`}
                                                     >
-                                                        ไตรมาส {q === 1 ? '๑' : q === 2 ? '๒' : q === 3 ? '๓' : '๔'}
+                                                        ไตรมาส {q}
                                                     </span>
                                                 );
                                             })}
@@ -2070,7 +2070,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                             </div>
                                             <div className="text-slate-300 font-bold text-base">/</div>
                                             <div className="text-right">
-                                                <span className="text-[10px] text-slate-500 font-sans block">ยอดในแผน (ข้อ ๑๑)</span>
+                                                <span className="text-[10px] text-slate-500 font-sans block">ยอดในแผน (ข้อ 11)</span>
                                                 <span className={`font-black text-sm ${isActionPlanOverBudget ? 'text-rose-600' : 'text-purple-900'}`}>
                                                     {actionPlanTotal.toLocaleString()} ฿
                                                 </span>
@@ -2993,7 +2993,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             )}
                             </div>
 
-                            {/* Accordion Group 4: การประเมินผล และการลงนาม (หัวข้อ ๑๓ - ๑๔) */}
+                            {/* Accordion Group 4: การประเมินผล และการลงนาม (หัวข้อ 13 - 14) */}
                             <div id="group-g4" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
                                 <button
                                     type="button"
@@ -3002,20 +3002,20 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 >
                                     <div className="flex items-center gap-3">
                                         <span className="w-9 h-9 rounded-2xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
-                                            ๔
+                                            4
                                         </span>
                                         <div>
                                             <h3 className="text-base font-black text-purple-950">
-                                                กลุ่มที่ ๔ : ผู้รับผิดชอบ และการติดตามประเมินผลโครงการ
+                                                กลุ่มที่ 4 : ผู้รับผิดชอบ และการติดตามประเมินผลโครงการ
                                             </h3>
                                             <p className="text-xs text-purple-700">
-                                                หัวข้อที่ ๑๓ (ผู้รับผิดชอบ/ลงนาม) • หัวข้อที่ ๑๔ (วิธีการติดตามและประเมินผล)
+                                                หัวข้อที่ 13 (ผู้รับผิดชอบ/ลงนาม) • หัวข้อที่ 14 (วิธีการติดตามและประเมินผล)
                                             </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hidden sm:inline-block">
-                                            หัวข้อ ๑๓ - ๑๔
+                                            หัวข้อ 13 - 14
                                         </span>
                                         <span className="w-8 h-8 rounded-full bg-white border border-purple-200 text-purple-800 flex items-center justify-center text-sm font-bold shadow-2xs">
                                             {openGroups.g4 ? '▲' : '▼'}
@@ -3239,7 +3239,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             </span>
                         </div>
                         <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
-                            <span className="text-slate-500 font-bold">แผนปฏิบัติงาน (ข้อ ๑๑):</span>
+                            <span className="text-slate-500 font-bold">แผนปฏิบัติงาน (ข้อ 11):</span>
                             <span className={`font-black text-sm ${isActionPlanOverBudget ? 'text-rose-600 animate-pulse' : 'text-slate-800'}`}>
                                 {actionPlanTotal.toLocaleString()} <span className="text-[10px] font-normal">บาท</span>
                             </span>
