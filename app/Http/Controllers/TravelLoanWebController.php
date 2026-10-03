@@ -17,8 +17,10 @@ class TravelLoanWebController extends Controller
     {
         $validated = $request->validate([
             'funding_source_id' => 'required|exists:funding_sources,id',
-            'plan_doc_number' => 'nullable|string|max:100',
-            'plan_notes' => 'nullable|string|max:500',
+            'project_id'        => 'nullable|exists:projects,id',
+            'expense_type'      => 'nullable|string|max:150',
+            'plan_doc_number'   => 'nullable|string|max:100',
+            'plan_notes'        => 'nullable|string|max:500',
         ]);
 
         // Generate unified document number or use provided one
@@ -33,11 +35,13 @@ class TravelLoanWebController extends Controller
 
         $travelLoan->update([
             'funding_source_id' => $validated['funding_source_id'],
-            'plan_doc_number' => $docNumber,
-            'plan_cut_at' => now(),
-            'plan_cut_by' => Auth::id(),
-            'plan_notes' => $validated['plan_notes'] ?? null,
-            'loan_status' => 'plan_cut',
+            'project_id'        => $validated['project_id'] ?? null,
+            'expense_type'      => $validated['expense_type'] ?? null,
+            'plan_doc_number'   => $docNumber,
+            'plan_cut_at'       => now(),
+            'plan_cut_by'       => Auth::id(),
+            'plan_notes'        => $validated['plan_notes'] ?? null,
+            'loan_status'       => 'plan_cut',
         ]);
 
         \App\Services\NotificationService::notifyFinanceDisbursementNeeded($travelLoan);

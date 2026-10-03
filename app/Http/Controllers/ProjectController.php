@@ -2950,6 +2950,49 @@ class ProjectController extends Controller
             $data = $request->all();
             $data['title'] = $title;
 
+            if ($type === 'executive_brief') {
+                $projectId = $request->input('project_id');
+                $project = $projectId ? \App\Models\Project::with(['department', 'budget', 'fundingSource'])->find($projectId) : null;
+
+                $objText = '';
+                if ($project && !empty($project->objectives)) {
+                    $objs = is_array($project->objectives) ? $project->objectives : (json_decode($project->objectives, true) ?: [$project->objectives]);
+                    $objText = implode(' ', array_filter(array_map('trim', (array)$objs)));
+                }
+                if (empty($objText) && !empty($data['objectives'])) {
+                    $objText = is_array($data['objectives']) ? implode(' ', $data['objectives']) : $data['objectives'];
+                }
+                if (empty($objText)) {
+                    $objText = "เพื่อส่งเสริมและพัฒนาการจัดการเรียนการสอนและยกระดับสมรรถนะวิชาชีพของผู้เรียนและบุคลากร";
+                }
+
+                $targetText = '';
+                if ($project && !empty($project->targets)) {
+                    $targets = is_array($project->targets) ? $project->targets : (json_decode($project->targets, true) ?: [$project->targets]);
+                    $targetText = implode(' ', array_filter(array_map('trim', (array)$targets)));
+                }
+                if (empty($targetText) && !empty($data['targets'])) {
+                    $targetText = is_array($data['targets']) ? implode(' ', $data['targets']) : $data['targets'];
+                }
+                if (empty($targetText)) {
+                    $targetText = "นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษา วิทยาลัยสารพัดช่างน่าน จำนวนประมาณ 50-100 คน";
+                }
+
+                $budgetVal = $project ? (float)($project->allocated_budget ?: $project->estimated_budget) : (float)($request->input('budget', 0));
+                $fundingName = $project?->fundingSource?->name ?: ($project?->budget?->fundingSource?->name ?? 'งบประมาณตามแผนปฏิบัติการ');
+                $budgetSummary = "วงเงินงบประมาณ " . number_format($budgetVal, 2) . " บาท (" . $fundingName . ") หมวดค่าตอบแทน ค่าใช้สอย และค่าวัสดุตามแผนงาน";
+
+                $brief = [
+                    'objective' => $objText,
+                    'target_group' => $targetText,
+                    'budget_summary' => $budgetSummary,
+                    'project_title' => $project?->title ?: $title,
+                    'department' => $project?->department?->name ?: ($data['department'] ?? 'ฝ่ายงานทั่วไป'),
+                ];
+
+                return response()->json(['success' => true, 'brief' => $brief]);
+            }
+
             if ($type === 'rationale') {
                 $content = $gemini->generateRationale($data);
                 return response()->json(['success' => true, 'content' => $content]);

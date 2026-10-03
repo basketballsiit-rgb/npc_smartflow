@@ -182,6 +182,8 @@ class DashboardController extends Controller
                     'due_date' => $tl->due_date ? $tl->due_date->format('d/m/Y') : null,
                     'return_days' => (int)$tl->return_days,
                     'project_id' => $tl->project_id,
+                    'project_title' => $tl->project?->title,
+                    'project_code' => $tl->project?->project_code,
                     'funding_source_id' => $tl->funding_source_id,
                     'funding_source_name' => $tl->fundingSource?->name,
                     'funding_source_code' => $tl->fundingSource?->code,
