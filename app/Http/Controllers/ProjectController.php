@@ -168,7 +168,7 @@ class ProjectController extends Controller
 
         AuditLog::record(
             action: 'CREATED',
-            auditable: $project,
+            model: $project,
             stepNumber: 1,
             notes: 'สร้างแบบร่างโครงการใหม่'
         );
@@ -296,7 +296,7 @@ class ProjectController extends Controller
 
         AuditLog::record(
             action: 'CREATED_PRELIMINARY',
-            auditable: $project,
+            model: $project,
             stepNumber: 1,
             notes: 'ยื่นเสนอคำของบประมาณโครงการเบื้องต้น'
         );
@@ -910,7 +910,7 @@ class ProjectController extends Controller
             $isPostApproval = ($project->current_approval_step > 1 || in_array($project->status, ['approved', 'in_progress', 'completed']));
             AuditLog::record(
                 action: $isPostApproval ? 'MODIFIED_AFTER_APPROVAL' : 'UPDATED',
-                auditable: $project,
+                model: $project,
                 stepNumber: $project->current_approval_step,
                 oldValues: $oldDiff,
                 newValues: $newDiff,

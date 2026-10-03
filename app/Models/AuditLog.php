@@ -55,21 +55,23 @@ class AuditLog extends Model
      */
     public static function record(
         string $action,
-        Model $model,
+        ?Model $model = null,
         ?array $oldValues = null,
         ?array $newValues = null,
         ?string $notes = null,
         ?int $stepNumber = null,
-        ?int $userId = null
+        ?int $userId = null,
+        ?Model $auditable = null
     ): self {
+        $targetModel = $model ?? $auditable;
         $user = auth()->user();
         $req = request();
 
         return self::create([
             'user_id' => $userId ?: $user?->id,
             'action' => $action,
-            'auditable_type' => get_class($model),
-            'auditable_id' => $model->getKey(),
+            'auditable_type' => $targetModel ? get_class($targetModel) : null,
+            'auditable_id' => $targetModel ? $targetModel->getKey() : null,
             'step_number' => $stepNumber,
             'old_values' => $oldValues,
             'new_values' => $newValues,
