@@ -833,5 +833,93 @@ Write the report in Thai. Include sections for:
             ]
         ];
     }
+
+    /**
+     * AI-Assisted Personnel Workload Analysis for Fair Distribution.
+     */
+    public function analyzePersonnelWorkload(array $personnelData): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_recommendations', true);
+
+        if (!$aiEnabled || empty($apiKey) || empty($personnelData)) {
+            return $this->getDynamicWorkloadFallback($personnelData);
+        }
+
+        $prompt = "คุณคือผู้เชี่ยวชาญด้านการบริหารทรัพยากรบุคคลและการจัดองค์กรของสถาบันอาชีวศึกษา (สอศ.)\n" .
+            "จงวิเคราะห์ภาระงาน (Workload Analysis) ของบุคลากรต่อไปนี้ เพื่อช่วยผู้บริหารประเมินการกระจายงานอย่างเป็นธรรม ป้องกันปัญหาคอขวด (Bottlenecks) และภาวะหมดไฟ (Burnout):\n\n" .
+            json_encode(array_slice($personnelData, 0, 30), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . "\n\n" .
+            "ตอบกลับเป็น JSON เท่านั้น รูปแบบ:\n" .
+            "{\n" .
+            "  \"workload_balance_score\": 82,\n" .
+            "  \"executive_summary\": \"สรุปภาพรวมภาระงานของบุคลากรในสถานศึกษา...\",\n" .
+            "  \"high_workload_alerts\": [\n" .
+            "    {\"name\": \"ชื่อ\", \"reason\": \"เหตุผลที่ภาระงานหนาแน่น\", \"recommendation\": \"ข้อแนะนำการปรับลด\"}\n" .
+            "  ],\n" .
+            "  \"balanced_capacity_personnel\": [\n" .
+            "    {\"name\": \"ชื่อ\", \"status\": \"ภาระงานสมดุล/สามารถรับงานส่งเสริมเพิ่มได้\"}\n" .
+            "  ],\n" .
+            "  \"fairness_recommendations\": [\n" .
+            "    \"ข้อเสนอแนะเชิงนโยบายเพื่อกระจายงานอย่างเป็นธรรมตามสมรรถนะ\"\n" .
+            "  ]\n" .
+            "}";
+
+        try {
+            $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    'contents' => [['parts' => [['text' => $prompt]]]]
+                ]);
+
+            if ($response->successful()) {
+                $rawText = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                if (preg_match('/\{[\s\S]*\}/', $rawText, $matches)) {
+                    $json = json_decode($matches[0], true);
+                    if ($json && isset($json['executive_summary'])) {
+                        return $json;
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Gemini Workload Analysis Error: ' . $e->getMessage());
+        }
+
+        return $this->getDynamicWorkloadFallback($personnelData);
+    }
+
+    private function getDynamicWorkloadFallback(array $personnelData): array
+    {
+        $highLoad = [];
+        $balanced = [];
+
+        foreach ($personnelData as $p) {
+            $score = ($p['positions_count'] ?? 1) * 2 + ($p['active_project_count'] ?? 0) * 3;
+            if ($score >= 8) {
+                $highLoad[] = [
+                    'name' => $p['name'] ?? 'ไม่ระบุ',
+                    'reason' => "รับผิดชอบหลายหน้าที่ (" . ($p['positions_count'] ?? 1) . " บทบาท) และขับเคลื่อนโครงการ " . ($p['active_project_count'] ?? 0) . " โครงการ",
+                    'recommendation' => 'ควรพิจารณาแต่งตั้งผู้ช่วยผู้ประสานงาน หรือมอบหมายโครงการบางส่วนให้เพื่อนร่วมงานในฝ่าย'
+                ];
+            } else {
+                $balanced[] = [
+                    'name' => $p['name'] ?? 'ไม่ระบุ',
+                    'status' => 'ภาระงานอยู่ในเกณฑ์มาตรฐาน มีศักยภาพร่วมเป็นกรรมการหรือผู้ขับเคลื่อนกิจกรรมเพิ่มได้'
+                ];
+            }
+        }
+
+        $balanceScore = count($highLoad) > 5 ? 74 : (count($highLoad) > 2 ? 85 : 92);
+
+        return [
+            'workload_balance_score' => $balanceScore,
+            'executive_summary' => "จากการประเมินภาระงานของบุคลากรจำนวน " . count($personnelData) . " ท่าน พบว่าดัชนีการกระจายงานเฉลี่ยอยู่ที่ " . $balanceScore . "/100 โดยมีบุคลากรที่มีบทบาทหน้าที่ซ้อนทับและมีโครงการในความรับผิดชอบสูงจำนวน " . count($highLoad) . " ท่าน ที่ควรได้รับการเกลี่ยภาระงาน และมีบุคลากรจำนวน " . count($balanced) . " ท่านที่มีศักยภาพพร้อมสนับสนุนโครงการเพิ่มเติม",
+            'high_workload_alerts' => array_slice($highLoad, 0, 5),
+            'balanced_capacity_personnel' => array_slice($balanced, 0, 5),
+            'fairness_recommendations' => [
+                'กระจายบทบาทกรรมการจัดซื้อจัดจ้างและตรวจรับพัสดุให้ครอบคลุมบุคลากรทุกท่าน เพื่อป้องกันคอขวดที่ครูท่านเดิม',
+                'ส่งเสริมระบบพี่เลี้ยง (Mentorship) ให้ครูรุ่นใหม่ร่วมรับผิดชอบโครงการคู่กับครูผู้มีประสบการณ์',
+                'ใช้ระบบ SmartFlow ในการตรวจสอบจำนวนโครงการค้างคาของผู้เสนอก่อนอนุมัติโครงการใหม่'
+            ]
+        ];
+    }
 }
 

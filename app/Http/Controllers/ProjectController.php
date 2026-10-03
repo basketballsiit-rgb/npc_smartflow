@@ -983,9 +983,15 @@ class ProjectController extends Controller
     {
         if (!$user) return false;
 
+        // Strict RBAC Rule: Proposer can NEVER approve their own project at any approval step
+        // to prevent conflict of interest even if holding multi-duty roles.
+        if ($user->id === $project->user_id) {
+            return false;
+        }
+
         switch ($step) {
             case 2: // ขั้นตอนที่ 2: หัวหน้างาน / หัวหน้าแผนกวิชา (ต้นสังกัดของผู้เสนอ)
-                return $user->isDepartmentHead($project->department_id) && $user->id !== $project->user_id;
+                return $user->isDepartmentHead($project->department_id);
 
             case 3: // ขั้นตอนที่ 3: หัวหน้างานวางแผนและงบประมาณ (ล็อกงบ/ผูกงบ)
                 return $user->isPlanHead();

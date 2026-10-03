@@ -3,6 +3,10 @@ import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
 import React, { useState, useEffect, Fragment } from 'react';
 import Swal from 'sweetalert2';
 import WorkflowKanbanBoard from '@/Components/WorkflowKanbanBoard';
+import AdminDataVisualization from '@/Components/AdminDataVisualization';
+import PendingTasksWidget from '@/Components/PendingTasksWidget';
+import WorkloadAnalyzerModal from '@/Components/WorkloadAnalyzerModal';
+import axios from 'axios';
 
 export default function Dashboard({ 
     role, 
@@ -2059,6 +2063,32 @@ export default function Dashboard({
 
     const [isApiDocsModalOpen, setIsApiDocsModalOpen] = useState(false);
     const [isGeneratingMockLoan, setIsGeneratingMockLoan] = useState(false);
+    const [isApiBannerCollapsed, setIsApiBannerCollapsed] = useState(true);
+
+    // AI Workload Analysis State
+    const [isWorkloadModalOpen, setIsWorkloadModalOpen] = useState(false);
+    const [workloadAnalysis, setWorkloadAnalysis] = useState(null);
+    const [isLoadingWorkload, setIsLoadingWorkload] = useState(false);
+
+    const handleRunWorkloadAnalysis = async () => {
+        setIsLoadingWorkload(true);
+        setIsWorkloadModalOpen(true);
+        try {
+            const res = await axios.post(route('admin.ai.workload_analysis'));
+            if (res.data?.success) {
+                setWorkloadAnalysis(res.data.analysis);
+            }
+        } catch (e) {
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาด',
+                text: 'ไม่สามารถประมวลผลการวิเคราะห์ภาระงานได้ กรุณาลองใหม่อีกครั้ง'
+            });
+            setIsWorkloadModalOpen(false);
+        } finally {
+            setIsLoadingWorkload(false);
+        }
+    };
 
     const handleGenerateMockLoan = () => {
         Swal.fire({
@@ -2085,6 +2115,34 @@ export default function Dashboard({
         const endpoint = apiStatus.endpoint || '/api/v1/travel-loans';
         const totalReceived = apiStatus.total_received ?? travelLoansList.length;
         const lastReceived = apiStatus.last_received_at || (travelLoansList[0]?.created_at || 'รอรับข้อมูลแรก');
+
+        if (isApiBannerCollapsed) {
+            return (
+                <div className="rounded-2xl border border-sky-200/80 bg-gradient-to-r from-sky-950 via-indigo-950 to-slate-900 px-4 py-2.5 text-white shadow-xs flex flex-wrap items-center justify-between gap-3 mb-5 text-xs">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-bold border border-emerald-400/30">
+                            <span className="relative flex h-1.5 w-1.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                            </span>
+                            API Active
+                        </span>
+                        <span className="font-bold text-slate-200">📡 npc_eleve สัญญายืมเงิน กค.101:</span>
+                        <span className="text-emerald-300 font-mono font-bold">รับแล้วสะสม {totalReceived} สัญญา</span>
+                        <span className="text-slate-400 text-[11px] hidden sm:inline">• ซิงค์ล่าสุด: {lastReceived}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsApiBannerCollapsed(false)}
+                            className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-sky-200 text-xs font-bold border border-white/15 transition cursor-pointer"
+                        >
+                            <span>▼ ขยายรายละเอียด & ทดสอบ</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        }
 
         return (
             <div className="rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-900 via-indigo-950 to-slate-900 p-4 sm:p-5 text-white shadow-md relative overflow-hidden mb-5">
@@ -2137,6 +2195,14 @@ export default function Dashboard({
                             title="ดูรายละเอียด Endpoint, Headers, JSON Schema และ cURL"
                         >
                             <span>🔌</span> ข้อมูลเชื่อมต่อ API
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsApiBannerCollapsed(true)}
+                            className="inline-flex items-center gap-1 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 text-xs font-bold transition cursor-pointer"
+                            title="ย่อแถบแจ้งเตือน"
+                        >
+                            <span>▲ ย่อ</span>
                         </button>
                     </div>
                 </div>
@@ -3447,13 +3513,13 @@ export default function Dashboard({
 
     const handleDeleteDepartment = (dept) => {
         Swal.fire({
-            title: 'ยืนยันการลบฝ่าย/สังกัดแผนก?',
-            text: `ต้องการลบ "${dept.name}" หรือไม่? หากมีโครงการหรืองานในสังกัด ระบบจะย้ายไปยังฝ่ายหลักสำรองให้อัตโนมัติ`,
+            title: 'ยืนยันจัดเก็บถาวร / ปิดการใช้งานฝ่าย?',
+            html: `ต้องการปิดการใช้งานและจัดเก็บถาวร "<b>${dept.name}</b>" หรือไม่?<br/><span class="text-xs text-slate-500 mt-2 block">💡 ระบบจะใช้ <b>Soft Delete</b> เพื่อรักษาความสัมพันธ์ทางข้อมูล (Data Integrity) ของโครงการและงบประมาณในอดีตไว้อย่างสมบูรณ์โดยไม่สูญหาย</span>`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#e11d48',
             cancelButtonColor: '#64748b',
-            confirmButtonText: '🗑️ ยืนยันลบข้อมูล',
+            confirmButtonText: '📦 ยืนยันจัดเก็บถาวร (Soft Delete)',
             cancelButtonText: 'ยกเลิก'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -3462,18 +3528,98 @@ export default function Dashboard({
                     onSuccess: (page) => {
                         const flashError = page?.props?.flash?.error;
                         if (flashError) {
-                            Swal.fire('ไม่สามารถลบได้', flashError, 'error');
+                            Swal.fire('ไม่สามารถดำเนินการได้', flashError, 'error');
                         } else {
-                            Swal.fire('ลบสำเร็จ', 'ลบข้อมูลฝ่าย/สังกัดแผนกเรียบร้อยแล้ว', 'success');
+                            Swal.fire('สำเร็จ', `จัดเก็บและปิดการใช้งาน "${dept.name}" เรียบร้อยแล้ว (ข้อมูลโครงการในอดีตยังคงสมบูรณ์)`, 'success');
                         }
                     },
                     onError: (errors) => {
-                        const errorMsg = Object.values(errors).join('\n') || 'เกิดข้อผิดพลาดในการลบข้อมูล';
+                        const errorMsg = Object.values(errors).join('\n') || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
                         Swal.fire('เกิดข้อผิดพลาด', errorMsg, 'error');
                     }
                 });
             }
         });
+    };
+
+    // Department Structure Reordering State & Handlers (Drag & Drop + Up/Down)
+    const [deptList, setDeptList] = useState(allDepartments);
+    useEffect(() => {
+        setDeptList(allDepartments);
+    }, [allDepartments]);
+
+    const [draggedSubId, setDraggedSubId] = useState(null);
+
+    const handleMoveSubDept = async (subDept, direction, mainDeptId) => {
+        const subs = deptList.filter(d => d.parent_id === mainDeptId).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        const currentIndex = subs.findIndex(s => s.id === subDept.id);
+        if (currentIndex === -1) return;
+
+        const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+        if (targetIndex < 0 || targetIndex >= subs.length) return;
+
+        const newSubs = [...subs];
+        const temp = newSubs[currentIndex];
+        newSubs[currentIndex] = newSubs[targetIndex];
+        newSubs[targetIndex] = temp;
+
+        const orderedIds = newSubs.map(s => s.id);
+
+        setDeptList(prev => {
+            return prev.map(d => {
+                const foundIdx = orderedIds.indexOf(d.id);
+                if (foundIdx !== -1) {
+                    return { ...d, order_index: foundIdx + 1 };
+                }
+                return d;
+            });
+        });
+
+        try {
+            await axios.post(route('admin.departments.reorder'), { ordered_ids: orderedIds });
+        } catch (e) {
+            console.error('Failed to save reorder', e);
+        }
+    };
+
+    const handleDragStart = (e, id) => {
+        e.dataTransfer.setData('text/plain', String(id));
+        setDraggedSubId(id);
+    };
+
+    const handleDropSubDept = async (e, targetId, mainDeptId) => {
+        e.preventDefault();
+        const sourceId = parseInt(e.dataTransfer.getData('text/plain'), 10) || draggedSubId;
+        if (!sourceId || sourceId === targetId) return;
+
+        const subs = deptList.filter(d => d.parent_id === mainDeptId).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        const sourceIndex = subs.findIndex(s => s.id === sourceId);
+        const targetIndex = subs.findIndex(s => s.id === targetId);
+        if (sourceIndex === -1 || targetIndex === -1) return;
+
+        const newSubs = [...subs];
+        const [moved] = newSubs.splice(sourceIndex, 1);
+        newSubs.splice(targetIndex, 0, moved);
+
+        const orderedIds = newSubs.map(s => s.id);
+
+        setDeptList(prev => {
+            return prev.map(d => {
+                const foundIdx = orderedIds.indexOf(d.id);
+                if (foundIdx !== -1) {
+                    return { ...d, order_index: foundIdx + 1 };
+                }
+                return d;
+            });
+        });
+
+        try {
+            await axios.post(route('admin.departments.reorder'), { ordered_ids: orderedIds });
+        } catch (err) {
+            console.error('Failed to save drag drop order', err);
+        } finally {
+            setDraggedSubId(null);
+        }
     };
 
     // Strategy Handlers
@@ -3845,6 +3991,9 @@ export default function Dashboard({
                         {/* External API Integration Status (npc_eleve) */}
                         {renderApiConnectionBanner()}
 
+                        {/* Actionable Pending Tasks Queue */}
+                        <PendingTasksWidget allProjectsMaster={allProjectsMaster} user={auth?.user} />
+
                 {/* Admin Stat Overview */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
                     <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
@@ -3869,6 +4018,9 @@ export default function Dashboard({
                     </div>
                 </div>
 
+                {/* Executive Data Visualization (Donut Chart for LINE & Bar Chart for Projects across 4 Main Divisions) */}
+                <AdminDataVisualization adminData={adminData} allProjectsMaster={allProjectsMaster} />
+
                 {/* Users Table Header */}
                 <div className="overflow-hidden rounded-2xl border border-purple-100 bg-white shadow-sm">
                     <div className="border-b border-purple-100 bg-purple-50/50 px-6 py-4 flex flex-wrap justify-between items-center gap-3">
@@ -3876,7 +4028,15 @@ export default function Dashboard({
                             <h3 className="text-lg font-bold text-slate-900">จัดการบุคลากร ผู้ใช้งาน และสิทธิ์ระบบ</h3>
                             <p className="text-xs text-slate-600">กำหนดชื่อ ตำแหน่งงาน สิทธิ์การใช้งาน และสถานะเปิด/ปิดสิทธิ์ รวมถึง LINE Notification</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={handleRunWorkloadAnalysis}
+                                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 px-4 py-2 text-sm font-bold text-white shadow-sm hover:from-purple-800 hover:to-indigo-800 transition-all hover:scale-105 cursor-pointer"
+                                title="วิเคราะห์ภาระงานบุคลากรรายบุคคลอย่างเป็นธรรมด้วย AI"
+                            >
+                                <span>🤖</span> AI วิเคราะห์ภาระงาน
+                            </button>
                             <button
                                 onClick={handleSyncAllLineUsers}
                                 disabled={isSyncingLine}
@@ -3914,19 +4074,53 @@ export default function Dashboard({
                                                     {u.role_display}
                                                 </span>
                                                 {u.positions && u.positions.length > 0 ? (
-                                                    u.positions.map((p, pIdx) => (
-                                                        <span 
-                                                            key={pIdx} 
-                                                            className={`px-2 py-0.5 rounded-md text-[10px] font-medium border flex items-center gap-1 ${
-                                                                p.is_primary 
-                                                                    ? 'bg-amber-50 text-amber-900 border-amber-300 font-bold' 
-                                                                    : 'bg-slate-50 text-slate-600 border-slate-200'
-                                                            }`}
-                                                        >
-                                                            {p.is_primary && <span>⭐</span>}
-                                                            <span>{p.formatted_title || p.position}</span>
-                                                        </span>
-                                                    ))
+                                                    (() => {
+                                                        const sortedPositions = [...u.positions].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+                                                        const visiblePositions = sortedPositions.slice(0, 2);
+                                                        const extraPositions = sortedPositions.slice(2);
+
+                                                        return (
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                {visiblePositions.map((p, pIdx) => (
+                                                                    <span 
+                                                                        key={pIdx} 
+                                                                        className={`px-2 py-0.5 rounded-md text-[10px] font-medium border flex items-center gap-1 ${
+                                                                            p.is_primary 
+                                                                                ? 'bg-amber-50 text-amber-900 border-amber-300 font-bold shadow-2xs' 
+                                                                                : 'bg-slate-50 text-slate-600 border-slate-200'
+                                                                        }`}
+                                                                        title={p.formatted_title || p.position}
+                                                                    >
+                                                                        {p.is_primary && <span>⭐</span>}
+                                                                        <span>{p.formatted_title || p.position}</span>
+                                                                    </span>
+                                                                ))}
+
+                                                                {extraPositions.length > 0 && (
+                                                                    <div className="relative group inline-block">
+                                                                        <span className="cursor-pointer inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300 hover:bg-purple-200 hover:border-purple-400 transition-all shadow-2xs">
+                                                                            +{extraPositions.length} บทบาท ▾
+                                                                        </span>
+                                                                        
+                                                                        {/* Hover Tooltip Popup */}
+                                                                        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:flex flex-col gap-1 p-2.5 bg-slate-900/95 backdrop-blur-md text-white text-xs rounded-xl shadow-2xl z-50 min-w-[220px] max-w-xs border border-slate-700 animate-in fade-in zoom-in-95 duration-150 pointer-events-none">
+                                                                            <div className="flex items-center justify-between border-b border-slate-700 pb-1 text-[11px] font-bold text-amber-300">
+                                                                                <span>📋 บทบาทหน้าที่เพิ่มเติม ({extraPositions.length})</span>
+                                                                            </div>
+                                                                            <div className="space-y-1 max-h-48 overflow-y-auto pt-1">
+                                                                                {extraPositions.map((ep, epIdx) => (
+                                                                                    <div key={epIdx} className="flex items-start gap-1.5 text-[11px] text-slate-200">
+                                                                                        <span className="text-purple-400 shrink-0 font-mono">•</span>
+                                                                                        <span>{ep.formatted_title || ep.position} {ep.department_name ? `(${ep.department_name})` : ''}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })()
                                                 ) : (
                                                     <span className="text-slate-400 text-[10px]">{u.position} ({u.department_name})</span>
                                                 )}
@@ -3998,8 +4192,10 @@ export default function Dashboard({
                         </button>
                     </div>
 
-                    {allDepartments.filter(d => !d.parent_id).map((mainDept, idx) => {
-                        const subDepts = allDepartments.filter(d => d.parent_id === mainDept.id);
+                    {(deptList && deptList.length > 0 ? deptList : allDepartments).filter(d => !d.parent_id).map((mainDept, idx) => {
+                        const subDepts = (deptList && deptList.length > 0 ? deptList : allDepartments)
+                            .filter(d => d.parent_id === mainDept.id)
+                            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
                         const totalUsersInMain = adminData.users.filter(u => u.department_id === mainDept.id || subDepts.some(s => s.id === u.department_id)).length;
 
                         return (
@@ -4041,8 +4237,9 @@ export default function Dashboard({
                                         <button
                                             onClick={() => handleDeleteDepartment(mainDept)}
                                             className="inline-flex items-center gap-1 rounded-xl bg-rose-500/80 hover:bg-rose-600 text-white px-3 py-1.5 text-xs font-bold transition-all"
+                                            title="จัดเก็บถาวร (Soft Delete) - รักษาประวัติโครงการและงบประมาณ"
                                         >
-                                            🗑️ ลบฝ่าย
+                                            📦 จัดเก็บฝ่าย
                                         </button>
                                     </div>
                                 </div>
@@ -4052,8 +4249,8 @@ export default function Dashboard({
                                     <table className="w-full text-left border-collapse">
                                         <thead>
                                             <tr className="border-b border-purple-100 bg-purple-50/40 text-xs font-bold uppercase text-purple-900">
-                                                <th className="px-6 py-2.5 w-16">ลำดับ</th>
-                                                <th className="px-6 py-2.5">กลุ่มงานย่อย / สาขาวิชาในสังกัด</th>
+                                                <th className="px-6 py-2.5 w-24">ลำดับ / สลับ</th>
+                                                <th className="px-6 py-2.5">กลุ่มงานย่อย / สาขาวิชาในสังกัด (คลิกลากเพื่อย้ายได้)</th>
                                                 <th className="px-6 py-2.5">จำนวนบุคลากร</th>
                                                 <th className="px-6 py-2.5 text-right">การจัดการ</th>
                                             </tr>
@@ -4067,17 +4264,53 @@ export default function Dashboard({
                                                 </tr>
                                             ) : (
                                                 subDepts.map((sub, sIdx) => (
-                                                    <tr key={sub.id} className="hover:bg-purple-50/20">
-                                                        <td className="px-6 py-3 font-bold text-slate-400 text-xs">{idx + 1}.{sIdx + 1}</td>
-                                                        <td className="px-6 py-3 font-medium text-slate-900 flex items-center gap-2">
-                                                            <span className="text-purple-400 font-mono">└─</span>
-                                                            <span>{sub.name}</span>
+                                                    <tr 
+                                                        key={sub.id} 
+                                                        draggable
+                                                        onDragStart={(e) => handleDragStart(e, sub.id)}
+                                                        onDragOver={(e) => e.preventDefault()}
+                                                        onDrop={(e) => handleDropSubDept(e, sub.id, mainDept.id)}
+                                                        className={`hover:bg-purple-50/30 transition-all ${draggedSubId === sub.id ? 'opacity-40 bg-purple-100' : ''}`}
+                                                    >
+                                                        <td className="px-6 py-3 font-bold text-slate-400 text-xs">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-slate-400 cursor-grab active:cursor-grabbing text-xs p-1 hover:bg-purple-100 rounded" title="คลิกลากเพื่อเปลี่ยนลำดับ (Drag & Drop)">⋮⋮</span>
+                                                                <span>{idx + 1}.{sIdx + 1}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-3 font-medium text-slate-900">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-purple-400 font-mono">└─</span>
+                                                                <span className="font-semibold text-slate-800">{sub.name}</span>
+                                                            </div>
                                                         </td>
                                                         <td className="px-6 py-3 text-slate-700 font-semibold">
                                                             {adminData.users.filter(u => u.department_id === sub.id).length} คน
                                                         </td>
                                                         <td className="px-6 py-3 text-right">
-                                                            <div className="flex items-center justify-end gap-2">
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                {/* Quick Reorder Up/Down Buttons */}
+                                                                <div className="flex items-center border border-purple-200 rounded-lg overflow-hidden bg-white shadow-2xs mr-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleMoveSubDept(sub, 'up', mainDept.id)}
+                                                                        disabled={sIdx === 0}
+                                                                        className="px-2 py-1 text-xs text-purple-700 hover:bg-purple-100 disabled:opacity-20 disabled:hover:bg-white"
+                                                                        title="เลื่อนขึ้น"
+                                                                    >
+                                                                        ▲
+                                                                    </button>
+                                                                    <div className="w-[1px] h-3.5 bg-purple-200" />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleMoveSubDept(sub, 'down', mainDept.id)}
+                                                                        disabled={sIdx === subDepts.length - 1}
+                                                                        className="px-2 py-1 text-xs text-purple-700 hover:bg-purple-100 disabled:opacity-20 disabled:hover:bg-white"
+                                                                        title="เลื่อนลง"
+                                                                    >
+                                                                        ▼
+                                                                    </button>
+                                                                </div>
                                                                 <button
                                                                     onClick={() => handleEditDepartment(sub)}
                                                                     className="inline-flex items-center gap-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 px-2.5 py-1 text-xs font-bold border border-purple-200"
@@ -4087,8 +4320,9 @@ export default function Dashboard({
                                                                 <button
                                                                     onClick={() => handleDeleteDepartment(sub)}
                                                                     className="inline-flex items-center gap-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 px-2.5 py-1 text-xs font-bold border border-rose-200"
+                                                                    title="จัดเก็บถาวร (Soft Delete) - ข้อมูลโครงการเดิมไม่สูญหาย"
                                                                 >
-                                                                    🗑️ ลบ
+                                                                    📦 จัดเก็บ
                                                                 </button>
                                                             </div>
                                                         </td>
@@ -4438,6 +4672,14 @@ export default function Dashboard({
                         </div>
                     </div>
                 )}
+
+                {/* AI Workload Analyzer Modal */}
+                <WorkloadAnalyzerModal
+                    isOpen={isWorkloadModalOpen}
+                    onClose={() => setIsWorkloadModalOpen(false)}
+                    isLoading={isLoadingWorkload}
+                    analysis={workloadAnalysis}
+                />
                     </div>
                 )}
             </div>

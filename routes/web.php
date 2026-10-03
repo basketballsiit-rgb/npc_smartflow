@@ -128,6 +128,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/departments', [AdminController::class, 'storeDepartment'])->name('admin.departments.store');
     Route::put('/admin/departments/{department}', [AdminController::class, 'updateDepartment'])->name('admin.departments.update');
     Route::delete('/admin/departments/{department}', [AdminController::class, 'deleteDepartment'])->name('admin.departments.delete');
+    Route::post('/admin/departments/{id}/restore', [AdminController::class, 'restoreDepartment'])->name('admin.departments.restore');
+    Route::post('/admin/departments/reorder', [AdminController::class, 'reorderDepartments'])->name('admin.departments.reorder');
+    Route::post('/admin/ai/workload-analysis', [AdminController::class, 'aiAnalyzeWorkload'])->name('admin.ai.workload_analysis');
 
     // Admin Strategy Routes
     Route::post('/admin/iqa-strategies', [AdminController::class, 'storeIqaStrategy'])->name('admin.iqa.store');

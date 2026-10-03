@@ -18,7 +18,8 @@ use App\Models\ExpenseClearing;
 use App\Models\TravelLoan;
 use App\Models\SystemSetting;
 use App\Models\IqaStrategy;
-use App\Models\OvecStrategy;
+use App\Models\AuditLog;
+use App\Services\GeminiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -802,7 +803,8 @@ class AdminController extends Controller
     }
 
     /**
-     * Delete department.
+     * Delete / Archive department (Soft Delete).
+     * Maintains full historical integrity for past projects, budgets, and audit logs.
      */
     public function deleteDepartment(Department $department)
     {
@@ -812,54 +814,114 @@ class AdminController extends Controller
 
         try {
             DB::transaction(function () use ($department) {
-                // หาฝ่ายหลักสำรอง (Fallback) เพื่อย้ายโครงการและบุคลากรไปอยู่ฝ่ายที่ถูกต้อง
-                $fallbackDeptId = $department->parent_id;
-                if (!$fallbackDeptId) {
-                    // หากเป็นฝ่ายหลัก ให้ย้ายไปฝ่ายยุทธศาสตร์และแผนงาน หรือฝ่ายหลักแรกสุดที่มี
-                    $fallbackDeptId = Department::where('id', '!=', $department->id)
-                        ->whereNull('parent_id')
-                        ->where('name', 'like', '%ยุทธศาสตร์%')
-                        ->value('id')
-                        ?: Department::where('id', '!=', $department->id)->whereNull('parent_id')->value('id');
+                // If archiving a main division, also soft-delete all its sub-departments
+                if (!$department->parent_id) {
+                    Department::where('parent_id', $department->id)->delete();
                 }
 
-                // 1. ปลอดภัย: ย้ายโครงการทั้งหมดที่ผูกกับฝ่ายนี้ ไปยังฝ่ายหลักสำรอง
-                Project::where('department_id', $department->id)->update([
-                    'department_id' => $fallbackDeptId
-                ]);
-
-                // 2. ปลอดภัย: ย้ายงบประมาณประจำ (Routine Budgets) ไปยังฝ่ายหลักสำรอง
-                RoutineBudgetPlan::where('department_id', $department->id)->update([
-                    'department_id' => $fallbackDeptId
-                ]);
-
-                // 3. ปลอดภัย: ย้ายบุคลากร (Users) ไปยังฝ่ายหลักสำรอง
-                User::where('department_id', $department->id)->update([
-                    'department_id' => $fallbackDeptId
-                ]);
-
-                // 4. ปลอดภัย: อัปเดตตำแหน่งงานใน user_positions
-                UserPosition::where('department_id', $department->id)->update([
-                    'department_id' => $fallbackDeptId
-                ]);
-                UserPosition::where('sub_department_id', $department->id)->update([
-                    'sub_department_id' => null
-                ]);
-
-                // 5. ปลอดภัย: ย้ายงานย่อยในฝ่ายนี้ (ถ้ามี) ไปสังกัด parent หรือยกระดับ
-                Department::where('parent_id', $department->id)->update([
-                    'parent_id' => $department->parent_id
-                ]);
-
-                // 6. ดำเนินการลบฝ่าย
+                // Soft-delete the department (Data Integrity Preserved)
                 $department->delete();
+
+                AuditLog::record(
+                    auth()->user(),
+                    'archive_department',
+                    "จัดเก็บถาวร/ปิดการใช้งานฝ่าย: {$department->name} (Soft Delete)",
+                    $department
+                );
             });
 
-            return redirect()->back()->with('success', 'ลบข้อมูลฝ่าย/สังกัดแผนกเรียบร้อยแล้ว');
+            return redirect()->back()->with('success', "จัดเก็บและปิดการใช้งาน \"{$department->name}\" เรียบร้อยแล้ว (ข้อมูลโครงการและงบประมาณในอดีตยังคงถูกรักษาความสัมพันธ์ไว้อย่างสมบูรณ์)");
         } catch (\Throwable $e) {
             Log::error('Delete Department Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
             return redirect()->back()->with('error', 'ไม่สามารถลบฝ่ายได้: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Restore an archived/soft-deleted department.
+     */
+    public function restoreDepartment($id)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนผู้ดูแลระบบ');
+        }
+
+        $dept = Department::withTrashed()->findOrFail($id);
+        $dept->restore();
+        if (!$dept->parent_id) {
+            Department::withTrashed()->where('parent_id', $dept->id)->restore();
+        }
+
+        AuditLog::record(auth()->user(), 'restore_department', "กู้คืนการใช้งานฝ่าย: {$dept->name}", $dept);
+        return redirect()->back()->with('success', "กู้คืนฝ่าย \"{$dept->name}\" กลับมาใช้งานเรียบร้อยแล้ว");
+    }
+
+    /**
+     * Reorder sub-departments (Drag & Drop persistence).
+     */
+    public function reorderDepartments(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['error' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+        }
+
+        $validated = $request->validate([
+            'ordered_ids' => 'required|array',
+            'ordered_ids.*' => 'integer',
+        ]);
+
+        foreach ($validated['ordered_ids'] as $index => $id) {
+            Department::where('id', $id)->update(['order_index' => $index + 1]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'บันทึกลำดับโครงสร้างเรียบร้อยแล้ว'
+        ]);
+    }
+
+    /**
+     * AI-Assisted Workload Analysis for Personnel.
+     */
+    public function aiAnalyzeWorkload(Request $request, GeminiService $gemini)
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isExecutive()) {
+            return response()->json(['error' => 'ไม่มีสิทธิ์เข้าถึง'], 403);
+        }
+
+        $users = User::with(['role', 'department', 'userPositions'])
+            ->where('is_suspended', false)
+            ->get();
+
+        $projects = Project::select('id', 'user_id', 'status', 'allocated_budget', 'estimated_budget', 'title')->get();
+
+        $personnelData = $users->map(function ($u) use ($projects) {
+            $userProjs = $projects->where('user_id', $u->id);
+            $activeProjs = $userProjs->whereNotIn('status', ['completed', 'cancelled']);
+            $budgetSum = $userProjs->sum(fn($p) => (float)($p->allocated_budget ?: $p->estimated_budget ?: 0));
+
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'role' => $u->role?->name ?? 'user',
+                'role_display' => $u->role_display ?? $u->role?->name ?? 'บุคลากร',
+                'department' => $u->department?->name ?? 'ไม่ระบุ',
+                'positions_count' => max(1, $u->userPositions->count()),
+                'primary_position' => $u->position ?: ($u->userPositions->first()?->position ?? 'เจ้าหน้าที่'),
+                'positions_list' => $u->userPositions->pluck('position')->toArray(),
+                'total_projects' => $userProjs->count(),
+                'active_project_count' => $activeProjs->count(),
+                'total_budget' => $budgetSum,
+            ];
+        })->toArray();
+
+        $analysis = $gemini->analyzePersonnelWorkload($personnelData);
+
+        return response()->json([
+            'success' => true,
+            'analysis' => $analysis,
+            'personnel_summary' => $personnelData,
+        ]);
     }
 
     /**
