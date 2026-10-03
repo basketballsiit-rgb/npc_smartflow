@@ -1151,11 +1151,52 @@ ${itemsListText}
                                     🚀 ยื่นขออนุมัติโครงการ (ส่งต่อขั้นที่ 2)
                                 </button>
                             )}
+
+                            {/* Quick Next-Step Action Button for Approved Projects */}
+                            {isPlanApproved && (auth?.user?.id === project.user_id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && (
+                                <>
+                                    {project.status === 'approved' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus('in_progress', 'ขั้นตอนที่ 4: ดำเนินกิจกรรม & ประเมินผลโครงการ')}
+                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                                            title="คลิกเพื่อส่งต่อโครงการไปยังขั้นตอนที่ 4: ดำเนินโครงการและประเมินผล"
+                                        >
+                                            <span>▶️</span> ส่งต่อขั้นที่ 4 (ประเมินผล)
+                                        </button>
+                                    )}
+                                    {(project.status === 'in_progress' || project.status === 'evaluating') && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus('reporting', 'ขั้นตอนที่ 5: สรุปเล่มรายงานผลโครงการ 5 บท')}
+                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-blue-600/25 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                                            title="คลิกเพื่อส่งต่อโครงการไปยังขั้นตอนที่ 5: สรุปเล่มรายงานผลโครงการ 5 บท"
+                                        >
+                                            <span>▶️</span> ส่งต่อขั้นที่ 5 (รายงาน 5 บท)
+                                        </button>
+                                    )}
+                                    {project.status === 'reporting' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus('completed', 'ขั้นตอนที่ 6: เคลียร์เงินยืมและปิดโครงการสมบูรณ์')}
+                                            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/25 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                                            title="คลิกเพื่อปิดโครงการสมบูรณ์ (ขั้นที่ 6)"
+                                        >
+                                            <span>✅</span> ปิดโครงการสมบูรณ์ (ขั้นที่ 6)
+                                        </button>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
 
-                    {/* Visual Workflow Stepper Bar */}
-                    <ProjectWorkflowStepper currentStep={project.current_approval_step || 1} status={project.status} />
+                    {/* Visual Workflow Stepper Bar (Interactive) */}
+                    <ProjectWorkflowStepper 
+                        currentStep={project.current_approval_step || 1} 
+                        status={project.status} 
+                        onStepClick={handleUpdateStatus}
+                        canChangeStatus={isPlanApproved && Boolean(auth?.user?.id === project.user_id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin' || auth?.user?.is_procurement_head)}
+                    />
 
                     {/* Current Approval Officer Info Banner */}
                     <div className={`mb-6 p-4 rounded-2xl border ${currentOfficerInfo.color} flex items-center gap-3 font-sans shadow-2xs`}>

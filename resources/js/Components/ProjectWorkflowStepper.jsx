@@ -1,12 +1,13 @@
 import React from 'react';
 
-export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draft' }) {
+export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draft', onStepClick = null, canChangeStatus = false }) {
     const steps = [
         {
             number: 1,
             title: 'เสนอโครงการ',
             subtitle: 'ร่างข้อเสนอ & วัตถุประสงค์',
             activeStatus: 'กำลังร่างข้อเสนอ',
+            targetStatus: 'draft',
             icon: '📝',
         },
         {
@@ -14,6 +15,7 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
             title: 'ตรวจสอบ & อนุมัติ',
             subtitle: 'งานวางแผน & ผู้อำนวยการ',
             activeStatus: 'รอพิจารณาอนุมัติ',
+            targetStatus: 'pending_approval',
             icon: '🔍',
         },
         {
@@ -21,6 +23,7 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
             title: 'จัดซื้อจัดจ้าง & พัสดุ',
             subtitle: 'แต่งตั้งกรรมการ & คำสั่ง',
             activeStatus: 'กำลังดำเนินการ',
+            targetStatus: 'approved',
             icon: '📦',
         },
         {
@@ -28,6 +31,7 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
             title: 'ประเมินผลโครงการ',
             subtitle: 'แบบสำรวจ & วิเคราะห์ AI',
             activeStatus: 'กำลังประเมินผล',
+            targetStatus: 'in_progress',
             icon: '⭐',
         },
         {
@@ -35,6 +39,7 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
             title: 'รายงานผลฉบับสมบูรณ์',
             subtitle: 'รูปภาพ & รวมเล่ม PDF',
             activeStatus: 'กำลังจัดทำรายงาน',
+            targetStatus: 'reporting',
             icon: '📄',
         },
         {
@@ -42,6 +47,7 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
             title: 'เคลียร์เงินยืม & เบิกจ่าย',
             subtitle: 'ส่งเอกสารเคลียร์เงินยืม/ทดรอง',
             activeStatus: 'รอเคลียร์เงินยืม',
+            targetStatus: 'completed',
             icon: '🧾',
         },
     ];
@@ -72,6 +78,11 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
                     <h4 className="text-xs font-bold uppercase tracking-wider text-purple-950">
                         ลำดับขั้นตอนการดำเนินโครงการ (PDCA Lifecycle Workflow)
                     </h4>
+                    {canChangeStatus && onStepClick && (
+                        <span className="text-[10px] text-purple-600 font-semibold hidden md:inline ml-2">
+                            (คลิกที่ขั้นตอนเพื่อเปลี่ยนสถานะได้)
+                        </span>
+                    )}
                 </div>
                 <span className="text-xs font-extrabold text-purple-700 bg-white px-3 py-1 rounded-full border border-purple-200 shadow-2xs">
                     ขั้นตอนที่ {activeIndex + 1} จาก {steps.length}
@@ -87,17 +98,24 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
                     {steps.map((step, index) => {
                         const isCompleted = index < activeIndex;
                         const isCurrent = index === activeIndex;
+                        const isClickable = canChangeStatus && onStepClick && !isCurrent && step.number >= 3;
 
                         return (
                             <div
                                 key={step.number}
+                                onClick={() => {
+                                    if (isClickable) {
+                                        onStepClick(step.targetStatus, `ขั้นตอนที่ ${step.number}: ${step.title}`);
+                                    }
+                                }}
                                 className={`flex flex-col items-center text-center p-2.5 rounded-xl transition-all ${
                                     isCurrent
                                         ? 'bg-white shadow-md border border-purple-300 ring-2 ring-purple-500/20 translate-y-[-2px]'
                                         : isCompleted
                                         ? 'bg-purple-50/60 border border-purple-100'
                                         : 'bg-slate-50/50 opacity-65 border border-slate-100'
-                                }`}
+                                } ${isClickable ? 'cursor-pointer hover:ring-2 hover:ring-purple-400 hover:scale-102 hover:opacity-100' : ''}`}
+                                title={isClickable ? `คลิกเพื่อเปลี่ยนสถานะโครงการเป็น: ${step.title}` : undefined}
                             >
                                 {/* Circle Node */}
                                 <div

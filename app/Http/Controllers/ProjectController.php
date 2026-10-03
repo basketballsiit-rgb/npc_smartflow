@@ -1693,7 +1693,7 @@ class ProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:draft,submitted,pending_approval,approved,in_progress,evaluating,completed',
+            'status' => 'required|in:draft,submitted,pending_approval,approved,in_progress,evaluating,reporting,completed',
         ]);
 
         $oldStatus = $project->status;
