@@ -15,6 +15,7 @@ const SignaturePad = forwardRef(({
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
+    const isDrawingRef = useRef(false);
     const [hasStrokes, setHasStrokes] = useState(false);
     const strokeHistory = useRef([]);
     const currentStroke = useRef([]);
@@ -75,10 +76,7 @@ const SignaturePad = forwardRef(({
         if (!canvas) return;
 
         const preventTouchScroll = (e) => {
-            if (isDrawing || e.target === canvas) {
-                // Only prevent default on touch within canvas
-                if (e.cancelable) e.preventDefault();
-            }
+            if (e.cancelable) e.preventDefault();
         };
 
         canvas.addEventListener('touchstart', preventTouchScroll, { passive: false });
@@ -90,7 +88,7 @@ const SignaturePad = forwardRef(({
             canvas.removeEventListener('touchmove', preventTouchScroll);
             canvas.removeEventListener('touchend', preventTouchScroll);
         };
-    }, [isDrawing]);
+    }, []);
 
     const getCanvasPoint = (e) => {
         const canvas = canvasRef.current;
@@ -118,55 +116,55 @@ const SignaturePad = forwardRef(({
     };
 
     const startDrawing = (e) => {
+        isDrawingRef.current = true;
         setIsDrawing(true);
         const point = getCanvasPoint(e);
         currentStroke.current = [point];
 
         const canvas = canvasRef.current;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.fillStyle = strokeColor;
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = strokeWidth;
+
         ctx.beginPath();
         ctx.arc(point.x, point.y, strokeWidth / 2, 0, Math.PI * 2);
-        ctx.fillStyle = strokeColor;
         ctx.fill();
 
         if (onBegin) onBegin();
     };
 
     const draw = (e) => {
-        if (!isDrawing) return;
+        if (!isDrawingRef.current) return;
         const point = getCanvasPoint(e);
         currentStroke.current.push(point);
 
         const canvas = canvasRef.current;
+        if (!canvas) return;
         const ctx = canvas.getContext('2d');
 
         const points = currentStroke.current;
-        if (points.length >= 3) {
+        if (points.length >= 2) {
             const p1 = points[points.length - 2];
             const p2 = points[points.length - 1];
-            const midPoint = {
-                x: (p1.x + p2.x) / 2,
-                y: (p1.y + p2.y) / 2
-            };
 
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
-            ctx.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y);
+            ctx.lineTo(p2.x, p2.y);
             ctx.strokeStyle = strokeColor;
             ctx.lineWidth = strokeWidth;
-            ctx.stroke();
-        } else if (points.length === 2) {
-            ctx.beginPath();
-            ctx.moveTo(points[0].x, points[0].y);
-            ctx.lineTo(points[1].x, points[1].y);
-            ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = strokeWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
             ctx.stroke();
         }
     };
 
     const stopDrawing = () => {
-        if (!isDrawing) return;
+        if (!isDrawingRef.current) return;
+        isDrawingRef.current = false;
         setIsDrawing(false);
 
         if (currentStroke.current.length > 0) {
@@ -192,6 +190,7 @@ const SignaturePad = forwardRef(({
         ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
 
         ctx.strokeStyle = strokeColor;
+        ctx.fillStyle = strokeColor;
         ctx.lineWidth = strokeWidth;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
@@ -200,17 +199,14 @@ const SignaturePad = forwardRef(({
             if (stroke.length === 1) {
                 ctx.beginPath();
                 ctx.arc(stroke[0].x, stroke[0].y, strokeWidth / 2, 0, Math.PI * 2);
-                ctx.fillStyle = strokeColor;
                 ctx.fill();
-            } else {
+            } else if (stroke.length > 1) {
+                ctx.beginPath();
+                ctx.moveTo(stroke[0].x, stroke[0].y);
                 for (let i = 1; i < stroke.length; i++) {
-                    const p1 = stroke[i - 1];
-                    const p2 = stroke[i];
-                    ctx.beginPath();
-                    ctx.moveTo(p1.x, p1.y);
-                    ctx.lineTo(p2.x, p2.y);
-                    ctx.stroke();
+                    ctx.lineTo(stroke[i].x, stroke[i].y);
                 }
+                ctx.stroke();
             }
         });
     };
