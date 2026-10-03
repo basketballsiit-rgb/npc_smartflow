@@ -6,36 +6,42 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
             number: 1,
             title: 'เสนอโครงการ',
             subtitle: 'ร่างข้อเสนอ & วัตถุประสงค์',
+            activeStatus: 'กำลังร่างข้อเสนอ',
             icon: '📝',
         },
         {
             number: 2,
             title: 'ตรวจสอบ & อนุมัติ',
             subtitle: 'งานวางแผน & ผู้อำนวยการ',
+            activeStatus: 'รอพิจารณาอนุมัติ',
             icon: '🔍',
         },
         {
             number: 3,
             title: 'จัดซื้อจัดจ้าง & พัสดุ',
             subtitle: 'แต่งตั้งกรรมการ & คำสั่ง',
+            activeStatus: 'กำลังดำเนินการ',
             icon: '📦',
         },
         {
             number: 4,
             title: 'ประเมินผลโครงการ',
             subtitle: 'แบบสำรวจ & วิเคราะห์ AI',
+            activeStatus: 'กำลังประเมินผล',
             icon: '⭐',
         },
         {
             number: 5,
             title: 'รายงานผลฉบับสมบูรณ์',
             subtitle: 'รูปภาพ & รวมเล่ม PDF',
+            activeStatus: 'กำลังจัดทำรายงาน',
             icon: '📄',
         },
         {
             number: 6,
             title: 'เคลียร์เงินยืม & เบิกจ่าย',
-            subtitle: 'ส่งเอกสารเคลียร์ทดรอง',
+            subtitle: 'ส่งเอกสารเคลียร์เงินยืม/ทดรอง',
+            activeStatus: 'รอเคลียร์เงินยืม',
             icon: '🧾',
         },
     ];
@@ -135,10 +141,10 @@ export default function ProjectWorkflowStepper({ currentStep = 1, status = 'draf
                                     }`}
                                 >
                                     {isCurrent
-                                        ? 'กำลังรวบรวม'
+                                        ? (step.activeStatus || 'กำลังดำเนินการ')
                                         : isCompleted
                                         ? 'เสร็จสิ้น'
-                                        : 'รอเรียงลำดับ'}
+                                        : 'รอดำเนินการ'}
                                 </span>
                             </div>
                         );
