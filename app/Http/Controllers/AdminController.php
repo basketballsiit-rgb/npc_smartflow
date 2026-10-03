@@ -823,10 +823,9 @@ class AdminController extends Controller
                 $department->delete();
 
                 AuditLog::record(
-                    auth()->user(),
-                    'archive_department',
-                    "จัดเก็บถาวร/ปิดการใช้งานฝ่าย: {$department->name} (Soft Delete)",
-                    $department
+                    action: 'archive_department',
+                    model: $department,
+                    notes: "จัดเก็บถาวร/ปิดการใช้งานฝ่าย: {$department->name} (Soft Delete)"
                 );
             });
 
@@ -852,7 +851,11 @@ class AdminController extends Controller
             Department::withTrashed()->where('parent_id', $dept->id)->restore();
         }
 
-        AuditLog::record(auth()->user(), 'restore_department', "กู้คืนการใช้งานฝ่าย: {$dept->name}", $dept);
+        AuditLog::record(
+            action: 'restore_department',
+            model: $dept,
+            notes: "กู้คืนการใช้งานฝ่าย: {$dept->name}"
+        );
         return redirect()->back()->with('success', "กู้คืนฝ่าย \"{$dept->name}\" กลับมาใช้งานเรียบร้อยแล้ว");
     }
 
