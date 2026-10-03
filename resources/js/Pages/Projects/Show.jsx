@@ -1581,7 +1581,7 @@ ${itemsListText}
                             </div>
 
                             {/* Approver Side Panel */}
-                            {(canApprove || ((auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'approved')) && (
+                            {(canApprove || ((auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin' || auth?.user?.is_executive) && project.status !== 'approved')) && (
                                 <div className="lg:col-span-1 space-y-6">
                                 {canApprove && (
                                     <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
@@ -1657,11 +1657,11 @@ ${itemsListText}
                                     </div>
                                 )}
 
-                                {(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'approved' && (
+                                {(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin' || auth?.user?.is_executive) && project.status !== 'approved' && (
                                     <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 p-5 shadow-md space-y-3 font-sans">
                                         <div className="flex items-center gap-2 text-amber-950 font-black text-sm">
                                             <span>👑</span>
-                                            <span>แผงควบคุมอนุมัติลัด (เฉพาะผู้ดูแลระบบ Admin)</span>
+                                            <span>แผงควบคุมอนุมัติลัด (ผู้ดูแลระบบ & ผู้บริหาร)</span>
                                         </div>
                                         <p className="text-xs text-amber-900 leading-relaxed">
                                             ผู้ดูแลระบบสามารถกดอนุมัติข้ามขั้นตอนปัจจุบัน หรือกดอนุมัติรวดเดียวสมบูรณ์ทั้ง 6 ขั้นตอนเพื่อทดสอบระบบได้ทันที

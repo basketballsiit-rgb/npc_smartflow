@@ -41,6 +41,17 @@ export default function Dashboard({
     const { auth, flash, departments_data } = usePage().props;
     const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
     const fiscalYear = systemSettings?.find(s => s.key === 'current_fiscal_year')?.value || '2569';
+    const getSecureProjectShowUrl = (id) => {
+        try {
+            let url = route('projects.show', id);
+            if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('http://')) {
+                url = url.replace('http://', 'https://');
+            }
+            return url;
+        } catch (e) {
+            return `/npc_smartflow/projects/${id}`;
+        }
+    };
 
     // Routine budgets states
     const [editingRoutinePlan, setEditingRoutinePlan] = useState(null);
@@ -9667,7 +9678,7 @@ ${itemsListText}
                                                                         </Link>
                                                                     )}
                                                                     <Link
-                                                                        href={route('projects.show', p.id)}
+                                                                        href={getSecureProjectShowUrl(p.id)}
                                                                         className="p-1 text-purple-700 hover:bg-purple-100 rounded-md transition text-xs"
                                                                         title="ดูรายละเอียดโครงการ"
                                                                     >
@@ -9968,9 +9979,13 @@ ${itemsListText}
                                                     <td className="px-6 py-4 whitespace-nowrap text-right">
                                                         <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
                                                             <Link
-                                                                href={route('projects.show', p.id)}
-                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                                                href={getSecureProjectShowUrl(p.id)}
+                                                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
                                                                 title="ตรวจสอบและลงนามโครงการ"
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    router.visit(getSecureProjectShowUrl(p.id));
+                                                                }}
                                                             >
                                                                 🔍 ตรวจสอบ ➔
                                                             </Link>
@@ -16207,7 +16222,7 @@ return (
                                                                         <span>ประวัติลงนาม</span>
                                                                     </button>
                                                                     <Link
-                                                                        href={route('projects.show', item.id)}
+                                                                        href={getSecureProjectShowUrl(item.id)}
                                                                         className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-purple-100 text-purple-950 font-black text-xs sm:text-sm rounded-xl shadow-2xs hover:scale-105 transition"
                                                                     >
                                                                         <span>เปิดโครงการ</span>
@@ -16494,7 +16509,7 @@ return (
                                 </a>
                                 <div className="flex items-center gap-2">
                                     <Link
-                                        href={route('projects.show', selectedApprovalProject.id)}
+                                        href={getSecureProjectShowUrl(selectedApprovalProject.id)}
                                         className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs transition"
                                     >
                                         <span>เปิดหน้าโครงการ</span> <span>➔</span>

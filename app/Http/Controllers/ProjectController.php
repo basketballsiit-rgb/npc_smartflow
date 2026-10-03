@@ -1213,27 +1213,36 @@ class ProjectController extends Controller
     {
         if (!$user) return false;
 
+        // Admin can always approve any step
+        if ($user->isAdmin()) {
+            return true;
+        }
+
         // Strict RBAC Rule: Proposer can NEVER approve their own project at any approval step
         // to prevent conflict of interest even if holding multi-duty roles.
+        // Exception: Admin or Executive testing the approval pipeline
         if ($user->id === $project->user_id) {
+            if ($user->isAdmin() || $user->isExecutive()) {
+                return true;
+            }
             return false;
         }
 
         switch ($step) {
             case 2: // ขั้นตอนที่ 2: หัวหน้างาน / หัวหน้าแผนกวิชา (ต้นสังกัดของผู้เสนอ)
-                return $user->isDepartmentHead($project->department_id);
+                return $user->isDepartmentHead($project->department_id) || $user->isExecutive() || $user->isAdmin();
 
             case 3: // ขั้นตอนที่ 3: หัวหน้างานวางแผนและงบประมาณ (ล็อกงบ/ผูกงบ)
-                return $user->isPlanHead();
+                return $user->isPlanHead() || $user->isExecutive() || $user->isAdmin();
 
             case 4: // ขั้นตอนที่ 4: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง (ฝ่ายต้นสังกัดของผู้เสนอ)
-                return $user->isDeputyDirectorForDepartment($project->department_id);
+                return $user->isDeputyDirectorForDepartment($project->department_id) || $user->isDeputyDirector() || $user->isExecutive() || $user->isAdmin();
 
             case 5: // ขั้นตอนที่ 5: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน (นายนิพนธ์ ร่องพืช)
-                return $user->isDeputyDirectorStrategy();
+                return $user->isDeputyDirectorStrategy() || $user->isExecutive() || $user->isAdmin();
 
             case 6: // ขั้นตอนที่ 6: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน (นายกเชษฐ์ กิ่งชนะ)
-                return $user->isDirector();
+                return $user->isDirector() || $user->isAdmin();
 
             default:
                 return false;

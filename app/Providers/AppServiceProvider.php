@@ -23,10 +23,15 @@ class AppServiceProvider extends ServiceProvider
     {
         Vite::prefetch(concurrency: 3);
 
-        // Force HTTPS scheme when behind SSL reverse proxy / production server
+        $host = request()->getHost() ?: (request()->header('Host') ?: 'service.npc.ac.th');
+
+        // Force HTTPS scheme when behind SSL reverse proxy / production server or domain npc.ac.th
         $isHttps = config('app.env') === 'production' 
             || str_contains(request()->header('X-Forwarded-Proto', ''), 'https') 
             || str_contains(request()->header('X-Forwarded-Ssl', ''), 'on')
+            || str_contains(request()->server('HTTP_X_FORWARDED_PROTO', ''), 'https')
+            || request()->server('HTTPS') === 'on'
+            || str_contains($host, 'npc.ac.th')
             || request()->secure();
 
         if ($isHttps) {
@@ -44,7 +49,6 @@ class AppServiceProvider extends ServiceProvider
 
         if ($subfolder) {
             $scheme = $isHttps ? 'https' : (request()->getScheme() ?: 'http');
-            $host = request()->getHost() ?: 'service.npc.ac.th';
             $rootUrl = "{$scheme}://{$host}{$subfolder}";
             \Illuminate\Support\Facades\URL::forceRootUrl($rootUrl);
             config(['app.asset_url' => $rootUrl]);
