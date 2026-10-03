@@ -27,81 +27,6 @@ export default function Show({ project, strategyCategories = [], fundingSources 
 
     const [activeTab, setActiveTab] = useState('plan');
     const [torModalOpen, setTorModalOpen] = useState(false);
-    const [appendixTitle, setAppendixTitle] = useState('');
-    const [appendixFile, setAppendixFile] = useState(null);
-    const [uploading, setUploading] = useState(false);
-
-    // Chapter 2 State
-    const [chapter2Sections, setChapter2Sections] = useState(
-        project.chapter_2_sections || {
-            intro: '',
-            section_2_1: '',
-            section_2_2: '',
-            section_2_3: '',
-            references: '',
-        }
-    );
-    const [chapter2FullContent, setChapter2FullContent] = useState(project.chapter_2_content || '');
-    const [generatingChapter2, setGeneratingChapter2] = useState(false);
-    const [savingChapter2, setSavingChapter2] = useState(false);
-    const [activeChapter2Tab, setActiveChapter2Tab] = useState('2_2');
-    const [linkedOvecStrategies, setLinkedOvecStrategies] = useState([]);
-
-    const handleGenerateChapter2 = () => {
-        setGeneratingChapter2(true);
-        window.axios.post(route('projects.chapter2.generate', project.id))
-            .then(res => {
-                if (res.data.success) {
-                    setChapter2Sections(res.data.sections);
-                    setChapter2FullContent(res.data.full_content);
-                    if (res.data.linked_ovec_strategies) {
-                        setLinkedOvecStrategies(res.data.linked_ovec_strategies);
-                    }
-                    Swal.fire({
-                        title: '✨ AI สังเคราะห์เนื้อหาบทที่ 2 สำเร็จ!',
-                        html: `ระบบได้ร่างเนื้อหา 3 หัวข้อสำคัญ พร้อม<b>ขยายความยุทธศาสตร์ สอศ.</b> และรวบรวมการอ้างอิงเอกสาร/บรรณานุกรมเรียบร้อยแล้ว`,
-                        icon: 'success',
-                        confirmButtonColor: '#7c3aed',
-                    });
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างเนื้อหาบทที่ 2 ได้ กรุณาลองใหม่อีกครั้ง', 'error');
-            })
-            .finally(() => {
-                setGeneratingChapter2(false);
-            });
-    };
-
-    const handleSaveChapter2 = () => {
-        setSavingChapter2(true);
-        const full = `บทที่ 2\nเอกสารและงานวิจัยที่เกี่ยวข้อง\n\n${chapter2Sections.intro || ''}\n\n${chapter2Sections.section_2_1 || ''}\n\n${chapter2Sections.section_2_2 || ''}\n\n${chapter2Sections.section_2_3 || ''}\n\n${chapter2Sections.references || ''}`;
-        
-        window.axios.post(route('projects.chapter2.save', project.id), {
-            sections: chapter2Sections,
-            full_content: full
-        })
-            .then(res => {
-                if (res.data.success) {
-                    setChapter2FullContent(full);
-                    Swal.fire({
-                        title: '💾 บันทึกสำเร็จ!',
-                        text: 'บันทึกเนื้อหาบทที่ 2 และการอ้างอิงเอกสารเรียบร้อยแล้ว',
-                        icon: 'success',
-                        confirmButtonColor: '#7c3aed',
-                        timer: 2000,
-                    });
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
-            })
-            .finally(() => {
-                setSavingChapter2(false);
-            });
-    };
 
     // Procurement Items & Committee Form State
     const [procurementItems, setProcurementItems] = useState(
@@ -634,45 +559,7 @@ ${itemsListText}
         setSignatureModalOpen(true);
     };
 
-    const handleUploadAppendix = (e) => {
-        e.preventDefault();
-        if (!appendixTitle || !appendixFile) {
-            Swal.fire('ข้อผิดพลาด', 'กรุณาระบุชื่อเอกสารและเลือกไฟล์ PDF', 'warning');
-            return;
-        }
 
-        setUploading(true);
-        const formData = new FormData();
-        formData.append('title', appendixTitle);
-        formData.append('file', appendixFile);
-
-        router.post(route('appendices.store', project.id), formData, {
-            onFinish: () => setUploading(false),
-            onSuccess: () => {
-                setAppendixTitle('');
-                setAppendixFile(null);
-                Swal.fire('อัปโหลดสำเร็จ!', 'เพิ่มเอกสารแนบเรียบร้อยแล้ว', 'success');
-            }
-        });
-    };
-
-    const handleDeleteAppendix = (id) => {
-        Swal.fire({
-            title: 'ลบเอกสารแนบ?',
-            text: 'การดำเนินการนี้ไม่สามารถยกเลิกได้',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#e11d48',
-            cancelButtonText: 'ยกเลิก',
-            confirmButtonText: 'ยืนยันลบ',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.delete(route('appendices.destroy', id), {
-                    onSuccess: () => Swal.fire('ลบสำเร็จ!', 'ลบเอกสารแนบเรียบร้อยแล้ว', 'success')
-                });
-            }
-        });
-    };
 
     const getStatusBadgeText = (status) => {
         switch (status) {
@@ -738,19 +625,7 @@ ${itemsListText}
         });
     };
 
-    const isAppendixUploaded = (keyword) => {
-        if (!project.appendices || project.appendices.length === 0) return false;
-        return project.appendices.some(app => app.title.toLowerCase().includes(keyword.toLowerCase()));
-    };
 
-    const recommendedDocs = [
-        { id: 1, title: 'กำหนดการโครงการ', icon: '📄', keyword: 'กำหนดการ' },
-        { id: 2, title: 'คำสั่งแต่งตั้งปฏิบัติหน้าที่', icon: '📋', keyword: 'คำสั่ง' },
-        { id: 3, title: 'คำกล่าวรายงาน / กล่าวเปิด', icon: '🎤', keyword: 'คำกล่าว' },
-        { id: 4, title: 'รายชื่อผู้เข้าร่วมโครงการ', icon: '👥', keyword: 'รายชื่อ' },
-        { id: 5, title: 'หนังสือเชิญวิทยากร/หน่วยงาน', icon: '✉️', keyword: 'เชิญ' },
-        { id: 6, title: 'สรุปผลการประเมินความพึงพอใจ', icon: '📊', keyword: 'ประเมิน' },
-    ];
 
     const handleUpdateStatus = (newStatus, statusLabel) => {
         Swal.fire({
@@ -1419,24 +1294,25 @@ ${itemsListText}
                         </div>
                     )}
 
-                    {/* 4-Tab Navigation Bar */}
+                    {/* Navigation Tabs (Tab 1, 2, 5) */}
                     <div className="flex border-b border-purple-100 mb-8 overflow-x-auto">
                         <button
                             onClick={() => setActiveTab('plan')}
-                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap ${
+                            className={`py-3.5 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-2 ${
                                 activeTab === 'plan'
-                                    ? 'border-purple-600 text-purple-900 bg-purple-50/40'
-                                    : 'border-transparent text-slate-500 hover:text-purple-700'
+                                    ? 'border-purple-600 text-purple-900 bg-purple-50/50'
+                                    : 'border-transparent text-slate-500 hover:text-purple-700 hover:bg-slate-50'
                             }`}
                         >
-                            📋 แท็บที่ 1: รายละเอียดข้อเสนอโครงการ (Plan)
+                            <span>📋</span>
+                            <span>แท็บที่ 1: รายละเอียดข้อเสนอโครงการ (Plan)</span>
                         </button>
                         <button
                             onClick={() => setActiveTab('do')}
-                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                            className={`py-3.5 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-2 ${
                                 activeTab === 'do'
-                                    ? 'border-purple-600 text-purple-900 bg-purple-50/40'
-                                    : 'border-transparent text-slate-500 hover:text-purple-700'
+                                    ? 'border-purple-600 text-purple-900 bg-purple-50/50'
+                                    : 'border-transparent text-slate-500 hover:text-purple-700 hover:bg-slate-50'
                             }`}
                         >
                             <span>
@@ -1447,46 +1323,20 @@ ${itemsListText}
                                     : '🔄 แท็บที่ 2: จัดซื้อจัดจ้าง & สัญญายืมเงิน (Do)'}
                             </span>
                             {!isPlanApproved && (
-                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">🔒 รออนุมัติ</span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('check')}
-                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                                activeTab === 'check'
-                                    ? 'border-purple-600 text-purple-900 bg-purple-50/40'
-                                    : 'border-transparent text-slate-500 hover:text-purple-700'
-                            }`}
-                        >
-                            <span>📊 แท็บที่ 3: แบบสำรวจ & ประเมินผล (Check)</span>
-                            {!isPlanApproved && (
-                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">🔒 รออนุมัติ</span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('act')}
-                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                                activeTab === 'act'
-                                    ? 'border-purple-600 text-purple-900 bg-purple-50/40'
-                                    : 'border-transparent text-slate-500 hover:text-purple-700'
-                            }`}
-                        >
-                            <span>🤖 แท็บที่ 4: รายงาน AI & ภาคผนวก (Act)</span>
-                            {!isPlanApproved && (
-                                <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold">🔒 รออนุมัติ</span>
+                                <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">🔒 รออนุมัติ</span>
                             )}
                         </button>
                         <button
                             onClick={() => setActiveTab('audit')}
-                            className={`py-3 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                            className={`py-3.5 px-6 text-sm font-bold border-b-2 transition-all whitespace-nowrap flex items-center gap-2 ${
                                 activeTab === 'audit'
-                                    ? 'border-purple-600 text-purple-900 bg-purple-50/40'
-                                    : 'border-transparent text-slate-500 hover:text-purple-700'
+                                    ? 'border-purple-600 text-purple-900 bg-purple-50/50'
+                                    : 'border-transparent text-slate-500 hover:text-purple-700 hover:bg-slate-50'
                             }`}
                         >
                             <span>🛡️ แท็บที่ 5: ประวัติ & ตรารับรอง (Audit Trail)</span>
                             {project.sealed_at && (
-                                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold">✓ ตรารับรองแล้ว</span>
+                                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">✓ ตรารับรองแล้ว</span>
                             )}
                         </button>
                     </div>
@@ -2412,543 +2262,78 @@ ${itemsListText}
                                     )}
                                 </div>
                             </div>
-                        </div>
-                        )
-                    )}
 
-                    {/* Tab 3: Survey & Stats (Check) */}
-                    {activeTab === 'check' && (
-                        !isPlanApproved ? (
-                            <div className="rounded-3xl border border-amber-200 bg-white p-8 sm:p-12 text-center space-y-5 font-sans shadow-sm">
-                                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-amber-200">
-                                    🔒
-                                </div>
-                                <div className="space-y-2 max-w-lg mx-auto">
-                                    <h3 className="text-xl font-bold text-slate-800">
-                                        แท็บที่ 3 ยังไม่เปิดให้ทำแบบประเมินผล (Check Phase)
-                                    </h3>
-                                    <p className="text-xs text-slate-600 leading-relaxed">
-                                        แบบสำรวจและประเมินผลความพึงพอใจจะเปิดให้ใช้งานเมื่อโครงการผ่านการพิจารณาอนุมัติใน <strong>แท็บที่ 1 (Plan)</strong> และเริ่มดำเนินกิจกรรมเรียบร้อยแล้วครับ
-                                    </p>
-                                </div>
-                                <div className="pt-2">
-                                    <button
-                                        onClick={() => setActiveTab('plan')}
-                                        className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
-                                    >
-                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ 1 (Plan)
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                        <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6">
-
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-bold text-purple-950">📊 การสำรวจความพึงพอใจ และดัชนีประเมินผลโครงการ (Check)</h3>
-                                <Link 
-                                    href={route('surveys.stats', project.id)}
-                                    className="text-xs font-bold text-purple-700 hover:underline bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-200"
-                                >
-                                    เปิดดูสถิติและรายงานผลฉบับเต็ม ➔
-                                </Link>
-                            </div>
-                            <p className="text-xs text-slate-500">สร้าง QR Code และลิงก์แบบประเมินสำหรับสแกนตอบประเมินความพึงพอใจโครงการออนไลน์</p>
-                        </div>
-                        )
-                    )}
-
-                    {/* Tab 4: AI Report & Appendix (Act) */}
-                    {activeTab === 'act' && (
-                        !isPlanApproved ? (
-                            <div className="rounded-3xl border border-amber-200 bg-white p-8 sm:p-12 text-center space-y-5 font-sans shadow-sm">
-                                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-amber-200">
-                                    🔒
-                                </div>
-                                <div className="space-y-2 max-w-lg mx-auto">
-                                    <h3 className="text-xl font-bold text-slate-800">
-                                        แท็บที่ 4 ยังไม่เปิดให้สรุปรายงาน AI (Act Phase)
-                                    </h3>
-                                    <p className="text-xs text-slate-600 leading-relaxed">
-                                        ระบบ AI จะประมวลผลเล่มรายงานผลโครงการ 5 บทและภาคผนวกให้อัตโนมัติ เมื่อโครงการผ่านการอนุมัติใน <strong>แท็บที่ 1 (Plan)</strong> และดำเนินกิจกรรมเรียบร้อยแล้วครับ
-                                    </p>
-                                </div>
-                                <div className="pt-2">
-                                    <button
-                                        onClick={() => setActiveTab('plan')}
-                                        className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
-                                    >
-                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ 1 (Plan)
-                                    </button>
-                                </div>
-                            </div>
-                        ) : (
-                        <div className="space-y-6 font-sans">
-                            {(project.user_id === auth?.user?.id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'completed' && (
-                                <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-900/10 via-teal-900/10 to-emerald-900/5 border border-emerald-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs">
-                                    <div>
-                                        <h4 className="text-xs font-black text-emerald-950 uppercase">
-                                            🏆 ปิดโครงการฉบับสมบูรณ์ (Complete Project Lifecycle)
-                                        </h4>
-                                        <p className="text-xs text-emerald-800 mt-0.5">กดปุ่มเพื่อปรับสถานะเป็น "เสร็จสิ้นโครงการสมบูรณ์ (Completed)" เมื่อแนบรูปภาพและหลักฐานครบถ้วนแล้ว</p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleUpdateStatus('completed', 'เสร็จสิ้นโครงการสมบูรณ์ (ขั้นตอนที่ 6)')}
-                                        className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:scale-105 text-white font-black text-xs shadow-md transition-all whitespace-nowrap"
-                                    >
-                                        ✅ ยืนยันปิดโครงการสมบูรณ์ (Completed)
-                                    </button>
-                                </div>
-                            )}
-                            {/* Download Stitched PDF */}
-                            {project.status === 'approved' && (
-                                <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 rounded-2xl p-6 text-white flex justify-between items-center shadow-lg">
-                                    <div>
-                                        <h3 className="text-lg font-bold">ดาวน์โหลดรายงานผลโครงการฉบับสมบูรณ์ (PDF)</h3>
-                                        <p className="text-xs text-purple-200 mt-1">ระบบรวมเล่มเสนอโครงการ งบประมาณ สถิติความพึงพอใจ รูปภาพ และภาคผนวกให้อัตโนมัติ</p>
-                                    </div>
-                                    <a
-                                        href={route('projects.download_report', project.id)}
-                                        className="rounded-xl bg-white px-5 py-2.5 text-xs font-bold text-purple-950 shadow hover:bg-purple-50 transition-all"
-                                    >
-                                        📥 ดาวน์โหลดรายงานผลฉบับสมบูรณ์ (.pdf)
-                                    </a>
-                                </div>
-                            )}
-
-                            {/* Chapter 2: Literature Review & OVEC Strategies Card */}
-                            <div className="rounded-2xl border border-indigo-100 bg-white p-6 shadow-sm space-y-6 font-sans">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-50 pb-5">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 text-purple-700 text-lg shadow-xs">
-                                                📖
-                                            </span>
-                                            <div>
-                                                <h3 className="text-base font-bold text-slate-900">
-                                                    บทที่ 2: เอกสารและงานวิจัยที่เกี่ยวข้อง (Literature Review & OVEC Strategies)
-                                                </h3>
-                                                <p className="text-xs text-slate-500 mt-0.5">
-                                                    สังเคราะห์เอกสาร ทฤษฎี ยุทธศาสตร์ สอศ. ที่เชื่อมโยง และงานวิจัยที่เกี่ยวข้อง พร้อมการอ้างอิงและบรรณานุกรมมาตรฐาน
-                                                </p>
-                                            </div>
+                            {/* Section: Next Steps & Quick Shortcuts */}
+                            <div className="border border-purple-100 bg-gradient-to-br from-white via-purple-50/20 to-indigo-50/30 rounded-2xl p-6 shadow-xs space-y-4 font-sans">
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-purple-100 pb-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="text-xl">🚀</span>
+                                        <div>
+                                            <h4 className="text-sm font-extrabold text-purple-950">ขั้นตอนถัดไป: จัดทำเอกสารรายงาน 5 บท & แบบประเมินผลโครงการ</h4>
+                                            <p className="text-xs text-slate-500">ดำเนินโครงการเสร็จสิ้นแล้ว สามารถจัดทำเอกสารรายงาน 5 บท และสำรวจแบบประเมินความพึงพอใจได้สะดวกผ่านเมนูหลัก</p>
                                         </div>
                                     </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={handleGenerateChapter2}
-                                            disabled={generatingChapter2}
-                                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-800 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-                                        >
-                                            {generatingChapter2 ? (
-                                                <>
-                                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-                                                    </svg>
-                                                    AI กำลังค้นคว้า & สังเคราะห์...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    ✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2
-                                                </>
-                                            )}
-                                        </button>
+                                    {project.status === 'approved' && (
                                         <a
-                                            href={route('projects.chapter2.print', project.id)}
+                                            href={route('projects.download_report', project.id)}
                                             target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white font-bold text-xs rounded-xl shadow-xs hover:scale-105 active:scale-95 transition"
                                         >
-                                            🖨️ พิมพ์ / ดูเล่มบทที่ 2
+                                            <span>📥</span>
+                                            <span>ดาวน์โหลดเล่มรายงาน (.pdf)</span>
                                         </a>
-                                        <button
-                                            type="button"
-                                            onClick={handleSaveChapter2}
-                                            disabled={savingChapter2}
-                                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
-                                        >
-                                            {savingChapter2 ? 'กำลังบันทึก...' : '💾 บันทึกเนื้อหาบทที่ 2'}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Banner for Strategy and Reference Standards */}
-                                <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50/80 via-purple-50/80 to-slate-50 border border-indigo-100 text-xs text-slate-700 space-y-2">
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2 font-bold text-indigo-950">
-                                            <span>🎯 ยุทธศาสตร์ / นโยบายจุดเน้น สอศ. ที่โครงการนี้เชื่อมโยง:</span>
-                                        </div>
-                                        <span className="text-[11px] bg-purple-100 text-purple-800 font-semibold px-2 py-0.5 rounded-md">
-                                            ตัดหัวข้อ 2.4 ออกตามเกณฑ์มาตรฐาน
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5 pt-1">
-                                        {project.strategy_item?.name ? (
-                                            <span className="bg-indigo-100/90 text-indigo-900 px-2.5 py-1 rounded-lg text-xs font-semibold border border-indigo-200 flex items-center gap-1">
-                                                <span>📌</span> {project.strategy_item.name}
-                                            </span>
-                                        ) : project.strategy_category?.name ? (
-                                            <span className="bg-indigo-100/90 text-indigo-900 px-2.5 py-1 rounded-lg text-xs font-semibold border border-indigo-200 flex items-center gap-1">
-                                                <span>📌</span> {project.strategy_category.name}
-                                            </span>
-                                        ) : project.strategy?.name ? (
-                                            <span className="bg-indigo-100/90 text-indigo-900 px-2.5 py-1 rounded-lg text-xs font-semibold border border-indigo-200 flex items-center gap-1">
-                                                <span>📌</span> {project.strategy.name}
-                                            </span>
-                                        ) : (
-                                            <span className="text-slate-500 italic">
-                                                ยังไม่ได้ระบุยุทธศาสตร์เฉพาะ (AI จะใช้ยุทธศาสตร์การจัดการศึกษาอาชีวศึกษาเพื่อพัฒนาสมรรถนะวิชาชีพเป็นฐาน)
-                                            </span>
-                                        )}
-                                        {linkedOvecStrategies.map((st, idx) => (
-                                            <span key={idx} className="bg-purple-100/80 text-purple-900 px-2.5 py-1 rounded-lg text-xs font-semibold border border-purple-200 flex items-center gap-1">
-                                                <span>📌</span> {st}
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <p className="text-[11px] text-slate-500 pt-1">
-                                        💡 หัวข้อ 2.2 จะวิเคราะห์และขยายความเชื่อมโยงกับยุทธศาสตร์ สอศ. ดังกล่าวอย่างละเอียด และทุกหัวข้อจะมีการอ้างอิงทางวิชาการ (ชื่อผู้แต่ง, ปี พ.ศ., สถาบัน/สำนักพิมพ์) และจัดทำบรรณานุกรมท้ายบทครบถ้วน
-                                    </p>
-                                </div>
-
-                                {/* Subsection Tabs */}
-                                <div className="border-b border-slate-200">
-                                    <div className="flex flex-wrap -mb-px text-xs font-bold gap-1">
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveChapter2Tab('intro')}
-                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
-                                                activeChapter2Tab === 'intro'
-                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                                            }`}
-                                        >
-                                            บทนำบทที่ 2
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveChapter2Tab('2_1')}
-                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
-                                                activeChapter2Tab === '2_1'
-                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                                            }`}
-                                        >
-                                            2.1 แนวคิด & ทฤษฎี
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveChapter2Tab('2_2')}
-                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
-                                                activeChapter2Tab === '2_2'
-                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                                            }`}
-                                        >
-                                            <span className="text-amber-500">★</span> 2.2 ยุทธศาสตร์ สอศ.
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveChapter2Tab('2_3')}
-                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
-                                                activeChapter2Tab === '2_3'
-                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                                            }`}
-                                        >
-                                            2.3 เอกสาร & งานวิจัย
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveChapter2Tab('references')}
-                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
-                                                activeChapter2Tab === 'references'
-                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                                            }`}
-                                        >
-                                            📚 บรรณานุกรม / แหล่งอ้างอิง
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setActiveChapter2Tab('full')}
-                                            className={`inline-flex items-center gap-1 px-3 py-2 border-b-2 rounded-t-lg transition-colors cursor-pointer ${
-                                                activeChapter2Tab === 'full'
-                                                    ? 'border-purple-600 text-purple-700 bg-purple-50/50'
-                                                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
-                                            }`}
-                                        >
-                                            📄 ดูภาพรวมทั้งบท
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Editor Panels */}
-                                <div className="space-y-3">
-                                    {activeChapter2Tab === 'intro' && (
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1">
-                                                ข้อความเกริ่นนำบทที่ 2 (Introduction to Chapter 2):
-                                            </label>
-                                            <textarea
-                                                rows={6}
-                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed"
-                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' เพื่อร่างข้อความเกริ่นนำ หรือพิมพ์ข้อความด้วยตนเอง..."
-                                                value={chapter2Sections.intro || ''}
-                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, intro: e.target.value })}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {activeChapter2Tab === '2_1' && (
-                                        <div>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <label className="block text-xs font-bold text-slate-700">
-                                                    2.1 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง (พร้อมการอ้างอิงในเนื้อหา):
-                                                </label>
-                                                <span className="text-[11px] text-purple-600">
-                                                    เช่น ทฤษฎีการเรียนรู้เชิงประสบการณ์ (Kolb), วงจรบริหารงานคุณภาพ PDCA
-                                                </span>
-                                            </div>
-                                            <textarea
-                                                rows={12}
-                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
-                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' เพื่อให้ AI ช่วยค้นคว้าแนวคิดและทฤษฎีที่ตรงกับโครงการ..."
-                                                value={chapter2Sections.section_2_1 || ''}
-                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_1: e.target.value })}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {activeChapter2Tab === '2_2' && (
-                                        <div>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <label className="block text-xs font-bold text-slate-700">
-                                                    2.2 ยุทธศาสตร์และนโยบายจุดเน้นของ สอศ. ที่เกี่ยวข้อง (ขยายความและวิเคราะห์การเชื่อมโยง):
-                                                </label>
-                                                <span className="text-[11px] text-amber-600 font-semibold">
-                                                    ★ เชื่อมโยงกับนโยบายที่เลือกไว้ในขั้นตอนเสนอโครงการ
-                                                </span>
-                                            </div>
-                                            <textarea
-                                                rows={12}
-                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
-                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' เพื่อให้ AI ดึงยุทธศาสตร์ สอศ. ที่ระบุไว้มาขยายความอย่างละเอียด..."
-                                                value={chapter2Sections.section_2_2 || ''}
-                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_2: e.target.value })}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {activeChapter2Tab === '2_3' && (
-                                        <div>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <label className="block text-xs font-bold text-slate-700">
-                                                    2.3 เอกสารและงานวิจัยที่เกี่ยวข้อง (ระบุชื่อผู้วิจัย, ปี พ.ศ., ชื่องานวิจัย, สถาบัน):
-                                                </label>
-                                                <span className="text-[11px] text-purple-600">
-                                                    งานวิจัยที่เกี่ยวข้องทั้งในและต่างประเทศ
-                                                </span>
-                                            </div>
-                                            <textarea
-                                                rows={12}
-                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
-                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' เพื่อค้นหางานวิจัยที่สอดคล้องกับโครงการ..."
-                                                value={chapter2Sections.section_2_3 || ''}
-                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_3: e.target.value })}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {activeChapter2Tab === 'references' && (
-                                        <div>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <label className="block text-xs font-bold text-slate-700">
-                                                    📚 รายการเอกสารอ้างอิง / บรรณานุกรมท้ายบท (References & Bibliography):
-                                                </label>
-                                                <span className="text-[11px] text-slate-500">
-                                                    ระบุชื่อผู้แต่ง, ปีที่พิมพ์, ชื่อหนังสือ/งานวิจัย, สำนักพิมพ์/สถาบัน
-                                                </span>
-                                            </div>
-                                            <textarea
-                                                rows={10}
-                                                className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono bg-slate-50/50"
-                                                placeholder="รายการเอกสารอ้างอิงตามมาตรฐานวิชาการ..."
-                                                value={chapter2Sections.references || ''}
-                                                onChange={(e) => setChapter2Sections({ ...chapter2Sections, references: e.target.value })}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {activeChapter2Tab === 'full' && (
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1">
-                                                📄 ตัวอย่างเนื้อหาบทที่ 2 ฉบับเต็มที่จะนำไปออกรายงานและพิมพ์:
-                                            </label>
-                                            <div className="w-full max-h-96 overflow-y-auto text-xs font-sans rounded-xl border border-slate-200 bg-slate-50 p-4 leading-relaxed whitespace-pre-wrap text-slate-800">
-                                                {chapter2FullContent || (
-                                                    <span className="text-slate-400 italic">
-                                                        ยังไม่มีเนื้อหาฉบับเต็ม กรุณาคลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' แล้วกด '💾 บันทึกเนื้อหาบทที่ 2'
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
                                     )}
                                 </div>
-                            </div>
 
-                            {/* Appendices Upload Card */}
-                            <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-5 font-sans">
-                                <div>
-                                    <h3 className="text-base font-bold text-purple-950">📁 เอกสารแนบและภาคผนวก (PDF Attachments)</h3>
-                                    <p className="text-xs text-slate-500 mt-0.5">อัปโหลดเอกสารประกอบรายงานผลฉบับสมบูรณ์สำหรับรวมเล่ม PDF อัตโนมัติ</p>
-                                </div>
-
-                                {/* Auto-Generated Layout Info Banner */}
-                                <div className="p-4 rounded-xl bg-gradient-to-r from-teal-900/10 via-emerald-900/10 to-teal-900/5 border border-emerald-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 font-sans shadow-2xs">
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-2xl">📖</span>
-                                        <div>
-                                            <h4 className="text-xs font-black text-emerald-950 uppercase">
-                                                ระบบสร้าง "หน้าปกฉบับทางการ", "คำนำ", และ "สารบัญ" ให้โดยอัตโนมัติ (Auto-Generated)
-                                            </h4>
-                                            <p className="text-xs text-emerald-800 mt-0.5">
-                                                เมื่อรวมเล่มเสนอรายงานผล (PDF) ระบบจะดึงข้อมูลโครงการและจัดทำหน้าปก คำนำ และสารบัญให้อัตโนมัติ โดยท่านไม่ต้องสร้างหรือพิมพ์ไฟล์หน้าปกเอง
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className="text-[11px] font-bold bg-emerald-600 text-white px-3 py-1 rounded-full shrink-0 shadow-2xs">
-                                        ✓ มีในระบบอัตโนมัติ
-                                    </span>
-                                </div>
-
-                                {/* Guidance Box: Recommended Files Checklist with Live Status */}
-                                <div className="p-4 rounded-xl bg-purple-50/60 border border-purple-200 space-y-2">
-                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1">
-                                        <h4 className="text-xs font-black text-purple-950 uppercase flex items-center gap-1.5">
-                                            <span>💡 รายการเอกสารแนบที่แนะนำสำหรับการสรุปรายงานผลโครงการ:</span>
-                                        </h4>
-                                        <span className="text-[11px] font-extrabold text-purple-800 bg-white px-2.5 py-0.5 rounded-full border border-purple-200">
-                                            อัปโหลดแล้ว {recommendedDocs.filter(d => isAppendixUploaded(d.keyword)).length} / {recommendedDocs.length} รายการ
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs text-purple-900 pt-1">
-                                        {recommendedDocs.map((doc) => {
-                                            const uploaded = isAppendixUploaded(doc.keyword);
-                                            return (
-                                                <div
-                                                    key={doc.id}
-                                                    onClick={() => {
-                                                        if (!uploaded) setAppendixTitle(doc.title);
-                                                    }}
-                                                    title={uploaded ? 'อัปโหลดเรียบร้อยแล้ว' : 'คลิกเพื่อเลือกชื่อเอกสารนี้'}
-                                                    className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
-                                                        uploaded
-                                                            ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950 shadow-2xs'
-                                                            : 'bg-white border-purple-100 text-purple-900 hover:border-purple-300 hover:shadow-2xs'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-center gap-1.5 overflow-hidden">
-                                                        <span>{doc.icon}</span>
-                                                        <span className="font-bold truncate">{doc.id}. {doc.title}</span>
-                                                    </div>
-                                                    {uploaded ? (
-                                                        <span className="text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full shrink-0 shadow-2xs">
-                                                            ✓ อัปโหลดแล้ว
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full shrink-0">
-                                                            ⏳ รออัปโหลด
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-
-                                {(project.user_id === auth?.user?.id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && (
-                                    <form onSubmit={handleUploadAppendix} className="space-y-4 border-b border-purple-100 pb-6">
-                                        {/* Quick Title Selection Chips */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1.5">เลือกชื่อเอกสารด่วน (Quick Preset Titles):</label>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {[
-                                                    'กำหนดการโครงการ',
-                                                    'คำสั่งแต่งตั้งปฏิบัติหน้าที่',
-                                                    'คำกล่าวรายงานเปิดโครงการ',
-                                                    'รายชื่อผู้เข้าร่วมโครงการและลงทะเบียน',
-                                                    'หนังสือเชิญวิทยากร',
-                                                    'สรุปผลการประเมินความพึงพอใจ',
-                                                ].map((titleOption) => (
-                                                    <button
-                                                        key={titleOption}
-                                                        type="button"
-                                                        onClick={() => setAppendixTitle(titleOption)}
-                                                        className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all ${
-                                                            appendixTitle === titleOption
-                                                                ? 'bg-purple-600 text-white border-purple-600 shadow-2xs scale-105'
-                                                                : 'bg-white text-purple-900 border-purple-200 hover:bg-purple-50'
-                                                        }`}
-                                                    >
-                                                        + {titleOption}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 items-end">
-                                            <div>
-                                                <label className="block text-xs font-bold text-slate-700">ชื่อเอกสารแนบ *</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={appendixTitle} 
-                                                    onChange={(e) => setAppendixTitle(e.target.value)} 
-                                                    className="mt-1 block w-full rounded-xl border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500 bg-white"
-                                                    placeholder="เช่น คำกล่าวรายงาน / กำหนดการโครงการ"
-                                                    required 
-                                                />
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Link
+                                        href={route('dashboard', { tab: 'proposals', chapter: 1 })}
+                                        className="group p-4 bg-white rounded-xl border border-purple-100 hover:border-purple-300 hover:shadow-md transition-all flex items-center justify-between"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                                                📖
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-700">เลือกไฟล์ PDF *</label>
-                                                <input 
-                                                    type="file" 
-                                                    accept=".pdf" 
-                                                    onChange={(e) => setAppendixFile(e.target.files[0])} 
-                                                    className="mt-1 block w-full text-xs text-slate-500"
-                                                    required 
-                                                />
+                                                <h5 className="text-xs font-bold text-slate-800 group-hover:text-purple-700">2. เอกสารรายงานโครงการ (5 บท)</h5>
+                                                <p className="text-[11px] text-slate-500 mt-0.5">เขียนและจัดการเนื้อหาบทที่ 1 - 5 พร้อม AI ช่วยสังเคราะห์</p>
                                             </div>
-                                            <button 
-                                                type="submit" 
-                                                disabled={uploading}
-                                                className="w-full inline-flex justify-center items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 py-2.5 px-4 text-xs font-bold text-white shadow-md shadow-purple-600/20 hover:scale-105 active:scale-95 disabled:opacity-50 transition-all"
-                                            >
-                                                {uploading ? '⌛ กำลังอัปโหลด...' : '📤 อัปโหลดเอกสารแนบ'}
-                                            </button>
                                         </div>
-                                    </form>
+                                        <span className="text-purple-600 text-sm font-black group-hover:translate-x-1 transition-transform">➔</span>
+                                    </Link>
+
+                                    <Link
+                                        href={route('surveys.stats', project.id)}
+                                        className="group p-4 bg-white rounded-xl border border-indigo-100 hover:border-indigo-300 hover:shadow-md transition-all flex items-center justify-between"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                                                📊
+                                            </div>
+                                            <div>
+                                                <h5 className="text-xs font-bold text-slate-800 group-hover:text-indigo-700">แบบสำรวจความพึงพอใจ & สถิติ</h5>
+                                                <p className="text-[11px] text-slate-500 mt-0.5">เปิดดู QR Code แบบประเมิน และสรุปผลค่าสถิติ S.D./ค่าเฉลี่ย</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-indigo-600 text-sm font-black group-hover:translate-x-1 transition-transform">➔</span>
+                                    </Link>
+                                </div>
+
+                                {(project.user_id === auth?.user?.id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'completed' && (
+                                    <div className="mt-2 pt-3 border-t border-purple-100/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                        <div>
+                                            <h5 className="text-xs font-black text-slate-800">🏆 สรุปและปิดโครงการ (Project Lifecycle)</h5>
+                                            <p className="text-[11px] text-slate-500">ปรับสถานะเป็น "เสร็จสิ้นโครงการสมบูรณ์ (Completed)" เมื่อดำเนินกิจกรรมและส่งหลักฐานเรียบร้อยแล้ว</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleUpdateStatus('completed', 'เสร็จสิ้นโครงการสมบูรณ์ (ขั้นตอนที่ 6)')}
+                                            className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs hover:scale-105 active:scale-95 transition whitespace-nowrap cursor-pointer"
+                                        >
+                                            ✅ ยืนยันปิดโครงการสมบูรณ์
+                                        </button>
+                                    </div>
                                 )}
-
-                                <div className="space-y-2">
-                                    {(!project.appendices || project.appendices.length === 0) ? (
-                                        <p className="text-xs text-slate-400">ยังไม่มีเอกสารแนบภาคผนวก</p>
-                                    ) : (
-                                        project.appendices.map((app) => (
-                                            <div key={app.id} className="flex justify-between items-center p-3 bg-purple-50/40 rounded-xl border border-purple-100">
-                                                <div>
-                                                    <span className="font-bold text-sm text-purple-950">{app.title}</span>
-                                                    <span className="block text-[10px] text-slate-500">PDF | {Math.round(app.file_size / 1024)} KB</span>
-                                                </div>
-                                                <div className="flex gap-x-2">
-                                                    <button onClick={() => handleDeleteAppendix(app.id)} className="text-xs font-bold text-rose-600 hover:underline">ลบ</button>
-                                                </div>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
                             </div>
                         </div>
                         )
