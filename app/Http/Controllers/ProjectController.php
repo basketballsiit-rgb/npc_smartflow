@@ -720,6 +720,28 @@ class ProjectController extends Controller
      */
     public function show(Project $project)
     {
+        // Auto-heal / synchronize funding_source_id between Project and Budget if one has it and the other doesn't
+        $budget = $project->budget()->first();
+        if (!$project->funding_source_id && $budget?->funding_source_id) {
+            $project->funding_source_id = $budget->funding_source_id;
+            if (!$project->allocated_budget && $budget->allocated_amount) {
+                $project->allocated_budget = $budget->allocated_amount;
+            }
+            $project->save();
+        } elseif ($project->funding_source_id && $budget && !$budget->funding_source_id) {
+            $budget->funding_source_id = $project->funding_source_id;
+            $budget->save();
+        } elseif ($project->funding_source_id && !$budget) {
+            \App\Models\Budget::create([
+                'project_id' => $project->id,
+                'funding_source_id' => $project->funding_source_id,
+                'allocated_amount' => $project->allocated_budget ?: $project->estimated_budget,
+                'encumbered_amount' => $project->allocated_budget ?: $project->estimated_budget,
+                'spent_amount' => 0.00,
+                'is_advance_payment' => in_array($project->disbursement_type, ['loan', 'both']),
+            ]);
+        }
+
         $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items', 'auditLogs.user']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
         
@@ -1298,12 +1320,19 @@ class ProjectController extends Controller
                 'is_advance_payment' => 'nullable|boolean',
             ]);
 
+            $fundingId = $request->input('funding_source_id');
+            $allocatedAmount = $request->input('allocated_amount');
+
+            $project->funding_source_id = $fundingId;
+            $project->allocated_budget = $allocatedAmount;
+            $project->save();
+
             Budget::updateOrCreate(
                 ['project_id' => $project->id],
                 [
-                    'funding_source_id' => $request->input('funding_source_id'),
-                    'allocated_amount' => $request->input('allocated_amount'),
-                    'encumbered_amount' => $request->input('allocated_amount'), // lock budget
+                    'funding_source_id' => $fundingId,
+                    'allocated_amount' => $allocatedAmount,
+                    'encumbered_amount' => $allocatedAmount, // lock budget
                     'spent_amount' => 0.00,
                     'is_advance_payment' => $request->boolean('is_advance_payment', false),
                 ]
@@ -1404,14 +1433,19 @@ class ProjectController extends Controller
 
         if ($mode === 'full') {
             $defaultFunding = \App\Models\FundingSource::first();
-            $fundingId = $defaultFunding ? $defaultFunding->id : 1;
+            $fundingId = $request->input('funding_source_id', $defaultFunding ? $defaultFunding->id : 1);
+            $allocated = $request->input('allocated_amount', $project->estimated_budget);
+
+            $project->funding_source_id = $fundingId;
+            $project->allocated_budget = $allocated;
+            $project->save();
 
             Budget::updateOrCreate(
                 ['project_id' => $project->id],
                 [
-                    'funding_source_id' => $request->input('funding_source_id', $fundingId),
-                    'allocated_amount' => $request->input('allocated_amount', $project->estimated_budget),
-                    'encumbered_amount' => $request->input('allocated_amount', $project->estimated_budget),
+                    'funding_source_id' => $fundingId,
+                    'allocated_amount' => $allocated,
+                    'encumbered_amount' => $allocated,
                     'spent_amount' => 0.00,
                     'is_advance_payment' => false,
                 ]
@@ -1468,6 +1502,10 @@ class ProjectController extends Controller
             $defaultFunding = \App\Models\FundingSource::first();
             $fundingId = $request->input('funding_source_id', $defaultFunding ? $defaultFunding->id : 1);
             $allocated = $request->input('allocated_amount', $project->estimated_budget);
+
+            $project->funding_source_id = $fundingId;
+            $project->allocated_budget = $allocated;
+            $project->save();
 
             Budget::updateOrCreate(
                 ['project_id' => $project->id],

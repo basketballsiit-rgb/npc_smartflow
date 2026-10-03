@@ -38,6 +38,8 @@ export default function DigitalSignatureModal({
         if (isOpen) {
             setActiveTab(hasStoredSignature ? 'stored' : 'live');
             setComments(defaultComments || '');
+            setSelectedFundingId(fundingSourceId || (fundingSources?.[0]?.id || ''));
+            setSelectedAllocatedAmount(allocatedAmount || '');
             setSaveToProfile(false);
             setLiveSignatureData(null);
             setUploadSignatureData(null);
@@ -46,7 +48,7 @@ export default function DigitalSignatureModal({
                 padRef.current.clear();
             }
         }
-    }, [isOpen, hasStoredSignature, defaultComments]);
+    }, [isOpen, hasStoredSignature, defaultComments, fundingSourceId, allocatedAmount]);
 
     if (!isOpen) return null;
 

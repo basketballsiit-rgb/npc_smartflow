@@ -11,8 +11,8 @@ export default function Show({ project, strategyCategories = [], fundingSources 
     const { auth } = usePage().props;
     const { data, setData, post, processing } = useForm({
         comments: '',
-        funding_source_id: project.budget?.funding_source_id || (fundingSources[0]?.id || 1),
-        allocated_amount: project.budget?.allocated_amount || project.estimated_budget || 0,
+        funding_source_id: project.funding_source_id || project.budget?.funding_source_id || (fundingSources[0]?.id || 1),
+        allocated_amount: project.allocated_budget || project.budget?.allocated_amount || project.estimated_budget || 0,
         is_advance_payment: project.budget?.is_advance_payment || false,
     });
 
@@ -419,7 +419,8 @@ ${itemsListText}
     };
 
     const handleQuickSetFundingSource = () => {
-        const optionsHtml = fundingSources.map(fs => `<option value="${fs.id}" ${fs.id == (project.funding_source_id || project.budget?.funding_source_id) ? 'selected' : ''}>${fs.name}</option>`).join('');
+        const currentFsId = project.funding_source_id || project.budget?.funding_source_id || project.funding_source?.id || project.budget?.funding_source?.id;
+        const optionsHtml = fundingSources.map(fs => `<option value="${fs.id}" ${String(fs.id) === String(currentFsId) ? 'selected' : ''}>${fs.name}</option>`).join('');
         Swal.fire({
             title: '🏛️ ระบุ/แก้ไข แหล่งเงินงบประมาณ',
             html: `
@@ -1934,7 +1935,9 @@ ${itemsListText}
                                         <span className="text-xs font-bold uppercase text-purple-800">แหล่งเงินงบประมาณ</span>
                                         <p className="text-base font-black text-purple-950 mt-1">
                                             {(() => {
-                                                const fn = project.budget?.fundingSource?.name || project.fundingSource?.name;
+                                                const fsId = project.funding_source_id || project.budget?.funding_source_id || project.funding_source?.id || project.budget?.funding_source?.id;
+                                                const fsFromList = fundingSources.find(f => String(f.id) === String(fsId));
+                                                const fn = project.funding_source_name || project.funding_source?.name || project.budget?.funding_source?.name || project.fundingSource?.name || project.budget?.fundingSource?.name || fsFromList?.name;
                                                 if (!fn) return 'ยังไม่ระบุแหล่งเงินทุน';
                                                 if (fn.includes('สถานศึกษา') || fn.includes('Revenue') || fn.includes('บำรุงการศึกษา') || fn.includes('บกศ')) return 'เงินรายได้สถานศึกษา (บกศ.)';
                                                 return fn;
@@ -2967,8 +2970,8 @@ ${itemsListText}
                 projectTitle={project.title}
                 defaultComments={data.comments}
                 fundingSources={fundingSources}
-                fundingSourceId={data.funding_source_id}
-                allocatedAmount={data.allocated_amount}
+                fundingSourceId={data.funding_source_id || project.funding_source_id || project.budget?.funding_source_id}
+                allocatedAmount={data.allocated_amount || project.allocated_budget || project.budget?.allocated_amount || project.estimated_budget}
                 processing={processing}
             />
 

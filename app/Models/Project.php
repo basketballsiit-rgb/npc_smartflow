@@ -99,6 +99,20 @@ class Project extends Model
         ];
     }
 
+    protected $appends = [
+        'funding_source_name',
+    ];
+
+    /**
+     * Get the funding source name from relation or budget fallback.
+     */
+    public function getFundingSourceNameAttribute(): ?string
+    {
+        return $this->fundingSource?->name
+            ?: $this->budget?->fundingSource?->name
+            ?: null;
+    }
+
     /**
      * Get all audit trail logs for this project.
      */
