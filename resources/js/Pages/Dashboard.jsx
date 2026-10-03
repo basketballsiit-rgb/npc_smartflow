@@ -793,11 +793,15 @@ export default function Dashboard({
     // ==========================================
     // 5-Chapter Project Report State & Handlers
     // ==========================================
-    const toThaiNumerals = (num) => {
-        if (num === null || num === undefined) return '';
-        const thDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(num).replace(/[0-9]/g, (d) => thDigits[parseInt(d, 10)]);
+    const toArabicNumerals = (str) => {
+        if (str === null || str === undefined) return '';
+        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        return String(str).replace(/[๐-๙]/g, c => {
+            const idx = thaiDigits.indexOf(c);
+            return idx !== -1 ? String(idx) : c;
+        });
     };
+    const toThaiNumerals = (num) => toArabicNumerals(num);
 
     const safeString = (val, fallback = '') => {
         if (val === null || val === undefined) return fallback;
@@ -990,13 +994,13 @@ export default function Dashboard({
 
         setChapter1Sections({
             background: safeString(proj.background_rationale),
-            objectives: objsText || `๑. เพื่อพัฒนาทักษะวิชาชีพและการเรียนรู้ของผู้เรียนตามมาตรฐานการศึกษา\n๒. เพื่อเพิ่มประสิทธิภาพการปฏิบัติงานและการจัดการเรียนการสอน`,
+            objectives: objsText || `1. เพื่อพัฒนาทักษะวิชาชีพและการเรียนรู้ของผู้เรียนตามมาตรฐานการศึกษา\n2. เพื่อเพิ่มประสิทธิภาพการปฏิบัติงานและการจัดการเรียนการสอน`,
             scope_target: targetText || 'คณะครู บุคลากรทางการศึกษา และนักเรียน นักศึกษา วิทยาลัยสารพัดช่างน่าน',
             scope_content: contentText || 'การดำเนินกิจกรรมตามแผนงาน การฝึกอบรมเชิงปฏิบัติการ และการประเมินผลสัมฤทธิ์',
             scope_location_time: locTime || 'วิทยาลัยสารพัดช่างน่าน ภายในปีงบประมาณ',
-            indicators_quantitative: quantInd || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐ ของกลุ่มเป้าหมาย',
-            indicators_qualitative: qualInd || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป ไม่น้อยกว่าร้อยละ ๘๐ (ค่าเฉลี่ย ๓.๕๑ ขึ้นไป)',
-            expected_benefits: benefitsText || `๑. ผู้เข้าร่วมโครงการได้รับความรู้และทักษะตามวัตถุประสงค์\n๒. สถานศึกษามีผลสัมฤทธิ์ในการจัดการศึกษาที่มีคุณภาพตามมาตรฐานวิชาชีพ`,
+            indicators_quantitative: quantInd || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ 80 ของกลุ่มเป้าหมาย',
+            indicators_qualitative: qualInd || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป ไม่น้อยกว่าร้อยละ 80 (ค่าเฉลี่ย 3.51 ขึ้นไป)',
+            expected_benefits: benefitsText || `1. ผู้เข้าร่วมโครงการได้รับความรู้และทักษะตามวัตถุประสงค์\n2. สถานศึกษามีผลสัมฤทธิ์ในการจัดการศึกษาที่มีคุณภาพตามมาตรฐานวิชาชีพ`,
             definitions: ''
         });
     };
@@ -1118,8 +1122,8 @@ export default function Dashboard({
             activeChapter1Project.chapter_1_sections = payload;
             Swal.fire({
                 icon: 'success',
-                title: 'บันทึกบทที่ ๑ สำเร็จ',
-                text: 'บันทึกข้อมูลรายงานบทที่ ๑ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                title: 'บันทึกบทที่ 1 สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ 1 เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#10b981',
                 timer: 2000,
@@ -1191,32 +1195,31 @@ export default function Dashboard({
     };
 
     const toThaiNumber = (num) => {
-        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(num).replace(/[0-9]/g, d => thaiDigits[d]);
+        return String(num);
     };
 
     const renumberSubsections = (text, prefix) => {
         if (!text || typeof text !== 'string') return '';
-        const thaiPrefix = prefix.replace(/\./g, '\\.');
-        const arabicDigits = { '๐': 0, '๑': 1, '๒': 2, '๓': 3, '๔': 4, '๕': 5, '๖': 6, '๗': 7, '๘': 8, '๙': 9 };
-        const arabicPrefix = prefix.replace(/[๐-๙]/g, d => arabicDigits[d]).replace(/\./g, '\\.');
-        const pattern = new RegExp('(^|\\n)[ \\t]*(?:' + thaiPrefix + '|' + arabicPrefix + ')\\.[๑-๙0-9]+[.\\s]*', 'g');
+        const escapedPrefix = prefix.replace(/\./g, '\\.');
+        const thaiDigits = { '๐': 0, '๑': 1, '๒': 2, '๓': 3, '๔': 4, '๕': 5, '๖': 6, '๗': 7, '๘': 8, '๙': 9 };
+        const thaiPrefix = prefix.replace(/[0-9]/g, d => Object.keys(thaiDigits)[d] || d).replace(/\./g, '\\.');
+        const pattern = new RegExp('(^|\\n)[ \\t]*(?:' + thaiPrefix + '|' + escapedPrefix + ')\\.[๑-๙0-9]+[.\\s]*', 'g');
         let idx = 0;
         return text.replace(pattern, (match, p1) => {
             idx++;
-            return `${p1}${prefix}.${toThaiNumber(idx)} `;
+            return `${p1}${prefix}.${idx} `;
         });
     };
 
     const handleAutoRenumberSection2_1 = () => {
         if (!chapter2Sections.section_2_1) return;
-        const renumbered = renumberSubsections(chapter2Sections.section_2_1, '๒.๑');
+        const renumbered = renumberSubsections(chapter2Sections.section_2_1, '2.1');
         setChapter2Sections(prev => ({ ...prev, section_2_1: renumbered }));
         Swal.fire({
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: 'จัดเรียงลำดับหัวข้อย่อย ๒.๑.๑, ๒.๑.๒... สำเร็จ',
+            title: 'จัดเรียงลำดับหัวข้อย่อย 2.1.1, 2.1.2... สำเร็จ',
             showConfirmButton: false,
             timer: 1800
         });
@@ -1224,13 +1227,13 @@ export default function Dashboard({
 
     const handleAutoRenumberSection2_3 = () => {
         if (!chapter2Sections.section_2_3) return;
-        const renumbered = renumberSubsections(chapter2Sections.section_2_3, '๒.๓');
+        const renumbered = renumberSubsections(chapter2Sections.section_2_3, '2.3');
         setChapter2Sections(prev => ({ ...prev, section_2_3: renumbered }));
         Swal.fire({
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: 'จัดเรียงลำดับหัวข้อย่อย ๒.๓.๑, ๒.๓.๒... สำเร็จ',
+            title: 'จัดเรียงลำดับหัวข้อย่อย 2.3.1, 2.3.2... สำเร็จ',
             showConfirmButton: false,
             timer: 1800
         });
@@ -1238,18 +1241,18 @@ export default function Dashboard({
 
     const handleInsertSingleTheory = (theory) => {
         if (!theory) return;
-        const heading = `๒.๑.๑ ${theory.name}`;
+        const heading = `2.1.1 ${theory.name}`;
         const body = theory.content || `${theory.relevance} ${theory.key_point}`;
 
         setChapter2Sections(prev => {
             let updated2_1 = prev.section_2_1 ? prev.section_2_1.trim() : '';
             if (!updated2_1) {
-                updated2_1 = `๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง\n\n${heading}\n${body}`;
+                updated2_1 = `2.1 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง\n\n${heading}\n${body}`;
             } else {
                 updated2_1 = `${updated2_1}\n\n${heading}\n${body}`;
             }
-            // Automatically renumber ALL subsections consecutively (๒.๑.๑, ๒.๑.๒, ๒.๑.๓...)
-            updated2_1 = renumberSubsections(updated2_1, '๒.๑');
+            // Automatically renumber ALL subsections consecutively (2.1.1, 2.1.2, 2.1.3...)
+            updated2_1 = renumberSubsections(updated2_1, '2.1');
 
             return {
                 ...prev,
@@ -1275,23 +1278,23 @@ export default function Dashboard({
             Swal.fire({
                 icon: 'warning',
                 title: 'ยังไม่ได้เลือกทฤษฎี',
-                text: 'กรุณาคลิกเลือกการ์ดทฤษฎีที่ต้องการนำไปใช้ด้านบนอย่างน้อย ๑ รายการ',
+                text: 'กรุณาคลิกเลือกการ์ดทฤษฎีที่ต้องการนำไปใช้ด้านบนอย่างน้อย 1 รายการ',
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#f59e0b'
             });
             return;
         }
 
-        let text2_1 = `๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง\n\nในการวางแผนและดำเนินงานโครงการ "${activeChapter1Project?.title || ''}" ได้บูรณาการแนวคิดและทฤษฎีที่สำคัญ ดังนี้\n\n`;
+        let text2_1 = `2.1 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง\n\nในการวางแผนและดำเนินงานโครงการ "${activeChapter1Project?.title || ''}" ได้บูรณาการแนวคิดและทฤษฎีที่สำคัญ ดังนี้\n\n`;
         let newRefs = chapter2Sections.references || 'เอกสารอ้างอิง\n\n';
 
         selected.forEach((t, idx) => {
             const num = toThaiNumber(idx + 1);
-            text2_1 += `๒.๑.${num} ${t.name}\n${t.content || t.relevance}\n\n`;
+            text2_1 += `2.1.${num} ${t.name}\n${t.content || t.relevance}\n\n`;
             newRefs = appendReference(newRefs, t.reference);
         });
 
-        const cleaned2_1 = renumberSubsections(text2_1.trim(), '๒.๑');
+        const cleaned2_1 = renumberSubsections(text2_1.trim(), '2.1');
 
         setChapter2Sections(prev => ({
             ...prev,
@@ -1301,8 +1304,8 @@ export default function Dashboard({
 
         Swal.fire({
             icon: 'success',
-            title: 'นำทฤษฎีที่เลือกลงในข้อ ๒.๑ แล้ว',
-            text: `นำเข้า ${selected.length} ทฤษฎีที่เลือก พร้อมจัดลำดับหัวข้อ ๒.๑.๑ - ๒.๑.${toThaiNumber(selected.length)} และอัปเดตรายการอ้างอิงเรียบร้อยแล้ว`,
+            title: 'นำทฤษฎีที่เลือกลงในข้อ 2.1 แล้ว',
+            text: `นำเข้า ${selected.length} ทฤษฎีที่เลือก พร้อมจัดลำดับหัวข้อ 2.1.1 - 2.1.${toThaiNumber(selected.length)} และอัปเดตรายการอ้างอิงเรียบร้อยแล้ว`,
             confirmButtonText: 'ตกลง',
             confirmButtonColor: '#059669',
             timer: 2000
@@ -1311,18 +1314,18 @@ export default function Dashboard({
 
     const handleInsertSingleResearch = (research) => {
         if (!research) return;
-        const heading = `๒.๓.๑ ${research.author}`;
+        const heading = `2.3.1 ${research.author}`;
         const body = research.content;
 
         setChapter2Sections(prev => {
             let updated2_3 = prev.section_2_3 ? prev.section_2_3.trim() : '';
             if (!updated2_3) {
-                updated2_3 = `๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง\n\nจากการสำรวจและรวบรวมงานวิจัยทางวิชาการที่เกี่ยวข้องกับโครงการ มีเอกสารและงานวิจัยที่สำคัญดังนี้\n\n${heading}\n${body}`;
+                updated2_3 = `2.3 เอกสารและงานวิจัยที่เกี่ยวข้อง\n\nจากการสำรวจและรวบรวมงานวิจัยทางวิชาการที่เกี่ยวข้องกับโครงการ มีเอกสารและงานวิจัยที่สำคัญดังนี้\n\n${heading}\n${body}`;
             } else {
                 updated2_3 = `${updated2_3}\n\n${heading}\n${body}`;
             }
-            // Automatically renumber ALL subsections consecutively (๒.๓.๑, ๒.๓.๒, ๒.๓.๓...)
-            updated2_3 = renumberSubsections(updated2_3, '๒.๓');
+            // Automatically renumber ALL subsections consecutively (2.3.1, 2.3.2, 2.3.3...)
+            updated2_3 = renumberSubsections(updated2_3, '2.3');
 
             return {
                 ...prev,
@@ -1343,16 +1346,16 @@ export default function Dashboard({
 
     const handleInsertAllResearches = () => {
         if (!chapter2Analysis?.researches || chapter2Analysis.researches.length === 0) return;
-        let text2_3 = `๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง\n\nจากการสำรวจและรวบรวมงานวิจัยทางวิชาการและเอกสารที่เกี่ยวข้องกับโครงการ มีเอกสารและงานวิจัยที่สำคัญดังนี้\n\n`;
+        let text2_3 = `2.3 เอกสารและงานวิจัยที่เกี่ยวข้อง\n\nจากการสำรวจและรวบรวมงานวิจัยทางวิชาการและเอกสารที่เกี่ยวข้องกับโครงการ มีเอกสารและงานวิจัยที่สำคัญดังนี้\n\n`;
         let newRefs = chapter2Sections.references || 'เอกสารอ้างอิง\n\n';
 
         chapter2Analysis.researches.forEach((r, idx) => {
             const num = toThaiNumber(idx + 1);
-            text2_3 += `๒.๓.${num} ${r.author}\n${r.content}\n\n`;
+            text2_3 += `2.3.${num} ${r.author}\n${r.content}\n\n`;
             newRefs = appendReference(newRefs, r.reference);
         });
 
-        const cleaned2_3 = renumberSubsections(text2_3.trim(), '๒.๓');
+        const cleaned2_3 = renumberSubsections(text2_3.trim(), '2.3');
 
         setChapter2Sections(prev => ({
             ...prev,
@@ -1362,8 +1365,8 @@ export default function Dashboard({
 
         Swal.fire({
             icon: 'success',
-            title: 'นำงานวิจัยทั้งหมดลงในข้อ ๒.๓ แล้ว',
-            text: `นำเข้า ${chapter2Analysis.researches.length} งานวิจัย พร้อมจัดลำดับหัวข้อ ๒.๓.๑ - ๒.๓.${toThaiNumber(chapter2Analysis.researches.length)} เรียบร้อยแล้ว`,
+            title: 'นำงานวิจัยทั้งหมดลงในข้อ 2.3 แล้ว',
+            text: `นำเข้า ${chapter2Analysis.researches.length} งานวิจัย พร้อมจัดลำดับหัวข้อ 2.3.1 - 2.3.${toThaiNumber(chapter2Analysis.researches.length)} เรียบร้อยแล้ว`,
             confirmButtonText: 'ตกลง',
             confirmButtonColor: '#059669',
             timer: 2000
@@ -1442,7 +1445,7 @@ export default function Dashboard({
         Swal.fire({
             icon: 'success',
             title: 'ซิงค์และตรวจสอบรายการอ้างอิงครบถ้วน',
-            text: `ระบบตรวจสอบเนื้อหาในข้อ ๒.๑, ๒.๒ และ ๒.๓ และรวบรวมรายการอ้างอิงตรงตามเนื้อหาทั้งหมด ${finalSorted.length} รายการ`,
+            text: `ระบบตรวจสอบเนื้อหาในข้อ 2.1, 2.2 และ 2.3 และรวบรวมรายการอ้างอิงตรงตามเนื้อหาทั้งหมด ${finalSorted.length} รายการ`,
             confirmButtonText: 'ตกลง',
             confirmButtonColor: '#059669',
             timer: 2500
@@ -1493,7 +1496,7 @@ export default function Dashboard({
         if (!chapter2Analysis?.sections) return;
         Swal.fire({
             title: 'นำเนื้อหาที่วิเคราะห์ทั้งหมดเข้าสู่แบบฟอร์ม?',
-            text: 'ระบบจะนำทฤษฎีและงานวิจัยทั้งหมดที่วิเคราะห์ได้ พร้อมรายการอ้างอิงที่สอดคล้องครบถ้วน เข้าสู่แบบฟอร์มบทที่ ๒',
+            text: 'ระบบจะนำทฤษฎีและงานวิจัยทั้งหมดที่วิเคราะห์ได้ พร้อมรายการอ้างอิงที่สอดคล้องครบถ้วน เข้าสู่แบบฟอร์มบทที่ 2',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'ยืนยันนำเข้าทั้งหมด',
@@ -1525,9 +1528,9 @@ export default function Dashboard({
         if (!activeChapter1Project) return;
         setIsSavingChapter2(true);
 
-        // Ensure all subsections in ๒.๑ and ๒.๓ are sequentially numbered
-        const cleanedSec2_1 = renumberSubsections(chapter2Sections.section_2_1, '๒.๑');
-        const cleanedSec2_3 = renumberSubsections(chapter2Sections.section_2_3, '๒.๓');
+        // Ensure all subsections in 2.1 and 2.3 are sequentially numbered
+        const cleanedSec2_1 = renumberSubsections(chapter2Sections.section_2_1, '2.1');
+        const cleanedSec2_3 = renumberSubsections(chapter2Sections.section_2_3, '2.3');
         const updatedSections = {
             ...chapter2Sections,
             section_2_1: cleanedSec2_1,
@@ -1536,7 +1539,7 @@ export default function Dashboard({
         setChapter2Sections(updatedSections);
 
         const fullContent = [
-            "บทที่ ๒",
+            "บทที่ 2",
             "เอกสารและงานวิจัยที่เกี่ยวข้อง\n",
             updatedSections.intro,
             updatedSections.section_2_1,
@@ -1558,8 +1561,8 @@ export default function Dashboard({
 
             Swal.fire({
                 icon: 'success',
-                title: 'บันทึกบทที่ ๒ สำเร็จ',
-                text: 'บันทึกข้อมูลรายงานบทที่ ๒ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                title: 'บันทึกบทที่ 2 สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ 2 เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#059669',
                 timer: 2000,
@@ -1607,8 +1610,8 @@ export default function Dashboard({
 
                 Swal.fire({
                     icon: 'success',
-                    title: 'วิเคราะห์และร่างเนื้อหาบทที่ ๓ สำเร็จ',
-                    text: `AI ประมวลผลข้อมูลจากบทที่ ๑ (วัตถุประสงค์ ตัวชี้วัด), บทที่ ๒ (ทฤษฎี นโยบาย) และโครงการฉบับเต็ม พร้อมสังเคราะห์วิธีดำเนินงานตามวงจร PDCA ให้เรียบร้อยแล้ว`,
+                    title: 'วิเคราะห์และร่างเนื้อหาบทที่ 3 สำเร็จ',
+                    text: `AI ประมวลผลข้อมูลจากบทที่ 1 (วัตถุประสงค์ ตัวชี้วัด), บทที่ 2 (ทฤษฎี นโยบาย) และโครงการฉบับเต็ม พร้อมสังเคราะห์วิธีดำเนินงานตามวงจร PDCA ให้เรียบร้อยแล้ว`,
                     confirmButtonText: 'ตกลง',
                     confirmButtonColor: '#059669',
                     timer: 2500
@@ -1619,7 +1622,7 @@ export default function Dashboard({
             Swal.fire({
                 icon: 'error',
                 title: 'เกิดข้อผิดพลาดในการวิเคราะห์',
-                text: error.response?.data?.message || 'ไม่สามารถวิเคราะห์ข้อมูลบทที่ ๓ ได้ กรุณาลองใหม่อีกครั้ง',
+                text: error.response?.data?.message || 'ไม่สามารถวิเคราะห์ข้อมูลบทที่ 3 ได้ กรุณาลองใหม่อีกครั้ง',
                 confirmButtonText: 'ตกลง'
             });
         } finally {
@@ -1650,13 +1653,13 @@ export default function Dashboard({
 
     const handleAutoRenumberSection3_3 = () => {
         if (!chapter3Sections.section_3_3) return;
-        const renumbered = renumberSubsections(chapter3Sections.section_3_3, '๓.๓');
+        const renumbered = renumberSubsections(chapter3Sections.section_3_3, '3.3');
         setChapter3Sections(prev => ({ ...prev, section_3_3: renumbered }));
         Swal.fire({
             toast: true,
             position: 'top-end',
             icon: 'success',
-            title: 'จัดเรียงลำดับหัวข้อย่อย ๓.๓.๑, ๓.๓.๒... สำเร็จ',
+            title: 'จัดเรียงลำดับหัวข้อย่อย 3.3.1, 3.3.2... สำเร็จ',
             showConfirmButton: false,
             timer: 1800
         });
@@ -1666,7 +1669,7 @@ export default function Dashboard({
         if (!activeChapter1Project) return;
         setIsSavingChapter3(true);
 
-        const cleanedSec3_3 = renumberSubsections(chapter3Sections.section_3_3, '๓.๓');
+        const cleanedSec3_3 = renumberSubsections(chapter3Sections.section_3_3, '3.3');
         const updatedSections = {
             ...chapter3Sections,
             section_3_3: cleanedSec3_3
@@ -1674,7 +1677,7 @@ export default function Dashboard({
         setChapter3Sections(updatedSections);
 
         const fullContent = [
-            "บทที่ ๓",
+            "บทที่ 3",
             "วิธีดำเนินงานโครงการ\n",
             updatedSections.intro,
             updatedSections.section_3_1,
@@ -1697,8 +1700,8 @@ export default function Dashboard({
 
             Swal.fire({
                 icon: 'success',
-                title: 'บันทึกบทที่ ๓ สำเร็จ',
-                text: 'บันทึกข้อมูลรายงานบทที่ ๓ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                title: 'บันทึกบทที่ 3 สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ 3 เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#059669',
                 timer: 2000,
@@ -1743,8 +1746,8 @@ export default function Dashboard({
 
                 Swal.fire({
                     icon: 'success',
-                    title: 'วิเคราะห์และร่างเนื้อหาบทที่ ๔ สำเร็จ',
-                    text: 'AI ประมวลผลข้อมูลสถิติจากแบบประเมินจริง ตัวชี้วัดเชิงปริมาณ และผลการเบิกจ่ายงบประมาณ พร้อมสังเคราะห์เนื้อหาบทที่ ๔ ให้เรียบร้อยแล้ว',
+                    title: 'วิเคราะห์และร่างเนื้อหาบทที่ 4 สำเร็จ',
+                    text: 'AI ประมวลผลข้อมูลสถิติจากแบบประเมินจริง ตัวชี้วัดเชิงปริมาณ และผลการเบิกจ่ายงบประมาณ พร้อมสังเคราะห์เนื้อหาบทที่ 4 ให้เรียบร้อยแล้ว',
                     confirmButtonText: 'ตกลง',
                     confirmButtonColor: '#e11d48',
                     timer: 2500
@@ -1755,7 +1758,7 @@ export default function Dashboard({
             Swal.fire({
                 icon: 'error',
                 title: 'เกิดข้อผิดพลาดในการวิเคราะห์',
-                text: error.response?.data?.message || 'ไม่สามารถวิเคราะห์ข้อมูลบทที่ ๔ ได้ กรุณาลองใหม่อีกครั้ง',
+                text: error.response?.data?.message || 'ไม่สามารถวิเคราะห์ข้อมูลบทที่ 4 ได้ กรุณาลองใหม่อีกครั้ง',
                 confirmButtonText: 'ตกลง'
             });
         } finally {
@@ -1790,7 +1793,7 @@ export default function Dashboard({
         const updatedSections = { ...chapter4Sections };
 
         const fullContent = [
-            "บทที่ ๔",
+            "บทที่ 4",
             "ผลการดำเนินงานและการประเมินผลโครงการ\n",
             updatedSections.intro,
             updatedSections.section_4_1,
@@ -1812,8 +1815,8 @@ export default function Dashboard({
 
             Swal.fire({
                 icon: 'success',
-                title: 'บันทึกบทที่ ๔ สำเร็จ',
-                text: 'บันทึกข้อมูลรายงานบทที่ ๔ เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
+                title: 'บันทึกบทที่ 4 สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ 4 เรียบร้อยแล้ว พร้อมสำหรับพิมพ์รายงาน',
                 confirmButtonText: 'ตกลง',
                 confirmButtonColor: '#e11d48',
                 timer: 2000,
@@ -1904,8 +1907,8 @@ export default function Dashboard({
     const handleLoadStandard15Pattern = async () => {
         if (!activeChapter1Project) return;
         const confirm = await Swal.fire({
-            title: 'โหลดชุดคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ)?',
-            text: 'ระบบจะนำเข้าข้อคำถามมาตรฐาน ๑๕ ข้อ ครอบคลุม ๔ ด้าน (กระบวนการ, ปัจจัยนำเข้า, ผลผลิต/วัตถุประสงค์, ประโยชน์/ตัวชี้วัด) สอดคล้องกับโครงการนี้',
+            title: 'โหลดชุดคำถามมาตรฐาน 4 ด้าน (15 ข้อ)?',
+            text: 'ระบบจะนำเข้าข้อคำถามมาตรฐาน 15 ข้อ ครอบคลุม 4 ด้าน (กระบวนการ, ปัจจัยนำเข้า, ผลผลิต/วัตถุประสงค์, ประโยชน์/ตัวชี้วัด) สอดคล้องกับโครงการนี้',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#7c3aed',
@@ -1924,7 +1927,7 @@ export default function Dashboard({
                 Swal.fire({
                     icon: 'success',
                     title: 'โหลดชุดคำถามมาตรฐานสำเร็จ!',
-                    text: 'นำเข้าข้อคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ) พร้อมปรับข้อความสอดคล้องกับวัตถุประสงค์และตัวชี้วัดโครงการเรียบร้อยแล้ว',
+                    text: 'นำเข้าข้อคำถามมาตรฐาน 4 ด้าน (15 ข้อ) พร้อมปรับข้อความสอดคล้องกับวัตถุประสงค์และตัวชี้วัดโครงการเรียบร้อยแล้ว',
                     confirmButtonColor: '#7c3aed',
                     confirmButtonText: 'ตกลง'
                 });
@@ -1966,7 +1969,7 @@ export default function Dashboard({
             Swal.fire({
                 icon: 'warning',
                 title: 'ไม่สามารถลบได้',
-                text: 'แบบประเมินต้องมีข้อคำถามอย่างน้อย ๑ ข้อ',
+                text: 'แบบประเมินต้องมีข้อคำถามอย่างน้อย 1 ข้อ',
                 confirmButtonColor: '#7c3aed',
             });
             return;
@@ -1980,7 +1983,7 @@ export default function Dashboard({
             Swal.fire({
                 icon: 'warning',
                 title: 'กรุณาเพิ่มข้อคำถาม',
-                text: 'ต้องมีข้อคำถามอย่างน้อย ๑ ข้อเพื่อบันทึกแบบประเมิน',
+                text: 'ต้องมีข้อคำถามอย่างน้อย 1 ข้อเพื่อบันทึกแบบประเมิน',
                 confirmButtonColor: '#7c3aed',
             });
             return;
@@ -2059,7 +2062,7 @@ export default function Dashboard({
     const handleGenerateMockLoan = () => {
         Swal.fire({
             title: 'ส่งข้อมูลสัญญาจำลองจาก npc_eleve?',
-            html: 'ระบบจะจำลองการส่ง API สัญญายืมเงินไปราชการ (แบบ กค. ๑๐๑) เข้าสู่ SmartFlow เพื่อทดสอบการรับข้อมูลและการเข้าสู่คิวงานแผนงานทันที',
+            html: 'ระบบจะจำลองการส่ง API สัญญายืมเงินไปราชการ (แบบ กค. 101) เข้าสู่ SmartFlow เพื่อทดสอบการรับข้อมูลและการเข้าสู่คิวงานแผนงานทันที',
             icon: 'question',
             showCancelButton: true,
             confirmButtonText: '🚀 ยืนยันส่งข้อมูลทดสอบ',
@@ -2099,7 +2102,7 @@ export default function Dashboard({
                             </span>
                         </div>
                         <div className="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                            <span>📡</span> ระบบ SmartFlow พร้อมรับข้อมูลสัญญายืมเงิน (แบบ กค. ๑๐๑) แบบ Real-time
+                            <span>📡</span> ระบบ SmartFlow พร้อมรับข้อมูลสัญญายืมเงิน (แบบ กค. 101) แบบ Real-time
                         </div>
                         <div className="flex items-center gap-3 sm:gap-4 text-xs text-slate-300 flex-wrap pt-0.5">
                             <span className="flex items-center gap-1">
@@ -2807,7 +2810,7 @@ export default function Dashboard({
             const isFinReceived = loanStatus === 'finance_received' || project?.finance_received_at || proc?.finance_received_at;
             const isProcToFin = procStatus === 'forwarded_to_finance' || procStatus === 'completed';
 
-            // 1. Pure Loan route (สัญญายืมเงิน กค. ๑๐๑): routes directly to Finance, never to Procurement!
+            // 1. Pure Loan route (สัญญายืมเงิน กค. 101): routes directly to Finance, never to Procurement!
             if (disbType === 'loan') {
                 if (project?.loan_status === 'cleared' || project?.finance_disbursed_at) {
                     return (
@@ -3924,7 +3927,7 @@ export default function Dashboard({
                 <div className="space-y-6 mt-8">
                     <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-purple-100 shadow-sm">
                         <div>
-                            <h3 className="text-lg font-bold text-slate-900">จัดการโครงสร้าง ๔ ฝ่ายหลัก และงานย่อยในสังกัด</h3>
+                            <h3 className="text-lg font-bold text-slate-900">จัดการโครงสร้าง 4 ฝ่ายหลัก และงานย่อยในสังกัด</h3>
                             <p className="text-xs text-slate-600">ตั้งค่าชื่อฝ่ายหลัก และเพิ่ม/แก้ไขกลุ่มงานย่อย สาขาวิชาในสังกัด เพื่อใช้เลือกในข้อมูลบุคลากรและโครงการ</p>
                         </div>
                         <button
@@ -4569,15 +4572,7 @@ export default function Dashboard({
         );
     };
 
-    // Helper to convert Thai numerals to Arabic numerals
-    const toArabicNumerals = (str) => {
-        if (!str || typeof str !== 'string') return str;
-        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return str.replace(/[๐-๙]/g, char => {
-            const idx = thaiDigits.indexOf(char);
-            return idx !== -1 ? String(idx) : char;
-        });
-    };
+    // (toArabicNumerals already defined at top of component)
 
     const handleConvertThaiToArabic = () => {
         Swal.fire({
@@ -5756,7 +5751,7 @@ ${itemsListText}
 วิทยาลัยสารพัดช่างน่าน แผนกวิชา ${deptName} มีความประสงค์ดำเนินงานและจัดกิจกรรม หมวด${planTitle} ให้เกิดประสิทธิภาพสูงสุด
 
 2. คุณลักษณะเฉพาะและขอบเขตงาน
-รายการนี้เป็นการดำเนินงานในลักษณะการยืมเงินทดรองราชการ (แบบ กค.๑๐๑) เพื่อเป็นค่าใช้จ่ายในการดำเนินกิจกรรมทั้งหมด โดยไม่มีรายการพัสดุหรือครุภัณฑ์ที่ต้องจัดซื้อจัดจ้างตามขอบเขตงาน (TOR) เพิ่มเติม
+รายการนี้เป็นการดำเนินงานในลักษณะการยืมเงินทดรองราชการ (แบบ กค. 101) เพื่อเป็นค่าใช้จ่ายในการดำเนินกิจกรรมทั้งหมด โดยไม่มีรายการพัสดุหรือครุภัณฑ์ที่ต้องจัดซื้อจัดจ้างตามขอบเขตงาน (TOR) เพิ่มเติม
 
 3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ
 ผู้ยืมเงินจะต้องดำเนินงานให้แล้วเสร็จ และส่งใช้เงินยืมทดรองราชการพร้อมหลักฐานใบสำคัญคู่จ่ายให้แก่งานการเงินภายในกำหนด 30 วัน
@@ -5951,10 +5946,10 @@ ${itemsListText}
                                 <span>📊</span> งานแผนและงบประมาณ & ผู้บริหารสถานศึกษา
                             </div>
                             <h2 className="text-xl md:text-3xl font-black text-white tracking-tight">
-                                ภาพรวมคำของบประมาณประจำปี (แยก ๔ ฝ่ายหลัก)
+                                ภาพรวมคำของบประมาณประจำปี (แยก 4 ฝ่ายหลัก)
                             </h2>
                             <p className="text-xs sm:text-sm text-purple-200 mt-1 max-w-3xl leading-relaxed">
-                                สรุปยอดคำขอตั้งงบประมาณจำแนกตาม ๔ ฝ่ายหลักของสถานศึกษา เพื่อพิจารณาอนุมัติจัดสรรงบประมาณดำเนินโครงการและแผนปฏิบัติราชการ ประจำปีงบประมาณ พ.ศ. {fiscalYear}
+                                สรุปยอดคำขอตั้งงบประมาณจำแนกตาม 4 ฝ่ายหลักของสถานศึกษา เพื่อพิจารณาอนุมัติจัดสรรงบประมาณดำเนินโครงการและแผนปฏิบัติราชการ ประจำปีงบประมาณ พ.ศ. {fiscalYear}
                             </p>
                         </div>
 
@@ -5981,7 +5976,7 @@ ${itemsListText}
                     {/* Top Stats Cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 border-t border-white/15 pt-6 relative z-10">
                         <div className="bg-white/10 backdrop-blur-xs p-4 rounded-2xl border border-white/10">
-                            <span className="text-purple-200 text-xs block">ยอดคำขอตั้งงบรวม ๔ ฝ่าย</span>
+                            <span className="text-purple-200 text-xs block">ยอดคำขอตั้งงบรวม 4 ฝ่าย</span>
                             <span className="text-lg md:text-2xl font-black text-amber-300 mt-1 block">
                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(grandTotalProposed)}
                             </span>
@@ -6027,13 +6022,13 @@ ${itemsListText}
                     </div>
                 </div>
 
-                {/* 2. Four Main Divisions Summary Cards (แยก ๔ ฝ่าย ชัดเจน) */}
+                {/* 2. Four Main Divisions Summary Cards (แยก 4 ฝ่าย ชัดเจน) */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <span className="text-xl">🏛️</span>
                             <h3 className="text-base sm:text-lg font-black text-slate-900">
-                                คำของบประมาณจำแนกตาม ๔ ฝ่ายหลักของสถานศึกษา
+                                คำของบประมาณจำแนกตาม 4 ฝ่ายหลักของสถานศึกษา
                             </h3>
                         </div>
                         <span className="text-xs text-slate-500">
@@ -6390,14 +6385,14 @@ ${itemsListText}
                     </div>
                 </div>
 
-                {/* 1.5 Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา ๔ มิติ) */}
+                {/* 1.5 Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา 4 มิติ) */}
                 {(() => {
                     const expProjections = institutionalExpenditureProjections || {
                         total_projected_pool: 10000000.00,
                         categories: [
                             {
                                 id: 'routine_divisions',
-                                name: '๑. งบดำเนินงานและภารกิจประจำ ๔ ฝ่าย',
+                                name: '1. งบดำเนินงานและภารกิจประจำ 4 ฝ่าย',
                                 description: 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
                                 projected_ceiling: 2000000.00,
                                 requested_amount: routineAllocated,
@@ -6406,7 +6401,7 @@ ${itemsListText}
                             },
                             {
                                 id: 'strategic_projects',
-                                name: '๒. งบโครงการตามแผนปฏิบัติราชการประจำปี',
+                                name: '2. งบโครงการตามแผนปฏิบัติราชการประจำปี',
                                 description: 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
                                 projected_ceiling: 5000000.00,
                                 requested_amount: parseFloat(pHead.globalAllocated || 0),
@@ -6415,7 +6410,7 @@ ${itemsListText}
                             },
                             {
                                 id: 'utilities_overhead',
-                                name: '๓. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
+                                name: '3. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
                                 description: 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
                                 projected_ceiling: 2000000.00,
                                 requested_amount: totalCentralReceived > 0 ? totalCentralReceived : 1500000.00,
@@ -6424,7 +6419,7 @@ ${itemsListText}
                             },
                             {
                                 id: 'contingency_reserve',
-                                name: '๔. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
+                                name: '4. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
                                 description: 'เงินสำรองกรณีเร่งด่วน ภัยพิบัติ หรือโครงการนโยบายเร่งด่วนพิเศษ',
                                 projected_ceiling: 1000000.00,
                                 requested_amount: 0.00,
@@ -6455,7 +6450,7 @@ ${itemsListText}
                                         <span>🏛️</span> กรอบประมาณการรายจ่ายสถานศึกษา (Institutional Expenditure Projections)
                                     </div>
                                     <h3 className="text-lg sm:text-xl font-black text-purple-950">
-                                        ประมาณการรายจ่ายสถานศึกษา ๔ มิติหลัก ประจำปีงบประมาณ
+                                        ประมาณการรายจ่ายสถานศึกษา 4 มิติหลัก ประจำปีงบประมาณ
                                     </h3>
                                     <p className="text-xs text-slate-600 mt-0.5">
                                         ควบคุมกรอบวงเงินประมาณการใช้จ่ายจำแนกตามประเภทภารกิจ เปรียบเทียบกับยอดคำขอจริง วงเงินจัดสรร และยอดเบิกจ่ายสะสม
@@ -8334,7 +8329,7 @@ ${itemsListText}
                             <div className="border-b border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-white px-6 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                                 <div>
                                     <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold mb-1 border border-purple-200">
-                                        <span>✈️</span> สัญญายืมเงินไปราชการ (กค. ๑๐๑)
+                                        <span>✈️</span> สัญญายืมเงินไปราชการ (กค. 101)
                                     </div>
                                     <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
                                         <span>📝</span> {isPowerUser ? 'สัญญายืมเงินไปราชการ รอแผนงานตัดยอดงบประมาณ' : 'สัญญายืมเงินไปราชการของฉัน'}
@@ -12366,7 +12361,7 @@ ${itemsListText}
                                                                 type="text"
                                                                 value={procPoData.delivery_days}
                                                                 onChange={(e) => setProcPoData({ ...procPoData, delivery_days: e.target.value })}
-                                                                placeholder="เช่น ๗ หรือ 15"
+                                                                placeholder="เช่น 7 หรือ 15"
                                                                 className="w-full text-xs rounded-xl border border-purple-200 px-3 py-1.5 focus:ring-purple-500"
                                                             />
                                                         </div>
@@ -12374,7 +12369,7 @@ ${itemsListText}
 
                                                     <div className="pt-2">
                                                         <a
-                                                            href={`${route('procurements.download_document', { project: p.id, type: 'po' })}?vendor_name=${encodeURIComponent(procPoData.vendor_name || '')}&vendor_tax_id=${encodeURIComponent(procPoData.vendor_tax_id || '')}&vendor_address=${encodeURIComponent(procPoData.vendor_address || '')}&vendor_phone=${encodeURIComponent(procPoData.vendor_phone || '')}&po_number=${encodeURIComponent(procPoData.po_number || proc?.procurement_number || '')}&delivery_days=${encodeURIComponent(procPoData.delivery_days || '๗')}`}
+                                                            href={`${route('procurements.download_document', { project: p.id, type: 'po' })}?vendor_name=${encodeURIComponent(procPoData.vendor_name || '')}&vendor_tax_id=${encodeURIComponent(procPoData.vendor_tax_id || '')}&vendor_address=${encodeURIComponent(procPoData.vendor_address || '')}&vendor_phone=${encodeURIComponent(procPoData.vendor_phone || '')}&po_number=${encodeURIComponent(procPoData.po_number || proc?.procurement_number || '')}&delivery_days=${encodeURIComponent(procPoData.delivery_days || '7')}`}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-800 hover:to-indigo-700 text-white font-black text-xs shadow-md flex items-center justify-center gap-2 transition hover:scale-[1.02] active:scale-95"
@@ -12773,12 +12768,12 @@ ${itemsListText}
                         <h3 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
                             <span>🏛️</span>
                             {executiveTableView === 'projects'
-                                ? 'สรุปโครงการแยกตาม ๔ ฝ่ายหลัก (แบบภาพที่ 1)'
+                                ? 'สรุปโครงการแยกตาม 4 ฝ่ายหลัก (แบบภาพที่ 1)'
                                 : 'สรุปสถิติตามผังโครงสร้างงานย่อย (แบบภาพที่ 2)'}
                         </h3>
                         <p className="text-xs text-slate-500 mt-0.5">
                             {executiveTableView === 'projects'
-                                ? 'แสดงรายละเอียดโครงการ ผู้รับผิดชอบ งบประมาณเสนอขอ งบจัดสรร และสถานะอนุมัติแยกตาม ๔ ฝ่ายหลักของสถานศึกษา'
+                                ? 'แสดงรายละเอียดโครงการ ผู้รับผิดชอบ งบประมาณเสนอขอ งบจัดสรร และสถานะอนุมัติแยกตาม 4 ฝ่ายหลักของสถานศึกษา'
                                 : 'แสดงสถิติและงบประมาณจำแนกตามโครงสร้างฝ่ายและงานย่อยในสังกัด'}
                         </p>
                     </div>
@@ -12792,7 +12787,7 @@ ${itemsListText}
                                     : 'text-purple-800 hover:bg-purple-200/60'
                             }`}
                         >
-                            <span>📋</span> แยกโครงการตาม ๔ ฝ่าย (แบบภาพที่ 1)
+                            <span>📋</span> แยกโครงการตาม 4 ฝ่าย (แบบภาพที่ 1)
                         </button>
                         <button
                             type="button"
@@ -12814,7 +12809,7 @@ ${itemsListText}
                 ) : (
                     <div className="overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-sm">
                         <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/70 px-6 py-4">
-                            <h3 className="text-lg font-bold text-slate-900">สรุปสถิติและงบประมาณจำแนกตาม ๔ ฝ่ายหลัก และงานย่อยในสังกัด</h3>
+                            <h3 className="text-lg font-bold text-slate-900">สรุปสถิติและงบประมาณจำแนกตาม 4 ฝ่ายหลัก และงานย่อยในสังกัด</h3>
                             <p className="text-xs text-slate-600">บริหารจัดการครอบคลุม ฝ่ายวิชาการ, ฝ่ายกิจการนักเรียน นักศึกษา, ฝ่ายบริหารทรัพยากร และ ฝ่ายยุทธศาสตร์และแผนงาน</p>
                         </div>
                         <div className="overflow-x-auto">
@@ -13002,7 +12997,7 @@ ${itemsListText}
 
         const years = Array.from(new Set(allProjectsMaster.map(p => p.academic_year))).sort().reverse();
 
-        // Group budgets & projects by the 4 Main Divisions (รวมโครงการย่อยเข้าไปอยู่ใน ๔ ฝ่ายหลัก)
+        // Group budgets & projects by the 4 Main Divisions (รวมโครงการย่อยเข้าไปอยู่ใน 4 ฝ่ายหลัก)
         const mainDivisions = getFourMainDivisions();
         const deptSummaryMap = {};
         mainDivisions.forEach(mainDept => {
@@ -13448,17 +13443,17 @@ ${itemsListText}
     const getTrackingApprovalStepInfo = (stepNumber) => {
         switch (parseInt(stepNumber)) {
             case 1:
-                return { title: 'ขั้นตอนที่ ๑: ผู้เสนอโครงการ', role: 'ครู/บุคลากรผู้รับผิดชอบ', icon: '👤' };
+                return { title: 'ขั้นตอนที่ 1: ผู้เสนอโครงการ', role: 'ครู/บุคลากรผู้รับผิดชอบ', icon: '👤' };
             case 2:
-                return { title: 'ขั้นตอนที่ ๒: หัวหน้างาน/หัวหน้าแผนก', role: 'หัวหน้างาน/แผนกวิชา', icon: '📋' };
+                return { title: 'ขั้นตอนที่ 2: หัวหน้างาน/หัวหน้าแผนก', role: 'หัวหน้างาน/แผนกวิชา', icon: '📋' };
             case 3:
-                return { title: 'ขั้นตอนที่ ๓: เจ้าหน้าที่งานแผนงาน', role: 'งานวางแผนและงบประมาณ', icon: '⚖️' };
+                return { title: 'ขั้นตอนที่ 3: เจ้าหน้าที่งานแผนงาน', role: 'งานวางแผนและงบประมาณ', icon: '⚖️' };
             case 4:
-                return { title: 'ขั้นตอนที่ ๔: หัวหน้างานวางแผนฯ', role: 'หัวหน้างานวางแผนและงบประมาณ', icon: '📊' };
+                return { title: 'ขั้นตอนที่ 4: หัวหน้างานวางแผนฯ', role: 'หัวหน้างานวางแผนและงบประมาณ', icon: '📊' };
             case 5:
-                return { title: 'ขั้นตอนที่ ๕: รองผู้อำนวยการ', role: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน', icon: '👔' };
+                return { title: 'ขั้นตอนที่ 5: รองผู้อำนวยการ', role: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน', icon: '👔' };
             case 6:
-                return { title: 'ขั้นตอนที่ ๖: ผู้อำนวยการวิทยาลัย', role: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน', icon: '🏛️' };
+                return { title: 'ขั้นตอนที่ 6: ผู้อำนวยการวิทยาลัย', role: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน', icon: '🏛️' };
             default:
                 return { title: `ขั้นตอนที่ ${stepNumber}`, role: 'ผู้เกี่ยวข้อง', icon: '📝' };
         }
@@ -13610,7 +13605,7 @@ ${itemsListText}
                 : (hasLoanComponent ? isLoanCleared : isProcDisbursed);
 
             // ==========================================
-            // 1. Compute Loan Contract (สัญญายืมเงิน กค. ๑๐๑) Status & Location
+            // 1. Compute Loan Contract (สัญญายืมเงิน กค. 101) Status & Location
             // ==========================================
             let loanLocation = null;
             let loanHolder = null;
@@ -13698,7 +13693,7 @@ ${itemsListText}
                 }
 
                 // ==========================================
-                // 2. Compute Procurement Package (ชุดจัดซื้อจัดจ้าง ๔ ฉบับ) Status & Location
+                // 2. Compute Procurement Package (ชุดจัดซื้อจัดจ้าง 4 ฉบับ) Status & Location
                 // ==========================================
                 if (hasProcComponent) {
                     procLocation = 'อยู่ที่งานแผนงาน';
@@ -13861,7 +13856,7 @@ ${itemsListText}
             let defaultRef = 'โอนเงิน KTB';
 
             if (loanPending) {
-                optionsHtml += `<option value="loan" data-amount="${loanAmt}" data-ref="โอนเงินยืม KTB" ${loanPending && !procPending ? 'selected' : ''}>สัญญายืมเงิน (แบบ กค. ๑๐๑) ➔ ฿${fmt(loanAmt)}</option>`;
+                optionsHtml += `<option value="loan" data-amount="${loanAmt}" data-ref="โอนเงินยืม KTB" ${loanPending && !procPending ? 'selected' : ''}>สัญญายืมเงิน (แบบ กค. 101) ➔ ฿${fmt(loanAmt)}</option>`;
             }
 
             if (procPending) {
@@ -13871,7 +13866,7 @@ ${itemsListText}
                         optionsHtml += `<option value="proc_set_${sIdx}" data-amount="${s.amount}" data-ref="เบิกจ่ายจัดซื้อ ${s.shortLabel} KTB">↳ ${s.label} ➔ ฿${fmt(s.amount)}</option>`;
                     });
                 } else {
-                    optionsHtml += `<option value="procurement" data-amount="${procAmt}" data-ref="เบิกจ่ายจัดซื้อ KTB" ${!loanPending ? 'selected' : ''}>ชุดจัดซื้อจัดจ้าง (๔ ฉบับ / PR) ➔ ฿${fmt(procAmt)}</option>`;
+                    optionsHtml += `<option value="procurement" data-amount="${procAmt}" data-ref="เบิกจ่ายจัดซื้อ KTB" ${!loanPending ? 'selected' : ''}>ชุดจัดซื้อจัดจ้าง (4 ฉบับ / PR) ➔ ฿${fmt(procAmt)}</option>`;
                 }
             }
 
@@ -13997,9 +13992,9 @@ return (
                             </h2>
                             <p className="text-xs sm:text-sm text-purple-200 max-w-2xl leading-relaxed">
                                 {isStrictFinanceUser
-                                    ? 'แสดงเฉพาะเอกสารและสัญญาที่วิ่งเข้าสู่งานการเงิน เพื่อลงรับ โอนเงินยืมทดรองราชการ หรือเบิกจ่ายตามชุดจัดซื้อจัดจ้าง ๔ ฉบับ'
+                                    ? 'แสดงเฉพาะเอกสารและสัญญาที่วิ่งเข้าสู่งานการเงิน เพื่อลงรับ โอนเงินยืมทดรองราชการ หรือเบิกจ่ายตามชุดจัดซื้อจัดจ้าง 4 ฉบับ'
                                     : (isPowerTrackingUser
-                                        ? 'ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค.๑๐๑) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน'
+                                        ? 'ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค. 101) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน'
                                         : 'ติดตามสถานะและตำแหน่งเอกสารของโครงการที่คุณเสนอขออนุมัติ ทราบทันทีว่าสัญญายืมเงินหรือจัดซื้อจัดจ้างอยู่ที่ขั้นตอนหรือโต๊ะงานใด ป้องกันเอกสารตกค้าง')}
                             </p>
                         </div>
@@ -14113,7 +14108,7 @@ return (
                             </div>
                             <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">ลงรับแล้ว/รอโอนเงิน</h4>
                             <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'fin_pending_loan' ? 'text-blue-100' : 'text-slate-600'}`}>
-                                ลงรับ กค.๑๐๑ แล้ว / รอสั่งจ่ายเงินยืม
+                                ลงรับ กค. 101 แล้ว / รอสั่งจ่ายเงินยืม
                             </p>
                         </button>
 
@@ -14133,7 +14128,7 @@ return (
                             </div>
                             <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">ชุดจัดซื้อรอเบิกจ่าย</h4>
                             <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'fin_proc_pay' ? 'text-purple-100' : 'text-slate-600'}`}>
-                                พัสดุส่งเรื่อง ๔ ฉบับมาการเงิน
+                                พัสดุส่งเรื่อง 4 ฉบับมาการเงิน
                             </p>
                         </button>
 
@@ -14195,7 +14190,7 @@ return (
                             </div>
                             <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">อยู่ที่งานการเงิน</h4>
                             <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'at_finance' ? 'text-emerald-100' : 'text-slate-600'}`}>
-                                ตรวจสัญญา กค.๑๐๑ / รอเบิกจ่าย
+                                ตรวจสัญญา กค. 101 / รอเบิกจ่าย
                             </p>
                         </button>
 
@@ -14390,7 +14385,7 @@ return (
                                                         href={route('procurements.download_document', [item.id, 'loan_contract'])}
                                                         target="_blank"
                                                         className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-amber-50/90 hover:bg-amber-100 border border-amber-300 text-amber-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
-                                                        title="คลิกที่ตัวเลขเพื่อเปิดดูสัญญายืมเงิน แบบ กค. ๑๐๑"
+                                                        title="คลิกที่ตัวเลขเพื่อเปิดดูสัญญายืมเงิน แบบ กค. 101"
                                                     >
                                                         <span className="text-xs sm:text-sm font-bold text-amber-950 font-mono underline decoration-amber-400 group-hover:text-amber-700">
                                                             ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.loanAmount)}
@@ -14491,9 +14486,9 @@ return (
                                                                                     <div>
                                                                                         <label class="block font-bold mb-1 text-slate-800">เลือกรายการที่ต้องการตัดยอด:</label>
                                                                                         <select id="swal-plan-target" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold">
-                                                                                            <option value="all" selected>ตัดยอดทั้ง ๒ ส่วน (ส่งพัสดุ + ส่งการเงิน)</option>
-                                                                                            <option value="procurement">เฉพาะชุดจัดซื้อจัดจ้าง (๔ ฉบับ) ➔ ส่งต่อพัสดุ</option>
-                                                                                            <option value="loan">เฉพาะสัญญายืมเงิน (กค.๑๐๑) ➔ ส่งต่อการเงิน</option>
+                                                                                            <option value="all" selected>ตัดยอดทั้ง 2 ส่วน (ส่งพัสดุ + ส่งการเงิน)</option>
+                                                                                            <option value="procurement">เฉพาะชุดจัดซื้อจัดจ้าง (4 ฉบับ) ➔ ส่งต่อพัสดุ</option>
+                                                                                            <option value="loan">เฉพาะสัญญายืมเงิน (กค. 101) ➔ ส่งต่อการเงิน</option>
                                                                                         </select>
                                                                                     </div>
                                                                                     <div>
@@ -14623,7 +14618,7 @@ return (
                                                                             html: `
                                                                                 <div class="text-left text-xs space-y-3 font-sans">
                                                                                     <p class="text-slate-600 leading-relaxed">
-                                                                                        ลงรับสัญญายืมเงิน (แบบ กค. ๑๐๑) ของโครงการ <strong>"${item.title}"</strong> เพื่อเตรียมโอนเงินยืม
+                                                                                        ลงรับสัญญายืมเงิน (แบบ กค. 101) ของโครงการ <strong>"${item.title}"</strong> เพื่อเตรียมโอนเงินยืม
                                                                                     </p>
                                                                                     <div>
                                                                                         <label class="font-bold text-slate-700 block mb-1">เลขที่รับการเงิน (อิงเลขเดียวกันจากงานแผน):</label>
@@ -14839,7 +14834,7 @@ return (
                                         value={docNumberFormData.prefix}
                                         onChange={(e) => setDocNumberFormData('prefix', e.target.value)}
                                         className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                                        placeholder="เช่น ผง. หรือ อว ๐๖๒๕"
+                                        placeholder="เช่น ผง. หรือ อว 0625"
                                         required
                                     />
                                     <span className="text-[10px] text-slate-500">เช่น อักษรย่อหน่วยงานงานแผนงานและงบประมาณ</span>
@@ -14912,7 +14907,7 @@ return (
                                             .replace('{YEAR_SHORT}', String((new Date().getFullYear() + 543) % 100).padStart(2, '0'))}
                                     </div>
                                     <p className="text-[10px] text-slate-600 mt-1.5">
-                                        หมายเลขนี้จะถูกใช้เป็น <strong>เลขคุมชุดเอกสารเดียวกันตลอดเส้นทาง</strong> ทั้งชุดจัดซื้อจัดจ้าง (๔ ฉบับ) และสัญญายืมเงิน (กค.๑๐๑)
+                                        หมายเลขนี้จะถูกใช้เป็น <strong>เลขคุมชุดเอกสารเดียวกันตลอดเส้นทาง</strong> ทั้งชุดจัดซื้อจัดจ้าง (4 ฉบับ) และสัญญายืมเงิน (กค. 101)
                                     </p>
                                 </div>
 
@@ -15117,7 +15112,7 @@ return (
                                 <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-2.5">
                                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-extrabold text-purple-950 text-sm">📦 ชุดจัดซื้อจัดจ้าง (๔ ฉบับ)</span>
+                                            <span className="font-extrabold text-purple-950 text-sm">📦 ชุดจัดซื้อจัดจ้าง (4 ฉบับ)</span>
                                             <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold ${selectedFinanceDocDetails.procBadgeClass}`}>
                                                 {selectedFinanceDocDetails.procStatusText}
                                             </span>
@@ -15133,12 +15128,12 @@ return (
                                         )}
                                     </div>
                                     <div className="pt-2 border-t border-purple-200/70 flex flex-wrap items-center gap-2">
-                                        <span className="text-xs text-purple-950 font-black">🖨️ พิมพ์เอกสารชุดจัดซื้อ (๔ ฉบับ):</span>
+                                        <span className="text-xs text-purple-950 font-black">🖨️ พิมพ์เอกสารชุดจัดซื้อ (4 ฉบับ):</span>
                                         <div className="flex flex-wrap items-center gap-1.5">
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'memo'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">๑. บันทึกข้อความ</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'request_form'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">๒. ใบขอซื้อ/จ้าง</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'estimation'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">๓. ตารางสืบราคา</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'tor'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">๔. TOR / รายละเอียด</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'memo'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">1. บันทึกข้อความ</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'request_form'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">2. ใบขอซื้อ/จ้าง</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'estimation'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">3. ตารางสืบราคา</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'tor'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">4. TOR / รายละเอียด</a>
                                         </div>
                                     </div>
                                 </div>
@@ -15304,13 +15299,13 @@ return (
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-purple-200 text-xs font-bold mb-2">
-                                <span>📘</span> เล่มรายงานโครงการ ๕ บท (PDCA Plan Phase)
+                                <span>📘</span> เล่มรายงานโครงการ 5 บท (PDCA Plan Phase)
                             </div>
                             <h2 className="text-xl md:text-2xl font-black tracking-tight">
-                                บทที่ ๑: บทนำ & ข้อมูลโครงการ (Introduction)
+                                บทที่ 1: บทนำ & ข้อมูลโครงการ (Introduction)
                             </h2>
                             <p className="text-purple-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
-                                จัดทำเนื้อหารายงานบทที่ ๑ ตามแบบมาตรฐาน สอศ. ระบบดึงข้อมูลจากแบบเสนอโครงการ (Proposal) โดยอัตโนมัติ สามารถปรับแต่งเนื้อหา สลับดูตัวอย่างเสมือนจริง และสั่งพิมพ์ A4
+                                จัดทำเนื้อหารายงานบทที่ 1 ตามแบบมาตรฐาน สอศ. ระบบดึงข้อมูลจากแบบเสนอโครงการ (Proposal) โดยอัตโนมัติ สามารถปรับแต่งเนื้อหา สลับดูตัวอย่างเสมือนจริง และสั่งพิมพ์ A4
                             </p>
                         </div>
 
@@ -15339,7 +15334,7 @@ return (
                     <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <span className="px-3.5 py-2 rounded-xl bg-white/10 text-white text-xs font-bold border border-white/15 flex items-center gap-1.5">
-                                <span>✏️</span> แบบฟอร์มจัดทำเนื้อหารายงาน บทที่ ๑ (บทนำ)
+                                <span>✏️</span> แบบฟอร์มจัดทำเนื้อหารายงาน บทที่ 1 (บทนำ)
                             </span>
                         </div>
 
@@ -15377,7 +15372,7 @@ return (
                                 ) : (
                                     <>
                                         <span>💾</span>
-                                        <span>บันทึกบทที่ ๑</span>
+                                        <span>บันทึกบทที่ 1</span>
                                     </>
                                 )}
                             </button>
@@ -15388,7 +15383,7 @@ return (
                                 rel="noopener noreferrer"
                                 className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-black transition shadow-md flex items-center gap-1.5"
                             >
-                                <span>🖨️</span> สั่งพิมพ์ / ดูตัวอย่าง A4 (บทที่ ๑)
+                                <span>🖨️</span> สั่งพิมพ์ / ดูตัวอย่าง A4 (บทที่ 1)
                             </a>
                         </div>
                     </div>
@@ -15400,10 +15395,10 @@ return (
                         <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 gap-3">
                             <div>
                                 <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                    <span>✏️</span> ปรับแต่งและแก้ไขข้อมูล บทที่ ๑ บทนำ
+                                    <span>✏️</span> ปรับแต่งและแก้ไขข้อมูล บทที่ 1 บทนำ
                                 </h3>
                                 <p className="text-xs text-slate-500 mt-0.5">
-                                    เนื้อหาด้านล่างนี้ถูกดึงมาจากแบบเสนอโครงการ (Proposal) อัตโนมัติ ท่านสามารถปรับภาษาให้เป็นเชิงวิชาการตามมาตรฐานรูปเล่ม ๕ บท
+                                    เนื้อหาด้านล่างนี้ถูกดึงมาจากแบบเสนอโครงการ (Proposal) อัตโนมัติ ท่านสามารถปรับภาษาให้เป็นเชิงวิชาการตามมาตรฐานรูปเล่ม 5 บท
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -15429,7 +15424,7 @@ return (
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๑</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">1.1</span>
                                     ความเป็นมาและความสำคัญของปัญหา
                                 </label>
                                 <span className="text-[11px] text-slate-400">ระบุสภาพปัญหา เหตุผลความจำเป็น และหลักการในการจัดทำโครงการ</span>
@@ -15447,30 +15442,30 @@ return (
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๒</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">1.2</span>
                                     วัตถุประสงค์ของโครงการ
                                 </label>
-                                <span className="text-[11px] text-slate-400">พิมพ์แยกแต่ละข้อ เช่น ๑. เพื่อ... ๒. เพื่อ...</span>
+                                <span className="text-[11px] text-slate-400">พิมพ์แยกแต่ละข้อ เช่น 1. เพื่อ... 2. เพื่อ...</span>
                             </div>
                             <textarea
                                 rows={4}
                                 value={safeString(chapter1Sections.objectives)}
                                 onChange={(e) => setChapter1Sections({ ...chapter1Sections, objectives: e.target.value })}
                                 className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
-                                placeholder="๑. เพื่อ...\n๒. เพื่อ..."
+                                placeholder="1. เพื่อ...\n2. เพื่อ..."
                             />
                         </div>
 
                         {/* 1.3 ขอบเขตโครงการ */}
                         <div className="space-y-3 pt-2">
                             <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๓</span>
+                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">1.3</span>
                                 ขอบเขตของโครงการ
                             </label>
                             
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pl-0 md:pl-2">
                                 <div className="space-y-1.5">
-                                    <span className="text-xs font-bold text-slate-700 block">๑.๓.๑ ประชากรและกลุ่มเป้าหมาย</span>
+                                    <span className="text-xs font-bold text-slate-700 block">1.3.1 ประชากรและกลุ่มเป้าหมาย</span>
                                     <textarea
                                         rows={3}
                                         value={safeString(chapter1Sections.scope_target)}
@@ -15480,7 +15475,7 @@ return (
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <span className="text-xs font-bold text-slate-700 block">๑.๓.๒ เนื้อหาและกิจกรรมการดำเนินงาน</span>
+                                    <span className="text-xs font-bold text-slate-700 block">1.3.2 เนื้อหาและกิจกรรมการดำเนินงาน</span>
                                     <textarea
                                         rows={3}
                                         value={safeString(chapter1Sections.scope_content)}
@@ -15490,7 +15485,7 @@ return (
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <span className="text-xs font-bold text-slate-700 block">๑.๓.๓ สถานที่และระยะเวลา</span>
+                                    <span className="text-xs font-bold text-slate-700 block">1.3.3 สถานที่และระยะเวลา</span>
                                     <textarea
                                         rows={3}
                                         value={safeString(chapter1Sections.scope_location_time)}
@@ -15505,29 +15500,29 @@ return (
                         {/* 1.4 ตัวชี้วัด */}
                         <div className="space-y-3 pt-2">
                             <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๔</span>
+                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">1.4</span>
                                 ตัวชี้วัดและเป้าหมายความสำเร็จ
                             </label>
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-0 md:pl-2">
                                 <div className="space-y-1.5">
-                                    <span className="text-xs font-bold text-slate-700 block">๑.๔.๑ เชิงปริมาณ (Quantitative)</span>
+                                    <span className="text-xs font-bold text-slate-700 block">1.4.1 เชิงปริมาณ (Quantitative)</span>
                                     <textarea
                                         rows={2}
                                         value={safeString(chapter1Sections.indicators_quantitative)}
                                         onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_quantitative: e.target.value })}
                                         className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
-                                        placeholder="ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐..."
+                                        placeholder="ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ 80..."
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <span className="text-xs font-bold text-slate-700 block">๑.๔.๒ เชิงคุณภาพ (Qualitative)</span>
+                                    <span className="text-xs font-bold text-slate-700 block">1.4.2 เชิงคุณภาพ (Qualitative)</span>
                                     <textarea
                                         rows={2}
                                         value={safeString(chapter1Sections.indicators_qualitative)}
                                         onChange={(e) => setChapter1Sections({ ...chapter1Sections, indicators_qualitative: e.target.value })}
                                         className="w-full text-xs rounded-xl border-slate-300 focus:border-purple-500 focus:ring-purple-500"
-                                        placeholder="ระดับความพึงพอใจ ค่าเฉลี่ย ๓.๕๑ ขึ้นไป..."
+                                        placeholder="ระดับความพึงพอใจ ค่าเฉลี่ย 3.51 ขึ้นไป..."
                                     />
                                 </div>
                             </div>
@@ -15537,7 +15532,7 @@ return (
                         <div className="space-y-2 pt-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๕</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">1.5</span>
                                     ประโยชน์ที่คาดว่าจะได้รับ
                                 </label>
                                 <span className="text-[11px] text-slate-400">ผลที่เกิดต่อผู้เรียน สถานศึกษา และหน่วยงาน</span>
@@ -15547,7 +15542,7 @@ return (
                                 value={safeString(chapter1Sections.expected_benefits)}
                                 onChange={(e) => setChapter1Sections({ ...chapter1Sections, expected_benefits: e.target.value })}
                                 className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed"
-                                placeholder="๑. ผู้เรียนได้รับความรู้และทักษะ...\n๒. สถานศึกษามีผลสัมฤทธิ์..."
+                                placeholder="1. ผู้เรียนได้รับความรู้และทักษะ...\n2. สถานศึกษามีผลสัมฤทธิ์..."
                             />
                         </div>
 
@@ -15555,7 +15550,7 @@ return (
                         <div className="space-y-2 pt-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">๑.๖</span>
+                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs">1.6</span>
                                     นิยามศัพท์เฉพาะ (ถ้ามี)
                                 </label>
                                 <span className="text-[11px] text-slate-400">คำศัพท์เฉพาะทางวิชาชีพหรือโครงการ</span>
@@ -15603,7 +15598,7 @@ return (
                                     ) : (
                                         <>
                                             <span>💾</span>
-                                            <span>บันทึกบทที่ ๑</span>
+                                            <span>บันทึกบทที่ 1</span>
                                         </>
                                     )}
                                 </button>
@@ -15620,7 +15615,7 @@ return (
             return (
                 <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 text-center">
                     <span className="text-4xl mb-3 block">📗</span>
-                    <h3 className="text-lg font-bold text-slate-800 mb-1">ยังไม่พบโครงการที่สามารถสังเคราะห์บทที่ ๒</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">ยังไม่พบโครงการที่สามารถสังเคราะห์บทที่ 2</h3>
                 </div>
             );
         }
@@ -15632,10 +15627,10 @@ return (
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-emerald-200 text-xs font-bold mb-2">
-                                <span>📗</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๒ (Related Literature & Theories)
+                                <span>📗</span> เล่มรายงานโครงการ 5 บท • บทที่ 2 (Related Literature & Theories)
                             </div>
                             <h2 className="text-xl md:text-2xl font-black tracking-tight">
-                                บทที่ ๒: เอกสาร ทฤษฎี และงานวิจัยที่เกี่ยวข้อง
+                                บทที่ 2: เอกสาร ทฤษฎี และงานวิจัยที่เกี่ยวข้อง
                             </h2>
                             <p className="text-emerald-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
                                 เครื่องมือวิเคราะห์คำสำคัญจากชื่อโครงการ วัตถุประสงค์ และตัวชี้วัด เพื่อสังเคราะห์ทฤษฎีและยุทธศาสตร์ สอศ. ที่สอดคล้อง พร้อมแบบฟอร์มปรับปรุงเนื้อหาและค้นคว้างานวิจัยเพิ่มเติม
@@ -15778,7 +15773,7 @@ return (
                                             className="px-3.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm transition disabled:opacity-40 flex items-center gap-1.5"
                                         >
                                             <span>📥</span>
-                                            <span>นำทฤษฎีที่เลือก ({selectedTheoryIds.length}) ใส่ในข้อ ๒.๑</span>
+                                            <span>นำทฤษฎีที่เลือก ({selectedTheoryIds.length}) ใส่ในข้อ 2.1</span>
                                         </button>
                                     </div>
                                 </div>
@@ -15840,9 +15835,9 @@ return (
                                                         type="button"
                                                         onClick={() => handleInsertSingleTheory(theory)}
                                                         className="py-1.5 px-2.5 bg-white hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 hover:border-emerald-300 transition shrink-0"
-                                                        title="แทรกทฤษฎีนี้ลงในข้อ ๒.๑ ทันที พร้อมเพิ่มรายการอ้างอิง"
+                                                        title="แทรกทฤษฎีนี้ลงในข้อ 2.1 ทันที พร้อมเพิ่มรายการอ้างอิง"
                                                     >
-                                                        ➕ แทรกข้อ ๒.๑
+                                                        ➕ แทรกข้อ 2.1
                                                     </button>
                                                 </div>
                                             </div>
@@ -15869,7 +15864,7 @@ return (
                                             className="px-3 py-1 bg-teal-50 hover:bg-teal-100 text-teal-800 text-xs font-bold rounded-lg border border-teal-200 transition flex items-center gap-1.5 self-start sm:self-auto"
                                         >
                                             <span>📥</span>
-                                            <span>นำงานวิจัยทั้งหมดใส่ลงในข้อ ๒.๓</span>
+                                            <span>นำงานวิจัยทั้งหมดใส่ลงในข้อ 2.3</span>
                                         </button>
                                     </div>
 
@@ -15901,7 +15896,7 @@ return (
                                                         onClick={() => handleInsertSingleResearch(res)}
                                                         className="w-full py-1.5 bg-white hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200 hover:border-emerald-300 transition flex items-center justify-center gap-1"
                                                     >
-                                                        <span>➕</span> แทรกงานวิจัยนี้ลงในข้อ ๒.๓ (พร้อมอ้างอิง)
+                                                        <span>➕</span> แทรกงานวิจัยนี้ลงในข้อ 2.3 (พร้อมอ้างอิง)
                                                     </button>
                                                 </div>
                                             </div>
@@ -15935,7 +15930,7 @@ return (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                         <div>
                             <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                                <span>📝</span> แบบฟอร์มเนื้อหาบทที่ ๒ (แก้ไขและพิมพ์รายงาน)
+                                <span>📝</span> แบบฟอร์มเนื้อหาบทที่ 2 (แก้ไขและพิมพ์รายงาน)
                             </h3>
                             <p className="text-xs text-slate-500">
                                 ท่านสามารถพิมพ์ ปรับแต่ง หรือค้นคว้าเอกสารและงานวิจัยเพิ่มเติมมาใส่ในแต่ละหัวข้อได้อย่างอิสระ
@@ -15964,7 +15959,7 @@ return (
                                 ) : (
                                     <>
                                         <span>💾</span>
-                                        <span>บันทึกบทที่ ๒</span>
+                                        <span>บันทึกบทที่ 2</span>
                                     </>
                                 )}
                             </button>
@@ -15976,7 +15971,7 @@ return (
                         <div className="flex items-center justify-between">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
                                 <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">บทนำ</span>
-                                ความนำบทที่ ๒ (เกริ่นนำภาพรวมของเอกสารและทฤษฎีที่ใช้)
+                                ความนำบทที่ 2 (เกริ่นนำภาพรวมของเอกสารและทฤษฎีที่ใช้)
                             </label>
                         </div>
                         <textarea
@@ -15992,7 +15987,7 @@ return (
                     <div className="space-y-1.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๑</span>
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">2.1</span>
                                 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง
                             </label>
                             <div className="flex flex-wrap items-center gap-2">
@@ -16000,9 +15995,9 @@ return (
                                     type="button"
                                     onClick={handleAutoRenumberSection2_1}
                                     className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline flex items-center gap-1"
-                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น ๒.๑.๑, ๒.๑.๒, ๒.๑.๓... อัตโนมัติ"
+                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น 2.1.1, 2.1.2, 2.1.3... อัตโนมัติ"
                                 >
-                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (๒.๑.๑, ๒.๑.๒...)
+                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (2.1.1, 2.1.2...)
                                 </button>
                                 <span className="text-[11px] text-slate-300 hidden sm:inline">|</span>
                                 <span className="text-[11px] text-slate-400">เลือกทฤษฎีจากการ์ดด้านบน หรือพิมพ์ระบุเพิ่มเติม</span>
@@ -16013,7 +16008,7 @@ return (
                             value={safeString(chapter2Sections.section_2_1)}
                             onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_1: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
-                            placeholder="๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง..."
+                            placeholder="2.1 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง..."
                         />
                     </div>
 
@@ -16021,7 +16016,7 @@ return (
                     <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๒</span>
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">2.2</span>
                                 ยุทธศาสตร์และนโยบายจุดเน้นของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.) ที่เกี่ยวข้อง
                             </label>
                             <span className="text-[11px] text-slate-400">ความสอดคล้องกับนโยบายเร่งด่วนและยุทธศาสตร์ สอศ.</span>
@@ -16031,7 +16026,7 @@ return (
                             value={safeString(chapter2Sections.section_2_2)}
                             onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_2: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
-                            placeholder="๒.๒ ยุทธศาสตร์และนโยบาย สอศ. ที่เกี่ยวข้อง..."
+                            placeholder="2.2 ยุทธศาสตร์และนโยบาย สอศ. ที่เกี่ยวข้อง..."
                         />
                     </div>
 
@@ -16039,7 +16034,7 @@ return (
                     <div className="space-y-1.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">๒.๓</span>
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs">2.3</span>
                                 เอกสารและงานวิจัยที่เกี่ยวข้อง
                             </label>
                             <div className="flex flex-wrap items-center gap-2">
@@ -16047,9 +16042,9 @@ return (
                                     type="button"
                                     onClick={handleAutoRenumberSection2_3}
                                     className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold underline flex items-center gap-1"
-                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น ๒.๓.๑, ๒.๓.๒, ๒.๓.๓... อัตโนมัติ"
+                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น 2.3.1, 2.3.2, 2.3.3... อัตโนมัติ"
                                 >
-                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (๒.๓.๑, ๒.๓.๒...)
+                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (2.3.1, 2.3.2...)
                                 </button>
                                 {chapter2Analysis?.researches?.length > 0 && (
                                     <>
@@ -16070,7 +16065,7 @@ return (
                             value={safeString(chapter2Sections.section_2_3)}
                             onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_3: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-emerald-500 focus:ring-emerald-500 leading-relaxed font-sans"
-                            placeholder="๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง..."
+                            placeholder="2.3 เอกสารและงานวิจัยที่เกี่ยวข้อง..."
                         />
                     </div>
 
@@ -16086,7 +16081,7 @@ return (
                                     type="button"
                                     onClick={handleSyncReferences}
                                     className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-2xs self-start sm:self-auto"
-                                    title="ตรวจสอบข้อความในข้อ ๒.๑, ๒.๒ และ ๒.๓ แล้วดึงรายการอ้างอิงที่ตรงกันให้ครบถ้วนทุกรายการ"
+                                    title="ตรวจสอบข้อความในข้อ 2.1, 2.2 และ 2.3 แล้วดึงรายการอ้างอิงที่ตรงกันให้ครบถ้วนทุกรายการ"
                                 >
                                     <span>✨</span> ตรวจสอบและซิงค์รายการอ้างอิงให้ครบถ้วน 100%
                                 </button>
@@ -16136,7 +16131,7 @@ return (
                                 ) : (
                                     <>
                                         <span>💾</span>
-                                        <span>บันทึกบทที่ ๒</span>
+                                        <span>บันทึกบทที่ 2</span>
                                     </>
                                 )}
                             </button>
@@ -16152,7 +16147,7 @@ return (
             return (
                 <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 text-center">
                     <span className="text-4xl mb-3 block">📙</span>
-                    <h3 className="text-lg font-bold text-slate-800 mb-1">ยังไม่พบโครงการที่สามารถสังเคราะห์บทที่ ๓</h3>
+                    <h3 className="text-lg font-bold text-slate-800 mb-1">ยังไม่พบโครงการที่สามารถสังเคราะห์บทที่ 3</h3>
                     <p className="text-sm text-slate-500 mb-4">กรุณาสร้างข้อเสนอโครงการหรือตรวจสอบสิทธิ์การเข้าถึงโครงการของคุณ</p>
                 </div>
             );
@@ -16165,10 +16160,10 @@ return (
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
                             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-200 text-xs font-bold mb-2">
-                                <span>📙</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๓ (Methodology)
+                                <span>📙</span> เล่มรายงานโครงการ 5 บท • บทที่ 3 (Methodology)
                             </div>
                             <h2 className="text-xl md:text-2xl font-black tracking-tight">
-                                บทที่ ๓: วิธีดำเนินงานโครงการ (Do Phase)
+                                บทที่ 3: วิธีดำเนินงานโครงการ (Do Phase)
                             </h2>
                             <p className="text-amber-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
                                 ระเบียบวิธีและขั้นตอนการดำเนินงานตามวงจรบริหารงานคุณภาพ PDCA ประชากรและกลุ่มตัวอย่าง เครื่องมือประเมินผล และสถิติที่ใช้ในการวิเคราะห์ข้อมูล
@@ -16201,13 +16196,13 @@ return (
                             </div>
                             <div>
                                 <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
-                                    AI ช่วยเขียนและค้นหาข้อมูลบทที่ ๓ (PDCA Methodology Engine)
+                                    AI ช่วยเขียนและค้นหาข้อมูลบทที่ 3 (PDCA Methodology Engine)
                                     <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">
                                         Smart PDCA Synthesizer
                                     </span>
                                 </h3>
                                 <p className="text-xs text-slate-500">
-                                    ดึงข้อมูลตั้งต้นจากบทที่ ๑ (วัตถุประสงค์ ตัวชี้วัด), บทที่ ๒ (ทฤษฎี นโยบาย) และโครงการฉบับเต็ม (กิจกรรม แผนปฏิบัติการ) เพื่อร่างเนื้อหาบทที่ ๓
+                                    ดึงข้อมูลตั้งต้นจากบทที่ 1 (วัตถุประสงค์ ตัวชี้วัด), บทที่ 2 (ทฤษฎี นโยบาย) และโครงการฉบับเต็ม (กิจกรรม แผนปฏิบัติการ) เพื่อร่างเนื้อหาบทที่ 3
                                 </p>
                             </div>
                         </div>
@@ -16222,12 +16217,12 @@ return (
                                 {isAnalyzingChapter3 ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        <span>AI กำลังวิเคราะห์และร่างบทที่ ๓...</span>
+                                        <span>AI กำลังวิเคราะห์และร่างบทที่ 3...</span>
                                     </>
                                 ) : (
                                     <>
                                         <span>⚡</span>
-                                        <span>ใช้ AI วิเคราะห์และช่วยเขียนบทที่ ๓</span>
+                                        <span>ใช้ AI วิเคราะห์และช่วยเขียนบทที่ 3</span>
                                     </>
                                 )}
                             </button>
@@ -16251,17 +16246,17 @@ return (
                                 📑
                             </div>
                             <h4 className="text-sm font-bold text-slate-800">
-                                หัวข้อมาตรฐานในบทที่ ๓ วิธีดำเนินงานโครงการ (ตัดหัวข้อจัดหาพัสดุออกแล้ว)
+                                หัวข้อมาตรฐานในบทที่ 3 วิธีดำเนินงานโครงการ (ตัดหัวข้อจัดหาพัสดุออกแล้ว)
                             </h4>
                             <div className="flex flex-wrap justify-center gap-2 text-xs text-slate-600 max-w-2xl mx-auto">
-                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย</span>
-                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ</span>
-                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๓ ขั้นตอนการดำเนินงานตามวงจรคุณภาพ PDCA</span>
-                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๔ การเก็บรวบรวมข้อมูล</span>
-                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">๓.๕ สถิติที่ใช้ในการวิเคราะห์ข้อมูล</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">3.1 ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">3.2 เครื่องมือที่ใช้ในการประเมินผลโครงการ</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">3.3 ขั้นตอนการดำเนินงานตามวงจรคุณภาพ PDCA</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">3.4 การเก็บรวบรวมข้อมูล</span>
+                                <span className="px-3 py-1 bg-white border border-slate-200 rounded-lg shadow-2xs font-medium">3.5 สถิติที่ใช้ในการวิเคราะห์ข้อมูล</span>
                             </div>
                             <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed pt-1">
-                                กดปุ่ม <strong>"ใช้ AI วิเคราะห์และช่วยเขียนบทที่ ๓"</strong> ด้านบน เพื่อให้ระบบอ่านข้อมูลจากบทที่ ๑, บทที่ ๒ และกิจกรรมในโครงการฉบับเต็มมาร่างเนื้อหาให้โดยอัตโนมัติ
+                                กดปุ่ม <strong>"ใช้ AI วิเคราะห์และช่วยเขียนบทที่ 3"</strong> ด้านบน เพื่อให้ระบบอ่านข้อมูลจากบทที่ 1, บทที่ 2 และกิจกรรมในโครงการฉบับเต็มมาร่างเนื้อหาให้โดยอัตโนมัติ
                             </p>
                         </div>
                     ) : (
@@ -16274,10 +16269,10 @@ return (
                                     </span>
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className="px-2.5 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-lg border border-purple-200">
-                                            📘 บทที่ ๑: {chapter3Analysis.analyzed_sources?.chapter_1?.objectives_count || 0} วัตถุประสงค์ & ตัวชี้วัด
+                                            📘 บทที่ 1: {chapter3Analysis.analyzed_sources?.chapter_1?.objectives_count || 0} วัตถุประสงค์ & ตัวชี้วัด
                                         </span>
                                         <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-200">
-                                            📗 บทที่ ๒: กรอบทฤษฎี & นโยบาย สอศ.
+                                            📗 บทที่ 2: กรอบทฤษฎี & นโยบาย สอศ.
                                         </span>
                                         <span className="px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-lg border border-blue-200">
                                             📋 เล่มโครงการ: {chapter3Analysis.analyzed_sources?.full_project?.activities_count || 0} กิจกรรม
@@ -16313,7 +16308,7 @@ return (
                     <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-100 pb-4 gap-3">
                         <div>
                             <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                <span>✏️</span> ปรับแต่งและแก้ไขข้อมูล บทที่ ๓ วิธีดำเนินงานโครงการ
+                                <span>✏️</span> ปรับแต่งและแก้ไขข้อมูล บทที่ 3 วิธีดำเนินงานโครงการ
                             </h3>
                             <p className="text-xs text-slate-500">
                                 ปรับแก้เนื้อหาแต่ละหัวข้อตามบริบทจริงของโครงการ (ตัดเฉพาะหัวข้อจัดหาพัสดุออกเรียบร้อยแล้ว)
@@ -16327,7 +16322,7 @@ return (
                                 rel="noopener noreferrer"
                                 className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5"
                             >
-                                <span>🖨️</span> สั่งพิมพ์ / ดูตัวอย่าง A4 (บทที่ ๓)
+                                <span>🖨️</span> สั่งพิมพ์ / ดูตัวอย่าง A4 (บทที่ 3)
                             </a>
 
                             <button
@@ -16344,7 +16339,7 @@ return (
                                 ) : (
                                     <>
                                         <span>💾</span>
-                                        <span>บันทึกบทที่ ๓</span>
+                                        <span>บันทึกบทที่ 3</span>
                                     </>
                                 )}
                             </button>
@@ -16356,7 +16351,7 @@ return (
                         <div className="flex items-center justify-between">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
                                 <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">บทนำ</span>
-                                ความนำบทที่ ๓ (เกริ่นนำกระบวนการและวงจรบริหารงานคุณภาพ PDCA)
+                                ความนำบทที่ 3 (เกริ่นนำกระบวนการและวงจรบริหารงานคุณภาพ PDCA)
                             </label>
                         </div>
                         <textarea
@@ -16372,7 +16367,7 @@ return (
                     <div className="space-y-1.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๑</span>
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">3.1</span>
                                 ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย
                             </label>
                             <span className="text-[11px] text-slate-400">ประชากร, กลุ่มตัวอย่าง, วิธีการคัดเลือก, เป้าหมายเชิงปริมาณและคุณภาพ</span>
@@ -16382,7 +16377,7 @@ return (
                             value={safeString(chapter3Sections.section_3_1)}
                             onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_1: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
-                            placeholder="๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย..."
+                            placeholder="3.1 ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย..."
                         />
                     </div>
 
@@ -16390,17 +16385,17 @@ return (
                     <div className="space-y-1.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๒</span>
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">3.2</span>
                                 เครื่องมือที่ใช้ในการประเมินผลโครงการ
                             </label>
-                            <span className="text-[11px] text-slate-400">แบบประเมินความพึงพอใจ ๕ ระดับ (Likert Scale), การตรวจสอบ IOC</span>
+                            <span className="text-[11px] text-slate-400">แบบประเมินความพึงพอใจ 5 ระดับ (Likert Scale), การตรวจสอบ IOC</span>
                         </div>
                         <textarea
                             rows={8}
                             value={safeString(chapter3Sections.section_3_2)}
                             onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_2: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
-                            placeholder="๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ..."
+                            placeholder="3.2 เครื่องมือที่ใช้ในการประเมินผลโครงการ..."
                         />
                     </div>
 
@@ -16408,7 +16403,7 @@ return (
                     <div className="space-y-1.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๓</span>
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">3.3</span>
                                 ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA
                             </label>
                             <div className="flex flex-wrap items-center gap-2">
@@ -16416,9 +16411,9 @@ return (
                                     type="button"
                                     onClick={handleAutoRenumberSection3_3}
                                     className="text-[11px] text-amber-700 hover:text-amber-900 font-bold underline flex items-center gap-1"
-                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น ๓.๓.๑, ๓.๓.๒, ๓.๓.๓, ๓.๓.๔ อัตโนมัติ"
+                                    title="จัดเรียงลำดับหัวข้อย่อยเป็น 3.3.1, 3.3.2, 3.3.3, 3.3.4 อัตโนมัติ"
                                 >
-                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (๓.๓.๑, ๓.๓.๒...)
+                                    <span>🔢</span> จัดเรียงลำดับหัวข้อย่อยอัตโนมัติ (3.3.1, 3.3.2...)
                                 </button>
                                 <span className="text-[11px] text-slate-300 hidden sm:inline">|</span>
                                 <span className="text-[11px] text-slate-400">Plan (P), Do (D), Check (C), Action (A)</span>
@@ -16429,7 +16424,7 @@ return (
                             value={safeString(chapter3Sections.section_3_3)}
                             onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_3: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
-                            placeholder="๓.๓ ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA..."
+                            placeholder="3.3 ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA..."
                         />
                     </div>
 
@@ -16437,7 +16432,7 @@ return (
                     <div className="space-y-1.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๔</span>
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">3.4</span>
                                 การเก็บรวบรวมข้อมูล
                             </label>
                             <span className="text-[11px] text-slate-400">ขั้นตอนการแจก รวบรวม และตรวจสอบความถูกต้องครบถ้วนของแบบประเมิน</span>
@@ -16447,7 +16442,7 @@ return (
                             value={safeString(chapter3Sections.section_3_4)}
                             onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_4: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
-                            placeholder="๓.๔ การเก็บรวบรวมข้อมูล..."
+                            placeholder="3.4 การเก็บรวบรวมข้อมูล..."
                         />
                     </div>
 
@@ -16455,7 +16450,7 @@ return (
                     <div className="space-y-1.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                             <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">๓.๕</span>
+                                <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs">3.5</span>
                                 สถิติที่ใช้ในการวิเคราะห์ข้อมูล
                             </label>
                             <span className="text-[11px] text-slate-400">ค่าร้อยละ, ค่าเฉลี่ย x̄, ส่วนเบี่ยงเบนมาตรฐาน S.D., เกณฑ์ Best (1977)</span>
@@ -16465,7 +16460,7 @@ return (
                             value={safeString(chapter3Sections.section_3_5)}
                             onChange={(e) => setChapter3Sections({ ...chapter3Sections, section_3_5: e.target.value })}
                             className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-amber-500 focus:ring-amber-500 leading-relaxed font-sans"
-                            placeholder="๓.๕ สถิติที่ใช้ในการวิเคราะห์ข้อมูล..."
+                            placeholder="3.5 สถิติที่ใช้ในการวิเคราะห์ข้อมูล..."
                         />
                     </div>
 
@@ -16487,7 +16482,7 @@ return (
                                 rel="noopener noreferrer"
                                 className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition flex items-center gap-1.5"
                             >
-                                <span>🖨️</span> ดูตัวอย่างและพิมพ์ A4 (บทที่ ๓)
+                                <span>🖨️</span> ดูตัวอย่างและพิมพ์ A4 (บทที่ 3)
                             </a>
 
                             <button
@@ -16504,7 +16499,7 @@ return (
                                 ) : (
                                     <>
                                         <span>💾</span>
-                                        <span>บันทึกบทที่ ๓</span>
+                                        <span>บันทึกบทที่ 3</span>
                                     </>
                                 )}
                             </button>
@@ -16513,7 +16508,7 @@ return (
                 </div>
 
                 {/* ------------------------------------------------------------- */}
-                {/* ๓.๖ เครื่องมือประเมินโครงการ (Evaluation Questionnaire & QR) */}
+                {/* 3.6 เครื่องมือประเมินโครงการ (Evaluation Questionnaire & QR) */}
                 {/* ------------------------------------------------------------- */}
                 <div id="survey-builder" className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-purple-200 space-y-6">
                     {/* Header */}
@@ -16530,7 +16525,7 @@ return (
                                     เครื่องมือประเมินผลโครงการ (Evaluation Questionnaire & QR Generator)
                                 </h3>
                                 <p className="text-xs text-slate-500">
-                                    สร้างและปรับแต่งแบบประเมินความพึงพอใจโครงการที่สอดคล้องกับวัตถุประสงค์และตัวชี้วัด พร้อมสร้าง QR Code และลิงก์ เพื่อนำผลไปวิเคราะห์ในบทที่ ๔
+                                    สร้างและปรับแต่งแบบประเมินความพึงพอใจโครงการที่สอดคล้องกับวัตถุประสงค์และตัวชี้วัด พร้อมสร้าง QR Code และลิงก์ เพื่อนำผลไปวิเคราะห์ในบทที่ 4
                                 </p>
                             </div>
                         </div>
@@ -16541,10 +16536,10 @@ return (
                                 onClick={handleLoadStandard15Pattern}
                                 disabled={isGeneratingSurveyAi}
                                 className="px-3.5 py-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
-                                title="นำเข้าชุดข้อคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ) ที่เชื่อมโยงวัตถุประสงค์ ตัวชี้วัด และประโยชน์ที่คาดว่าจะได้รับ"
+                                title="นำเข้าชุดข้อคำถามมาตรฐาน 4 ด้าน (15 ข้อ) ที่เชื่อมโยงวัตถุประสงค์ ตัวชี้วัด และประโยชน์ที่คาดว่าจะได้รับ"
                             >
                                 <span>📋</span>
-                                <span>โหลดชุดคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ)</span>
+                                <span>โหลดชุดคำถามมาตรฐาน 4 ด้าน (15 ข้อ)</span>
                             </button>
 
                             <button
@@ -16607,10 +16602,10 @@ return (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between pb-1">
                             <span className="text-xs font-bold text-slate-800">
-                                รายการข้อคำถามแบบประเมิน (มาตราส่วนประมาณค่า Likert Scale ๕ ระดับ)
+                                รายการข้อคำถามแบบประเมิน (มาตราส่วนประมาณค่า Likert Scale 5 ระดับ)
                             </span>
                             <span className="text-[11px] text-slate-400">
-                                จัดกลุ่ม ๔ ด้าน (กระบวนการ, ปัจจัยนำเข้า, ผลผลิต/วัตถุประสงค์, ประโยชน์/ตัวชี้วัด) สามารถปรับแต่งได้อิสระ
+                                จัดกลุ่ม 4 ด้าน (กระบวนการ, ปัจจัยนำเข้า, ผลผลิต/วัตถุประสงค์, ประโยชน์/ตัวชี้วัด) สามารถปรับแต่งได้อิสระ
                             </span>
                         </div>
 
@@ -16670,7 +16665,7 @@ return (
                                 onClick={handleLoadStandard15Pattern}
                                 className="px-3.5 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold transition flex items-center gap-1.5"
                             >
-                                <span>🔄 รีเซ็ตเป็นชุด ๑๕ ข้อมาตรฐาน</span>
+                                <span>🔄 รีเซ็ตเป็นชุด 15 ข้อมาตรฐาน</span>
                             </button>
                         </div>
 
@@ -16752,7 +16747,7 @@ return (
                                         className="px-3.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 text-xs font-bold transition flex items-center gap-1.5"
                                     >
                                         <span>📊</span>
-                                        <span>ดูการนำข้อมูลไปใช้ในบทที่ ๔ ➔</span>
+                                        <span>ดูการนำข้อมูลไปใช้ในบทที่ 4 ➔</span>
                                     </button>
                                 </div>
                             </div>
@@ -16789,13 +16784,13 @@ return (
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-rose-200 text-xs font-bold mb-2">
-                            <span>📕</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๔ (Results & Analysis)
+                            <span>📕</span> เล่มรายงานโครงการ 5 บท • บทที่ 4 (Results & Analysis)
                         </div>
                         <h2 className="text-xl md:text-2xl font-black tracking-tight">
-                            บทที่ ๔: ผลการดำเนินงาน & ประเมินผล (Check Phase)
+                            บทที่ 4: ผลการดำเนินงาน & ประเมินผล (Check Phase)
                         </h2>
                         <p className="text-rose-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
-                            นำเสนอผลการวิเคราะห์ข้อมูลทางสถิติ ผลสัมฤทธิ์ตามตัวชี้วัดเชิงปริมาณและเชิงคุณภาพ และสรุปผลเปรียบเทียบย้อนกลับไปยังบทที่ ๑
+                            นำเสนอผลการวิเคราะห์ข้อมูลทางสถิติ ผลสัมฤทธิ์ตามตัวชี้วัดเชิงปริมาณและเชิงคุณภาพ และสรุปผลเปรียบเทียบย้อนกลับไปยังบทที่ 1
                         </p>
                     </div>
 
@@ -16826,10 +16821,10 @@ return (
                             <span>วิเคราะห์ข้อมูลจริงจากการตอบแบบประเมิน</span>
                         </div>
                         <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span>📊</span> ตารางที่ ๔.๑ ค่าเฉลี่ย ส่วนเบี่ยงเบนมาตรฐาน และระดับความพึงพอใจต่อการดำเนินโครงการ (จำแนกรายด้าน ๔ ด้าน)
+                            <span>📊</span> ตารางที่ 4.1 ค่าเฉลี่ย ส่วนเบี่ยงเบนมาตรฐาน และระดับความพึงพอใจต่อการดำเนินโครงการ (จำแนกรายด้าน 4 ด้าน)
                         </h3>
                         <p className="text-xs text-slate-500">
-                            ข้อมูลประมวลผลจากการตอบแบบประเมินความพึงพอใจโครงการ "{activeChapter1Project?.title || ''}" (เกณฑ์ Best, 1977: ๕=มากที่สุด ถึง ๑=ปรับปรุง)
+                            ข้อมูลประมวลผลจากการตอบแบบประเมินความพึงพอใจโครงการ "{activeChapter1Project?.title || ''}" (เกณฑ์ Best, 1977: 5=มากที่สุด ถึง 1=ปรับปรุง)
                         </p>
                     </div>
 
@@ -16853,7 +16848,7 @@ return (
                                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                             >
                                 <span>🖨️</span>
-                                <span>พิมพ์บทที่ ๔ (A4)</span>
+                                <span>พิมพ์บทที่ 4 (A4)</span>
                             </a>
                         )}
                     </div>
@@ -16872,7 +16867,7 @@ return (
                         <span className="text-[11px] font-bold text-emerald-700">ค่าเฉลี่ยภาพรวมทั้งโครงการ (x̄)</span>
                         <div className="text-2xl font-black text-emerald-950 mt-1">
                             {toThaiNumerals(Number(surveyStatsSummary?.overallMean || 0).toFixed(2))}
-                            <span className="text-xs font-semibold text-emerald-600"> / ๕.๐๐</span>
+                            <span className="text-xs font-semibold text-emerald-600"> / 5.00</span>
                         </div>
                     </div>
 
@@ -16894,12 +16889,12 @@ return (
                     </div>
                 </div>
 
-                {/* Table 4.0: Demographic Information (ตอนที่ ๑) */}
+                {/* Table 4.0: Demographic Information (ตอนที่ 1) */}
                 {surveyTotalResponses > 0 && surveyStatsSummary?.demographicStats && (
                     <div className="space-y-3 pt-2">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1 border-b border-slate-100">
                             <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                                <span>👤</span> ตอนที่ ๑: ข้อมูลทั่วไปของผู้ตอบแบบประเมิน (ตารางที่ ๔.๐)
+                                <span>👤</span> ตอนที่ 1: ข้อมูลทั่วไปของผู้ตอบแบบประเมิน (ตารางที่ 4.0)
                             </h4>
                             <span className="text-[11px] font-medium text-slate-500">
                                 ประมวลผลจากกลุ่มตัวอย่างทั้งหมด N = {toThaiNumerals(surveyTotalResponses)} คน
@@ -16918,7 +16913,7 @@ return (
                                     {/* 1. เพศ */}
                                     <tr className="bg-purple-50/70 font-bold text-purple-950">
                                         <td colSpan={3} className="py-2 px-4">
-                                            ๑. เพศ (Gender)
+                                            1. เพศ (Gender)
                                         </td>
                                     </tr>
                                     {surveyStatsSummary.demographicStats.gender?.map((g) => (
@@ -16938,7 +16933,7 @@ return (
                                     {/* 2. ระดับการศึกษา */}
                                     <tr className="bg-purple-50/70 font-bold text-purple-950 border-t border-purple-200">
                                         <td colSpan={3} className="py-2 px-4">
-                                            ๒. ระดับการศึกษา (Education Level)
+                                            2. ระดับการศึกษา (Education Level)
                                         </td>
                                     </tr>
                                     {surveyStatsSummary.demographicStats.education_level?.map((edu) => (
@@ -16958,7 +16953,7 @@ return (
                                     {/* 3. สถานะผู้ตอบ */}
                                     <tr className="bg-purple-50/70 font-bold text-purple-950 border-t border-purple-200">
                                         <td colSpan={3} className="py-2 px-4">
-                                            ๓. สถานะของผู้ตอบแบบประเมิน (Respondent Status)
+                                            3. สถานะของผู้ตอบแบบประเมิน (Respondent Status)
                                         </td>
                                     </tr>
                                     {surveyStatsSummary.demographicStats.respondent_type?.map((rt) => (
@@ -17082,17 +17077,17 @@ return (
                         </div>
 
                         {/* ------------------------------------------------------------- */}
-                        {/* ๔.๕ สรุปผลการประเมินเปรียบเทียบกับบทที่ ๑ (Design Alignment)  */}
+                        {/* 4.5 สรุปผลการประเมินเปรียบเทียบกับบทที่ 1 (Design Alignment)  */}
                         {/* ------------------------------------------------------------- */}
                         <div className="p-5 rounded-2xl bg-gradient-to-br from-indigo-50/80 via-purple-50/60 to-slate-50 border border-indigo-200/90 space-y-4">
                             <div className="flex items-center gap-2">
                                 <span className="text-xl">💡</span>
                                 <div>
                                     <h4 className="text-xs sm:text-sm font-bold text-indigo-950">
-                                        การวิเคราะห์ผลลัพธ์ย้อนกลับไปยังบทที่ ๑ (Objective, Expected Benefits & KPI Comparison)
+                                        การวิเคราะห์ผลลัพธ์ย้อนกลับไปยังบทที่ 1 (Objective, Expected Benefits & KPI Comparison)
                                     </h4>
                                     <p className="text-[11px] text-indigo-800">
-                                        จัดกลุ่มตารางเพื่อดึงตัวเลขไปสรุปเปรียบเทียบกับวัตถุประสงค์ ประโยชน์ที่คาดว่าจะได้รับ และตัวชี้วัดความสำเร็จในบทที่ ๑
+                                        จัดกลุ่มตารางเพื่อดึงตัวเลขไปสรุปเปรียบเทียบกับวัตถุประสงค์ ประโยชน์ที่คาดว่าจะได้รับ และตัวชี้วัดความสำเร็จในบทที่ 1
                                     </p>
                                 </div>
                             </div>
@@ -17102,14 +17097,14 @@ return (
                                 <div className="p-4 rounded-xl bg-white border border-indigo-100 shadow-2xs space-y-2">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[11px] font-bold text-indigo-700 px-2 py-0.5 rounded-md bg-indigo-50">
-                                            ๑. ตอบโจทย์วัตถุประสงค์
+                                            1. ตอบโจทย์วัตถุประสงค์
                                         </span>
                                         <span className="text-xs font-black text-indigo-950">
                                             X̄ = {toThaiNumerals(Number(surveyStatsSummary.chapter1Comparison?.objectiveFulfillment?.mean || 0).toFixed(2))}
                                         </span>
                                     </div>
                                     <p className="text-xs text-slate-700 leading-relaxed">
-                                        นำค่าเฉลี่ยของ <strong className="text-indigo-900">ด้านที่ ๓ (ข้อ ๙-๑๒)</strong> ไปรายงานสรุปผล:
+                                        นำค่าเฉลี่ยของ <strong className="text-indigo-900">ด้านที่ 3 (ข้อ 9-12)</strong> ไปรายงานสรุปผล:
                                     </p>
                                     <div className="p-2.5 rounded-lg bg-indigo-50/50 text-[11px] text-indigo-950 font-medium leading-relaxed border border-indigo-100">
                                         "{surveyStatsSummary.chapter1Comparison?.objectiveFulfillment?.summary || 'อยู่ระหว่างเก็บข้อมูล'}"
@@ -17120,14 +17115,14 @@ return (
                                 <div className="p-4 rounded-xl bg-white border border-emerald-100 shadow-2xs space-y-2">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[11px] font-bold text-emerald-700 px-2 py-0.5 rounded-md bg-emerald-50">
-                                            ๒. ตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ
+                                            2. ตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ
                                         </span>
                                         <span className="text-xs font-black text-emerald-950">
                                             X̄ = {toThaiNumerals(Number(surveyStatsSummary.chapter1Comparison?.benefitRealization?.mean || 0).toFixed(2))}
                                         </span>
                                     </div>
                                     <p className="text-xs text-slate-700 leading-relaxed">
-                                        นำค่าเฉลี่ยของ <strong className="text-emerald-900">ด้านที่ ๔ (ข้อ ๑๓-๑๕)</strong> ไปอ้างอิงยืนยันผลกระทบเชิงบวก:
+                                        นำค่าเฉลี่ยของ <strong className="text-emerald-900">ด้านที่ 4 (ข้อ 13-15)</strong> ไปอ้างอิงยืนยันผลกระทบเชิงบวก:
                                     </p>
                                     <div className="p-2.5 rounded-lg bg-emerald-50/50 text-[11px] text-emerald-950 font-medium leading-relaxed border border-emerald-100">
                                         "{surveyStatsSummary.chapter1Comparison?.benefitRealization?.summary || 'อยู่ระหว่างเก็บข้อมูล'}"
@@ -17138,7 +17133,7 @@ return (
                                 <div className="p-4 rounded-xl bg-white border border-purple-100 shadow-2xs space-y-2">
                                     <div className="flex items-center justify-between">
                                         <span className="text-[11px] font-bold text-purple-700 px-2 py-0.5 rounded-md bg-purple-50">
-                                            ๓. ตอบโจทย์ตัวชี้วัด (KPIs)
+                                            3. ตอบโจทย์ตัวชี้วัด (KPIs)
                                         </span>
                                         <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
                                             surveyStatsSummary.chapter1Comparison?.kpiAchievement?.isPassed
@@ -17165,7 +17160,7 @@ return (
                             ยังไม่มีข้อมูลผลการตอบแบบประเมินสำหรับโครงการนี้
                         </h4>
                         <p className="text-xs text-amber-800 max-w-lg mx-auto leading-relaxed">
-                            คุณสามารถนำชุดข้อคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ) ที่สร้างขึ้นในส่วนท้ายของบทที่ ๓ ส่งเป็นลิงก์หรือแสดง QR Code ให้ผู้เข้าร่วมโครงการสแกนตอบแบบประเมิน เมื่อมีการตอบข้อมูล ระบบจะนำผลมาจัดกลุ่ม ๔ ด้านและเปรียบเทียบกับบทที่ ๑ ในตารางนี้โดยอัตโนมัติ
+                            คุณสามารถนำชุดข้อคำถามมาตรฐาน 4 ด้าน (15 ข้อ) ที่สร้างขึ้นในส่วนท้ายของบทที่ 3 ส่งเป็นลิงก์หรือแสดง QR Code ให้ผู้เข้าร่วมโครงการสแกนตอบแบบประเมิน เมื่อมีการตอบข้อมูล ระบบจะนำผลมาจัดกลุ่ม 4 ด้านและเปรียบเทียบกับบทที่ 1 ในตารางนี้โดยอัตโนมัติ
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                             <button
@@ -17189,7 +17184,7 @@ return (
                                 className="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                             >
                                 <span>📙</span>
-                                <span>ไปยังเครื่องมือสร้างแบบประเมินในบทที่ ๓</span>
+                                <span>ไปยังเครื่องมือสร้างแบบประเมินในบทที่ 3</span>
                             </button>
                         </div>
                     </div>
@@ -17204,10 +17199,10 @@ return (
                             <span>🤖 AI Research & Data Synthesis</span>
                         </div>
                         <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span>✨</span> ผู้ช่วย AI สังเคราะห์และวิเคราะห์ผลการประเมิน บทที่ ๔
+                            <span>✨</span> ผู้ช่วย AI สังเคราะห์และวิเคราะห์ผลการประเมิน บทที่ 4
                         </h3>
                         <p className="text-xs text-slate-500">
-                            ระบบจะนำสถิติตอบแบบสอบถามจริง ๔ ด้าน, เป้าหมายเชิงปริมาณในบทที่ ๑, และข้อมูลงบประมาณมาวิเคราะห์สรุปเป็นข้อความทางวิชาการ
+                            ระบบจะนำสถิติตอบแบบสอบถามจริง 4 ด้าน, เป้าหมายเชิงปริมาณในบทที่ 1, และข้อมูลงบประมาณมาวิเคราะห์สรุปเป็นข้อความทางวิชาการ
                         </p>
                     </div>
 
@@ -17226,7 +17221,7 @@ return (
                             ) : (
                                 <>
                                     <span>⚡</span>
-                                    <span>ใช้ AI วิเคราะห์และช่วยเขียนบทที่ ๔</span>
+                                    <span>ใช้ AI วิเคราะห์และช่วยเขียนบทที่ 4</span>
                                 </>
                             )}
                         </button>
@@ -17277,10 +17272,10 @@ return (
                             <span>✏️ แก้ไขและบันทึกรายงาน</span>
                         </div>
                         <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
-                            <span>📝</span> เนื้อหารายละเอียดรายงานผลการดำเนินงาน บทที่ ๔
+                            <span>📝</span> เนื้อหารายละเอียดรายงานผลการดำเนินงาน บทที่ 4
                         </h3>
                         <p className="text-xs text-slate-500">
-                            แก้ไข ปรับปรุง และบันทึกเนื้อหาบทที่ ๔ สำหรับพิมพ์ออกทางเครื่องพิมพ์ (A4) หรือจัดทำเล่มรายงาน ๕ บท
+                            แก้ไข ปรับปรุง และบันทึกเนื้อหาบทที่ 4 สำหรับพิมพ์ออกทางเครื่องพิมพ์ (A4) หรือจัดทำเล่มรายงาน 5 บท
                         </p>
                     </div>
 
@@ -17293,7 +17288,7 @@ return (
                                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                             >
                                 <span>🖨️</span>
-                                <span>พิมพ์บทที่ ๔ (A4)</span>
+                                <span>พิมพ์บทที่ 4 (A4)</span>
                             </a>
                         )}
 
@@ -17311,7 +17306,7 @@ return (
                             ) : (
                                 <>
                                     <span>💾</span>
-                                    <span>บันทึกเนื้อหาบทที่ ๔</span>
+                                    <span>บันทึกเนื้อหาบทที่ 4</span>
                                 </>
                             )}
                         </button>
@@ -17322,7 +17317,7 @@ return (
                 <div className="space-y-1.5">
                     <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
                         <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">บทนำ</span>
-                        ความนำบทที่ ๔ (เกริ่นนำกระบวนการประเมินผลและการเก็บรวบรวมข้อมูล)
+                        ความนำบทที่ 4 (เกริ่นนำกระบวนการประเมินผลและการเก็บรวบรวมข้อมูล)
                     </label>
                     <textarea
                         rows={4}
@@ -17337,7 +17332,7 @@ return (
                 <div className="space-y-1.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">๔.๑</span>
+                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">4.1</span>
                             ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม (Demographic Profile)
                         </label>
                         <span className="text-[11px] text-slate-400">จำแนกตามเพศ ระดับการศึกษา และสถานะผู้ตอบ</span>
@@ -17347,7 +17342,7 @@ return (
                         value={safeString(chapter4Sections.section_4_1)}
                         onChange={(e) => setChapter4Sections({ ...chapter4Sections, section_4_1: e.target.value })}
                         className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
-                        placeholder="๔.๑ ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม..."
+                        placeholder="4.1 ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบสอบถาม..."
                     />
                 </div>
 
@@ -17355,17 +17350,17 @@ return (
                 <div className="space-y-1.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">๔.๒</span>
+                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">4.2</span>
                             ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ (Quantitative Achievements)
                         </label>
-                        <span className="text-[11px] text-slate-400">เปรียบเทียบยอดผู้เข้าร่วมจริง กับเป้าหมายที่กำหนดในบทที่ ๑</span>
+                        <span className="text-[11px] text-slate-400">เปรียบเทียบยอดผู้เข้าร่วมจริง กับเป้าหมายที่กำหนดในบทที่ 1</span>
                     </div>
                     <textarea
                         rows={6}
                         value={safeString(chapter4Sections.section_4_2)}
                         onChange={(e) => setChapter4Sections({ ...chapter4Sections, section_4_2: e.target.value })}
                         className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
-                        placeholder="๔.๒ ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ..."
+                        placeholder="4.2 ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ..."
                     />
                 </div>
 
@@ -17373,17 +17368,17 @@ return (
                 <div className="space-y-1.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">๔.๓</span>
-                            ผลการประเมินความพึงพอใจเชิงคุณภาพตามตารางที่ ๔.๑ (Qualitative Satisfaction Evaluation)
+                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">4.3</span>
+                            ผลการประเมินความพึงพอใจเชิงคุณภาพตามตารางที่ 4.1 (Qualitative Satisfaction Evaluation)
                         </label>
-                        <span className="text-[11px] text-slate-400">บรรยายสรุปค่าเฉลี่ย x̄, ส่วนเบี่ยงเบนมาตรฐาน S.D. รายด้าน ๔ ด้าน และภาพรวม</span>
+                        <span className="text-[11px] text-slate-400">บรรยายสรุปค่าเฉลี่ย x̄, ส่วนเบี่ยงเบนมาตรฐาน S.D. รายด้าน 4 ด้าน และภาพรวม</span>
                     </div>
                     <textarea
                         rows={10}
                         value={safeString(chapter4Sections.section_4_3)}
                         onChange={(e) => setChapter4Sections({ ...chapter4Sections, section_4_3: e.target.value })}
                         className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
-                        placeholder="๔.๓ ผลการประเมินความพึงพอใจเชิงคุณภาพ..."
+                        placeholder="4.3 ผลการประเมินความพึงพอใจเชิงคุณภาพ..."
                     />
                 </div>
 
@@ -17391,7 +17386,7 @@ return (
                 <div className="space-y-1.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">๔.๔</span>
+                            <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs">4.4</span>
                             ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน (Budget Utilization)
                         </label>
                         <span className="text-[11px] text-slate-400">งบประมาณที่ได้รับอนุมัติ งบประมาณที่เบิกจ่ายจริง และผลการประหยัด</span>
@@ -17401,14 +17396,14 @@ return (
                         value={safeString(chapter4Sections.section_4_4)}
                         onChange={(e) => setChapter4Sections({ ...chapter4Sections, section_4_4: e.target.value })}
                         className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-rose-500 focus:ring-rose-500 leading-relaxed font-sans"
-                        placeholder="๔.๔ ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน..."
+                        placeholder="4.4 ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน..."
                     />
                 </div>
 
                 {/* Bottom Action Bar */}
                 <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <p className="text-xs text-slate-500">
-                        เมื่อบันทึกข้อมูลเรียบร้อยแล้ว สามารถกดปุ่มพิมพ์ A4 เพื่อเปิดหน้าพิมพ์เอกสารบทที่ ๔ พร้อมตาราง ๔.๐ และ ๔.๑ ได้ทันที
+                        เมื่อบันทึกข้อมูลเรียบร้อยแล้ว สามารถกดปุ่มพิมพ์ A4 เพื่อเปิดหน้าพิมพ์เอกสารบทที่ 4 พร้อมตาราง 4.0 และ 4.1 ได้ทันที
                     </p>
 
                     <div className="flex items-center gap-3">
@@ -17420,7 +17415,7 @@ return (
                                 className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
                             >
                                 <span>🖨️</span>
-                                <span>ดูตัวอย่างและพิมพ์ A4 (บทที่ ๔)</span>
+                                <span>ดูตัวอย่างและพิมพ์ A4 (บทที่ 4)</span>
                             </a>
                         )}
 
@@ -17438,7 +17433,7 @@ return (
                             ) : (
                                 <>
                                     <span>💾</span>
-                                    <span>บันทึกเนื้อหาบทที่ ๔</span>
+                                    <span>บันทึกเนื้อหาบทที่ 4</span>
                                 </>
                             )}
                         </button>
@@ -17454,13 +17449,13 @@ return (
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-purple-200 text-xs font-bold mb-2">
-                            <span>📓</span> เล่มรายงานโครงการ ๕ บท • บทที่ ๕ (Conclusion & Report Book)
+                            <span>📓</span> เล่มรายงานโครงการ 5 บท • บทที่ 5 (Conclusion & Report Book)
                         </div>
                         <h2 className="text-xl md:text-2xl font-black tracking-tight">
-                            บทที่ ๕: สรุปผล อภิปรายผล & พิมพ์รูปเล่ม (Act Phase)
+                            บทที่ 5: สรุปผล อภิปรายผล & พิมพ์รูปเล่ม (Act Phase)
                         </h2>
                         <p className="text-purple-200 text-xs md:text-sm mt-1 max-w-3xl leading-relaxed">
-                            สรุปภาพรวมโครงการ อภิปรายผลเปรียบเทียบกับวัตถุประสงค์และงานวิจัย ข้อเสนอแนะเพื่อการพัฒนา และจัดพิมพ์เล่มรายงานโครงการ ๕ บท ฉบับสมบูรณ์
+                            สรุปภาพรวมโครงการ อภิปรายผลเปรียบเทียบกับวัตถุประสงค์และงานวิจัย ข้อเสนอแนะเพื่อการพัฒนา และจัดพิมพ์เล่มรายงานโครงการ 5 บท ฉบับสมบูรณ์
                         </p>
                     </div>
 
@@ -17486,14 +17481,14 @@ return (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-4">
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                        <span>📝</span> สาระสำคัญบทที่ ๕
+                        <span>📝</span> สาระสำคัญบทที่ 5
                     </h3>
                     <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
                         <ul className="list-disc pl-5 space-y-1.5">
-                            <li>๕.๑ สรุปผลการดำเนินโครงการ</li>
-                            <li>๕.๒ การอภิปรายผล (เทียบเคียงกับทฤษฎีและงานวิจัยในบทที่ ๒)</li>
-                            <li>๕.๓ ปัญหา อุปสรรค และแนวทางแก้ไข</li>
-                            <li>๕.๔ ข้อเสนอแนะในการนำผลไปใช้ และข้อเสนอแนะสำหรับการจัดทำโครงการครั้งต่อไป</li>
+                            <li>5.1 สรุปผลการดำเนินโครงการ</li>
+                            <li>5.2 การอภิปรายผล (เทียบเคียงกับทฤษฎีและงานวิจัยในบทที่ 2)</li>
+                            <li>5.3 ปัญหา อุปสรรค และแนวทางแก้ไข</li>
+                            <li>5.4 ข้อเสนอแนะในการนำผลไปใช้ และข้อเสนอแนะสำหรับการจัดทำโครงการครั้งต่อไป</li>
                         </ul>
                     </div>
                 </div>
@@ -17515,7 +17510,7 @@ return (
                                     rel="noopener noreferrer"
                                     className="w-full px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-900 rounded-xl text-xs font-bold border border-purple-200 transition flex items-center justify-between"
                                 >
-                                    <span>📘 พิมพ์บทที่ ๑: บทนำ & ข้อมูลโครงการ (A4)</span>
+                                    <span>📘 พิมพ์บทที่ 1: บทนำ & ข้อมูลโครงการ (A4)</span>
                                     <span>🖨️</span>
                                 </a>
 
@@ -17525,7 +17520,7 @@ return (
                                     rel="noopener noreferrer"
                                     className="w-full px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 rounded-xl text-xs font-bold border border-emerald-200 transition flex items-center justify-between"
                                 >
-                                    <span>📗 พิมพ์บทที่ ๒: เอกสารและงานวิจัยที่เกี่ยวข้อง (A4)</span>
+                                    <span>📗 พิมพ์บทที่ 2: เอกสารและงานวิจัยที่เกี่ยวข้อง (A4)</span>
                                     <span>🖨️</span>
                                 </a>
 
@@ -17611,7 +17606,7 @@ return (
                                 <div className="space-y-4 text-xs">
                                     {/* 1. Endpoint & Method */}
                                     <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                                        <div className="font-bold text-slate-800">1. Endpoint สำหรับส่งสัญญายืมเงิน (แบบ กค. ๑๐๑):</div>
+                                        <div className="font-bold text-slate-800">1. Endpoint สำหรับส่งสัญญายืมเงิน (แบบ กค. 101):</div>
                                         <div className="flex items-center gap-2">
                                             <span className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-mono font-bold text-xs">
                                                 POST
@@ -17782,7 +17777,7 @@ return (
                                             value={planCutData.plan_notes}
                                             onChange={(e) => setPlanCutData('plan_notes', e.target.value)}
                                             className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs text-slate-800 focus:border-purple-500 focus:ring-purple-500 bg-white"
-                                            placeholder="บันทึกหมายเหตุเพิ่มเติม เช่น อนุมัติยืมตามระเบียบ กค. ๑๐๑"
+                                            placeholder="บันทึกหมายเหตุเพิ่มเติม เช่น อนุมัติยืมตามระเบียบ กค. 101"
                                         />
                                     </div>
 
@@ -17899,14 +17894,14 @@ return (
                         </div>
                     )}
 
-                    {/* Modal 3: Full Travel Loan Detail View (กค. ๑๐๑) */}
+                    {/* Modal 3: Full Travel Loan Detail View (กค. 101) */}
                     {selectedTravelLoanDetail && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-3 sm:p-6 overflow-y-auto">
                             <div className="w-full max-w-3xl rounded-3xl bg-white p-5 sm:p-8 shadow-2xl border border-slate-200 my-auto max-h-[92vh] flex flex-col">
                                 <div className="flex justify-between items-start border-b border-slate-200 pb-4 mb-4">
                                     <div>
                                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200 mb-1.5">
-                                            <span>🏛️</span> แบบ กค. ๑๐๑ • สัญญายืมเงินไปราชการ (ภายนอก: npc_eleve)
+                                            <span>🏛️</span> แบบ กค. 101 • สัญญายืมเงินไปราชการ (ภายนอก: npc_eleve)
                                         </div>
                                         <h3 className="text-base sm:text-xl font-black text-slate-900">
                                             {selectedTravelLoanDetail.subject}

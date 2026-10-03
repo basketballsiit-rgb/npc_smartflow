@@ -8,12 +8,13 @@ export default function PrintChapter2({ project }) {
     const sections = project?.chapter_2_sections || {};
     const fullContent = project?.chapter_2_content || '';
 
-    // Convert Arabic digits to Thai digits
-    const toThaiNumerals = (val) => {
+    // Standardize all numerals to Arabic (0-9)
+    const toArabicNumerals = (val) => {
         if (val === null || val === undefined) return '';
-        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(val).replace(/[0-9]/g, (digit) => thaiDigits[parseInt(digit, 10)]);
+        const map = { '๐':'0', '๑':'1', '๒':'2', '๓':'3', '๔':'4', '๕':'5', '๖':'6', '๗':'7', '๘':'8', '๙':'9' };
+        return String(val).replace(/[๐-๙]/g, (digit) => map[digit] || digit);
     };
+    const toThaiNumerals = toArabicNumerals;
 
     const handlePrint = () => {
         window.print();
@@ -28,7 +29,7 @@ export default function PrintChapter2({ project }) {
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
             <Head>
-                <title>{`รายงานผลโครงการ บทที่ ๒ - ${project.title}`}</title>
+                <title>{`รายงานผลโครงการ บทที่ 2 - ${project.title}`}</title>
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
                 <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
@@ -154,10 +155,10 @@ export default function PrintChapter2({ project }) {
             <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden font-sans">
                 <div>
                     <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <span>📖</span> รายงานผลโครงการ: บทที่ ๒ เอกสารและงานวิจัยที่เกี่ยวข้อง
+                        <span>📖</span> รายงานผลโครงการ: บทที่ 2 เอกสารและงานวิจัยที่เกี่ยวข้อง
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        ระยะขอบทุกด้าน ๑ นิ้ว | ฟอนต์ TH Sarabun PSK ขนาดมาตรฐาน 1:1 กับแบบเสนอโครงการ
+                        ระยะขอบทุกด้าน 1 นิ้ว | ฟอนต์ TH Sarabun PSK ขนาดมาตรฐาน 1:1 กับแบบเสนอโครงการ
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -207,9 +208,9 @@ export default function PrintChapter2({ project }) {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rounded-xl border border-purple-200 bg-purple-50 px-3.5 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 transition shadow-2xs"
-                        title="ดูแบบเสนอโครงการ / บทที่ ๑"
+                        title="ดูแบบเสนอโครงการ / บทที่ 1"
                     >
-                        📄 พิมพ์แบบเสนอ (บทที่ ๑)
+                        📄 พิมพ์แบบเสนอ (บทที่ 1)
                     </a>
 
                     <Link
@@ -233,7 +234,7 @@ export default function PrintChapter2({ project }) {
                 
                 {/* Chapter Heading */}
                 <div className="text-center mb-8">
-                    <h2 className="print-title tracking-wide text-black mb-1">บทที่ ๒</h2>
+                    <h2 className="print-title tracking-wide text-black mb-1">บทที่ 2</h2>
                     <h1 className="print-title tracking-wide text-black">เอกสารและงานวิจัยที่เกี่ยวข้อง</h1>
                 </div>
 
@@ -244,7 +245,7 @@ export default function PrintChapter2({ project }) {
                         {/* Intro */}
                         {sections.intro && (
                             <div className="thai-indent whitespace-pre-line text-justify leading-relaxed">
-                                {sections.intro}
+                                {toArabicNumerals(sections.intro)}
                             </div>
                         )}
 
@@ -252,10 +253,10 @@ export default function PrintChapter2({ project }) {
                         {sections.section_2_1 && (
                             <div className="pt-2">
                                 <h3 className="print-heading mb-2 text-black">
-                                    ๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง
+                                    2.1 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง
                                 </h3>
                                 <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {sections.section_2_1.replace(/^[๒2]\.[๑1]\s*แนวคิด[^\n]*\n+/u, '')}
+                                    {toArabicNumerals(sections.section_2_1.replace(/^[๒2]\.[๑1]\s*แนวคิด[^\n]*\n+/u, ''))}
                                 </div>
                             </div>
                         )}
@@ -264,10 +265,10 @@ export default function PrintChapter2({ project }) {
                         {sections.section_2_2 && (
                             <div className="pt-4">
                                 <h3 className="print-heading mb-2 text-black">
-                                    ๒.๒ ยุทธศาสตร์และนโยบายจุดเน้นของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.) ที่เกี่ยวข้อง
+                                    2.2 ยุทธศาสตร์และนโยบายจุดเน้นของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.) ที่เกี่ยวข้อง
                                 </h3>
                                 <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {sections.section_2_2.replace(/^[๒2]\.[๒2]\s*ยุทธศาสตร์[^\n]*\n+/u, '')}
+                                    {toArabicNumerals(sections.section_2_2.replace(/^[๒2]\.[๒2]\s*ยุทธศาสตร์[^\n]*\n+/u, ''))}
                                 </div>
                             </div>
                         )}
@@ -276,10 +277,10 @@ export default function PrintChapter2({ project }) {
                         {sections.section_2_3 && (
                             <div className="pt-4">
                                 <h3 className="print-heading mb-2 text-black">
-                                    ๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง
+                                    2.3 เอกสารและงานวิจัยที่เกี่ยวข้อง
                                 </h3>
                                 <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {sections.section_2_3.replace(/^[๒2]\.[๓3]\s*เอกสาร[^\n]*\n+/u, '')}
+                                    {toArabicNumerals(sections.section_2_3.replace(/^[๒2]\.[๓3]\s*เอกสาร[^\n]*\n+/u, ''))}
                                 </div>
                             </div>
                         )}
@@ -291,7 +292,7 @@ export default function PrintChapter2({ project }) {
                                     เอกสารอ้างอิง
                                 </h3>
                                 <div className="space-y-3 leading-relaxed">
-                                    {sections.references
+                                    {toArabicNumerals(sections.references)
                                         .replace(/^เอกสารอ้างอิง\s*\n+/u, '')
                                         .split(/\n+/)
                                         .filter(line => line.trim().length > 0)
@@ -307,19 +308,19 @@ export default function PrintChapter2({ project }) {
                     </div>
                 ) : fullContent ? (
                     <div className="whitespace-pre-line text-justify text-black leading-relaxed space-y-4 thai-indent">
-                        {fullContent}
+                        {toArabicNumerals(fullContent)}
                     </div>
                 ) : (
                     <div className="p-8 bg-amber-50 rounded-2xl border border-amber-200 text-center font-sans print:hidden">
-                        <p className="text-amber-800 font-bold">ยังไม่มีเนื้อหาบทที่ ๒ ในระบบ</p>
+                        <p className="text-amber-800 font-bold">ยังไม่มีเนื้อหาบทที่ 2 ในระบบ</p>
                         <p className="text-xs text-amber-600 mt-1">
-                            กรุณากลับไปที่หน้ารายละเอียดโครงการ แท็บที่ ๔ (Act) และกดปุ่ม "✨ ให้ AI ช่วยค้นคว้าและร่างเนื้อหาบทที่ ๒"
+                            กรุณากลับไปที่หน้ารายละเอียดโครงการ แท็บที่ 4 (Act) และกดปุ่ม "✨ ให้ AI ช่วยค้นคว้าและร่างเนื้อหาบทที่ 2"
                         </p>
                         <Link
                             href={route('projects.show', project.id)}
                             className="mt-4 inline-block px-4 py-2 bg-purple-700 text-white font-bold text-xs rounded-xl shadow"
                         >
-                            กลับไปสร้างเนื้อหาบทที่ ๒
+                            กลับไปสร้างเนื้อหาบทที่ 2
                         </Link>
                     </div>
                 )}

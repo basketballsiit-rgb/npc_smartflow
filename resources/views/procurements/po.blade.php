@@ -113,8 +113,8 @@
 
     @php
         function thaiNumberPo($number) {
-            $thainum = ['๐','๑','๒','๓','๔','๕','๖','๗','๘','๙'];
-            return str_replace(range(0, 9), $thainum, $number);
+            $thainum = ['๐'=>'0','๑'=>'1','๒'=>'2','๓'=>'3','๔'=>'4','๕'=>'5','๖'=>'6','๗'=>'7','๘'=>'8','๙'=>'9'];
+            return strtr((string)$number, $thainum);
         }
 
         function convertToThaiBahtTextPo($number) {

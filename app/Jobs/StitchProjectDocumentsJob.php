@@ -50,7 +50,7 @@ class StitchProjectDocumentsJob implements ShouldQueue
         $content .= "Department: " . ($this->project->department?->name ?? 'N/A') . "\n";
         $content .= "Proposer: " . ($this->project->user?->name ?? 'N/A') . "\n";
         $content .= "Estimated Budget: " . number_format($this->project->estimated_budget, 2) . " THB\n";
-        $content .= "2. CHAPTER 2: RELATED LITERATURE & OVEC STRATEGIES (บทที่ ๒)\n";
+        $content .= "2. CHAPTER 2: RELATED LITERATURE & OVEC STRATEGIES (บทที่ 2)\n";
         $content .= "------------------------------------------------------------------------\n";
         if (!empty($this->project->chapter_2_content)) {
             $content .= $this->project->chapter_2_content . "\n\n";

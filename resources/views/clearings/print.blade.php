@@ -327,7 +327,7 @@
     <div class="signature-grid">
         <!-- 1. Claimant / Borrower -->
         <div class="sign-box">
-            <div class="font-bold">๑. ผู้ยืมเงิน / ผู้ขอเบิกจ่าย</div>
+            <div class="font-bold">1. ผู้ยืมเงิน / ผู้ขอเบิกจ่าย</div>
             <div class="sign-space"></div>
             <div>ลงชื่อ..............................................................</div>
             <div class="font-bold">({{ $clearing->claimant_name }})</div>
@@ -337,7 +337,7 @@
 
         <!-- 2. Planning Department (Budget Cut) -->
         <div class="sign-box" style="border-color: #4f46e5;">
-            <div class="font-bold" style="color: #3730a3;">๒. ความเห็นงานวางแผนและงบประมาณ</div>
+            <div class="font-bold" style="color: #3730a3;">2. ความเห็นงานวางแผนและงบประมาณ</div>
             <div style="font-size: 10.5pt; text-align: left; margin: 4px 0 2px 8px;">
                 [✓] ตรวจสอบความถูกต้องและตัดยอดงบแล้ว<br>
                 เลขที่ตัดยอด: <b>{{ $clearing->plan_doc_number ?: '...........................' }}</b>
@@ -350,7 +350,7 @@
 
         <!-- 3. Finance Department (Disburse / Receive) -->
         <div class="sign-box" style="border-color: #059669;">
-            <div class="font-bold" style="color: #065f46;">๓. ความเห็นงานการเงิน</div>
+            <div class="font-bold" style="color: #065f46;">3. ความเห็นงานการเงิน</div>
             <div style="font-size: 10.5pt; text-align: left; margin: 4px 0 2px 8px;">
                 @if($clearing->clearing_result === 'refund')
                     [✓] ได้รับเงินเหลือส่งคืนคลังครบถ้วนแล้ว<br>
@@ -369,7 +369,7 @@
 
         <!-- 4. Director (Approval) -->
         <div class="sign-box">
-            <div class="font-bold">๔. การอนุมัติของผู้บริหาร</div>
+            <div class="font-bold">4. การอนุมัติของผู้บริหาร</div>
             <div style="font-size: 11pt; margin: 4px 0;">
                 [✓] อนุมัติ &nbsp;&nbsp;&nbsp; [ &nbsp; ] ไม่อนุมัติ
             </div>

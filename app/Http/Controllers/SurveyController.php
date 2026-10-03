@@ -250,7 +250,7 @@ class SurveyController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'โหลดชุดคำถามมาตรฐาน ๔ ด้าน (๑๕ ข้อ) สอดคล้องกับวัตถุประสงค์และตัวชี้วัดเรียบร้อยแล้ว',
+            'message' => 'โหลดชุดคำถามมาตรฐาน 4 ด้าน (15 ข้อ) สอดคล้องกับวัตถุประสงค์และตัวชี้วัดเรียบร้อยแล้ว',
             'questions' => $questions,
             'survey' => $survey,
         ]);
@@ -378,10 +378,10 @@ class SurveyController extends Controller
         }
 
         $dimensionTitles = [
-            1 => 'ด้านที่ ๑: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
-            2 => 'ด้านที่ ๒: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
-            3 => 'ด้านที่ ๓: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
-            4 => 'ด้านที่ ๔: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)',
+            1 => 'ด้านที่ 1: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
+            2 => 'ด้านที่ 2: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
+            3 => 'ด้านที่ 3: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
+            4 => 'ด้านที่ 4: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)',
         ];
 
         if ($totalResponses === 0) {
@@ -522,7 +522,7 @@ class SurveyController extends Controller
 
         $chapter1Comparison = [
             'objectiveFulfillment' => [
-                'title' => '๑. การตอบโจทย์วัตถุประสงค์ของโครงการ (ดึงจากด้านที่ ๓: Output / Objective)',
+                'title' => '1. การตอบโจทย์วัตถุประสงค์ของโครงการ (ดึงจากด้านที่ 3: Output / Objective)',
                 'mean' => $dim3 ? $dim3['mean'] : 0.0,
                 'sd' => $dim3 ? $dim3['sd'] : 0.0,
                 'level' => $dim3 ? $dim3['level'] : 'ยังไม่มีข้อมูล',
@@ -531,7 +531,7 @@ class SurveyController extends Controller
                     : "อยู่ระหว่างการเก็บรวบรวมข้อมูลแบบประเมิน",
             ],
             'benefitRealization' => [
-                'title' => '๒. การตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ (ดึงจากด้านที่ ๔: Outcome / Impact)',
+                'title' => '2. การตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ (ดึงจากด้านที่ 4: Outcome / Impact)',
                 'mean' => $dim4 ? $dim4['mean'] : 0.0,
                 'sd' => $dim4 ? $dim4['sd'] : 0.0,
                 'level' => $dim4 ? $dim4['level'] : 'ยังไม่มีข้อมูล',
@@ -540,16 +540,16 @@ class SurveyController extends Controller
                     : "อยู่ระหว่างการเก็บรวบรวมข้อมูลแบบประเมิน",
             ],
             'kpiAchievement' => [
-                'title' => '๓. การตอบโจทย์ตัวชี้วัดความสำเร็จ (KPIs) (เกณฑ์ความพึงพอใจภาพรวมไม่น้อยกว่าร้อยละ ๘๐ หรือ X̄ ≥ ๓.๕๑)',
+                'title' => '3. การตอบโจทย์ตัวชี้วัดความสำเร็จ (KPIs) (เกณฑ์ความพึงพอใจภาพรวมไม่น้อยกว่าร้อยละ 80 หรือ X̄ ≥ 3.51)',
                 'overallMean' => $overallMean,
                 'overallPercentage' => $overallPercentage,
                 'overallLevel' => $overallLevel,
                 'isPassed' => ($overallMean >= 3.51),
-                'benchmark' => 'ร้อยละ ๘๐.๐ (X̄ ≥ ๓.๕๑ ขึ้นไป)',
+                'benchmark' => 'ร้อยละ 80.0 (X̄ ≥ 3.51 ขึ้นไป)',
                 'summary' => $overallMean >= 3.51
-                    ? "คะแนนเฉลี่ยความพึงพอใจภาพรวมทั้งโครงการอยู่ที่ {$overallMean}/๕.๐๐ (ร้อยละ {$overallPercentage} ระดับ{$overallLevel}) ซึ่งสูงกว่าเกณฑ์ตัวชี้วัดขั้นต่ำ จึงถือว่า 'ผ่านเกณฑ์ตัวชี้วัดความสำเร็จ (KPI) ทุกประเด็น'"
+                    ? "คะแนนเฉลี่ยความพึงพอใจภาพรวมทั้งโครงการอยู่ที่ {$overallMean}/5.00 (ร้อยละ {$overallPercentage} ระดับ{$overallLevel}) ซึ่งสูงกว่าเกณฑ์ตัวชี้วัดขั้นต่ำ จึงถือว่า 'ผ่านเกณฑ์ตัวชี้วัดความสำเร็จ (KPI) ทุกประเด็น'"
                     : ($overallMean > 0
-                        ? "คะแนนเฉลี่ยความพึงพอใจภาพรวมอยู่ที่ {$overallMean}/๕.๐๐ (ร้อยละ {$overallPercentage}) ซึ่งจำเป็นต้องเพิ่มประสิทธิภาพเพื่อบรรลุเกณฑ์ตัวชี้วัดเป้าหมาย"
+                        ? "คะแนนเฉลี่ยความพึงพอใจภาพรวมอยู่ที่ {$overallMean}/5.00 (ร้อยละ {$overallPercentage}) ซึ่งจำเป็นต้องเพิ่มประสิทธิภาพเพื่อบรรลุเกณฑ์ตัวชี้วัดเป้าหมาย"
                         : "อยู่ระหว่างการเก็บรวบรวมข้อมูลแบบประเมิน"),
             ],
         ];

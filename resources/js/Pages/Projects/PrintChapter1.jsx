@@ -7,12 +7,13 @@ export default function PrintChapter1({ project }) {
     const sections = project?.chapter_1_sections || {};
     const fullContent = project?.chapter_1_content || '';
 
-    // Convert Arabic digits to Thai digits
-    const toThaiNumerals = (val) => {
+    // Standardize all numerals to Arabic (0-9)
+    const toArabicNumerals = (val) => {
         if (val === null || val === undefined) return '';
-        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(val).replace(/[0-9]/g, (digit) => thaiDigits[parseInt(digit, 10)]);
+        const map = { '๐':'0', '๑':'1', '๒':'2', '๓':'3', '๔':'4', '๕':'5', '๖':'6', '๗':'7', '๘':'8', '๙':'9' };
+        return String(val).replace(/[๐-๙]/g, (digit) => map[digit] || digit);
     };
+    const toThaiNumerals = toArabicNumerals;
 
     // Safe string serializer ensuring objects like {text, unit} never crash React
     const safeString = (val, fallback = '') => {
@@ -58,7 +59,7 @@ export default function PrintChapter1({ project }) {
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
             <Head>
-                <title>{`รายงานผลโครงการ บทที่ ๑ - ${project.title}`}</title>
+                <title>{`รายงานผลโครงการ บทที่ 1 - ${project.title}`}</title>
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
                 <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
@@ -175,10 +176,10 @@ export default function PrintChapter1({ project }) {
             <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden font-sans">
                 <div>
                     <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <span>📘</span> รายงานผลโครงการ: บทที่ ๑ บทนำ (Introduction)
+                        <span>📘</span> รายงานผลโครงการ: บทที่ 1 บทนำ (Introduction)
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        ระยะขอบทุกด้าน ๑ นิ้ว | ฟอนต์ TH Sarabun PSK ขนาดมาตรฐาน 1:1 กับรายงาน ๕ บท
+                        ระยะขอบทุกด้าน 1 นิ้ว | ฟอนต์ TH Sarabun PSK ขนาดมาตรฐาน 1:1 กับรายงาน 5 บท
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -254,14 +255,14 @@ export default function PrintChapter1({ project }) {
                 
                 {/* Chapter Heading */}
                 <div className="text-center mb-8">
-                    <h2 className="print-title tracking-wide text-black mb-1">บทที่ ๑</h2>
+                    <h2 className="print-title tracking-wide text-black mb-1">บทที่ 1</h2>
                     <h1 className="print-title tracking-wide text-black">บทนำ</h1>
                 </div>
 
                 {/* If full custom content is provided, display it directly */}
                 {fullContent ? (
                     <div className="space-y-6 text-black whitespace-pre-wrap leading-relaxed text-justify">
-                        {fullContent}
+                        {toArabicNumerals(fullContent)}
                     </div>
                 ) : (
                     <div className="space-y-6 text-black leading-relaxed">
@@ -269,26 +270,26 @@ export default function PrintChapter1({ project }) {
                         {/* 1.1 ความเป็นมาและความสำคัญของปัญหา */}
                         <div className="print-break-inside-avoid">
                             <h3 className="print-heading text-black mb-2">
-                                ๑.๑ ความเป็นมาและความสำคัญของปัญหา
+                                1.1 ความเป็นมาและความสำคัญของปัญหา
                             </h3>
                             <div className="text-justify thai-indent whitespace-pre-wrap">
-                                {safeString(sections.background) || safeString(project.background_rationale) || 'ไม่ได้ระบุความเป็นมาและความสำคัญของปัญหา'}
+                                {toArabicNumerals(safeString(sections.background) || safeString(project.background_rationale) || 'ไม่ได้ระบุความเป็นมาและความสำคัญของปัญหา')}
                             </div>
                         </div>
 
                         {/* 1.2 วัตถุประสงค์ของโครงการ */}
                         <div className="print-break-inside-avoid">
                             <h3 className="print-heading text-black mb-2">
-                                ๑.๒ วัตถุประสงค์ของโครงการ
+                                1.2 วัตถุประสงค์ของโครงการ
                             </h3>
                             <div className="space-y-1 pl-6">
                                 {sections.objectives ? (
-                                    <div className="whitespace-pre-wrap">{safeString(sections.objectives)}</div>
+                                    <div className="whitespace-pre-wrap">{toArabicNumerals(safeString(sections.objectives))}</div>
                                 ) : rawObjectives.length > 0 ? (
                                     rawObjectives.map((obj, idx) => (
                                         <div key={idx} className="flex items-start gap-2">
-                                            <span className="font-bold shrink-0">๑.๒.{toThaiNumerals(idx + 1)}</span>
-                                            <span>{safeString(obj)}</span>
+                                            <span className="font-bold shrink-0">1.2.{toArabicNumerals(idx + 1)}</span>
+                                            <span>{toArabicNumerals(safeString(obj))}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -300,47 +301,47 @@ export default function PrintChapter1({ project }) {
                         {/* 1.3 ขอบเขตของโครงการ */}
                         <div className="print-break-inside-avoid space-y-3">
                             <h3 className="print-heading text-black mb-1">
-                                ๑.๓ ขอบเขตของโครงการ
+                                1.3 ขอบเขตของโครงการ
                             </h3>
 
                             {/* 1.3.1 ประชากรและกลุ่มเป้าหมาย */}
                             <div className="pl-4">
                                 <h4 className="font-bold text-black mb-1">
-                                    ๑.๓.๑ ขอบเขตด้านประชากรและกลุ่มเป้าหมาย
+                                    1.3.1 ขอบเขตด้านประชากรและกลุ่มเป้าหมาย
                                 </h4>
                                 <div className="thai-indent whitespace-pre-wrap">
-                                    {safeString(sections.scope_target) || (
+                                    {toArabicNumerals(safeString(sections.scope_target) || (
                                         rawTargets.length > 0
                                             ? rawTargets.map(t => safeString(t)).filter(Boolean).join(', ')
                                             : 'นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษาที่เกี่ยวข้อง'
-                                    )}
+                                    ))}
                                 </div>
                             </div>
 
                             {/* 1.3.2 ด้านเนื้อหาและกิจกรรม */}
                             <div className="pl-4">
                                 <h4 className="font-bold text-black mb-1">
-                                    ๑.๓.๒ ขอบเขตด้านเนื้อหาและกิจกรรมการดำเนินงาน
+                                    1.3.2 ขอบเขตด้านเนื้อหาและกิจกรรมการดำเนินงาน
                                 </h4>
                                 <div className="thai-indent whitespace-pre-wrap">
-                                    {safeString(sections.scope_content) || (
+                                    {toArabicNumerals(safeString(sections.scope_content) || (
                                         rawActivities.length > 0
-                                            ? rawActivities.map((a, i) => `${toThaiNumerals(i + 1)}. ${safeString(a)}`).join('\n')
+                                            ? rawActivities.map((a, i) => `${toArabicNumerals(i + 1)}. ${safeString(a)}`).join('\n')
                                             : 'ดำเนินงานตามกิจกรรมและขั้นตอนการดำเนินงานที่ระบุไว้ในแผนปฏิบัติการ'
-                                    )}
+                                    ))}
                                 </div>
                             </div>
 
                             {/* 1.3.3 ด้านสถานที่และระยะเวลา */}
                             <div className="pl-4">
                                 <h4 className="font-bold text-black mb-1">
-                                    ๑.๓.๓ ขอบเขตด้านสถานที่และระยะเวลาดำเนินการ
+                                    1.3.3 ขอบเขตด้านสถานที่และระยะเวลาดำเนินการ
                                 </h4>
                                 <div className="thai-indent">
-                                    {safeString(sections.scope_location_time) || (
+                                    {toArabicNumerals(safeString(sections.scope_location_time) || (
                                         `สถานที่ดำเนินโครงการ: ${project.location || 'วิทยาลัยสารพัดช่างน่าน'} ` +
-                                        (project.start_date ? `ระยะเวลาตั้งแต่วันที่ ${toThaiNumerals(project.start_date)} ถึง ${toThaiNumerals(project.end_date || project.start_date)}` : '')
-                                    )}
+                                        (project.start_date ? `ระยะเวลาตั้งแต่วันที่ ${toArabicNumerals(project.start_date)} ถึง ${toArabicNumerals(project.end_date || project.start_date)}` : '')
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -348,21 +349,21 @@ export default function PrintChapter1({ project }) {
                         {/* 1.4 ตัวชี้วัดและเป้าหมายความสำเร็จ */}
                         <div className="print-break-inside-avoid">
                             <h3 className="print-heading text-black mb-2">
-                                ๑.๔ ตัวชี้วัดและเป้าหมายความสำเร็จ
+                                1.4 ตัวชี้วัดและเป้าหมายความสำเร็จ
                             </h3>
                             <div className="space-y-2 pl-4">
                                 <div>
-                                    <span className="font-bold">๑.๔.๑ ตัวชี้วัดเชิงปริมาณ: </span>
+                                    <span className="font-bold">1.4.1 ตัวชี้วัดเชิงปริมาณ: </span>
                                     <span>
-                                        {safeString(sections.indicators_quantitative) || 
-                                         safeString(project.indicators?.quantitative) || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ ๘๐ ของกลุ่มเป้าหมาย'}
+                                        {toArabicNumerals(safeString(sections.indicators_quantitative) || 
+                                         safeString(project.indicators?.quantitative) || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ 80 ของกลุ่มเป้าหมาย')}
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="font-bold">๑.๔.๒ ตัวชี้วัดเชิงคุณภาพ: </span>
+                                    <span className="font-bold">1.4.2 ตัวชี้วัดเชิงคุณภาพ: </span>
                                     <span>
-                                        {safeString(sections.indicators_qualitative) || 
-                                         safeString(project.indicators?.qualitative) || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป (ค่าเฉลี่ย ๓.๕๑ ขึ้นไป)'}
+                                        {toArabicNumerals(safeString(sections.indicators_qualitative) || 
+                                         safeString(project.indicators?.qualitative) || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป (ค่าเฉลี่ย 3.51 ขึ้นไป)')}
                                     </span>
                                 </div>
                             </div>
@@ -371,16 +372,16 @@ export default function PrintChapter1({ project }) {
                         {/* 1.5 ประโยชน์ที่คาดว่าจะได้รับ */}
                         <div className="print-break-inside-avoid">
                             <h3 className="print-heading text-black mb-2">
-                                ๑.๕ ประโยชน์ที่คาดว่าจะได้รับ
+                                1.5 ประโยชน์ที่คาดว่าจะได้รับ
                             </h3>
                             <div className="space-y-1 pl-6">
                                 {sections.benefits || sections.expected_benefits ? (
-                                    <div className="whitespace-pre-wrap">{safeString(sections.benefits || sections.expected_benefits)}</div>
+                                    <div className="whitespace-pre-wrap">{toArabicNumerals(safeString(sections.benefits || sections.expected_benefits))}</div>
                                 ) : rawBenefits.length > 0 ? (
                                     rawBenefits.map((b, idx) => (
                                         <div key={idx} className="flex items-start gap-2">
-                                            <span className="font-bold shrink-0">๑.๕.{toThaiNumerals(idx + 1)}</span>
-                                            <span>{safeString(b)}</span>
+                                            <span className="font-bold shrink-0">1.5.{toArabicNumerals(idx + 1)}</span>
+                                            <span>{toArabicNumerals(safeString(b))}</span>
                                         </div>
                                     ))
                                 ) : (
@@ -393,10 +394,10 @@ export default function PrintChapter1({ project }) {
                         {sections.definitions && (
                             <div className="print-break-inside-avoid">
                                 <h3 className="print-heading text-black mb-2">
-                                    ๑.๖ นิยามศัพท์เฉพาะ
+                                    1.6 นิยามศัพท์เฉพาะ
                                 </h3>
                                 <div className="text-justify thai-indent whitespace-pre-wrap">
-                                    {safeString(sections.definitions)}
+                                    {toArabicNumerals(safeString(sections.definitions))}
                                 </div>
                             </div>
                         )}

@@ -55,8 +55,8 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                         setLinkedOvecStrategies(res.data.linked_ovec_strategies);
                     }
                     Swal.fire({
-                        title: '✨ AI สังเคราะห์เนื้อหาบทที่ ๒ สำเร็จ!',
-                        html: `ระบบได้ร่างเนื้อหา ๓ หัวข้อสำคัญ พร้อม<b>ขยายความยุทธศาสตร์ สอศ.</b> และรวบรวมการอ้างอิงเอกสาร/บรรณานุกรมเรียบร้อยแล้ว`,
+                        title: '✨ AI สังเคราะห์เนื้อหาบทที่ 2 สำเร็จ!',
+                        html: `ระบบได้ร่างเนื้อหา 3 หัวข้อสำคัญ พร้อม<b>ขยายความยุทธศาสตร์ สอศ.</b> และรวบรวมการอ้างอิงเอกสาร/บรรณานุกรมเรียบร้อยแล้ว`,
                         icon: 'success',
                         confirmButtonColor: '#7c3aed',
                     });
@@ -64,7 +64,7 @@ export default function Show({ project, strategyCategories = [], fundingSources 
             })
             .catch(err => {
                 console.error(err);
-                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างเนื้อหาบทที่ ๒ ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถสร้างเนื้อหาบทที่ 2 ได้ กรุณาลองใหม่อีกครั้ง', 'error');
             })
             .finally(() => {
                 setGeneratingChapter2(false);
@@ -73,7 +73,7 @@ export default function Show({ project, strategyCategories = [], fundingSources 
 
     const handleSaveChapter2 = () => {
         setSavingChapter2(true);
-        const full = `บทที่ ๒\nเอกสารและงานวิจัยที่เกี่ยวข้อง\n\n${chapter2Sections.intro || ''}\n\n${chapter2Sections.section_2_1 || ''}\n\n${chapter2Sections.section_2_2 || ''}\n\n${chapter2Sections.section_2_3 || ''}\n\n${chapter2Sections.references || ''}`;
+        const full = `บทที่ 2\nเอกสารและงานวิจัยที่เกี่ยวข้อง\n\n${chapter2Sections.intro || ''}\n\n${chapter2Sections.section_2_1 || ''}\n\n${chapter2Sections.section_2_2 || ''}\n\n${chapter2Sections.section_2_3 || ''}\n\n${chapter2Sections.references || ''}`;
         
         window.axios.post(route('projects.chapter2.save', project.id), {
             sections: chapter2Sections,
@@ -84,7 +84,7 @@ export default function Show({ project, strategyCategories = [], fundingSources 
                     setChapter2FullContent(full);
                     Swal.fire({
                         title: '💾 บันทึกสำเร็จ!',
-                        text: 'บันทึกเนื้อหาบทที่ ๒ และการอ้างอิงเอกสารเรียบร้อยแล้ว',
+                        text: 'บันทึกเนื้อหาบทที่ 2 และการอ้างอิงเอกสารเรียบร้อยแล้ว',
                         icon: 'success',
                         confirmButtonColor: '#7c3aed',
                         timer: 2000,
@@ -190,7 +190,7 @@ ${itemsListText}
 วิทยาลัยสารพัดช่างน่าน แผนกวิชา ${deptName} มีความประสงค์ดำเนินกิจกรรมและจัดการเรียนการสอนตามโครงการ "${projectTitle}" ให้บรรลุวัตถุประสงค์และเกิดประสิทธิภาพสูงสุด
 
 2. คุณลักษณะเฉพาะและขอบเขตงาน
-โครงการนี้ดำเนินการจัดกิจกรรมโดยใช้งบประมาณในลักษณะการยืมเงินทดรองราชการ (แบบ กค.๑๐๑) เพื่อเป็นค่าใช้จ่ายในการดำเนินงาน (ค่าตอบแทนวิทยากร ค่าอาหารกลางวัน อาหารว่างและเครื่องดื่ม และค่าใช้จ่ายในการเดินทาง) ทั้งหมด โดยไม่มีรายการพัสดุหรือครุภัณฑ์ที่ต้องจัดซื้อจัดจ้างตามขอบเขตงาน (TOR) เพิ่มเติม
+โครงการนี้ดำเนินการจัดกิจกรรมโดยใช้งบประมาณในลักษณะการยืมเงินทดรองราชการ (แบบ กค. 101) เพื่อเป็นค่าใช้จ่ายในการดำเนินงาน (ค่าตอบแทนวิทยากร ค่าอาหารกลางวัน อาหารว่างและเครื่องดื่ม และค่าใช้จ่ายในการเดินทาง) ทั้งหมด โดยไม่มีรายการพัสดุหรือครุภัณฑ์ที่ต้องจัดซื้อจัดจ้างตามขอบเขตงาน (TOR) เพิ่มเติม
 
 3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ
 ผู้ยืมเงินหรือผู้รับผิดชอบโครงการจะต้องดำเนินกิจกรรมให้แล้วเสร็จ และส่งใช้เงินยืมทดรองราชการพร้อมหลักฐานใบสำคัญคู่จ่ายให้แก่งานการเงิน วิทยาลัยสารพัดช่างน่าน ภายในกำหนด 30 วัน นับถัดจากวันเสร็จสิ้นโครงการ
@@ -202,7 +202,7 @@ ${itemsListText}
 
             Swal.fire({
                 title: '💡 ตรวจพบรายการเงินยืมราชการ',
-                html: `รายการในโครงการเป็น <b>ค่าตอบแทน/ค่าอาหาร/ค่าพาหนะเดินทาง (สัญญายืมเงิน กค.๑๐๑)</b><br>AI ได้ยกเว้นรายการเงินยืมออกจากบัญชีพัสดุ และปรับข้อกำหนด TOR สำหรับโครงการยืมเงินจัดกิจกรรมให้เรียบร้อยแล้ว`,
+                html: `รายการในโครงการเป็น <b>ค่าตอบแทน/ค่าอาหาร/ค่าพาหนะเดินทาง (สัญญายืมเงิน กค. 101)</b><br>AI ได้ยกเว้นรายการเงินยืมออกจากบัญชีพัสดุ และปรับข้อกำหนด TOR สำหรับโครงการยืมเงินจัดกิจกรรมให้เรียบร้อยแล้ว`,
                 icon: 'info',
                 confirmButtonColor: '#7c3aed'
             });
@@ -460,7 +460,7 @@ ${itemsListText}
                         <label class="flex items-center gap-2 p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 cursor-pointer hover:bg-amber-100/50">
                             <input type="radio" name="swal_disb_type" value="loan" ${disbType === 'loan' ? 'checked' : ''} class="text-amber-600 focus:ring-amber-500" />
                             <div>
-                                <div class="font-bold text-slate-800 text-xs">💵 สัญญายืมเงินทดรองราชการ (แบบ กค.๑๐๑)</div>
+                                <div class="font-bold text-slate-800 text-xs">💵 สัญญายืมเงินทดรองราชการ (แบบ กค. 101)</div>
                                 <div class="text-[10px] text-slate-500">สำหรับค่าตอบแทนวิทยากร ค่าอาหาร ค่าเดินทาง (ไม่ต้องทำชุดพัสดุ 4 ฉบับ)</div>
                             </div>
                         </label>
@@ -540,12 +540,12 @@ ${itemsListText}
 
     const getStepTitle = (step) => {
         switch (step) {
-            case 1: return 'ขั้นตอนที่ ๑: ลงนามผู้เสนอโครงการ (Proposer)';
-            case 2: return 'ขั้นตอนที่ ๒: หัวหน้าแผนกวิชา/หัวหน้างาน เห็นชอบโครงการ';
-            case 3: return 'ขั้นตอนที่ ๓: งานแผนงานและงบประมาณ ตรวจสอบความสอดคล้องและจัดสรรงบ';
-            case 4: return 'ขั้นตอนที่ ๔: รองผู้อำนวยการฝ่ายประจำแผนก พิจารณาให้ความเห็นชอบ';
-            case 5: return 'ขั้นตอนที่ ๕: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน กลั่นกรองงบประมาณ';
-            case 6: return 'ขั้นตอนที่ ๖: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน อนุมัติโครงการ';
+            case 1: return 'ขั้นตอนที่ 1: ลงนามผู้เสนอโครงการ (Proposer)';
+            case 2: return 'ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน เห็นชอบโครงการ';
+            case 3: return 'ขั้นตอนที่ 3: งานแผนงานและงบประมาณ ตรวจสอบความสอดคล้องและจัดสรรงบ';
+            case 4: return 'ขั้นตอนที่ 4: รองผู้อำนวยการฝ่ายประจำแผนก พิจารณาให้ความเห็นชอบ';
+            case 5: return 'ขั้นตอนที่ 5: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน กลั่นกรองงบประมาณ';
+            case 6: return 'ขั้นตอนที่ 6: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน อนุมัติโครงการ';
             default: return `ขั้นตอนที่ ${step}: ลงนามพิจารณาอนุมัติ`;
         }
     };
@@ -626,7 +626,7 @@ ${itemsListText}
 
     const handleWorkflowSubmit = () => {
         setSignatureModalStep(1);
-        setSignatureModalTitle('ขั้นตอนที่ ๑: ลงนามผู้เสนอโครงการ (Proposer Signature)');
+        setSignatureModalTitle('ขั้นตอนที่ 1: ลงนามผู้เสนอโครงการ (Proposer Signature)');
         setSignatureModalOpen(true);
     };
 
@@ -775,37 +775,37 @@ ${itemsListText}
         switch (parseInt(stepNumber)) {
             case 1:
                 return {
-                    title: 'ขั้นตอนที่ ๑: ผู้เสนอโครงการ (ยื่นขออนุมัติ)',
+                    title: 'ขั้นตอนที่ 1: ผู้เสนอโครงการ (ยื่นขออนุมัติ)',
                     role: 'ผู้เสนอโครงการ / ครูผู้รับผิดชอบ',
                     icon: '📝',
                 };
             case 2:
                 return {
-                    title: 'ขั้นตอนที่ ๒: หัวหน้างาน / หัวหน้าแผนกวิชา',
+                    title: 'ขั้นตอนที่ 2: หัวหน้างาน / หัวหน้าแผนกวิชา',
                     role: 'หัวหน้างาน / หัวหน้าสาขาวิชา',
                     icon: '👔',
                 };
             case 3:
                 return {
-                    title: 'ขั้นตอนที่ ๓: งานวางแผนและงบประมาณ',
+                    title: 'ขั้นตอนที่ 3: งานวางแผนและงบประมาณ',
                     role: 'หัวหน้างานวางแผนและงบประมาณ',
                     icon: '📊',
                 };
             case 4:
                 return {
-                    title: 'ขั้นตอนที่ ๔: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง',
+                    title: 'ขั้นตอนที่ 4: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง',
                     role: 'รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง',
                     icon: '🎖️',
                 };
             case 5:
                 return {
-                    title: 'ขั้นตอนที่ ๕: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
+                    title: 'ขั้นตอนที่ 5: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
                     role: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
                     icon: '📑',
                 };
             case 6:
                 return {
-                    title: 'ขั้นตอนที่ ๖: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+                    title: 'ขั้นตอนที่ 6: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
                     role: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
                     icon: '🏛️',
                 };
@@ -847,7 +847,7 @@ ${itemsListText}
             if (procStatus === 'forwarded_to_finance') {
                 return {
                     title: '💰 อยู่ที่: งานการเงิน (พัสดุส่งเรื่องเบิกจ่ายแล้ว — รอการเงินตรวจสอบสัญญายืมเงิน/เบิกจ่าย)',
-                    desc: 'งานพัสดุได้ส่งชุดเอกสารจัดซื้อจัดจ้าง/สัญญายืมเงิน (กค. ๑๐๑) ไปยังงานการเงินแล้ว อยู่ระหว่างงานการเงินดำเนินการตรวจสอบหลักฐานและเบิกจ่ายงบประมาณ',
+                    desc: 'งานพัสดุได้ส่งชุดเอกสารจัดซื้อจัดจ้าง/สัญญายืมเงิน (กค. 101) ไปยังงานการเงินแล้ว อยู่ระหว่างงานการเงินดำเนินการตรวจสอบหลักฐานและเบิกจ่ายงบประมาณ',
                     color: 'bg-emerald-50 border-emerald-300 text-emerald-950',
                     icon: '💰',
                     roleName: 'เจ้าหน้าที่งานการเงิน'
@@ -919,7 +919,7 @@ ${itemsListText}
         switch (step) {
             case 2:
                 return {
-                    title: '👔 ขั้นตอนที่ ๒: อยู่ที่ "หัวหน้างาน / หัวหน้าแผนกวิชา" (รอตรวจสอบและลงนาม)',
+                    title: '👔 ขั้นตอนที่ 2: อยู่ที่ "หัวหน้างาน / หัวหน้าแผนกวิชา" (รอตรวจสอบและลงนาม)',
                     desc: `ระบบส่งเรื่องไปยัง หัวหน้างาน / หัวหน้าแผนกวิชา (${project.department?.name || 'ต้นสังกัด'}) เพื่อตรวจสอบความถูกต้องและลงนามเห็นชอบ`,
                     color: 'bg-blue-50 border-blue-300 text-blue-950',
                     icon: '👔',
@@ -927,7 +927,7 @@ ${itemsListText}
                 };
             case 3:
                 return {
-                    title: '📊 ขั้นตอนที่ ๓: อยู่ที่ "งานวางแผนและงบประมาณ" (รอตรวจสอบแผน & ล็อคงบประมาณ)',
+                    title: '📊 ขั้นตอนที่ 3: อยู่ที่ "งานวางแผนและงบประมาณ" (รอตรวจสอบแผน & ล็อคงบประมาณ)',
                     desc: 'ระบบส่งเรื่องไปยัง เจ้าหน้าที่/หัวหน้างานวางแผนและงบประมาณ เพื่อตรวจสอบความสอดคล้องยุทธศาสตร์และผูกจัดสรรงบประมาณ',
                     color: 'bg-cyan-50 border-cyan-300 text-cyan-950',
                     icon: '📊',
@@ -935,7 +935,7 @@ ${itemsListText}
                 };
             case 4:
                 return {
-                    title: '🎖️ ขั้นตอนที่ ๔: อยู่ที่ "รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง" (รอพิจารณากลั่นกรอง)',
+                    title: '🎖️ ขั้นตอนที่ 4: อยู่ที่ "รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง" (รอพิจารณากลั่นกรอง)',
                     desc: `ระบบส่งเรื่องไปยัง รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง (${project.department?.division || 'ฝ่ายต้นสังกัด'}) เพื่อพิจารณากลั่นกรองตามสายงานบังคับบัญชา`,
                     color: 'bg-indigo-50 border-indigo-300 text-indigo-950',
                     icon: '🎖️',
@@ -943,7 +943,7 @@ ${itemsListText}
                 };
             case 5:
                 return {
-                    title: '📑 ขั้นตอนที่ ๕: อยู่ที่ "รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน" (รอพิจารณา)',
+                    title: '📑 ขั้นตอนที่ 5: อยู่ที่ "รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน" (รอพิจารณา)',
                     desc: 'ระบบส่งเรื่องไปยัง รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน เพื่อพิจารณาความพร้อมด้านแผนงานและงบประมาณภาพรวมของวิทยาลัย',
                     color: 'bg-violet-50 border-violet-300 text-violet-950',
                     icon: '📑',
@@ -951,7 +951,7 @@ ${itemsListText}
                 };
             case 6:
                 return {
-                    title: '🏛️ ขั้นตอนที่ ๖: อยู่ที่ "ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน" (รอลงนามอนุมัติโครงการ)',
+                    title: '🏛️ ขั้นตอนที่ 6: อยู่ที่ "ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน" (รอลงนามอนุมัติโครงการ)',
                     desc: 'ระบบส่งเรื่องไปยัง ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน เพื่อลงนามอนุมัติโครงการฉบับสมบูรณ์ (หลังจากอนุมัติแล้ว จะเปิดให้เริ่มกระบวนการจัดซื้อจัดจ้าง/ยืมเงิน ในแท็บที่ 2)',
                     color: 'bg-purple-50 border-purple-300 text-purple-950',
                     icon: '🏛️',
@@ -975,23 +975,23 @@ ${itemsListText}
         const status = project.status;
         const procStatus = proc?.status || 'pending';
 
-        // 1. Loan Agreement Tracking (สัญญายืมเงิน แบบ กค. ๑๐๑)
+        // 1. Loan Agreement Tracking (สัญญายืมเงิน แบบ กค. 101)
         let loanInfo = {
             location: 'ผู้เสนอโครงการ',
             holder: project.user?.name || 'ครูผู้รับผิดชอบโครงการ',
             statusText: '📝 รอการอนุมัติโครงการ',
             badgeClass: 'bg-slate-100 text-slate-700 border border-slate-300',
-            actionDesc: 'สัญญายืมเงินจะเริ่มเดินเรื่องและมีผลบังคับใช้เมื่อโครงการได้รับการลงนามอนุมัติครบ ๖ ขั้นตอน',
+            actionDesc: 'สัญญายืมเงินจะเริ่มเดินเรื่องและมีผลบังคับใช้เมื่อโครงการได้รับการลงนามอนุมัติครบ 6 ขั้นตอน',
         };
 
         if (status === 'approved') {
             if (procStatus === 'forwarded_to_finance') {
                 loanInfo = {
-                    location: 'ห้องงานการเงิน (อาคารอำนวยการ ชั้น ๑)',
+                    location: 'ห้องงานการเงิน (อาคารอำนวยการ ชั้น 1)',
                     holder: 'เจ้าหน้าที่งานการเงิน / หัวหน้างานการเงิน',
                     statusText: '⏳ อยู่ที่งานการเงิน (ตรวจสัญญา & เสนอลงนามอนุมัติยืม)',
                     badgeClass: 'bg-emerald-100 text-emerald-950 border border-emerald-400 font-black animate-pulse shadow-xs',
-                    actionDesc: 'งานการเงินกำลังตรวจสอบเอกสารสัญญา กค.๑๐๑ และนำเสนอผู้มีอำนาจลงนามอนุมัติจ่ายเงินยืมทดรองราชการ',
+                    actionDesc: 'งานการเงินกำลังตรวจสอบเอกสารสัญญา กค. 101 และนำเสนอผู้มีอำนาจลงนามอนุมัติจ่ายเงินยืมทดรองราชการ',
                 };
             } else if (procStatus === 'received' || procStatus === 'processing') {
                 loanInfo = {
@@ -1007,7 +1007,7 @@ ${itemsListText}
                     holder: `${project.user?.name || 'ผู้เสนอโครงการ'} / งานพัสดุ`,
                     statusText: '🟡 รอพัสดุลงรับพร้อมชุดจัดซื้อจัดจ้าง',
                     badgeClass: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold',
-                    actionDesc: 'โครงการอนุมัติแล้ว ผู้เสนอจัดทำสัญญา กค.๑๐๑ ตอนที่ ๑ นำส่งพร้อมชุดเอกสารจัดซื้อจัดจ้างที่ห้องงานพัสดุ',
+                    actionDesc: 'โครงการอนุมัติแล้ว ผู้เสนอจัดทำสัญญา กค. 101 ตอนที่ 1 นำส่งพร้อมชุดเอกสารจัดซื้อจัดจ้างที่ห้องงานพัสดุ',
                 };
             }
         } else if (status === 'in_progress' || status === 'evaluating') {
@@ -1032,17 +1032,17 @@ ${itemsListText}
                 holder: 'เจ้าหน้าที่งานการเงิน',
                 statusText: '✅ เคลียร์เงินยืมและปิดสัญญาสมบูรณ์',
                 badgeClass: 'bg-teal-100 text-teal-900 border border-teal-300 font-black',
-                actionDesc: 'ส่งหลักฐานใบเสร็จครบถ้วน งานการเงินออกใบรับใบสำคัญและบันทึกปลดหนี้สัญญาเงินยืม กค.๑๐๑ เสร็จสิ้นสมบูรณ์',
+                actionDesc: 'ส่งหลักฐานใบเสร็จครบถ้วน งานการเงินออกใบรับใบสำคัญและบันทึกปลดหนี้สัญญาเงินยืม กค. 101 เสร็จสิ้นสมบูรณ์',
             };
         }
 
-        // 2. Procurement Package Tracking (ชุดเอกสารจัดซื้อจัดจ้าง ๔ ฉบับ & PO)
+        // 2. Procurement Package Tracking (ชุดเอกสารจัดซื้อจัดจ้าง 4 ฉบับ & PO)
         let procInfo = {
             location: 'ผู้เสนอโครงการ',
             holder: project.user?.name || 'ครูผู้รับผิดชอบโครงการ',
             statusText: '📝 รอการอนุมัติโครงการ',
             badgeClass: 'bg-slate-100 text-slate-700 border border-slate-300',
-            actionDesc: 'เอกสารขอซื้อขอจ้าง ๔ ฉบับ จะเปิดให้ดำเนินการในแท็บที่ ๒ เมื่อโครงการได้รับการอนุมัติ',
+            actionDesc: 'เอกสารขอซื้อขอจ้าง 4 ฉบับ จะเปิดให้ดำเนินการในแท็บที่ 2 เมื่อโครงการได้รับการอนุมัติ',
         };
 
         if (status === 'approved') {
@@ -1052,7 +1052,7 @@ ${itemsListText}
                     holder: 'เจ้าหน้าที่งานการเงิน',
                     statusText: '💰 ส่งงานการเงินแล้ว (รอเบิกจ่ายงบ)',
                     badgeClass: 'bg-emerald-100 text-emerald-950 border border-emerald-400 font-bold',
-                    actionDesc: 'งานพัสดุได้ลงรับ ตรวจสอบเอกสาร ๔ ฉบับครบถ้วน และส่งมอบให้งานการเงินตั้งเบิกแล้ว',
+                    actionDesc: 'งานพัสดุได้ลงรับ ตรวจสอบเอกสาร 4 ฉบับครบถ้วน และส่งมอบให้งานการเงินตั้งเบิกแล้ว',
                 };
             } else if (procStatus === 'received' || procStatus === 'processing') {
                 procInfo = {
@@ -1290,7 +1290,7 @@ ${itemsListText}
                                 <span className="p-2 rounded-2xl bg-purple-100 text-purple-900 text-lg">✍️</span>
                                 <div>
                                     <h3 className="text-sm font-black text-purple-950">
-                                        สถานะการลงนามอนุมัติ ๖ ขั้นตอน (6-Step Digital Signatures)
+                                        สถานะการลงนามอนุมัติ 6 ขั้นตอน (6-Step Digital Signatures)
                                     </h3>
                                     <p className="text-[11px] text-purple-700">
                                         ลงนามผ่านอุปกรณ์มือถือ ไอแพด แท็บเล็ต หรือคอมพิวเตอร์ ด้วยลายมือชื่อดิจิทัลและรหัสตรวจสอบความปลอดภัย
@@ -1305,12 +1305,12 @@ ${itemsListText}
                         {/* 6 Steps Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
                             {[
-                                { step: 1, title: '๑. ผู้เสนอโครงการ', role: 'ครูผู้สอน / ผู้รับผิดชอบโครงการ', officer: project.user?.name },
-                                { step: 2, title: '๒. หัวหน้าแผนก/สาขาวิชา/งาน', role: 'หัวหน้าแผนก/สาขาที่สังกัด', officer: 'หัวหน้าแผนกวิชา / หัวหน้างาน' },
-                                { step: 3, title: '๓. งานแผนงานและงบประมาณ', role: 'ตรวจสอบความสอดคล้อง & จัดสรรงบ', officer: 'หัวหน้างานพัฒนายุทธศาสตร์แผนงานและงบประมาณ' },
-                                { step: 4, title: '๔. รองผู้อำนวยการฝ่าย', role: 'รองผู้อำนวยการฝ่ายประจำแผนก', officer: project.department?.deputy_director_name || project.department?.parent?.deputy_director_name || 'รองผู้อำนวยการฝ่ายประจำแผนก' },
-                                { step: 5, title: '๕. รองฝ่ายยุทธศาสตร์และแผนงาน', role: 'กลั่นกรองงบประมาณและแผนปฏิบัติราชการ', officer: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน' },
-                                { step: 6, title: '๖. ผู้อำนวยการวิทยาลัย', role: 'อนุมัติโครงการขั้นสุดท้าย', officer: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน' },
+                                { step: 1, title: '1. ผู้เสนอโครงการ', role: 'ครูผู้สอน / ผู้รับผิดชอบโครงการ', officer: project.user?.name },
+                                { step: 2, title: '2. หัวหน้าแผนก/สาขาวิชา/งาน', role: 'หัวหน้าแผนก/สาขาที่สังกัด', officer: 'หัวหน้าแผนกวิชา / หัวหน้างาน' },
+                                { step: 3, title: '3. งานแผนงานและงบประมาณ', role: 'ตรวจสอบความสอดคล้อง & จัดสรรงบ', officer: 'หัวหน้างานพัฒนายุทธศาสตร์แผนงานและงบประมาณ' },
+                                { step: 4, title: '4. รองผู้อำนวยการฝ่าย', role: 'รองผู้อำนวยการฝ่ายประจำแผนก', officer: project.department?.deputy_director_name || project.department?.parent?.deputy_director_name || 'รองผู้อำนวยการฝ่ายประจำแผนก' },
+                                { step: 5, title: '5. รองฝ่ายยุทธศาสตร์และแผนงาน', role: 'กลั่นกรองงบประมาณและแผนปฏิบัติราชการ', officer: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน' },
+                                { step: 6, title: '6. ผู้อำนวยการวิทยาลัย', role: 'อนุมัติโครงการขั้นสุดท้าย', officer: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน' },
                             ].map(item => {
                                 const approval = project.approvals?.find(a => a.step_number === item.step);
                                 const isSigned = Boolean(approval && (approval.status === 'approved' || approval.status === 'submitted'));
@@ -1402,7 +1402,7 @@ ${itemsListText}
                                         โครงการได้รับการอนุมัติแล้ว: พร้อมเข้าสู่กระบวนการจัดซื้อจัดจ้าง & ดำเนินการ (Do Phase)
                                     </h4>
                                     <p className="text-xs text-emerald-900 mt-0.5">
-                                        ผู้เสนอโครงการและงานพัสดุสามารถจัดทำเอกสารจัดซื้อจัดจ้าง ๔ ฉบับ ทำสัญญายืมเงิน และออกคำสั่งแต่งตั้งกรรมการใน แท็บที่ ๒ ได้ทันที
+                                        ผู้เสนอโครงการและงานพัสดุสามารถจัดทำเอกสารจัดซื้อจัดจ้าง 4 ฉบับ ทำสัญญายืมเงิน และออกคำสั่งแต่งตั้งกรรมการใน แท็บที่ 2 ได้ทันที
                                     </p>
                                 </div>
                             </div>
@@ -1683,10 +1683,10 @@ ${itemsListText}
                                 </div>
                                 <div className="space-y-2 max-w-lg mx-auto">
                                     <h3 className="text-xl font-bold text-slate-800">
-                                        แท็บที่ ๒ ยังไม่เปิดให้ดำเนินการจัดซื้อจัดจ้าง (Do Phase)
+                                        แท็บที่ 2 ยังไม่เปิดให้ดำเนินการจัดซื้อจัดจ้าง (Do Phase)
                                     </h3>
                                     <p className="text-xs text-slate-600 leading-relaxed">
-                                        ตามระเบียบพัสดุและการเงินภาครัฐ โครงการจะต้องผ่านการพิจารณาอนุมัติตามสายงาน ๖ ขั้นตอนใน <strong>แท็บที่ ๑ (Plan)</strong> จนกระทั่งได้รับสถานะ <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg inline-block">✅ อนุมัติแล้ว</span> ก่อน จึงจะสามารถบันทึกข้อมูลพัสดุ ออกคำสั่งแต่งตั้งกรรมการ และพิมพ์เอกสารจัดซื้อจัดจ้าง ๔ ฉบับได้ครับ
+                                        ตามระเบียบพัสดุและการเงินภาครัฐ โครงการจะต้องผ่านการพิจารณาอนุมัติตามสายงาน 6 ขั้นตอนใน <strong>แท็บที่ 1 (Plan)</strong> จนกระทั่งได้รับสถานะ <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg inline-block">✅ อนุมัติแล้ว</span> ก่อน จึงจะสามารถบันทึกข้อมูลพัสดุ ออกคำสั่งแต่งตั้งกรรมการ และพิมพ์เอกสารจัดซื้อจัดจ้าง 4 ฉบับได้ครับ
                                     </p>
                                 </div>
                                 <div className="pt-2">
@@ -1694,7 +1694,7 @@ ${itemsListText}
                                         onClick={() => setActiveTab('plan')}
                                         className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
                                     >
-                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ ๑ (Plan)
+                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ 1 (Plan)
                                     </button>
                                 </div>
                             </div>
@@ -1786,17 +1786,17 @@ ${itemsListText}
                                 <div>
                                     <h3 className="text-lg font-black text-purple-950">
                                         {disbType === 'loan' 
-                                            ? '💵 สัญญายืมเงินทดรองราชการ (แบบ กค.๑๐๑) (Do Phase)' 
+                                            ? '💵 สัญญายืมเงินทดรองราชการ (แบบ กค. 101) (Do Phase)' 
                                             : disbType === 'procurement' 
                                             ? '🛠️ การจัดซื้อจัดจ้าง และคำสั่งแต่งตั้งกรรมการ (Do Phase)' 
                                             : '🔄 จัดซื้อจัดจ้าง & สัญญายืมเงินทดรองราชการ (Do Phase)'}
                                     </h3>
                                     <p className="text-xs text-slate-600 mt-0.5">
                                         {disbType === 'loan' 
-                                            ? 'โครงการนี้เบิกจ่ายในลักษณะสัญญายืมเงินทดรองราชการ (แบบ กค.๑๐๑) เพื่อเป็นค่าใช้จ่ายในการดำเนินงาน' 
+                                            ? 'โครงการนี้เบิกจ่ายในลักษณะสัญญายืมเงินทดรองราชการ (แบบ กค. 101) เพื่อเป็นค่าใช้จ่ายในการดำเนินงาน' 
                                             : disbType === 'procurement' 
                                             ? 'ระบุรายการวัสดุอุปกรณ์ แต่งตั้งคณะกรรมการพัสดุ และพิมพ์เอกสารจัดซื้อจัดจ้าง 4 ฉบับตามระเบียบ' 
-                                            : 'บริหารจัดการรายการจัดซื้อจัดจ้างพัสดุ 4 ฉบับ และสัญญายืมเงินราชการ (กค.๑๐๑)'}
+                                            : 'บริหารจัดการรายการจัดซื้อจัดจ้างพัสดุ 4 ฉบับ และสัญญายืมเงินราชการ (กค. 101)'}
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -1930,7 +1930,7 @@ ${itemsListText}
                                 </div>
                                 {disbType === 'loan' ? (
                                     <div className="p-4 rounded-xl border bg-amber-50/50 border-amber-200">
-                                        <span className="text-xs font-bold uppercase text-amber-800">วงเงินสัญญายืมเงินราชการ (กค.๑๐๑)</span>
+                                        <span className="text-xs font-bold uppercase text-amber-800">วงเงินสัญญายืมเงินราชการ (กค. 101)</span>
                                         <div className="flex items-center justify-between mt-1">
                                             <p className="text-base font-black text-amber-950">{formatCurrency(allocatedBudget)}</p>
                                             <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-200 text-amber-900">
@@ -1957,7 +1957,7 @@ ${itemsListText}
                                         <div className="flex items-center gap-3">
                                             <span className="text-3xl">💵</span>
                                             <div>
-                                                <h4 className="text-base font-black text-amber-950">สัญญายืมเงินทดรองราชการ (แบบ กค. ๑๐๑)</h4>
+                                                <h4 className="text-base font-black text-amber-950">สัญญายืมเงินทดรองราชการ (แบบ กค. 101)</h4>
                                                 <p className="text-xs text-amber-800">โครงการนี้ดำเนินการเบิกจ่ายงบประมาณเป็นเงินยืมทดรองราชการเพื่อจัดกิจกรรมโครงการ</p>
                                             </div>
                                         </div>
@@ -1967,7 +1967,7 @@ ${itemsListText}
                                             className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md hover:scale-105 active:scale-95 transition cursor-pointer"
                                         >
                                             <span>🖨️</span>
-                                            <span>พิมพ์สัญญายืมเงิน (แบบ กค.๑๐๑)</span>
+                                            <span>พิมพ์สัญญายืมเงิน (แบบ กค. 101)</span>
                                         </a>
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
@@ -1992,7 +1992,7 @@ ${itemsListText}
                                             <span>📌</span> เงื่อนไขและกำหนดเวลาส่งใช้เงินยืมทดรองราชการ:
                                         </p>
                                         <p className="text-[11px] text-slate-600 leading-relaxed">
-                                            ตามระเบียบการเบิกจ่ายเงินจากคลัง ผู้ยืมจะต้องจัดทำกิจกรรมให้เสร็จสิ้นและนำใบสำคัญคู่จ่าย (พร้อมเงินเหลือจ่าย ถ้ามี) ส่งใช้เงินยืมทดรองราชการให้แก่งานการเงินภายในกำหนด <b>๓๐ วัน</b> นับถัดจากวันดำเนินโครงการเสร็จสิ้น
+                                            ตามระเบียบการเบิกจ่ายเงินจากคลัง ผู้ยืมจะต้องจัดทำกิจกรรมให้เสร็จสิ้นและนำใบสำคัญคู่จ่าย (พร้อมเงินเหลือจ่าย ถ้ามี) ส่งใช้เงินยืมทดรองราชการให้แก่งานการเงินภายในกำหนด <b>30 วัน</b> นับถัดจากวันดำเนินโครงการเสร็จสิ้น
                                         </p>
                                     </div>
                                 </div>
@@ -2341,9 +2341,9 @@ ${itemsListText}
                             <div className="border-t border-purple-100 pt-4">
                                 <h4 className="text-sm font-black text-purple-950 mb-3">
                                     {disbType === 'loan' 
-                                        ? '💵 สัญญายืมเงินราชการ แบบ กค. ๑๐๑ (พิมพ์/สร้างอัตโนมัติ)' 
+                                        ? '💵 สัญญายืมเงินราชการ แบบ กค. 101 (พิมพ์/สร้างอัตโนมัติ)' 
                                         : disbType === 'procurement' 
-                                        ? '📄 เอกสารจัดซื้อจัดจ้าง ๔ ฉบับ (พิมพ์/สร้างอัตโนมัติ)' 
+                                        ? '📄 เอกสารจัดซื้อจัดจ้าง 4 ฉบับ (พิมพ์/สร้างอัตโนมัติ)' 
                                         : '📄 เอกสารจัดซื้อจัดจ้าง & สัญญายืมเงินราชการ (พิมพ์/สร้างอัตโนมัติ)'}
                                 </h4>
                                 <div className={`grid gap-3 ${disbType === 'loan' ? 'grid-cols-1 sm:grid-cols-2 max-w-md' : disbType === 'procurement' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-5'}`}>
@@ -2351,7 +2351,7 @@ ${itemsListText}
                                         <a href={route('procurements.download_document', [project.id, 'loan_contract'])} target="_blank" className="p-3.5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                             <div className="text-lg mb-1">💵</div>
                                             <div className="text-xs font-bold text-amber-950">สัญญายืมเงิน</div>
-                                            <div className="text-[10px] text-amber-700 font-medium">แบบ กค. ๑๐๑</div>
+                                            <div className="text-[10px] text-amber-700 font-medium">แบบ กค. 101</div>
                                         </a>
                                     )}
                                     {disbType !== 'loan' && (
@@ -2393,10 +2393,10 @@ ${itemsListText}
                                 </div>
                                 <div className="space-y-2 max-w-lg mx-auto">
                                     <h3 className="text-xl font-bold text-slate-800">
-                                        แท็บที่ ๓ ยังไม่เปิดให้ทำแบบประเมินผล (Check Phase)
+                                        แท็บที่ 3 ยังไม่เปิดให้ทำแบบประเมินผล (Check Phase)
                                     </h3>
                                     <p className="text-xs text-slate-600 leading-relaxed">
-                                        แบบสำรวจและประเมินผลความพึงพอใจจะเปิดให้ใช้งานเมื่อโครงการผ่านการพิจารณาอนุมัติใน <strong>แท็บที่ ๑ (Plan)</strong> และเริ่มดำเนินกิจกรรมเรียบร้อยแล้วครับ
+                                        แบบสำรวจและประเมินผลความพึงพอใจจะเปิดให้ใช้งานเมื่อโครงการผ่านการพิจารณาอนุมัติใน <strong>แท็บที่ 1 (Plan)</strong> และเริ่มดำเนินกิจกรรมเรียบร้อยแล้วครับ
                                     </p>
                                 </div>
                                 <div className="pt-2">
@@ -2404,7 +2404,7 @@ ${itemsListText}
                                         onClick={() => setActiveTab('plan')}
                                         className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
                                     >
-                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ ๑ (Plan)
+                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ 1 (Plan)
                                     </button>
                                 </div>
                             </div>
@@ -2434,10 +2434,10 @@ ${itemsListText}
                                 </div>
                                 <div className="space-y-2 max-w-lg mx-auto">
                                     <h3 className="text-xl font-bold text-slate-800">
-                                        แท็บที่ ๔ ยังไม่เปิดให้สรุปรายงาน AI (Act Phase)
+                                        แท็บที่ 4 ยังไม่เปิดให้สรุปรายงาน AI (Act Phase)
                                     </h3>
                                     <p className="text-xs text-slate-600 leading-relaxed">
-                                        ระบบ AI จะประมวลผลเล่มรายงานผลโครงการ ๕ บทและภาคผนวกให้อัตโนมัติ เมื่อโครงการผ่านการอนุมัติใน <strong>แท็บที่ ๑ (Plan)</strong> และดำเนินกิจกรรมเรียบร้อยแล้วครับ
+                                        ระบบ AI จะประมวลผลเล่มรายงานผลโครงการ 5 บทและภาคผนวกให้อัตโนมัติ เมื่อโครงการผ่านการอนุมัติใน <strong>แท็บที่ 1 (Plan)</strong> และดำเนินกิจกรรมเรียบร้อยแล้วครับ
                                     </p>
                                 </div>
                                 <div className="pt-2">
@@ -2445,7 +2445,7 @@ ${itemsListText}
                                         onClick={() => setActiveTab('plan')}
                                         className="px-6 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow transition"
                                     >
-                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ ๑ (Plan)
+                                        ← กลับไปตรวจสอบและดำเนินการใน แท็บที่ 1 (Plan)
                                     </button>
                                 </div>
                             </div>
@@ -2494,7 +2494,7 @@ ${itemsListText}
                                             </span>
                                             <div>
                                                 <h3 className="text-base font-bold text-slate-900">
-                                                    บทที่ ๒: เอกสารและงานวิจัยที่เกี่ยวข้อง (Literature Review & OVEC Strategies)
+                                                    บทที่ 2: เอกสารและงานวิจัยที่เกี่ยวข้อง (Literature Review & OVEC Strategies)
                                                 </h3>
                                                 <p className="text-xs text-slate-500 mt-0.5">
                                                     สังเคราะห์เอกสาร ทฤษฎี ยุทธศาสตร์ สอศ. ที่เชื่อมโยง และงานวิจัยที่เกี่ยวข้อง พร้อมการอ้างอิงและบรรณานุกรมมาตรฐาน
@@ -2519,7 +2519,7 @@ ${itemsListText}
                                                 </>
                                             ) : (
                                                 <>
-                                                    ✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒
+                                                    ✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2
                                                 </>
                                             )}
                                         </button>
@@ -2529,7 +2529,7 @@ ${itemsListText}
                                             rel="noopener noreferrer"
                                             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all border border-slate-200"
                                         >
-                                            🖨️ พิมพ์ / ดูเล่มบทที่ ๒
+                                            🖨️ พิมพ์ / ดูเล่มบทที่ 2
                                         </a>
                                         <button
                                             type="button"
@@ -2537,7 +2537,7 @@ ${itemsListText}
                                             disabled={savingChapter2}
                                             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all disabled:opacity-50 cursor-pointer"
                                         >
-                                            {savingChapter2 ? 'กำลังบันทึก...' : '💾 บันทึกเนื้อหาบทที่ ๒'}
+                                            {savingChapter2 ? 'กำลังบันทึก...' : '💾 บันทึกเนื้อหาบทที่ 2'}
                                         </button>
                                     </div>
                                 </div>
@@ -2549,7 +2549,7 @@ ${itemsListText}
                                             <span>🎯 ยุทธศาสตร์ / นโยบายจุดเน้น สอศ. ที่โครงการนี้เชื่อมโยง:</span>
                                         </div>
                                         <span className="text-[11px] bg-purple-100 text-purple-800 font-semibold px-2 py-0.5 rounded-md">
-                                            ตัดหัวข้อ ๒.๔ ออกตามเกณฑ์มาตรฐาน
+                                            ตัดหัวข้อ 2.4 ออกตามเกณฑ์มาตรฐาน
                                         </span>
                                     </div>
                                     <div className="flex flex-wrap gap-1.5 pt-1">
@@ -2577,7 +2577,7 @@ ${itemsListText}
                                         ))}
                                     </div>
                                     <p className="text-[11px] text-slate-500 pt-1">
-                                        💡 หัวข้อ ๒.๒ จะวิเคราะห์และขยายความเชื่อมโยงกับยุทธศาสตร์ สอศ. ดังกล่าวอย่างละเอียด และทุกหัวข้อจะมีการอ้างอิงทางวิชาการ (ชื่อผู้แต่ง, ปี พ.ศ., สถาบัน/สำนักพิมพ์) และจัดทำบรรณานุกรมท้ายบทครบถ้วน
+                                        💡 หัวข้อ 2.2 จะวิเคราะห์และขยายความเชื่อมโยงกับยุทธศาสตร์ สอศ. ดังกล่าวอย่างละเอียด และทุกหัวข้อจะมีการอ้างอิงทางวิชาการ (ชื่อผู้แต่ง, ปี พ.ศ., สถาบัน/สำนักพิมพ์) และจัดทำบรรณานุกรมท้ายบทครบถ้วน
                                     </p>
                                 </div>
 
@@ -2593,7 +2593,7 @@ ${itemsListText}
                                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                                             }`}
                                         >
-                                            บทนำบทที่ ๒
+                                            บทนำบทที่ 2
                                         </button>
                                         <button
                                             type="button"
@@ -2604,7 +2604,7 @@ ${itemsListText}
                                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                                             }`}
                                         >
-                                            ๒.๑ แนวคิด & ทฤษฎี
+                                            2.1 แนวคิด & ทฤษฎี
                                         </button>
                                         <button
                                             type="button"
@@ -2615,7 +2615,7 @@ ${itemsListText}
                                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                                             }`}
                                         >
-                                            <span className="text-amber-500">★</span> ๒.๒ ยุทธศาสตร์ สอศ.
+                                            <span className="text-amber-500">★</span> 2.2 ยุทธศาสตร์ สอศ.
                                         </button>
                                         <button
                                             type="button"
@@ -2626,7 +2626,7 @@ ${itemsListText}
                                                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                                             }`}
                                         >
-                                            ๒.๓ เอกสาร & งานวิจัย
+                                            2.3 เอกสาร & งานวิจัย
                                         </button>
                                         <button
                                             type="button"
@@ -2658,12 +2658,12 @@ ${itemsListText}
                                     {activeChapter2Tab === 'intro' && (
                                         <div>
                                             <label className="block text-xs font-bold text-slate-700 mb-1">
-                                                ข้อความเกริ่นนำบทที่ ๒ (Introduction to Chapter 2):
+                                                ข้อความเกริ่นนำบทที่ 2 (Introduction to Chapter 2):
                                             </label>
                                             <textarea
                                                 rows={6}
                                                 className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed"
-                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' เพื่อร่างข้อความเกริ่นนำ หรือพิมพ์ข้อความด้วยตนเอง..."
+                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' เพื่อร่างข้อความเกริ่นนำ หรือพิมพ์ข้อความด้วยตนเอง..."
                                                 value={chapter2Sections.intro || ''}
                                                 onChange={(e) => setChapter2Sections({ ...chapter2Sections, intro: e.target.value })}
                                             />
@@ -2674,7 +2674,7 @@ ${itemsListText}
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
                                                 <label className="block text-xs font-bold text-slate-700">
-                                                    ๒.๑ แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง (พร้อมการอ้างอิงในเนื้อหา):
+                                                    2.1 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง (พร้อมการอ้างอิงในเนื้อหา):
                                                 </label>
                                                 <span className="text-[11px] text-purple-600">
                                                     เช่น ทฤษฎีการเรียนรู้เชิงประสบการณ์ (Kolb), วงจรบริหารงานคุณภาพ PDCA
@@ -2683,7 +2683,7 @@ ${itemsListText}
                                             <textarea
                                                 rows={12}
                                                 className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
-                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' เพื่อให้ AI ช่วยค้นคว้าแนวคิดและทฤษฎีที่ตรงกับโครงการ..."
+                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' เพื่อให้ AI ช่วยค้นคว้าแนวคิดและทฤษฎีที่ตรงกับโครงการ..."
                                                 value={chapter2Sections.section_2_1 || ''}
                                                 onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_1: e.target.value })}
                                             />
@@ -2694,7 +2694,7 @@ ${itemsListText}
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
                                                 <label className="block text-xs font-bold text-slate-700">
-                                                    ๒.๒ ยุทธศาสตร์และนโยบายจุดเน้นของ สอศ. ที่เกี่ยวข้อง (ขยายความและวิเคราะห์การเชื่อมโยง):
+                                                    2.2 ยุทธศาสตร์และนโยบายจุดเน้นของ สอศ. ที่เกี่ยวข้อง (ขยายความและวิเคราะห์การเชื่อมโยง):
                                                 </label>
                                                 <span className="text-[11px] text-amber-600 font-semibold">
                                                     ★ เชื่อมโยงกับนโยบายที่เลือกไว้ในขั้นตอนเสนอโครงการ
@@ -2703,7 +2703,7 @@ ${itemsListText}
                                             <textarea
                                                 rows={12}
                                                 className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
-                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' เพื่อให้ AI ดึงยุทธศาสตร์ สอศ. ที่ระบุไว้มาขยายความอย่างละเอียด..."
+                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' เพื่อให้ AI ดึงยุทธศาสตร์ สอศ. ที่ระบุไว้มาขยายความอย่างละเอียด..."
                                                 value={chapter2Sections.section_2_2 || ''}
                                                 onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_2: e.target.value })}
                                             />
@@ -2714,7 +2714,7 @@ ${itemsListText}
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
                                                 <label className="block text-xs font-bold text-slate-700">
-                                                    ๒.๓ เอกสารและงานวิจัยที่เกี่ยวข้อง (ระบุชื่อผู้วิจัย, ปี พ.ศ., ชื่องานวิจัย, สถาบัน):
+                                                    2.3 เอกสารและงานวิจัยที่เกี่ยวข้อง (ระบุชื่อผู้วิจัย, ปี พ.ศ., ชื่องานวิจัย, สถาบัน):
                                                 </label>
                                                 <span className="text-[11px] text-purple-600">
                                                     งานวิจัยที่เกี่ยวข้องทั้งในและต่างประเทศ
@@ -2723,7 +2723,7 @@ ${itemsListText}
                                             <textarea
                                                 rows={12}
                                                 className="w-full text-xs font-sans rounded-xl border border-slate-300 focus:border-purple-500 focus:ring-purple-500 p-3 leading-relaxed font-mono"
-                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' เพื่อค้นหางานวิจัยที่สอดคล้องกับโครงการ..."
+                                                placeholder="คลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' เพื่อค้นหางานวิจัยที่สอดคล้องกับโครงการ..."
                                                 value={chapter2Sections.section_2_3 || ''}
                                                 onChange={(e) => setChapter2Sections({ ...chapter2Sections, section_2_3: e.target.value })}
                                             />
@@ -2753,12 +2753,12 @@ ${itemsListText}
                                     {activeChapter2Tab === 'full' && (
                                         <div>
                                             <label className="block text-xs font-bold text-slate-700 mb-1">
-                                                📄 ตัวอย่างเนื้อหาบทที่ ๒ ฉบับเต็มที่จะนำไปออกรายงานและพิมพ์:
+                                                📄 ตัวอย่างเนื้อหาบทที่ 2 ฉบับเต็มที่จะนำไปออกรายงานและพิมพ์:
                                             </label>
                                             <div className="w-full max-h-96 overflow-y-auto text-xs font-sans rounded-xl border border-slate-200 bg-slate-50 p-4 leading-relaxed whitespace-pre-wrap text-slate-800">
                                                 {chapter2FullContent || (
                                                     <span className="text-slate-400 italic">
-                                                        ยังไม่มีเนื้อหาฉบับเต็ม กรุณาคลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ ๒' แล้วกด '💾 บันทึกเนื้อหาบทที่ ๒'
+                                                        ยังไม่มีเนื้อหาฉบับเต็ม กรุณาคลิก '✨ AI ช่วยค้นคว้า & สังเคราะห์บทที่ 2' แล้วกด '💾 บันทึกเนื้อหาบทที่ 2'
                                                     </span>
                                                 )}
                                             </div>

@@ -77,9 +77,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const defaultActionPlan = [
         { 
-            step_name: '๑.ประชุมวางแผนเพื่อจัดทำโครงการ', 
+            step_name: '1.ประชุมวางแผนเพื่อจัดทำโครงการ', 
             q1: true, q2: false, q3: false, q4: false, 
-            target_count: 'คณะทำงาน ๑ ชุด', 
+            target_count: 'คณะทำงาน 1 ชุด', 
             location_name: 'ต.ในเวียง อ.เมืองน่าน', 
             budget_operating: 0, 
             budget_investment: 0, 
@@ -87,9 +87,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             budget_subsidy: 0 
         },
         { 
-            step_name: '๒.ดำเนินการเขียนโครงการเพื่อของบประมาณ ออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวันและสถานที่', 
+            step_name: '2.ดำเนินการเขียนโครงการเพื่อของบประมาณ ออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวันและสถานที่', 
             q1: true, q2: false, q3: false, q4: false, 
-            target_count: '๑ ครั้ง', 
+            target_count: '1 ครั้ง', 
             location_name: 'ต.ในเวียง อ.เมืองน่าน', 
             budget_operating: 0, 
             budget_investment: 0, 
@@ -97,9 +97,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             budget_subsidy: 0 
         },
         { 
-            step_name: '๓.ดำเนินการตามโครงการ', 
+            step_name: '3.ดำเนินการตามโครงการ', 
             q1: false, q2: true, q3: false, q4: false, 
-            target_count: 'ผู้เข้าร่วม ๕๐ คน', 
+            target_count: 'ผู้เข้าร่วม 50 คน', 
             location_name: 'ต.ในเวียง อ.เมืองน่าน', 
             budget_operating: parseFloat(project?.estimated_budget) || 0, 
             budget_investment: 0, 
@@ -107,9 +107,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             budget_subsidy: 0 
         },
         { 
-            step_name: '๔.สรุปประเมินโครงการและรายงานผล ปัญหา อุปสรรค โครงการให้กับคณะผู้บริหาร', 
+            step_name: '4.สรุปประเมินโครงการและรายงานผล ปัญหา อุปสรรค โครงการให้กับคณะผู้บริหาร', 
             q1: false, q2: false, q3: false, q4: true, 
-            target_count: 'รายงาน ๑ เล่ม', 
+            target_count: 'รายงาน 1 เล่ม', 
             location_name: 'ต.ในเวียง อ.เมืองน่าน', 
             budget_operating: 0, 
             budget_investment: 0, 
@@ -123,18 +123,18 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const defaultActivities = [
         {
-            name: 'กิจกรรมที่ ๑ : อบรมเชิงปฏิบัติการพัฒนาทักษะวิชาชีพและการประยุกต์ใช้งาน',
+            name: 'กิจกรรมที่ 1 : อบรมเชิงปฏิบัติการพัฒนาทักษะวิชาชีพและการประยุกต์ใช้งาน',
             location: 'ณ วิทยาลัยสารพัดช่างน่าน',
             target_group: 'นักเรียน นักศึกษา และบุคลากร จำนวน 50 คน',
             loan_items: [
-                { description: '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ (6 ชม. x 600 บาท)', quantity: 6, unit: 'ชั่วโมง', unit_price: 600, total_price: 3600 },
-                { description: '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)', quantity: 50, unit: 'คน', unit_price: 80, total_price: 4000 },
-                { description: '๓. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', quantity: 50, unit: 'คน', unit_price: 70, total_price: 3500 },
-                { description: '๔. ค่าใช้จ่ายในการเดินทางไปราชการ / ค่าพาหนะ', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
+                { description: '1. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ (6 ชม. x 600 บาท)', quantity: 6, unit: 'ชั่วโมง', unit_price: 600, total_price: 3600 },
+                { description: '2. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)', quantity: 50, unit: 'คน', unit_price: 80, total_price: 4000 },
+                { description: '3. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', quantity: 50, unit: 'คน', unit_price: 70, total_price: 3500 },
+                { description: '4. ค่าใช้จ่ายในการเดินทางไปราชการ / ค่าพาหนะ', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
             ],
             procurement_items: [
-                { description: '๑. ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการฝึกอบรม', quantity: 1, unit: 'ชุด', unit_price: Math.max(0, budgetAmount - 11100), total_price: Math.max(0, budgetAmount - 11100) },
-                { description: '๒. ค่าจ้างเหมาบริการจัดทำป้ายและสื่อประชาสัมพันธ์', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
+                { description: '1. ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการฝึกอบรม', quantity: 1, unit: 'ชุด', unit_price: Math.max(0, budgetAmount - 11100), total_price: Math.max(0, budgetAmount - 11100) },
+                { description: '2. ค่าจ้างเหมาบริการจัดทำป้ายและสื่อประชาสัมพันธ์', quantity: 1, unit: 'งาน', unit_price: 0, total_price: 0 },
             ]
         }
     ];
@@ -365,12 +365,12 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                 location: 'ณ วิทยาลัยสารพัดช่างน่าน',
                 target_group: 'นักเรียน นักศึกษา 50 คน',
                 loan_items: [
-                    { description: '๑. ค่าตอบแทนวิทยากร', quantity: 6, unit: 'ชั่วโมง', unit_price: 600, total_price: 3600 },
-                    { description: '๒. ค่าอาหารกลางวัน', quantity: 50, unit: 'คน', unit_price: 80, total_price: 4000 },
-                    { description: '๓. ค่าอาหารว่างและเครื่องดื่ม', quantity: 50, unit: 'คน', unit_price: 70, total_price: 3500 },
+                    { description: '1. ค่าตอบแทนวิทยากร', quantity: 6, unit: 'ชั่วโมง', unit_price: 600, total_price: 3600 },
+                    { description: '2. ค่าอาหารกลางวัน', quantity: 50, unit: 'คน', unit_price: 80, total_price: 4000 },
+                    { description: '3. ค่าอาหารว่างและเครื่องดื่ม', quantity: 50, unit: 'คน', unit_price: 70, total_price: 3500 },
                 ],
                 procurement_items: [
-                    { description: '๑. ค่าวัสดุ อุปกรณ์ดำเนินกิจกรรม', quantity: 1, unit: 'ชุด', unit_price: 0, total_price: 0 },
+                    { description: '1. ค่าวัสดุ อุปกรณ์ดำเนินกิจกรรม', quantity: 1, unit: 'ชุด', unit_price: 0, total_price: 0 },
                 ]
             }
         ]);
@@ -577,7 +577,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                 <div className="flex justify-between items-center">
                     <div>
                         <h2 className="text-2xl font-black leading-tight text-purple-950 font-sans">
-                            📄 จัดทำ/แก้ไขแบบเสนอโครงการฉบับเต็ม (Full Proposal - ๑๔ หัวข้อ)
+                            📄 จัดทำ/แก้ไขแบบเสนอโครงการฉบับเต็ม (Full Proposal - 14 หัวข้อ)
                         </h2>
                         <p className="text-xs text-slate-500 font-sans mt-0.5">
                             รองรับโครงการหลายกิจกรรมย่อย (Multi-Activity) พร้อมแยกสัญญายืมเงินและจัดซื้อจัดจ้าง
@@ -661,8 +661,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="border-b border-purple-100 pb-3 flex justify-between items-center">
                                     <div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๑ : ข้อมูลทั่วไป & ผู้รับผิดชอบโครงการ</span>
-                                        <h3 className="text-base font-bold text-purple-950">๑. ชื่อโครงการ & รายละเอียดผู้เสนอโครงการ</h3>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 1 : ข้อมูลทั่วไป & ผู้รับผิดชอบโครงการ</span>
+                                        <h3 className="text-base font-bold text-purple-950">1. ชื่อโครงการ & รายละเอียดผู้เสนอโครงการ</h3>
                                     </div>
                                     <span className="text-xs text-purple-700 font-bold bg-purple-100 px-3 py-1 rounded-full">
                                         ปีงบประมาณ พ.ศ. {data.academic_year}
@@ -842,12 +842,12 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             {/* Section 2: ลักษณะโครงการและความสอดคล้องกับยุทธศาสตร์ */}
                             <div className="space-y-6 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="border-b border-purple-100 pb-2">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๒ : ความสอดคล้องกับแผนพัฒนาสถานศึกษา & ยุทธศาสตร์</span>
-                                    <h3 className="text-base font-bold text-purple-950">๒. ลักษณะโครงการตามแผนพัฒนาการจัดการศึกษา วิทยาลัยสารพัดช่างน่าน & เช็คลิสต์ยุทธศาสตร์ ๔ ด้าน</h3>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 2 : ความสอดคล้องกับแผนพัฒนาสถานศึกษา & ยุทธศาสตร์</span>
+                                    <h3 className="text-base font-bold text-purple-950">2. ลักษณะโครงการตามแผนพัฒนาการจัดการศึกษา วิทยาลัยสารพัดช่างน่าน & เช็คลิสต์ยุทธศาสตร์ 4 ด้าน</h3>
                                 </div>
                                 <div className="space-y-3">
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">๒.๑ พันธกิจที่สอดคล้อง (Mission)</label>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">2.1 พันธกิจที่สอดคล้อง (Mission)</label>
                                         <input
                                             type="text"
                                             value={data.mission}
@@ -858,7 +858,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1">๒.๒ เป้าประสงค์ (Goal)</label>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">2.2 เป้าประสงค์ (Goal)</label>
                                             <input
                                                 type="text"
                                                 value={data.goal}
@@ -868,7 +868,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-slate-700 mb-1">๒.๓ กลยุทธ์ (Tactic/Strategy)</label>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">2.3 กลยุทธ์ (Tactic/Strategy)</label>
                                             <input
                                                 type="text"
                                                 value={data.strategy_tactic}
@@ -882,7 +882,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
                                 {/* Dynamic Strategy Checklists */}
                                 <div className="pt-2">
-                                    <h4 className="text-xs font-bold text-purple-900 mb-2">๒.๔ สอดคล้องกับยุทธศาสตร์ นโยบาย และมาตรฐานการอาชีวศึกษา (ติ๊กเลือกข้อที่เกี่ยวข้องได้มากกว่า 1 ข้อ):</h4>
+                                    <h4 className="text-xs font-bold text-purple-900 mb-2">2.4 สอดคล้องกับยุทธศาสตร์ นโยบาย และมาตรฐานการอาชีวศึกษา (ติ๊กเลือกข้อที่เกี่ยวข้องได้มากกว่า 1 ข้อ):</h4>
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         {strategyCategories.map((cat, catIdx) => {
                                             const selectedIds = data.strategy_selections[cat.id] || [];
@@ -957,7 +957,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             <div>
                                 <div className="flex justify-between items-center mb-1.5">
                                     <label className="block text-xs font-bold text-slate-700">
-                                        ๓. ความสำคัญของโครงการ / หลักการและเหตุผล (Background & Rationale) *
+                                        3. ความสำคัญของโครงการ / หลักการและเหตุผล (Background & Rationale) *
                                     </label>
                                     <button
                                         type="button"
@@ -983,7 +983,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             <div className="space-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-100">
                                 <div className="flex justify-between items-center">
                                     <label className="block text-xs font-bold text-purple-950">
-                                        ๔. วัตถุประสงค์ของโครงการ (Objectives) *
+                                        4. วัตถุประสงค์ของโครงการ (Objectives) *
                                     </label>
                                     <div className="flex gap-x-2 items-center">
                                         <button
@@ -1037,7 +1037,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="block text-xs font-bold text-slate-800">
-                                            ๕. ผลผลิตโครงการ (Outputs)
+                                            5. ผลผลิตโครงการ (Outputs)
                                         </label>
                                         <button
                                             type="button"
@@ -1081,7 +1081,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="block text-xs font-bold text-slate-800">
-                                            ๖. ผลลัพธ์โครงการ (Outcomes)
+                                            6. ผลลัพธ์โครงการ (Outcomes)
                                         </label>
                                         <button
                                             type="button"
@@ -1128,7 +1128,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="block text-xs font-bold text-slate-800">
-                                            ๗.๑ กลุ่มเป้าหมายเชิงปริมาณ (Quantitative) *
+                                            7.1 กลุ่มเป้าหมายเชิงปริมาณ (Quantitative) *
                                         </label>
                                         <button
                                             type="button"
@@ -1184,7 +1184,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 <div className="space-y-3 bg-purple-50/30 p-4 rounded-xl border border-purple-100">
                                     <div className="flex justify-between items-center mb-1">
                                         <label className="block text-xs font-bold text-slate-800">
-                                            ๗.๒ กลุ่มเป้าหมายเชิงคุณภาพ (Qualitative) *
+                                            7.2 กลุ่มเป้าหมายเชิงคุณภาพ (Qualitative) *
                                         </label>
                                         <span className="text-[10px] text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded-full">
                                             {(data.targets.qualitative || []).length} รายการ
@@ -1237,7 +1237,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             <div className="space-y-3 bg-purple-50/20 p-4 rounded-xl border border-purple-100">
                                 <div className="border-b border-purple-100 pb-2">
                                     <label className="block text-sm font-bold text-purple-950">
-                                        ๘. พื้นที่ดำเนินการ / สถานที่จัดโครงการ (Location) *
+                                        8. พื้นที่ดำเนินการ / สถานที่จัดโครงการ (Location) *
                                     </label>
                                     <p className="text-xs text-slate-500">ระบุสถานที่จัดกิจกรรม ห้องปฏิบัติการ หรือหน่วยงานเป้าหมาย</p>
                                 </div>
@@ -1255,7 +1255,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             <div className="space-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-100">
                                 <div className="flex justify-between items-center">
                                     <label className="block text-xs font-bold text-purple-950">
-                                        ๙. ผลที่คาดว่าจะได้รับ (Expected Benefits)
+                                        9. ผลที่คาดว่าจะได้รับ (Expected Benefits)
                                     </label>
                                     <button
                                         type="button"
@@ -1300,24 +1300,24 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="flex justify-between items-center border-b border-purple-100 pb-2">
                                     <div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๔ : ตัวชี้วัดความสำเร็จ</span>
-                                        <h3 className="text-base font-bold text-purple-950">๑๐. ตัวชี้วัดเป้าหมายโครงการ (KPI Indicators)</h3>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 4 : ตัวชี้วัดความสำเร็จ</span>
+                                        <h3 className="text-base font-bold text-purple-950">10. ตัวชี้วัดเป้าหมายโครงการ (KPI Indicators)</h3>
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => handleGenerateAi('indicators', 'ยกร่างตัวชี้วัด 4 มิติเรียบร้อยแล้ว')}
                                         className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs"
                                     >
-                                        ✨ ให้ AI สร้างตัวชี้วัด ๔ มิติ
+                                        ✨ ให้ AI สร้างตัวชี้วัด 4 มิติ
                                     </button>
                                 </div>
 
                                 <div className="space-y-3">
                                     {/* 10.1 ปริมาณ */}
                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-purple-100 items-center">
-                                        <span className="text-xs font-bold text-purple-950">๑๐.๑ เชิงปริมาณ</span>
+                                        <span className="text-xs font-bold text-purple-950">10.1 เชิงปริมาณ</span>
                                         <input
-                                            type="text"
+                                             type="text"
                                             value={data.indicators?.quantitative?.text || ''}
                                             onChange={(e) => handleIndicatorChange('quantitative', 'text', e.target.value)}
                                             className="sm:col-span-2 rounded-lg border-purple-200 px-3 py-1.5 text-xs focus:border-purple-500"
@@ -1328,13 +1328,13 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                             value={data.indicators?.quantitative?.unit || ''}
                                             onChange={(e) => handleIndicatorChange('quantitative', 'unit', e.target.value)}
                                             className="rounded-lg border-purple-200 px-3 py-1.5 text-xs focus:border-purple-500"
-                                            placeholder="หน่วยนับ (เช่น ๕๐ คน / ๑ โครงการ)"
+                                            placeholder="หน่วยนับ (เช่น 50 คน / 1 โครงการ)"
                                         />
                                     </div>
 
                                     {/* 10.2 คุณภาพ */}
                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-purple-100 items-center">
-                                        <span className="text-xs font-bold text-purple-950">๑๐.๒ เชิงคุณภาพ</span>
+                                        <span className="text-xs font-bold text-purple-950">10.2 เชิงคุณภาพ</span>
                                         <input
                                             type="text"
                                             value={data.indicators?.qualitative?.text || ''}
@@ -1347,13 +1347,13 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                             value={data.indicators?.qualitative?.unit || ''}
                                             onChange={(e) => handleIndicatorChange('qualitative', 'unit', e.target.value)}
                                             className="rounded-lg border-purple-200 px-3 py-1.5 text-xs focus:border-purple-500"
-                                            placeholder="หน่วยนับ (เช่น ร้อยละ ๙๐)"
+                                            placeholder="หน่วยนับ (เช่น ร้อยละ 90)"
                                         />
                                     </div>
 
                                     {/* 10.3 เวลา */}
                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-purple-100 items-center">
-                                        <span className="text-xs font-bold text-purple-950">๑๐.๓ เชิงเวลา</span>
+                                        <span className="text-xs font-bold text-purple-950">10.3 เชิงเวลา</span>
                                         <input
                                             type="text"
                                             value={data.indicators?.time?.text || ''}
@@ -1366,13 +1366,13 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                             value={data.indicators?.time?.unit || ''}
                                             onChange={(e) => handleIndicatorChange('time', 'unit', e.target.value)}
                                             className="rounded-lg border-purple-200 px-3 py-1.5 text-xs focus:border-purple-500"
-                                            placeholder="หน่วยนับ (เช่น ๑ วัน / ๑ ภาคเรียน)"
+                                            placeholder="หน่วยนับ (เช่น 1 วัน / 1 ภาคเรียน)"
                                         />
                                     </div>
 
                                     {/* 10.4 ค่าใช้จ่าย */}
                                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 rounded-xl border border-purple-100 items-center">
-                                        <span className="text-xs font-bold text-purple-950">๑๐.๔ เชิงค่าใช้จ่าย</span>
+                                        <span className="text-xs font-bold text-purple-950">10.4 เชิงค่าใช้จ่าย</span>
                                         <input
                                             type="text"
                                             value={data.indicators?.cost?.text || ''}
@@ -1395,8 +1395,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-2">
                                     <div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๕ : แผนการปฏิบัติงาน</span>
-                                        <h3 className="text-base font-bold text-purple-950">๑๑. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</h3>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 5 : แผนการปฏิบัติงาน</span>
+                                        <h3 className="text-base font-bold text-purple-950">11. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</h3>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button
@@ -1405,7 +1405,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                             className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-300 shadow-2xs"
                                             title="รีเซ็ตเป็น 4 ขั้นตอนมาตรฐานตามแบบฟอร์มวิทยาลัย"
                                         >
-                                            📋 คืนค่า ๔ ขั้นตอนมาตรฐาน
+                                            📋 คืนค่า 4 ขั้นตอนมาตรฐาน
                                         </button>
                                         <button
                                             type="button"
@@ -1443,10 +1443,10 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 </th>
                                             </tr>
                                             <tr className="bg-purple-50 text-purple-900 font-bold border-b border-purple-200 text-[11px] text-center">
-                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">๑</th>
-                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">๒</th>
-                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">๓</th>
-                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">๔</th>
+                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">1</th>
+                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">2</th>
+                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">3</th>
+                                                <th className="p-1 w-10 min-w-[36px] border-r border-purple-200">4</th>
                                                 <th className="p-2 w-[120px] min-w-[120px] border-r border-purple-200 text-right pr-3">งบดำเนินงาน</th>
                                                 <th className="p-2 w-[120px] min-w-[120px] border-r border-purple-200 text-right pr-3">งบลงทุน</th>
                                                 <th className="p-2 w-[120px] min-w-[120px] border-r border-purple-200 text-right pr-3">งบรายจ่ายอื่น</th>
@@ -1503,7 +1503,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                             value={row.target_count || ''}
                                                             onChange={(e) => handleActionPlanChange(rIdx, 'target_count', e.target.value)}
                                                             className="w-full rounded-lg border-purple-200 px-2 py-1.5 text-xs focus:border-purple-500"
-                                                            placeholder="เช่น ผู้เข้าร่วม ๕๐ คน"
+                                                            placeholder="เช่น ผู้เข้าร่วม 50 คน"
                                                         />
                                                     </td>
                                                     <td className="p-2 border-r border-purple-100">
@@ -1616,8 +1616,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             <div className="space-y-6 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-purple-100 pb-3">
                                     <div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๖ : งบประมาณ & กิจกรรมย่อย</span>
-                                        <h3 className="text-base font-bold text-purple-950">๑๒. งบประมาณและรายละเอียดค่าใช้จ่าย (แยกตามกิจกรรม & สัญญายืมเงิน / จัดซื้อจัดจ้าง)</h3>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 6 : งบประมาณ & กิจกรรมย่อย</span>
+                                        <h3 className="text-base font-bold text-purple-950">12. งบประมาณและรายละเอียดค่าใช้จ่าย (แยกตามกิจกรรม & สัญญายืมเงิน / จัดซื้อจัดจ้าง)</h3>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <button
@@ -1672,7 +1672,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 />
                                                 <div className="space-y-1">
                                                     <span className="text-xs font-black text-indigo-950 flex items-center gap-1">
-                                                        <span>📦</span> ชุดจัดซื้อจัดจ้าง (๔ ฉบับ)
+                                                        <span>📦</span> ชุดจัดซื้อจัดจ้าง (4 ฉบับ)
                                                     </span>
                                                     <p className="text-[11px] text-slate-600 leading-relaxed">
                                                         จัดซื้อวัสดุ ครุภัณฑ์ จ้างทำของ หรือจ้างเหมาบริการ
@@ -1707,7 +1707,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 />
                                                 <div className="space-y-1">
                                                     <span className="text-xs font-black text-amber-950 flex items-center gap-1">
-                                                        <span>💵</span> สัญญายืมเงินทดรองราชการ (แบบ กค. ๑๐๑)
+                                                        <span>💵</span> สัญญายืมเงินทดรองราชการ (แบบ กค. 101)
                                                     </span>
                                                     <p className="text-[11px] text-slate-600 leading-relaxed">
                                                         ค่าตอบแทนวิทยากร ค่าอาหาร/อาหารว่าง ค่าเดินทางไปราชการ
@@ -1742,7 +1742,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 />
                                                 <div className="space-y-1">
                                                     <span className="text-xs font-black text-purple-950 flex items-center gap-1">
-                                                        <span>🔄</span> ดำเนินการทั้ง ๒ รูปแบบ
+                                                        <span>🔄</span> ดำเนินการทั้ง 2 รูปแบบ
                                                     </span>
                                                     <p className="text-[11px] text-slate-600 leading-relaxed">
                                                         มีทั้งการจัดซื้อจัดจ้างวัสดุ และทำสัญญายืมเงินทดรองจ่าย
@@ -1753,7 +1753,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 <span className="font-bold text-purple-800 bg-purple-100 px-2 py-0.5 rounded-md">
                                                     ➔ แยกส่งพัสดุและการเงิน
                                                 </span>
-                                                <span className="text-slate-500 font-medium">ทำ ๒ ชุดเอกสาร</span>
+                                                <span className="text-slate-500 font-medium">ทำ 2 ชุดเอกสาร</span>
                                             </div>
                                         </label>
                                     </div>
@@ -1981,7 +1981,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                     <div className="p-3.5 bg-amber-50/40 rounded-xl border border-amber-200 space-y-2.5">
                                                         <div className="flex flex-wrap justify-between items-center gap-1.5">
                                                             <h5 className="text-xs font-bold text-amber-950 flex items-center gap-1">
-                                                                <span>💵</span> รายการสัญญายืมเงิน (แบบ กค. ๑๐๑) - กิจกรรมที่ {actIdx + 1}
+                                                                <span>💵</span> รายการสัญญายืมเงิน (แบบ กค. 101) - กิจกรรมที่ {actIdx + 1}
                                                             </h5>
                                                             <div className="flex items-center gap-2">
                                                                 {remainingBudget > 0 && data.disbursement_type === 'loan' && (
@@ -1997,7 +1997,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                                                 lItems[0].total_price = qty * lItems[0].unit_price;
                                                                             } else {
                                                                                 lItems.push({
-                                                                                    description: '๑. ค่าใช้จ่ายตามสัญญายืมเงินดำเนินกิจกรรม',
+                                                                                    description: '1. ค่าใช้จ่ายตามสัญญายืมเงินดำเนินกิจกรรม',
                                                                                     quantity: 1,
                                                                                     unit: 'งาน',
                                                                                     unit_price: remainingBudget,
@@ -2123,7 +2123,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                                             pItems[0].total_price = qty * pItems[0].unit_price;
                                                                         } else {
                                                                             pItems.push({
-                                                                                description: '๑. ค่าวัสดุ อุปกรณ์ดำเนินกิจกรรม',
+                                                                                description: '1. ค่าวัสดุ อุปกรณ์ดำเนินกิจกรรม',
                                                                                 quantity: 1,
                                                                                 unit: 'ชุด',
                                                                                 unit_price: remainingBudget,
@@ -2312,7 +2312,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                         onClick={addActivity}
                                         className="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 px-4 py-2 text-xs font-bold shadow-2xs transition-all"
                                     >
-                                        ➕ เพิ่มกิจกรรมย่อยอีก ๑ กิจกรรม
+                                        ➕ เพิ่มกิจกรรมย่อยอีก 1 กิจกรรม
                                     </button>
                                 </div>
                             </div>
@@ -2320,8 +2320,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             {/* Section 13: ผู้รับผิดชอบโครงการ */}
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="border-b border-purple-100 pb-2">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๗ : ผู้รับผิดชอบ & การลงนามเสนอ</span>
-                                    <h3 className="text-base font-bold text-purple-950">๑๓. ผู้รับผิดชอบโครงการ</h3>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 7 : ผู้รับผิดชอบ & การลงนามเสนอ</span>
+                                    <h3 className="text-base font-bold text-purple-950">13. ผู้รับผิดชอบโครงการ</h3>
                                 </div>
                                 <div className="max-w-md text-xs">
                                     <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-1 shadow-2xs">
@@ -2337,12 +2337,12 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             {/* Section 14: การติดตามและประเมินผลโครงการ */}
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
                                 <div className="border-b border-purple-100 pb-2">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ ๘ : การประเมินผล</span>
-                                    <h3 className="text-base font-bold text-purple-950">๑๔. การติดตามและประเมินผลโครงการ (Monitoring & Evaluation)</h3>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 8 : การประเมินผล</span>
+                                    <h3 className="text-base font-bold text-purple-950">14. การติดตามและประเมินผลโครงการ (Monitoring & Evaluation)</h3>
                                 </div>
                                 <div className="p-4 rounded-xl bg-white border border-purple-100 space-y-2 text-xs text-slate-700 leading-relaxed">
-                                    <p><span className="font-bold text-purple-900">๑๔.๑ เครื่องมือที่ใช้ในการประเมิน:</span> แบบประเมินความพึงพอใจของผู้เข้าร่วมโครงการ, แบบบันทึกการสังเกตพฤติกรรม และแบบทดสอบประเมินสมรรถนะ</p>
-                                    <p><span className="font-bold text-purple-900">๑๔.๒ วิธีการประเมิน:</span> ประเมินผลก่อนและหลังการจัดกิจกรรม รวบรวมข้อมูลทางสถิติ และจัดทำสรุปรายงานผลโครงการฉบับสมบูรณ์เสนอต่อผู้บริหารสถานศึกษา</p>
+                                    <p><span className="font-bold text-purple-900">14.1 เครื่องมือที่ใช้ในการประเมิน:</span> แบบประเมินความพึงพอใจของผู้เข้าร่วมโครงการ, แบบบันทึกการสังเกตพฤติกรรม และแบบทดสอบประเมินสมรรถนะ</p>
+                                    <p><span className="font-bold text-purple-900">14.2 วิธีการประเมิน:</span> ประเมินผลก่อนและหลังการจัดกิจกรรม รวบรวมข้อมูลทางสถิติ และจัดทำสรุปรายงานผลโครงการฉบับสมบูรณ์เสนอต่อผู้บริหารสถานศึกษา</p>
                                 </div>
                             </div>
 

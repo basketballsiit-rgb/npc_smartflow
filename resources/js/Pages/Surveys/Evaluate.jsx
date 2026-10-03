@@ -66,11 +66,16 @@ export default function Evaluate({ project, survey }) {
         { val: 1, label: 'น้อยที่สุด / ปรับปรุง', short: 'ปรับปรุง', color: 'bg-rose-500 hover:bg-rose-600 text-white' },
     ];
 
-    const toThaiNumerals = (num) => {
+    // Standardize all numerals to Arabic numerals
+    const toArabicNumerals = (num) => {
         if (num === null || num === undefined) return '';
-        const thDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(num).replace(/[0-9]/g, (d) => thDigits[parseInt(d, 10)]);
+        const thaiToArabic = {
+            '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4',
+            '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9'
+        };
+        return String(num).replace(/[๐-๙]/g, (ch) => thaiToArabic[ch] || ch);
     };
+    const toThaiNumerals = toArabicNumerals;
 
     return (
         <div className="min-h-screen bg-slate-100 py-10 px-4 sm:px-6 lg:px-8 font-sans">
@@ -114,7 +119,7 @@ export default function Evaluate({ project, survey }) {
                             <div className="bg-emerald-50/90 border border-emerald-200 text-emerald-900 p-5 rounded-2xl text-xs leading-relaxed max-w-lg mx-auto shadow-2xs">
                                 <p className="font-bold text-sm text-emerald-950">🎉 ขอบพระคุณอย่างยิ่งสำหรับความร่วมมือในการตอบแบบประเมิน</p>
                                 <p className="text-xs text-emerald-800 mt-1.5">
-                                    ข้อมูลการประเมินของท่านได้รับการบันทึกเข้าสู่ฐานข้อมูลระบบบริหารจัดการโครงการ เพื่อนำไปประมวลผลทางสถิติและสังเคราะห์รายงานผลบทที่ ๔ ต่อไป
+                                    ข้อมูลการประเมินของท่านได้รับการบันทึกเข้าสู่ฐานข้อมูลระบบบริหารจัดการโครงการ เพื่อนำไปประมวลผลทางสถิติและสังเคราะห์รายงานผลบทที่ 4 ต่อไป
                                 </p>
                             </div>
                             <div className="pt-2 flex justify-center">
@@ -137,7 +142,7 @@ export default function Evaluate({ project, survey }) {
                             <div className="p-5 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-4 shadow-2xs">
                                 <div className="border-b border-purple-200/80 pb-2">
                                     <h2 className="text-sm font-bold text-purple-950 flex items-center gap-1.5">
-                                        <span>👤</span> ตอนที่ ๑: ข้อมูลทั่วไปของผู้ตอบแบบประเมิน (General Information)
+                                        <span>👤</span> ตอนที่ 1: ข้อมูลทั่วไปของผู้ตอบแบบประเมิน (General Information)
                                     </h2>
                                     <p className="text-[11px] text-purple-800 mt-0.5">
                                         โปรดเลือกข้อมูลสถานะ เพศ และระดับการศึกษาของท่านตามความเป็นจริง
@@ -147,7 +152,7 @@ export default function Evaluate({ project, survey }) {
                                 {/* 1.1 สถานะผู้ตอบ */}
                                 <div className="space-y-2">
                                     <label className="block text-xs font-bold text-purple-950">
-                                        ๑. สถานะของผู้ตอบแบบประเมิน
+                                        1. สถานะของผู้ตอบแบบประเมิน
                                     </label>
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                         {[
@@ -175,7 +180,7 @@ export default function Evaluate({ project, survey }) {
                                 {/* 1.2 เพศ */}
                                 <div className="space-y-2 pt-2 border-t border-purple-100">
                                     <label className="block text-xs font-bold text-purple-950">
-                                        ๒. เพศ
+                                        2. เพศ
                                     </label>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[
@@ -201,7 +206,7 @@ export default function Evaluate({ project, survey }) {
                                 {/* 1.3 ระดับการศึกษา */}
                                 <div className="space-y-2 pt-2 border-t border-purple-100">
                                     <label className="block text-xs font-bold text-purple-950">
-                                        ๓. ระดับการศึกษา
+                                        3. ระดับการศึกษา
                                     </label>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                         {[
@@ -234,10 +239,10 @@ export default function Evaluate({ project, survey }) {
                             <div className="space-y-5">
                                 <div className="flex items-center justify-between pb-1 border-b border-slate-100">
                                     <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                                        <span>📊</span> ตอนที่ ๒: ความพึงพอใจต่อการดำเนินโครงการ
+                                        <span>📊</span> ตอนที่ 2: ความพึงพอใจต่อการดำเนินโครงการ
                                     </h2>
                                     <span className="text-[11px] text-slate-500">
-                                        เกณฑ์ให้คะแนน ๕ ระดับ (๕ = มากที่สุด ถึง ๑ = ปรับปรุง)
+                                        เกณฑ์ให้คะแนน 5 ระดับ (5 = มากที่สุด ถึง 1 = ปรับปรุง)
                                     </span>
                                 </div>
 
@@ -258,7 +263,7 @@ export default function Evaluate({ project, survey }) {
                                                     </span>
                                                 )}
                                                 <label className="block text-xs sm:text-sm font-bold text-slate-900 leading-snug">
-                                                    {toThaiNumerals(index + 1)}. {q.question}
+                                                    {toArabicNumerals(index + 1)}. {q.question}
                                                 </label>
                                             </div>
 
@@ -277,7 +282,7 @@ export default function Evaluate({ project, survey }) {
                                                                     : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
                                                             }`}
                                                         >
-                                                            <span className="text-sm font-black">{toThaiNumerals(val)}</span>
+                                                            <span className="text-sm font-black">{toArabicNumerals(val)}</span>
                                                             <span className="text-[10px] opacity-80">
                                                                 {val === 5 ? 'มากที่สุด' : val === 4 ? 'มาก' : val === 3 ? 'ปานกลาง' : val === 2 ? 'น้อย' : 'ปรับปรุง'}
                                                             </span>
@@ -287,7 +292,7 @@ export default function Evaluate({ project, survey }) {
                                             </div>
 
                                             <div className="text-right text-[11px] font-medium text-purple-900 pt-0.5">
-                                                ระดับคะแนนที่เลือก: <span className="font-bold">{levelObj?.label}</span> ({toThaiNumerals(currentScore)} / ๕)
+                                                ระดับคะแนนที่เลือก: <span className="font-bold">{levelObj?.label}</span> ({toArabicNumerals(currentScore)} / 5)
                                             </div>
                                         </div>
                                     );
@@ -297,7 +302,7 @@ export default function Evaluate({ project, survey }) {
                             {/* Comments */}
                             <div className="border-t border-purple-100 pt-5 space-y-2">
                                 <label className="block text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                                    <span>💬</span> ตอนที่ ๓: ข้อเสนอแนะเพิ่มเติมเพื่อการปรับปรุงและพัฒนา (Suggestions)
+                                    <span>💬</span> ตอนที่ 3: ข้อเสนอแนะเพิ่มเติมเพื่อการปรับปรุงและพัฒนา (Suggestions)
                                 </label>
                                 <textarea
                                     rows={4}

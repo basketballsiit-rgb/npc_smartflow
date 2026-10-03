@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>สัญญายืมเงิน (แบบ กค. ๑๐๑) - {{ $project->title }}</title>
+    <title>สัญญายืมเงิน (แบบ กค. 101) - {{ $project->title }}</title>
     <style>
         * {
             box-sizing: border-box;
@@ -147,34 +147,31 @@
 
     if (!function_exists('toThaiDigits')) {
         function toThaiDigits($str) {
-            $thaiDigits = ['0'=>'๐', '1'=>'๑', '2'=>'๒', '3'=>'๓', '4'=>'๔', '5'=>'๕', '6'=>'๖', '7'=>'๗', '8'=>'๘', '9'=>'๙'];
-            return strtr((string)$str, $thaiDigits);
+            $thaiToArabic = ['๐'=>'0', '๑'=>'1', '๒'=>'2', '๓'=>'3', '๔'=>'4', '๕'=>'5', '๖'=>'6', '๗'=>'7', '๘'=>'8', '๙'=>'9'];
+            return strtr((string)$str, $thaiToArabic);
         }
     }
 
     if (!function_exists('formatThaiMoney')) {
         function formatThaiMoney($number) {
-            $formatted = number_format(floatval($number), 2);
-            return toThaiDigits($formatted);
+            return number_format(floatval($number), 2);
         }
     }
 
     if (!function_exists('formatThaiLoanItemDesc')) {
         function formatThaiLoanItemDesc($desc, $itemIndex) {
             $desc = trim(preg_replace('/[💵📦💰📑📝🛒📄📊]/u', '', $desc));
-            // Strip leading dashes or bullet points e.g. "- ", "• ", "- ๑. ", "- 1. "
+            // Strip leading dashes or bullet points e.g. "- ", "• ", "- 1. "
             $desc = preg_replace('/^[\-\–\—\•\*\s]+/u', '', $desc);
             
             // If it starts with a number like "1. ", "๑. ", "1) ", "๑) ", "1 ", "๑ "
             if (preg_match('/^([0-9]+|[๐-๙]+)[\.\)]\s*(.*)$/u', $desc, $m)) {
-                $thaiNum = toThaiDigits($m[1]);
+                $arabicNum = toThaiDigits($m[1]);
                 $rest = $m[2];
-                $desc = $thaiNum . '. ' . $rest;
+                $desc = $arabicNum . '. ' . $rest;
             } else {
-                $thaiIdx = toThaiDigits($itemIndex);
-                $desc = $thaiIdx . '. ' . $desc;
+                $desc = $itemIndex . '. ' . $desc;
             }
-            // Convert any remaining Arabic digits in the item description to Thai digits
             return toThaiDigits($desc);
         }
     }
@@ -346,9 +343,9 @@
 
     if (empty($allLoanItems)) {
         $allLoanItems = [
-            ['description' => '๑. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ (๖ ชม. x ๖๐๐ บาท)', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => 3600],
-            ['description' => '๒. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (๕๐ คน x ๘๐ บาท x ๑ มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => 4000],
-            ['description' => '๓. ค่าอาหารว่างและเครื่องดื่ม (๕๐ คน x ๓๕ บาท x ๒ มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => 3500],
+            ['description' => '1. ค่าตอบแทนวิทยากรบรรยายและฝึกปฏิบัติการ (6 ชม. x 600 บาท)', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => 3600],
+            ['description' => '2. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => 4000],
+            ['description' => '3. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => 3500],
         ];
     }
 
@@ -464,7 +461,7 @@
 
             <!-- Paragraph 2 -->
             <div style="padding: 6px 12px; text-indent: 1.2cm; text-align: justify; font-size: 15pt; line-height: 1.25;">
-                ข้าพเจ้าสัญญาว่าจะปฏิบัติตามระเบียบของทางราชการทุกประการ และจะนำใบสำคัญคู่จ่ายที่ถูกต้อง พร้อมทั้งเงินเหลือจ่าย (ถ้ามี) ส่งใช้ภายในกำหนดไว้ในระเบียบการเบิกจ่ายจากคลัง คือ ภายใน <span class="bold">๓๐</span> วัน นับแต่วันที่ได้รับเงินนี้ หากข้าพเจ้าไม่ส่งตามกำหนด ข้าพเจ้ายินยอมให้หักเงินเดือน ค่าจ้าง เบี้ยหวัด บำนาญ หรือเงินอื่นใดที่ข้าพเจ้าพึงได้รับจากทางราชการชดใช้จำนวนเงินที่ยืมไปจนครบถ้วนได้ทันที
+                ข้าพเจ้าสัญญาว่าจะปฏิบัติตามระเบียบของทางราชการทุกประการ และจะนำใบสำคัญคู่จ่ายที่ถูกต้อง พร้อมทั้งเงินเหลือจ่าย (ถ้ามี) ส่งใช้ภายในกำหนดไว้ในระเบียบการเบิกจ่ายจากคลัง คือ ภายใน <span class="bold">30</span> วัน นับแต่วันที่ได้รับเงินนี้ หากข้าพเจ้าไม่ส่งตามกำหนด ข้าพเจ้ายินยอมให้หักเงินเดือน ค่าจ้าง เบี้ยหวัด บำนาญ หรือเงินอื่นใดที่ข้าพเจ้าพึงได้รับจากทางราชการชดใช้จำนวนเงินที่ยืมไปจนครบถ้วนได้ทันที
             </div>
 
             <!-- Signature of Borrower -->
@@ -556,13 +553,16 @@
         const fiscalYearThai = @json(toThaiDigits($project->academic_year ?? '2569'));
 
         function toThaiDigits(num) {
+            if (num === null || num === undefined) return '';
             const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-            return String(num).replace(/[0-9]/g, d => thaiDigits[d]);
+            return String(num).replace(/[๐-๙]/g, c => {
+                const idx = thaiDigits.indexOf(c);
+                return idx !== -1 ? String(idx) : c;
+            });
         }
 
         function formatThaiMoney(num) {
-            const formatted = parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            return toThaiDigits(formatted);
+            return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
         function cleanThaiItemDesc(desc, idx) {
@@ -573,10 +573,10 @@
             // Check if already has a number prefix like "1. ", "๑. ", "1) "
             const match = clean.match(/^([0-9]+|[๐-๙]+)[\.\)]\s*(.*)$/);
             if (match) {
-                const thaiNum = toThaiDigits(match[1]);
-                return thaiNum + '. ' + toThaiDigits(match[2]);
+                const arabicNum = toThaiDigits(match[1]);
+                return arabicNum + '. ' + toThaiDigits(match[2]);
             }
-            return toThaiDigits(idx) + '. ' + toThaiDigits(clean);
+            return idx + '. ' + toThaiDigits(clean);
         }
 
         function switchActivity(val) {

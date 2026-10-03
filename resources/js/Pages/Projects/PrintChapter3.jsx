@@ -8,12 +8,16 @@ export default function PrintChapter3({ project }) {
     const sections = project?.chapter_3_sections || {};
     const fullContent = project?.chapter_3_content || '';
 
-    // Convert Arabic digits to Thai digits
-    const toThaiNumerals = (val) => {
+    // Standardize all numerals to Arabic numerals
+    const toArabicNumerals = (val) => {
         if (val === null || val === undefined) return '';
-        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(val).replace(/[0-9]/g, (digit) => thaiDigits[parseInt(digit, 10)]);
+        const thaiToArabic = {
+            '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4',
+            '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9'
+        };
+        return String(val).replace(/[๐-๙]/g, (ch) => thaiToArabic[ch] || ch);
     };
+    const toThaiNumerals = toArabicNumerals; // alias for backwards compatibility
 
     const handlePrint = () => {
         window.print();
@@ -28,7 +32,7 @@ export default function PrintChapter3({ project }) {
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
             <Head>
-                <title>{`รายงานผลโครงการ บทที่ ๓ - ${project.title}`}</title>
+                <title>{`รายงานผลโครงการ บทที่ 3 - ${project.title}`}</title>
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
                 <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
@@ -145,10 +149,10 @@ export default function PrintChapter3({ project }) {
             <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 md:p-5 rounded-2xl shadow-sm border border-slate-200 print:hidden font-sans">
                 <div>
                     <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
-                        <span>📙</span> รายงานผลโครงการ: บทที่ ๓ วิธีดำเนินงานโครงการ (PDCA Methodology)
+                        <span>📙</span> รายงานผลโครงการ: บทที่ 3 วิธีดำเนินงานโครงการ (PDCA Methodology)
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        ระยะขอบทุกด้าน ๑ นิ้ว | ฟอนต์ TH Sarabun PSK ขนาดมาตรฐาน 1:1 กับแบบเสนอโครงการ
+                        ระยะขอบทุกด้าน 1 นิ้ว | ฟอนต์ TH Sarabun PSK ขนาดมาตรฐาน 1:1 กับแบบเสนอโครงการ
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -198,9 +202,9 @@ export default function PrintChapter3({ project }) {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rounded-xl border border-teal-200 bg-teal-50 px-3.5 py-2 text-xs font-bold text-teal-700 hover:bg-teal-100 transition shadow-2xs"
-                        title="ดูรายงานผลโครงการ บทที่ ๒"
+                        title="ดูรายงานผลโครงการ บทที่ 2"
                     >
-                        📗 ดูบทที่ ๒
+                        📗 ดูบทที่ 2
                     </a>
 
                     <Link
@@ -224,7 +228,7 @@ export default function PrintChapter3({ project }) {
                 
                 {/* Chapter Heading */}
                 <div className="text-center mb-8">
-                    <h2 className="print-title tracking-wide text-black mb-1">บทที่ ๓</h2>
+                    <h2 className="print-title tracking-wide text-black mb-1">บทที่ 3</h2>
                     <h1 className="print-title tracking-wide text-black">วิธีดำเนินงานโครงการ</h1>
                 </div>
 
@@ -235,7 +239,7 @@ export default function PrintChapter3({ project }) {
                         {/* Intro */}
                         {sections.intro && (
                             <div className="thai-indent whitespace-pre-line text-justify leading-relaxed">
-                                {sections.intro}
+                                {toArabicNumerals(sections.intro)}
                             </div>
                         )}
 
@@ -243,10 +247,10 @@ export default function PrintChapter3({ project }) {
                         {sections.section_3_1 && (
                             <div className="pt-2">
                                 <h3 className="print-heading mb-2 text-black">
-                                    ๓.๑ ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย
+                                    3.1 ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย
                                 </h3>
                                 <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {sections.section_3_1.replace(/^[๓3]\.[๑1]\s*ประชากร[^\n]*\n+/u, '')}
+                                    {toArabicNumerals(sections.section_3_1.replace(/^[๓3]\.[๑1]\s*ประชากร[^\n]*\n+/u, ''))}
                                 </div>
                             </div>
                         )}
@@ -255,10 +259,10 @@ export default function PrintChapter3({ project }) {
                         {sections.section_3_2 && (
                             <div className="pt-4">
                                 <h3 className="print-heading mb-2 text-black">
-                                    ๓.๒ เครื่องมือที่ใช้ในการประเมินผลโครงการ
+                                    3.2 เครื่องมือที่ใช้ในการประเมินผลโครงการ
                                 </h3>
                                 <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {sections.section_3_2.replace(/^[๓3]\.[๒2]\s*เครื่องมือ[^\n]*\n+/u, '')}
+                                    {toArabicNumerals(sections.section_3_2.replace(/^[๓3]\.[๒2]\s*เครื่องมือ[^\n]*\n+/u, ''))}
                                 </div>
                             </div>
                         )}
@@ -267,10 +271,10 @@ export default function PrintChapter3({ project }) {
                         {sections.section_3_3 && (
                             <div className="pt-4">
                                 <h3 className="print-heading mb-2 text-black">
-                                    ๓.๓ ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA
+                                    3.3 ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA
                                 </h3>
                                 <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {sections.section_3_3.replace(/^[๓3]\.[๓3]\s*ขั้นตอน[^\n]*\n+/u, '')}
+                                    {toArabicNumerals(sections.section_3_3.replace(/^[๓3]\.[๓3]\s*ขั้นตอน[^\n]*\n+/u, ''))}
                                 </div>
                             </div>
                         )}
@@ -279,10 +283,10 @@ export default function PrintChapter3({ project }) {
                         {sections.section_3_4 && (
                             <div className="pt-4">
                                 <h3 className="print-heading mb-2 text-black">
-                                    ๓.๔ การเก็บรวบรวมข้อมูล
+                                    3.4 การเก็บรวบรวมข้อมูล
                                 </h3>
                                 <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {sections.section_3_4.replace(/^[๓3]\.[๔4]\s*การเก็บรวบรวม[^\n]*\n+/u, '')}
+                                    {toArabicNumerals(sections.section_3_4.replace(/^[๓3]\.[๔4]\s*การเก็บรวบรวม[^\n]*\n+/u, ''))}
                                 </div>
                             </div>
                         )}
@@ -291,10 +295,10 @@ export default function PrintChapter3({ project }) {
                         {sections.section_3_5 && (
                             <div className="pt-4">
                                 <h3 className="print-heading mb-2 text-black">
-                                    ๓.๕ สถิติที่ใช้ในการวิเคราะห์ข้อมูล
+                                    3.5 สถิติที่ใช้ในการวิเคราะห์ข้อมูล
                                 </h3>
                                 <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {sections.section_3_5.replace(/^[๓3]\.[๕5]\s*สถิติ[^\n]*\n+/u, '')}
+                                    {toArabicNumerals(sections.section_3_5.replace(/^[๓3]\.[๕5]\s*สถิติ[^\n]*\n+/u, ''))}
                                 </div>
                             </div>
                         )}
@@ -302,19 +306,19 @@ export default function PrintChapter3({ project }) {
                     </div>
                 ) : fullContent ? (
                     <div className="whitespace-pre-line text-justify text-black leading-relaxed space-y-4 thai-indent">
-                        {fullContent}
+                        {toArabicNumerals(fullContent)}
                     </div>
                 ) : (
                     <div className="p-8 bg-amber-50 rounded-2xl border border-amber-200 text-center font-sans print:hidden">
-                        <p className="text-amber-800 font-bold">ยังไม่มีเนื้อหาบทที่ ๓ ในระบบ</p>
+                        <p className="text-amber-800 font-bold">ยังไม่มีเนื้อหาบทที่ 3 ในระบบ</p>
                         <p className="text-xs text-amber-600 mt-1">
-                            กรุณากลับไปที่หน้ารายงานผลโครงการ แท็บ "บทที่ ๓ (Methodology)" และกดปุ่ม "🤖 ใช้ AI วิเคราะห์และช่วยเขียนบทที่ ๓"
+                            กรุณากลับไปที่หน้ารายงานผลโครงการ แท็บ "บทที่ 3 (Methodology)" และกดปุ่ม "🤖 ใช้ AI วิเคราะห์และช่วยเขียนบทที่ 3"
                         </p>
                         <Link
                             href={route('dashboard', { chapter: 3 })}
                             className="mt-4 inline-block px-4 py-2 bg-amber-700 text-white font-bold text-xs rounded-xl shadow"
                         >
-                            กลับไปสร้างเนื้อหาบทที่ ๓
+                            กลับไปสร้างเนื้อหาบทที่ 3
                         </Link>
                     </div>
                 )}

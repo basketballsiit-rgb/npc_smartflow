@@ -279,7 +279,7 @@ export default function QuickCreate({
                             <div className="space-y-4 rounded-2xl border border-purple-100 bg-purple-50/30 p-5 sm:p-6">
                                 <div className="flex items-center justify-between border-b border-purple-100 pb-2">
                                     <h4 className="text-sm font-bold text-purple-950 flex items-center gap-2">
-                                        <span>๑.</span> ข้อมูลคำของบประมาณโครงการเบื้องต้น (บังคับ)
+                                        <span>1.</span> ข้อมูลคำของบประมาณโครงการเบื้องต้น (บังคับ)
                                     </h4>
                                     <span className="text-[11px] font-semibold text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-full">
                                         จำเป็นต้องระบุ
@@ -441,7 +441,7 @@ export default function QuickCreate({
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-100 pb-2">
                                     <div>
                                         <h4 className="text-sm font-bold text-indigo-950 flex items-center gap-2">
-                                            <span>๒.</span> วัตถุประสงค์ และเป้าหมายโครงการ (ระบุเบื้องต้น)
+                                            <span>2.</span> วัตถุประสงค์ และเป้าหมายโครงการ (ระบุเบื้องต้น)
                                         </h4>
                                         <p className="text-[11px] text-slate-500">ข้อมูลส่วนนี้จะนำไปประกอบการพิจารณา และดึงเข้าเล่มเต็มเมื่อได้รับการอนุมัติ</p>
                                     </div>
@@ -576,7 +576,7 @@ export default function QuickCreate({
                             <div className="space-y-4 rounded-2xl border border-sky-100 bg-sky-50/30 p-5 sm:p-6">
                                 <div className="border-b border-sky-100 pb-2">
                                     <h4 className="text-sm font-bold text-sky-950 flex items-center gap-2">
-                                        <span>๓.</span> การเชื่อมโยงยุทธศาสตร์และนโยบายสถานศึกษา (เลือกตอบสอดคล้อง)
+                                        <span>3.</span> การเชื่อมโยงยุทธศาสตร์และนโยบายสถานศึกษา (เลือกตอบสอดคล้อง)
                                     </h4>
                                     <p className="text-[11px] text-slate-500 mt-0.5">
                                         เลือกยุทธศาสตร์ที่งานแผนงานได้กรอกไว้ในระบบที่โครงการนี้ตอบสนอง เพื่อนำไปประมวลผลสรุปภาพรวมสถานศึกษา
@@ -705,7 +705,7 @@ export default function QuickCreate({
                             <div className="space-y-4 rounded-2xl border border-emerald-100 bg-emerald-50/30 p-5 sm:p-6">
                                 <div className="flex items-center justify-between border-b border-emerald-100 pb-2">
                                     <h4 className="text-sm font-bold text-emerald-950 flex items-center gap-2">
-                                        <span>๔.</span> ตัวชี้วัดความสำเร็จ (KPIs) (ทางเลือก)
+                                        <span>4.</span> ตัวชี้วัดความสำเร็จ (KPIs) (ทางเลือก)
                                     </h4>
                                     <button
                                         type="button"

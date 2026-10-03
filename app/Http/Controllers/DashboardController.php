@@ -227,7 +227,7 @@ class DashboardController extends Controller
             'total_received' => TravelLoan::count(),
             'last_received_at' => $lastLoan ? $lastLoan->created_at->format('d/m/Y H:i:s') : null,
             'last_received_contract' => $lastLoan ? $lastLoan->contract_no : null,
-            'source_system' => 'npc_eleve (สัญญายืมเงิน กค. ๑๐๑)',
+            'source_system' => 'npc_eleve (สัญญายืมเงิน กค. 101)',
         ];
         $data['apiIntegrationStatus'] = $apiIntegrationStatus;
 
@@ -667,7 +667,7 @@ class DashboardController extends Controller
                 ];
             }
 
-            // Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา ๔ มิติ)
+            // Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา 4 มิติ)
             $routineCeiling = 2000000.00;
             $projectsCeiling = 5000000.00;
             $utilitiesCeiling = 2000000.00;
@@ -681,7 +681,7 @@ class DashboardController extends Controller
                 'categories' => [
                     [
                         'id' => 'routine_divisions',
-                        'name' => '๑. งบดำเนินงานและภารกิจประจำ ๔ ฝ่าย',
+                        'name' => '1. งบดำเนินงานและภารกิจประจำ 4 ฝ่าย',
                         'description' => 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
                         'projected_ceiling' => $routineCeiling,
                         'requested_amount' => (float)\App\Models\RoutineBudgetPlan::sum('total_amount'),
@@ -690,7 +690,7 @@ class DashboardController extends Controller
                     ],
                     [
                         'id' => 'strategic_projects',
-                        'name' => '๒. งบโครงการตามแผนปฏิบัติราชการประจำปี',
+                        'name' => '2. งบโครงการตามแผนปฏิบัติราชการประจำปี',
                         'description' => 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
                         'projected_ceiling' => $projectsCeiling,
                         'requested_amount' => $totalRequestedAll,
@@ -699,7 +699,7 @@ class DashboardController extends Controller
                     ],
                     [
                         'id' => 'utilities_overhead',
-                        'name' => '๓. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
+                        'name' => '3. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
                         'description' => 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
                         'projected_ceiling' => $utilitiesCeiling,
                         'requested_amount' => $centralSpent > 0 ? $centralSpent : 1500000.00,
@@ -708,7 +708,7 @@ class DashboardController extends Controller
                     ],
                     [
                         'id' => 'contingency_reserve',
-                        'name' => '๔. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
+                        'name' => '4. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
                         'description' => 'เงินสำรองกรณีเร่งด่วน ภัยพิบัติ หรือโครงการนโยบายเร่งด่วนพิเศษ',
                         'projected_ceiling' => $contingencyCeiling,
                         'requested_amount' => 0.00,

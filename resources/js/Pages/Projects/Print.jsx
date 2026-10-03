@@ -16,16 +16,20 @@ export default function Print({ project, strategyCategories = [] }) {
         return cleaned;
     };
 
-    // Utility to convert any Arabic digits in a string/number into Thai digits
-    const toThaiNumerals = (val) => {
+    // Utility to standardize any Thai digits into Arabic digits
+    const toArabicNumerals = (val) => {
         if (val === null || val === undefined) return '';
-        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(val).replace(/[0-9]/g, (digit) => thaiDigits[parseInt(digit, 10)]);
+        const thaiToArabic = {
+            '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4',
+            '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9'
+        };
+        return String(val).replace(/[๐-๙]/g, (ch) => thaiToArabic[ch] || ch);
     };
+    const toThaiNumerals = toArabicNumerals; // alias for compatibility across all call sites
 
     const formatCurrencyThai = (value) => {
         const formatted = new Intl.NumberFormat('th-TH', { style: 'decimal', minimumFractionDigits: 0 }).format(value || 0);
-        return toThaiNumerals(formatted);
+        return toArabicNumerals(formatted);
     };
 
     const handlePrint = () => {
@@ -71,28 +75,28 @@ export default function Print({ project, strategyCategories = [] }) {
 
     const defaultStandardSteps = [
         { 
-            step_name: '๑.ประชุมวางแผนเพื่อจัดทำโครงการ', 
+            step_name: '1. ประชุมวางแผนเพื่อจัดทำโครงการ', 
             q1: true, q2: false, q3: false, q4: false, 
             target_count: '', 
             location_name: '', 
             budget_operating: 0, budget_investment: 0, budget_other: 0, budget_subsidy: 0 
         },
         { 
-            step_name: '๒.ดำเนินการเขียนโครงการเพื่อของบประมาณ ออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวันและสถานที่', 
+            step_name: '2. ดำเนินการเขียนโครงการเพื่อของบประมาณ ออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวันและสถานที่', 
             q1: true, q2: false, q3: false, q4: false, 
             target_count: '', 
             location_name: '', 
             budget_operating: 0, budget_investment: 0, budget_other: 0, budget_subsidy: 0 
         },
         { 
-            step_name: '๓.ดำเนินการตามโครงการ', 
+            step_name: '3. ดำเนินการตามโครงการ', 
             q1: false, q2: true, q3: false, q4: false, 
             target_count: '', 
             location_name: '', 
             budget_operating: project.estimated_budget || 0, budget_investment: 0, budget_other: 0, budget_subsidy: 0 
         },
         { 
-            step_name: '๔.สรุปประเมินโครงการและรายงานผล ปัญหา อุปสรรค โครงการให้กับคณะผู้บริหาร', 
+            step_name: '4. สรุปประเมินโครงการและรายงานผล ปัญหา อุปสรรค โครงการให้กับคณะผู้บริหาร', 
             q1: false, q2: false, q3: false, q4: true, 
             target_count: '', 
             location_name: '', 
@@ -256,7 +260,7 @@ export default function Print({ project, strategyCategories = [] }) {
                         <span>📄</span> แบบเสนอโครงการฉบับทางการ (Official TH Sarabun View)
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                        ระยะขอบทุกด้าน ๑ นิ้ว | ขนาดฟอนต์ในการพิมพ์เท่ากับหน้ามุมมองที่กำลังดู 100%
+                        ระยะขอบทุกด้าน 1 นิ้ว | ขนาดฟอนต์ในการพิมพ์เท่ากับหน้ามุมมองที่กำลังดู 100%
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -365,37 +369,37 @@ export default function Print({ project, strategyCategories = [] }) {
                     {/* Section 1: Title & Responsible Person */}
                     <div>
                         <p className="print-title font-bold text-slate-900">
-                            ๑. ชื่อโครงการ: <span className="font-semibold text-slate-900">{toThaiNumerals(project.title)}</span>
+                            1. ชื่อโครงการ: <span className="font-semibold text-slate-900">{toArabicNumerals(project.title)}</span>
                         </p>
                         <div className="pl-6 pt-1 space-y-0.5 text-slate-900 leading-relaxed">
-                            <p><span className="font-bold">ผู้รับผิดชอบโครงการ ชื่อ-สกุล :</span> {toThaiNumerals(cleanedResponsiblePerson)}</p>
-                            <p><span className="font-bold">ตำแหน่ง :</span> {toThaiNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}</p>
-                            <p><span className="font-bold">โทรศัพท์เคลื่อนที่ :</span> {toThaiNumerals(project.phone || '๐๘๐-๖๐๔๔๔๕๐')} &nbsp;&nbsp;&nbsp;&nbsp; <span className="font-bold">E-mail :</span> {project.email || project.user?.email || 'Newchatnapa16@npc.ac.th'}</p>
+                            <p><span className="font-bold">ผู้รับผิดชอบโครงการ ชื่อ-สกุล :</span> {toArabicNumerals(cleanedResponsiblePerson)}</p>
+                            <p><span className="font-bold">ตำแหน่ง :</span> {toArabicNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}</p>
+                            <p><span className="font-bold">โทรศัพท์เคลื่อนที่ :</span> {toArabicNumerals(project.phone || '080-6044450')} &nbsp;&nbsp;&nbsp;&nbsp; <span className="font-bold">E-mail :</span> {project.email || project.user?.email || 'Newchatnapa16@npc.ac.th'}</p>
                         </div>
                     </div>
 
-                    {/* Section 2: Project Characteristics & Clean Strategy Alignment (No Checkboxes, Numbered ๑) ๒) ๓)) */}
+                    {/* Section 2: Project Characteristics & Clean Strategy Alignment (No Checkboxes, Numbered 1) 2) 3)) */}
                     <div>
-                        <p className="print-title font-bold text-slate-900">๒. ลักษณะโครงการ</p>
+                        <p className="print-title font-bold text-slate-900">2. ลักษณะโครงการ</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-1.5 leading-relaxed">
                             <div>
-                                <p className="font-semibold">๒.๑ สอดคล้องกับแผนพัฒนาการจัดการศึกษาของสถานศึกษา (พ.ศ. ๒๕๖๘-๒๕๗๐) วิทยาลัยสารพัดช่างน่าน</p>
-                                <p className="pl-6 pt-0.5"><span className="font-bold">- พันธกิจที่ ๑</span> {toThaiNumerals(project.mission || 'ผลิตและพัฒนากำลังคนด้านวิชาชีพให้มีคุณภาพตามมาตรฐานการอาชีวศึกษา')}</p>
-                                <p className="pl-6 pt-0.5"><span className="font-bold">- เป้าประสงค์</span> {toThaiNumerals(project.goal || 'ผู้เรียนและผู้สำเร็จการศึกษามีความรู้ ทักษะ การประยุกต์ใช้และมีคุณธรรม จริยธรรม ตามมาตรฐานวิชาชีพ')}</p>
-                                <p className="pl-6 pt-0.5"><span className="font-bold">- กลยุทธ์ที่ ๑</span> {toThaiNumerals(project.strategy_tactic || 'ส่งเสริมด้านวิชาการ คุณธรรม จริยธรรม และค่านิยมที่ดีงามในวิชาชีพ')}</p>
+                                <p className="font-semibold">2.1 สอดคล้องกับแผนพัฒนาการจัดการศึกษาของสถานศึกษา (พ.ศ. 2568-2570) วิทยาลัยสารพัดช่างน่าน</p>
+                                <p className="pl-6 pt-0.5"><span className="font-bold">- พันธกิจที่ 1</span> {toArabicNumerals(project.mission || 'ผลิตและพัฒนากำลังคนด้านวิชาชีพให้มีคุณภาพตามมาตรฐานการอาชีวศึกษา')}</p>
+                                <p className="pl-6 pt-0.5"><span className="font-bold">- เป้าประสงค์</span> {toArabicNumerals(project.goal || 'ผู้เรียนและผู้สำเร็จการศึกษามีความรู้ ทักษะ การประยุกต์ใช้และมีคุณธรรม จริยธรรม ตามมาตรฐานวิชาชีพ')}</p>
+                                <p className="pl-6 pt-0.5"><span className="font-bold">- กลยุทธ์ที่ 1</span> {toArabicNumerals(project.strategy_tactic || 'ส่งเสริมด้านวิชาการ คุณธรรม จริยธรรม และค่านิยมที่ดีงามในวิชาชีพ')}</p>
                             </div>
 
-                            {/* Dynamic Strategy Checklist Render (Numbered ๑) ๒) ๓) without checkmarks & prefixes) */}
+                            {/* Dynamic Strategy Checklist Render (Numbered 1) 2) 3) without checkmarks & prefixes) */}
                             {strategyCategories && strategyCategories.length > 0 && (
                                 <div className="pt-0.5 space-y-1.5">
-                                    <p className="font-semibold">๒.๒ สอดคล้องกับยุทธศาสตร์ นโยบาย และมาตรฐานการอาชีวศึกษา:</p>
+                                    <p className="font-semibold">2.2 สอดคล้องกับยุทธศาสตร์ นโยบาย และมาตรฐานการอาชีวศึกษา:</p>
                                     <div className="pl-6 space-y-1.5">
                                         {strategyCategories.map((cat, catIdx) => {
                                             const selectedItems = getSelectedCategoryItems(cat);
                                             return (
                                                 <div key={cat.id} className="space-y-0.5">
                                                     <p className="font-bold text-slate-900">
-                                                        ๒.๒.{toThaiNumerals(catIdx + 1)} {toThaiNumerals(cat.name)}
+                                                        2.2.{toArabicNumerals(catIdx + 1)} {toArabicNumerals(cat.name)}
                                                     </p>
                                                     {selectedItems.map((item, itemIdx) => {
                                                         let itemName = (item.name || item.title || '').trim();
@@ -406,7 +410,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                                         const fullDisplayName = item.group_name ? `${item.group_name} : ${itemName}` : itemName;
                                                         return (
                                                             <p key={item.id || itemIdx} className="pl-6 text-slate-800">
-                                                                <span className="font-bold pr-1">{toThaiNumerals(itemIdx + 1)})</span> {toThaiNumerals(fullDisplayName)}
+                                                                <span className="font-bold pr-1">{toArabicNumerals(itemIdx + 1)})</span> {toArabicNumerals(fullDisplayName)}
                                                             </p>
                                                         );
                                                     })}
@@ -421,7 +425,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 3: Background Rationale (With 2.5cm Paragraph Indentation & Relaxed Line Spacing) */}
                     <div>
-                        <p className="print-title font-bold text-slate-900">๓. ความสำคัญของโครงการ/ หลักการและเหตุผล</p>
+                        <p className="print-title font-bold text-slate-900">3. ความสำคัญของโครงการ/ หลักการและเหตุผล</p>
                         <div className="pt-1.5 text-slate-900 space-y-2 leading-relaxed text-justify">
                             {project.background_rationale ? (
                                 project.background_rationale.split('\n\n').map((paragraph, pIdx) => {
@@ -429,7 +433,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                     if (!trimmed) return null;
                                     return (
                                         <p key={pIdx} className="thai-indent" style={{ textIndent: '2.5cm' }}>
-                                            {toThaiNumerals(trimmed)}
+                                            {toArabicNumerals(trimmed)}
                                         </p>
                                     );
                                 })
@@ -441,28 +445,28 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 4: Objectives */}
                     <div>
-                        <p className="print-title font-bold text-slate-900">๔. วัตถุประสงค์ของโครงการ:</p>
+                        <p className="print-title font-bold text-slate-900">4. วัตถุประสงค์ของโครงการ:</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-0.5 leading-relaxed">
                             {Array.isArray(project.objectives) && project.objectives.length > 0 ? (
                                 project.objectives.map((obj, i) => (
-                                    <p key={i}>๔.{toThaiNumerals(i + 1)} {toThaiNumerals(obj)}</p>
+                                    <p key={i}>4.{toArabicNumerals(i + 1)} {toArabicNumerals(obj)}</p>
                                 ))
                             ) : (
-                                <p>๔.๑ {toThaiNumerals(project.objectives || '-')}</p>
+                                <p>4.1 {toArabicNumerals(project.objectives || '-')}</p>
                             )}
                         </div>
                     </div>
 
                     {/* Section 5: Outputs */}
                     <div>
-                        <p className="print-title font-bold text-slate-900">๕. ผลผลิตโครงการ (Output)</p>
+                        <p className="print-title font-bold text-slate-900">5. ผลผลิตโครงการ (Output)</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-0.5 leading-relaxed">
                             {outputs.length > 0 ? (
-                                outputs.map((op, i) => <p key={i}>๕.{toThaiNumerals(i + 1)} {toThaiNumerals(op)}</p>)
+                                outputs.map((op, i) => <p key={i}>5.{toArabicNumerals(i + 1)} {toArabicNumerals(op)}</p>)
                             ) : (
                                 <>
-                                    <p>๕.๑ ผู้เข้าร่วมโครงการได้รับการอบรมและพัฒนาสมรรถนะครบถ้วนตามหลักเกณฑ์ที่กำหนด</p>
-                                    <p>๕.๒ มีเอกสาร สื่อการเรียนรู้ หรือผลงานจากการดำเนินโครงการที่นำไปใช้ประโยชน์ได้จริง</p>
+                                    <p>5.1 ผู้เข้าร่วมโครงการได้รับการอบรมและพัฒนาสมรรถนะครบถ้วนตามหลักเกณฑ์ที่กำหนด</p>
+                                    <p>5.2 มีเอกสาร สื่อการเรียนรู้ หรือผลงานจากการดำเนินโครงการที่นำไปใช้ประโยชน์ได้จริง</p>
                                 </>
                             )}
                         </div>
@@ -470,14 +474,14 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 6: Outcomes */}
                     <div>
-                        <p className="print-title font-bold text-slate-900">๖. ผลลัพธ์โครงการ (Outcome)</p>
+                        <p className="print-title font-bold text-slate-900">6. ผลลัพธ์โครงการ (Outcome)</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-0.5 leading-relaxed">
                             {outcomes.length > 0 ? (
-                                outcomes.map((oc, i) => <p key={i}>๖.{toThaiNumerals(i + 1)} {toThaiNumerals(oc)}</p>)
+                                outcomes.map((oc, i) => <p key={i}>6.{toArabicNumerals(i + 1)} {toArabicNumerals(oc)}</p>)
                             ) : (
                                 <>
-                                    <p>๖.๑ ผู้เรียนและบุคลากรสามารถนำองค์ความรู้และทักษะจากโครงการไปประยุกต์ใช้ในการปฏิบัติงานจริงได้อย่างมีประสิทธิภาพ</p>
-                                    <p>๖.๒ สถานศึกษามีมาตรฐานการจัดการเรียนการสอนและการบริการวิชาชีพที่ได้รับการยอมรับ</p>
+                                    <p>6.1 ผู้เรียนและบุคลากรสามารถนำองค์ความรู้และทักษะจากโครงการไปประยุกต์ใช้ในการปฏิบัติงานจริงได้อย่างมีประสิทธิภาพ</p>
+                                    <p>6.2 สถานศึกษามีมาตรฐานการจัดการเรียนการสอนและการบริการวิชาชีพที่ได้รับการยอมรับ</p>
                                 </>
                             )}
                         </div>
@@ -485,38 +489,38 @@ export default function Print({ project, strategyCategories = [] }) {
 
                     {/* Section 7: Target Groups */}
                     <div>
-                        <p className="print-title font-bold text-slate-900">๗. กลุ่มเป้าหมาย</p>
+                        <p className="print-title font-bold text-slate-900">7. กลุ่มเป้าหมาย</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-1 leading-relaxed">
-                            <p className="font-bold">๗.๑ เชิงปริมาณ</p>
+                            <p className="font-bold">7.1 เชิงปริมาณ</p>
                             {Array.isArray(project.targets?.quantitative) && project.targets.quantitative.length > 0 ? (
-                                project.targets.quantitative.map((q, i) => <p key={i} className="pl-6">๗.๑.{toThaiNumerals(i + 1)} {toThaiNumerals(q)}</p>)
+                                project.targets.quantitative.map((q, i) => <p key={i} className="pl-6">7.1.{toArabicNumerals(i + 1)} {toArabicNumerals(q)}</p>)
                             ) : (
-                                <p className="pl-6">๗.๑.๑ {toThaiNumerals(project.targets?.quantitative || '-')}</p>
+                                <p className="pl-6">7.1.1 {toArabicNumerals(project.targets?.quantitative || '-')}</p>
                             )}
-                            <p className="font-bold pt-0.5">๗.๒ เชิงคุณภาพ</p>
+                            <p className="font-bold pt-0.5">7.2 เชิงคุณภาพ</p>
                             {Array.isArray(project.targets?.qualitative) && project.targets.qualitative.length > 0 ? (
-                                project.targets.qualitative.map((q, i) => <p key={i} className="pl-6">๗.๒.{toThaiNumerals(i + 1)} {toThaiNumerals(q)}</p>)
+                                project.targets.qualitative.map((q, i) => <p key={i} className="pl-6">7.2.{toArabicNumerals(i + 1)} {toArabicNumerals(q)}</p>)
                             ) : (
-                                <p className="pl-6">๗.๒.๑ {toThaiNumerals(project.targets?.qualitative || '-')}</p>
+                                <p className="pl-6">7.2.1 {toArabicNumerals(project.targets?.qualitative || '-')}</p>
                             )}
                         </div>
                     </div>
 
                     {/* Section 8: Location */}
                     <div>
-                        <p className="print-title font-bold text-slate-900">๘. พื้นที่ดำเนินการ : <span className="font-normal">{toThaiNumerals(project.location || 'ณ วิทยาลัยสารพัดช่างน่าน')}</span></p>
+                        <p className="print-title font-bold text-slate-900">8. พื้นที่ดำเนินการ : <span className="font-normal">{toArabicNumerals(project.location || 'ณ วิทยาลัยสารพัดช่างน่าน')}</span></p>
                     </div>
 
                     {/* Section 9: Expected Benefits */}
                     <div>
-                        <p className="print-title font-bold text-slate-900">๙. ผลที่คาดว่าจะได้รับ</p>
+                        <p className="print-title font-bold text-slate-900">9. ผลที่คาดว่าจะได้รับ</p>
                         <div className="pl-6 pt-1 text-slate-900 space-y-0.5 leading-relaxed">
                             {expected_benefits.length > 0 ? (
-                                expected_benefits.map((eb, i) => <p key={i}>๙.{toThaiNumerals(i + 1)} {toThaiNumerals(eb)}</p>)
+                                expected_benefits.map((eb, i) => <p key={i}>9.{toArabicNumerals(i + 1)} {toArabicNumerals(eb)}</p>)
                             ) : (
                                 <>
-                                    <p>๙.๑ ผู้เข้าร่วมโครงการมีทักษะและสมรรถนะตรงตามมาตรฐานวิชาชีพและความต้องการของตลาดแรงงาน</p>
-                                    <p>๙.๒ สถานศึกษามีผลการดำเนินงานที่ตอบสนองต่อนโยบายของสำนักงานคณะกรรมการการอาชีวศึกษา</p>
+                                    <p>9.1 ผู้เข้าร่วมโครงการมีทักษะและสมรรถนะตรงตามมาตรฐานวิชาชีพและความต้องการของตลาดแรงงาน</p>
+                                    <p>9.2 สถานศึกษามีผลการดำเนินงานที่ตอบสนองต่อนโยบายของสำนักงานคณะกรรมการการอาชีวศึกษา</p>
                                 </>
                             )}
                         </div>
@@ -526,7 +530,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                 {/* Section 10: Indicators Table & Detailed Expenses */}
                 <div className="pt-4 print-break-inside-avoid">
-                    <p className="print-title font-bold text-slate-900 mb-1.5">๑๐. ตัวชี้วัดเป้าหมายโครงการ</p>
+                    <p className="print-title font-bold text-slate-900 mb-1.5">10. ตัวชี้วัดเป้าหมายโครงการ</p>
                     <table className="print-table w-full border-collapse border border-slate-900 text-xs sm:text-sm font-sarabun">
                         <thead>
                             <tr className="bg-slate-50 text-center font-bold border-b border-slate-900">
@@ -549,11 +553,11 @@ export default function Print({ project, strategyCategories = [] }) {
                                             <p key={idx}>{toThaiNumerals(idx + 1)}. {toThaiNumerals(t)}</p>
                                         ))
                                     ) : (
-                                        <p>{toThaiNumerals(project.targets?.quantitative || 'ผู้เข้าร่วมโครงการบรรลุตามเป้าหมายที่กำหนด คิดเป็นร้อยละ ๑๐๐')}</p>
+                                        <p>{toArabicNumerals(project.targets?.quantitative || 'ผู้เข้าร่วมโครงการบรรลุตามเป้าหมายที่กำหนด คิดเป็นร้อยละ 100')}</p>
                                     )}
                                 </td>
                                 <td className="p-1.5 text-center align-top font-bold">
-                                    {toThaiNumerals(project.indicators?.quantitative?.unit || (Array.isArray(project.targets?.quantitative) ? `${project.targets.quantitative.length} รายการ` : '๑๐๐%'))}
+                                    {toArabicNumerals(project.indicators?.quantitative?.unit || (Array.isArray(project.targets?.quantitative) ? `${project.targets.quantitative.length} รายการ` : '100%'))}
                                 </td>
                             </tr>
 
@@ -562,19 +566,19 @@ export default function Print({ project, strategyCategories = [] }) {
                                 <td className="border-r border-slate-900 p-1.5 font-bold align-top">เชิงคุณภาพ</td>
                                 <td className="border-r border-slate-900 p-1.5 space-y-0.5">
                                     {project.indicators?.qualitative?.text ? (
-                                        toThaiNumerals(project.indicators.qualitative.text).split('\n').map((line, idx) => (
+                                        toArabicNumerals(project.indicators.qualitative.text).split('\n').map((line, idx) => (
                                             <p key={idx}>{line}</p>
                                         ))
                                     ) : Array.isArray(project.targets?.qualitative) && project.targets.qualitative.length > 0 ? (
                                         project.targets.qualitative.map((t, idx) => (
-                                            <p key={idx}>{toThaiNumerals(idx + 1)}. {toThaiNumerals(t)}</p>
+                                            <p key={idx}>{toArabicNumerals(idx + 1)}. {toArabicNumerals(t)}</p>
                                         ))
                                     ) : (
-                                        <p>{toThaiNumerals(project.targets?.qualitative || 'ผู้เข้าร่วมมีความพึงพอใจต่อการดำเนินงานและได้รับความรู้ทักษะเพิ่มขึ้นในระดับดีมาก')}</p>
+                                        <p>{toArabicNumerals(project.targets?.qualitative || 'ผู้เข้าร่วมมีความพึงพอใจต่อการดำเนินงานและได้รับความรู้ทักษะเพิ่มขึ้นในระดับดีมาก')}</p>
                                     )}
                                 </td>
                                 <td className="p-1.5 text-center align-top font-bold">
-                                    {toThaiNumerals(project.indicators?.qualitative?.unit || 'ร้อยละ ๙๐')}
+                                    {toArabicNumerals(project.indicators?.qualitative?.unit || 'ร้อยละ 90')}
                                 </td>
                             </tr>
 
@@ -583,15 +587,15 @@ export default function Print({ project, strategyCategories = [] }) {
                                 <td className="border-r border-slate-900 p-1.5 font-bold align-top">เชิงเวลา</td>
                                 <td className="border-r border-slate-900 p-1.5 space-y-0.5">
                                     {project.indicators?.time?.text ? (
-                                        toThaiNumerals(project.indicators.time.text).split('\n').map((line, idx) => (
+                                        toArabicNumerals(project.indicators.time.text).split('\n').map((line, idx) => (
                                             <p key={idx}>{line}</p>
                                         ))
                                     ) : (
-                                        <p>ดำเนินโครงการแล้วเสร็จตามระยะเวลาและปฏิทินปฏิบัติงาน ประจำปีงบประมาณ พ.ศ. {toThaiNumerals(project.academic_year || 2569)}</p>
+                                        <p>ดำเนินโครงการแล้วเสร็จตามระยะเวลาและปฏิทินปฏิบัติงาน ประจำปีงบประมาณ พ.ศ. {toArabicNumerals(project.academic_year || 2569)}</p>
                                     )}
                                 </td>
                                 <td className="p-1.5 text-center align-top font-bold">
-                                    {toThaiNumerals(project.indicators?.time?.unit || '๑ ปีการศึกษา')}
+                                    {toArabicNumerals(project.indicators?.time?.unit || '1 ปีการศึกษา')}
                                 </td>
                             </tr>
 
@@ -684,7 +688,7 @@ export default function Print({ project, strategyCategories = [] }) {
 
                 {/* Section 11: Action Plan & Budget Table */}
                 <div className="pt-4 print-break-inside-avoid">
-                    <p className="print-title font-bold text-slate-900 mb-2">๑๑. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</p>
+                    <p className="print-title font-bold text-slate-900 mb-2">11. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</p>
                     <table className="print-table w-full border-collapse border border-black text-xs font-sarabun text-center">
                         <thead>
                             <tr className="bg-slate-50 font-bold border-b border-black text-xs">
@@ -708,10 +712,10 @@ export default function Print({ project, strategyCategories = [] }) {
                                 </th>
                             </tr>
                             <tr className="bg-slate-50 font-bold border-b border-black text-xs">
-                                <th className="border border-black p-1 text-center font-bold w-6">๑</th>
-                                <th className="border border-black p-1 text-center font-bold w-6">๒</th>
-                                <th className="border border-black p-1 text-center font-bold w-6">๓</th>
-                                <th className="border border-black p-1 text-center font-bold w-6">๔</th>
+                                <th className="border border-black p-1 text-center font-bold w-6">1</th>
+                                <th className="border border-black p-1 text-center font-bold w-6">2</th>
+                                <th className="border border-black p-1 text-center font-bold w-6">3</th>
+                                <th className="border border-black p-1 text-center font-bold w-6">4</th>
                                 <th className="border border-black p-1 text-center font-bold w-16">งบดำเนินงาน</th>
                                 <th className="border border-black p-1 text-center font-bold w-14">งบลงทุน</th>
                                 <th className="border border-black p-1 text-center font-bold w-16">งบรายจ่ายอื่น</th>
@@ -790,7 +794,7 @@ export default function Print({ project, strategyCategories = [] }) {
                 {/* Section 12: การอนุมัติโครงการ */}
                 <div className="pt-8 print-break-inside-avoid font-sarabun">
                     <p className="print-title font-bold text-slate-900 mb-8 pl-[2.2rem] -indent-[2.2rem] leading-relaxed text-left" style={{ textWrap: 'pretty' }}>
-                        ๑๒. การอนุมัติโครงการ{formattedProjectTitle ? toThaiNumerals(formattedProjectTitle) : '......................................................'}
+                        12. การอนุมัติโครงการ{formattedProjectTitle ? toArabicNumerals(formattedProjectTitle) : '......................................................'}
                     </p>
                     
                     <div className="space-y-10 text-xs sm:text-sm">

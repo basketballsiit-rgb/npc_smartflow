@@ -12,11 +12,16 @@ export default function Stats({ project, totalResponses, detailedStats, comments
         });
     };
 
-    const toThaiNumerals = (num) => {
+    // Standardize all numerals to Arabic numerals
+    const toArabicNumerals = (num) => {
         if (num === null || num === undefined) return '';
-        const thDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(num).replace(/[0-9]/g, (d) => thDigits[parseInt(d, 10)]);
+        const thaiToArabic = {
+            '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4',
+            '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9'
+        };
+        return String(num).replace(/[๐-๙]/g, (ch) => thaiToArabic[ch] || ch);
     };
+    const toThaiNumerals = toArabicNumerals;
 
     const dimensionStats = detailedStats?.dimensionStats || {};
     const questionsStats = detailedStats?.questionsStats || [];
@@ -30,32 +35,32 @@ export default function Stats({ project, totalResponses, detailedStats, comments
     const dimensionMetadata = [
         {
             dim: 1,
-            title: 'ด้านที่ ๑: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
-            shortTitle: 'ด้านที่ ๑ กระบวนการและขั้นตอน (Process)',
+            title: 'ด้านที่ 1: ด้านกระบวนการและขั้นตอนการดำเนินงาน (Process / Plan & Do)',
+            shortTitle: 'ด้านที่ 1 กระบวนการและขั้นตอน (Process)',
             icon: '⚙️',
             barColor: 'from-blue-500 to-indigo-600',
             badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
         },
         {
             dim: 2,
-            title: 'ด้านที่ ๒: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
-            shortTitle: 'ด้านที่ ๒ ปัจจัยนำเข้าและสิ่งอำนวยความสะดวก (Input)',
+            title: 'ด้านที่ 2: ด้านปัจจัยนำเข้าและการอำนวยความสะดวก (Input)',
+            shortTitle: 'ด้านที่ 2 ปัจจัยนำเข้าและสิ่งอำนวยความสะดวก (Input)',
             icon: '🏢',
             barColor: 'from-purple-500 to-indigo-600',
             badgeColor: 'bg-purple-100 text-purple-800 border-purple-200',
         },
         {
             dim: 3,
-            title: 'ด้านที่ ๓: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
-            shortTitle: 'ด้านที่ ๓ ผลผลิตและวัตถุประสงค์โครงการ (Output)',
+            title: 'ด้านที่ 3: ด้านผลผลิตและผลลัพธ์โดยตรง (Output / Objective)',
+            shortTitle: 'ด้านที่ 3 ผลผลิตและวัตถุประสงค์โครงการ (Output)',
             icon: '🎯',
             barColor: 'from-emerald-500 to-teal-600',
             badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
         },
         {
             dim: 4,
-            title: 'ด้านที่ ๔: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)',
-            shortTitle: 'ด้านที่ ๔ ประโยชน์และผลกระทบเชิงบวก (Outcome / KPIs)',
+            title: 'ด้านที่ 4: ด้านประโยชน์และการนำไปใช้ประโยชน์ (Outcome / Impact)',
+            shortTitle: 'ด้านที่ 4 ประโยชน์และผลกระทบเชิงบวก (Outcome / KPIs)',
             icon: '🌟',
             barColor: 'from-amber-500 to-orange-600',
             badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -76,13 +81,13 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between font-sans gap-4">
                     <div>
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-bold mb-1">
-                            <span>📊 รายงานวิเคราะห์สถิติผลการประเมินเชิงลึก ๔ ด้าน (PDCA Check & Act)</span>
+                            <span>📊 รายงานวิเคราะห์สถิติผลการประเมินเชิงลึก 4 ด้าน (PDCA Check & Act)</span>
                         </div>
                         <h2 className="text-xl sm:text-2xl font-black leading-tight text-purple-950 dark:text-gray-100">
                             โครงการ: {project.title}
                         </h2>
                         <p className="text-xs text-slate-500 mt-0.5">
-                            ประจำปีการศึกษา {toThaiNumerals(project.academic_year)} | วิทยาลัยสารพัดช่างน่าน
+                            ประจำปีการศึกษา {toArabicNumerals(project.academic_year)} | วิทยาลัยสารพัดช่างน่าน
                         </p>
                     </div>
 
@@ -103,27 +108,27 @@ export default function Stats({ project, totalResponses, detailedStats, comments
             <div className="py-8 font-sans">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
 
-                    {/* ๑. ภาพรวมตัวชี้วัดสำคัญ (Key Statistical Indicators) */}
+                    {/* 1. ภาพรวมตัวชี้วัดสำคัญ (Key Statistical Indicators) */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div className="rounded-2xl border border-purple-100 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 text-center">
                             <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600 block">ผู้ตอบแบบประเมินทั้งหมด (N)</span>
                             <div className="mt-2 text-3xl font-black text-slate-900 dark:text-white">
-                                {toThaiNumerals(totalResponses)} <span className="text-xs font-medium text-slate-500">คน</span>
+                                {toArabicNumerals(totalResponses)} <span className="text-xs font-medium text-slate-500">คน</span>
                             </div>
                         </div>
 
                         <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 text-center">
                             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 block">ค่าเฉลี่ยภาพรวมทั้งโครงการ (x̄)</span>
                             <div className="mt-2 text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                                {toThaiNumerals(overallMean.toFixed(2))}
-                                <span className="text-xs font-semibold text-slate-400"> / ๕.๐๐</span>
+                                {toArabicNumerals(overallMean.toFixed(2))}
+                                <span className="text-xs font-semibold text-slate-400"> / 5.00</span>
                             </div>
                         </div>
 
                         <div className="rounded-2xl border border-teal-100 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800 text-center">
                             <span className="text-[11px] font-bold uppercase tracking-wider text-teal-600 block">ส่วนเบี่ยงเบนมาตรฐาน (S.D.)</span>
                             <div className="mt-2 text-3xl font-black text-teal-600 dark:text-teal-400">
-                                {toThaiNumerals(overallSd.toFixed(2))}
+                                {toArabicNumerals(overallSd.toFixed(2))}
                             </div>
                         </div>
 
@@ -133,17 +138,17 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                 {overallLevel}
                             </div>
                             <span className="text-[10px] text-amber-700 block mt-0.5">
-                                (ร้อยละ {toThaiNumerals(overallPercentage.toFixed(1))}%)
+                                (ร้อยละ {toArabicNumerals(overallPercentage.toFixed(1))}%)
                             </span>
                         </div>
                     </div>
 
-                    {/* ๒. การวิเคราะห์ผลการประเมินจำแนกรายด้าน ๔ ด้าน (Dimension Breakdown) */}
+                    {/* 2. การวิเคราะห์ผลการประเมินจำแนกรายด้าน 4 ด้าน (Dimension Breakdown) */}
                     <div className="rounded-3xl border border-purple-100 bg-white p-6 sm:p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800 space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-gray-700 gap-2">
                             <div>
                                 <h3 className="text-base sm:text-lg font-black text-purple-950 dark:text-white flex items-center gap-2">
-                                    <span>📊</span> สรุปผลการประเมินจำแนกรายด้าน ๔ ด้าน (Standard 4 Dimensions)
+                                    <span>📊</span> สรุปผลการประเมินจำแนกรายด้าน 4 ด้าน (Standard 4 Dimensions)
                                 </h3>
                                 <p className="text-xs text-slate-500 mt-0.5">
                                     วิเคราะห์คะแนนเฉลี่ย (x̄), ส่วนเบี่ยงเบนมาตรฐาน (S.D.) และระดับความพึงพอใจตามเกณฑ์มาตรฐาน Best (1977)
@@ -187,10 +192,10 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                         <div className="space-y-1.5 pt-1">
                                             <div className="flex justify-between text-xs font-bold">
                                                 <span className="text-purple-950 dark:text-purple-300">
-                                                    คะแนนเฉลี่ย: {toThaiNumerals(mean.toFixed(2))} / ๕.๐๐ (S.D. = {toThaiNumerals(sd.toFixed(2))})
+                                                    คะแนนเฉลี่ย: {toArabicNumerals(mean.toFixed(2))} / 5.00 (S.D. = {toArabicNumerals(sd.toFixed(2))})
                                                 </span>
                                                 <span className="text-slate-600 dark:text-slate-400">
-                                                    {toThaiNumerals(pct.toFixed(1))}%
+                                                    {toArabicNumerals(pct.toFixed(1))}%
                                                 </span>
                                             </div>
                                             <div className="w-full bg-slate-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
@@ -206,12 +211,12 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                         </div>
                     </div>
 
-                    {/* ๓. ผลคะแนนความพึงพอใจจำแนกรายข้อ (Dynamic Question Breakdown) */}
+                    {/* 3. ผลคะแนนความพึงพอใจจำแนกรายข้อ (Dynamic Question Breakdown) */}
                     <div className="rounded-3xl border border-purple-100 bg-white p-6 sm:p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800 space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-gray-700 gap-2">
                             <div>
                                 <h3 className="text-base sm:text-lg font-black text-purple-950 dark:text-white flex items-center gap-2">
-                                    <span>📝</span> ผลคะแนนความพึงพอใจจำแนกรายข้อ ({toThaiNumerals(questionsStats.length)} ข้อคำถาม)
+                                    <span>📝</span> ผลคะแนนความพึงพอใจจำแนกรายข้อ ({toArabicNumerals(questionsStats.length)} ข้อคำถาม)
                                 </h3>
                                 <p className="text-xs text-slate-500 mt-0.5">
                                     ข้อคำถามประเมินความพึงพอใจของโครงการ พร้อมแสดงค่าเฉลี่ย ส่วนเบี่ยงเบนมาตรฐาน และร้อยละ
@@ -245,14 +250,14 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                                         <div key={q.id || idx} className="p-3.5 rounded-xl bg-slate-50/80 hover:bg-purple-50/40 border border-slate-200/80 transition space-y-2">
                                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                                                                 <span className="text-xs font-bold text-slate-900 leading-snug">
-                                                                    {toThaiNumerals(q.id || idx + 1)}. {q.question}
+                                                                    {toArabicNumerals(q.id || idx + 1)}. {q.question}
                                                                 </span>
                                                                 <div className="flex items-center gap-2 shrink-0">
                                                                     <span className="text-xs font-black text-purple-950">
-                                                                        {toThaiNumerals(mean.toFixed(2))} / ๕.๐๐
+                                                                        {toArabicNumerals(mean.toFixed(2))} / 5.00
                                                                     </span>
                                                                     <span className="text-[11px] text-slate-500">
-                                                                        (S.D. = {toThaiNumerals(sd.toFixed(2))})
+                                                                        (S.D. = {toArabicNumerals(sd.toFixed(2))})
                                                                     </span>
                                                                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getLevelBadgeClass(mean)}`}>
                                                                         {q.level || 'ปานกลาง'}
@@ -276,12 +281,12 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                         )}
                     </div>
 
-                    {/* ๔. การวิเคราะห์ผลการประเมินย้อนกลับไปยังบทที่ ๑ (Design Alignment) */}
+                    {/* 4. การวิเคราะห์ผลการประเมินย้อนกลับไปยังบทที่ 1 (Design Alignment) */}
                     {chapter1Comparison && (
                         <div className="rounded-3xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 via-purple-50/50 to-slate-50 p-6 sm:p-8 shadow-sm space-y-4">
                             <div className="border-b border-indigo-100 pb-2">
                                 <h3 className="text-base sm:text-lg font-black text-indigo-950 flex items-center gap-2">
-                                    <span>🎯</span> การวิเคราะห์เปรียบเทียบผลลัพธ์ย้อนกลับสู่บทที่ ๑ (Objective & KPI Alignment)
+                                    <span>🎯</span> การวิเคราะห์เปรียบเทียบผลลัพธ์ย้อนกลับสู่บทที่ 1 (Objective & KPI Alignment)
                                 </h3>
                                 <p className="text-xs text-indigo-800 mt-0.5">
                                     รายงานสรุปความสำเร็จเทียบกับวัตถุประสงค์ ประโยชน์ที่คาดว่าจะได้รับ และตัวชี้วัดความสำเร็จของโครงการ
@@ -292,14 +297,14 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                 {/* Objective Card */}
                                 <div className="p-4 rounded-2xl bg-white border border-indigo-100 shadow-2xs space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-indigo-950">๑. ตอบโจทย์วัตถุประสงค์</span>
+                                        <span className="text-xs font-bold text-indigo-950">1. ตอบโจทย์วัตถุประสงค์</span>
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getLevelBadgeClass(chapter1Comparison.objectiveFulfillment?.mean || 0)}`}>
                                             {chapter1Comparison.objectiveFulfillment?.level}
                                         </span>
                                     </div>
                                     <div className="text-xl font-black text-indigo-950">
-                                        x̄ = {toThaiNumerals(Number(chapter1Comparison.objectiveFulfillment?.mean || 0).toFixed(2))}
-                                        <span className="text-xs text-slate-500 font-medium"> (S.D. {toThaiNumerals(Number(chapter1Comparison.objectiveFulfillment?.sd || 0).toFixed(2))})</span>
+                                        x̄ = {toArabicNumerals(Number(chapter1Comparison.objectiveFulfillment?.mean || 0).toFixed(2))}
+                                        <span className="text-xs text-slate-500 font-medium"> (S.D. {toArabicNumerals(Number(chapter1Comparison.objectiveFulfillment?.sd || 0).toFixed(2))})</span>
                                     </div>
                                     <p className="text-xs text-slate-600 leading-relaxed">
                                         {chapter1Comparison.objectiveFulfillment?.summary}
@@ -309,14 +314,14 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                 {/* Benefit Card */}
                                 <div className="p-4 rounded-2xl bg-white border border-indigo-100 shadow-2xs space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-indigo-950">๒. ตอบโจทย์ประโยชน์ที่ได้รับ</span>
+                                        <span className="text-xs font-bold text-indigo-950">2. ตอบโจทย์ประโยชน์ที่ได้รับ</span>
                                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getLevelBadgeClass(chapter1Comparison.benefitRealization?.mean || 0)}`}>
                                             {chapter1Comparison.benefitRealization?.level}
                                         </span>
                                     </div>
                                     <div className="text-xl font-black text-indigo-950">
-                                        x̄ = {toThaiNumerals(Number(chapter1Comparison.benefitRealization?.mean || 0).toFixed(2))}
-                                        <span className="text-xs text-slate-500 font-medium"> (S.D. {toThaiNumerals(Number(chapter1Comparison.benefitRealization?.sd || 0).toFixed(2))})</span>
+                                        x̄ = {toArabicNumerals(Number(chapter1Comparison.benefitRealization?.mean || 0).toFixed(2))}
+                                        <span className="text-xs text-slate-500 font-medium"> (S.D. {toArabicNumerals(Number(chapter1Comparison.benefitRealization?.sd || 0).toFixed(2))})</span>
                                     </div>
                                     <p className="text-xs text-slate-600 leading-relaxed">
                                         {chapter1Comparison.benefitRealization?.summary}
@@ -326,7 +331,7 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                 {/* KPI Card */}
                                 <div className="p-4 rounded-2xl bg-white border border-indigo-100 shadow-2xs space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-indigo-950">๓. ตัวชี้วัดความสำเร็จ (KPIs)</span>
+                                        <span className="text-xs font-bold text-indigo-950">3. ตัวชี้วัดความสำเร็จ (KPIs)</span>
                                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                                             chapter1Comparison.kpiAchievement?.isPassed
                                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
@@ -336,8 +341,8 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                         </span>
                                     </div>
                                     <div className="text-xl font-black text-indigo-950">
-                                        {toThaiNumerals(Number(chapter1Comparison.kpiAchievement?.overallPercentage || 0).toFixed(1))}%
-                                        <span className="text-xs text-slate-500 font-medium"> (เกณฑ์ ≥ ร้อยละ ๘๐.๐)</span>
+                                        {toArabicNumerals(Number(chapter1Comparison.kpiAchievement?.overallPercentage || 0).toFixed(1))}%
+                                        <span className="text-xs text-slate-500 font-medium"> (เกณฑ์ ≥ ร้อยละ 80.0)</span>
                                     </div>
                                     <p className="text-xs text-slate-600 leading-relaxed">
                                         {chapter1Comparison.kpiAchievement?.summary}
@@ -347,7 +352,7 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                         </div>
                     )}
 
-                    {/* ๕. ข้อมูลทั่วไปของผู้ตอบแบบประเมิน (Demographic Information) */}
+                    {/* 5. ข้อมูลทั่วไปของผู้ตอบแบบประเมิน (Demographic Information) */}
                     {demographicStats && totalResponses > 0 && (
                         <div className="rounded-3xl border border-purple-100 bg-white p-6 sm:p-8 shadow-sm space-y-4">
                             <div className="border-b border-slate-100 pb-2">
@@ -362,13 +367,13 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
                                 {/* Gender */}
                                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                                    <span className="text-xs font-bold text-purple-950 block">๑. เพศ (Gender)</span>
+                                    <span className="text-xs font-bold text-purple-950 block">1. เพศ (Gender)</span>
                                     <div className="space-y-1.5 text-xs">
                                         {demographicStats.gender?.map(g => (
                                             <div key={g.key} className="flex justify-between py-1 border-b border-slate-100 last:border-0">
                                                 <span className="font-medium text-slate-700">{g.label}</span>
                                                 <span className="font-bold text-purple-950">
-                                                    {toThaiNumerals(g.count)} คน ({toThaiNumerals(Number(g.percentage || 0).toFixed(1))}%)
+                                                    {toArabicNumerals(g.count)} คน ({toArabicNumerals(Number(g.percentage || 0).toFixed(1))}%)
                                                 </span>
                                             </div>
                                         ))}
@@ -377,13 +382,13 @@ export default function Stats({ project, totalResponses, detailedStats, comments
 
                                 {/* Education */}
                                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                                    <span className="text-xs font-bold text-purple-950 block">๒. ระดับการศึกษา (Education Level)</span>
+                                    <span className="text-xs font-bold text-purple-950 block">2. ระดับการศึกษา (Education Level)</span>
                                     <div className="space-y-1.5 text-xs">
                                         {demographicStats.education_level?.map(edu => (
                                             <div key={edu.key} className="flex justify-between py-1 border-b border-slate-100 last:border-0">
                                                 <span className="font-medium text-slate-700">{edu.label}</span>
                                                 <span className="font-bold text-purple-950">
-                                                    {toThaiNumerals(edu.count)} คน ({toThaiNumerals(Number(edu.percentage || 0).toFixed(1))}%)
+                                                    {toArabicNumerals(edu.count)} คน ({toArabicNumerals(Number(edu.percentage || 0).toFixed(1))}%)
                                                 </span>
                                             </div>
                                         ))}
@@ -392,13 +397,13 @@ export default function Stats({ project, totalResponses, detailedStats, comments
 
                                 {/* Respondent Status */}
                                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                                    <span className="text-xs font-bold text-purple-950 block">๓. สถานะของผู้ตอบ (Respondent Status)</span>
+                                    <span className="text-xs font-bold text-purple-950 block">3. สถานะของผู้ตอบ (Respondent Status)</span>
                                     <div className="space-y-1.5 text-xs">
                                         {demographicStats.respondent_type?.map(rt => (
                                             <div key={rt.key} className="flex justify-between py-1 border-b border-slate-100 last:border-0">
                                                 <span className="font-medium text-slate-700">{rt.label}</span>
                                                 <span className="font-bold text-purple-950">
-                                                    {toThaiNumerals(rt.count)} คน ({toThaiNumerals(Number(rt.percentage || 0).toFixed(1))}%)
+                                                    {toArabicNumerals(rt.count)} คน ({toArabicNumerals(Number(rt.percentage || 0).toFixed(1))}%)
                                                 </span>
                                             </div>
                                         ))}
@@ -408,7 +413,7 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                         </div>
                     )}
 
-                    {/* ๖. ข้อเสนอแนะเชิงรุกและแนวทางการปรับปรุง (AI ACT Phase) */}
+                    {/* 6. ข้อเสนอแนะเชิงรุกและแนวทางการปรับปรุง (AI ACT Phase) */}
                     <div className="rounded-3xl border border-purple-200 bg-purple-50/40 p-6 sm:p-8 shadow-sm space-y-4">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-purple-100 gap-3">
                             <div>
@@ -416,7 +421,7 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                     <span>🤖</span> ข้อเสนอแนะเชิงรุกและแนวทางการปรับปรุงด้วย Gemini AI (AI ACT Phase)
                                 </h3>
                                 <p className="text-xs text-purple-900 mt-0.5">
-                                    ประมวลผลการวิเคราะห์ข้อมูลความพึงพอใจ ๔ ด้าน และข้อเสนอแนะเพื่อนำไปจัดทำแผนปรับปรุงในบทที่ ๕ (Act Phase)
+                                    ประมวลผลการวิเคราะห์ข้อมูลความพึงพอใจ 4 ด้าน และข้อเสนอแนะเพื่อนำไปจัดทำแผนปรับปรุงในบทที่ 5 (Act Phase)
                                 </p>
                             </div>
                             <button
@@ -450,16 +455,16 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                                     ยังไม่มีข้อมูลข้อเสนอแนะ AI สำหรับรอบนี้
                                 </p>
                                 <p className="text-[11px] text-slate-500 mt-1">
-                                    กดปุ่ม "ประมวลผลข้อเสนอแนะด้วย Gemini AI" ด้านบน เพื่อให้ AI สังเคราะห์ข้อเสนอแนะเชิงพัฒนาสำหรับจัดทำบทที่ ๕ ต่อไป
+                                    กดปุ่ม "ประมวลผลข้อเสนอแนะด้วย Gemini AI" ด้านบน เพื่อให้ AI สังเคราะห์ข้อเสนอแนะเชิงพัฒนาสำหรับจัดทำบทที่ 5 ต่อไป
                                 </p>
                             </div>
                         )}
                     </div>
 
-                    {/* ๗. ข้อเสนอแนะเพิ่มเติมจากผู้ตอบแบบประเมิน (Comments Log) */}
+                    {/* 7. ข้อเสนอแนะเพิ่มเติมจากผู้ตอบแบบประเมิน (Comments Log) */}
                     <div className="rounded-3xl border border-purple-100 bg-white p-6 sm:p-8 shadow-sm space-y-4">
                         <h3 className="text-base sm:text-lg font-black text-purple-950 flex items-center gap-2">
-                            <span>💬</span> ข้อเสนอแนะเพิ่มเติมจากผู้ตอบแบบประเมิน ({toThaiNumerals(comments?.length || 0)} รายการ)
+                            <span>💬</span> ข้อเสนอแนะเพิ่มเติมจากผู้ตอบแบบประเมิน ({toArabicNumerals(comments?.length || 0)} รายการ)
                         </h3>
 
                         {(!comments || comments.length === 0) ? (
@@ -468,13 +473,13 @@ export default function Stats({ project, totalResponses, detailedStats, comments
                             </p>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
-                                {comments.map((sug, i) => (
+                                 {comments.map((sug, i) => (
                                     <div key={i} className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100 space-y-2">
                                         <p className="text-xs text-slate-800 italic leading-relaxed">
                                             "{sug}"
                                         </p>
                                         <span className="block text-[10px] font-bold text-purple-700">
-                                            ผู้ตอบแบบประเมินคนที่ #{toThaiNumerals(i + 1)}
+                                            ผู้ตอบแบบประเมินคนที่ #{toArabicNumerals(i + 1)}
                                         </span>
                                     </div>
                                 ))}

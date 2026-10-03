@@ -280,7 +280,7 @@ class KeycloakController extends Controller
         $dept = Department::where('name', $departmentName)->first();
         if ($dept) return $dept;
 
-        // 2. ป้องกันการสร้างฝ่ายซ้ำซ้อน: แมปเข้า ๔ ฝ่ายหลักเดิมที่มีในระบบ
+        // 2. ป้องกันการสร้างฝ่ายซ้ำซ้อน: แมปเข้า 4 ฝ่ายหลักเดิมที่มีในระบบ
         if (mb_strpos($departmentName, 'แผนงาน') !== false || mb_strpos($departmentName, 'ยุทธศาสตร์') !== false || mb_strpos($departmentName, 'วางแผน') !== false) {
             $matched = Department::where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%')->first();
             if ($matched) return $matched;

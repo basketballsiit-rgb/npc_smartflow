@@ -609,7 +609,7 @@ class ProcurementController extends Controller
             'vendorAddress' => request('vendor_address', ''),
             'vendorTaxId' => request('vendor_tax_id', ''),
             'vendorPhone' => request('vendor_phone', ''),
-            'deliveryDays' => request('delivery_days', '๗'),
+            'deliveryDays' => request('delivery_days', '7'),
             'poNumber' => request('po_number', ''),
             'poDate' => request('po_date', ''),
         ]);

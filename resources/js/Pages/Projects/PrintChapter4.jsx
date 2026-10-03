@@ -8,12 +8,13 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
     const sections = project?.chapter_4_sections || {};
     const fullContent = project?.chapter_4_content || '';
 
-    // Convert Arabic digits to Thai digits
-    const toThaiNumerals = (val) => {
+    // Standardize all numerals to Arabic (0-9)
+    const toArabicNumerals = (val) => {
         if (val === null || val === undefined) return '';
-        const thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return String(val).replace(/[0-9]/g, (digit) => thaiDigits[parseInt(digit, 10)]);
+        const map = { '๐':'0', '๑':'1', '๒':'2', '๓':'3', '๔':'4', '๕':'5', '๖':'6', '๗':'7', '๘':'8', '๙':'9' };
+        return String(val).replace(/[๐-๙]/g, (digit) => map[digit] || digit);
     };
+    const toThaiNumerals = toArabicNumerals;
 
     const handlePrint = () => {
         window.print();
@@ -34,7 +35,7 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
             <Head>
-                <title>{`รายงานผลโครงการ บทที่ ๔ - ${project.title}`}</title>
+                <title>{`รายงานผลโครงการ บทที่ 4 - ${project.title}`}</title>
                 <link rel="preconnect" href="https://fonts.googleapis.com" />
                 <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
                 <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
@@ -143,7 +144,7 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                         ← กลับหน้าศูนย์ควบคุม
                     </Link>
                     <span className="text-xs font-bold text-slate-800">
-                        📄 พิมพ์รูปเล่มรายงาน บทที่ ๔: ผลการดำเนินงานโครงการ
+                        📄 พิมพ์รูปเล่มรายงาน บทที่ 4: ผลการดำเนินงานโครงการ
                     </span>
                 </div>
 
@@ -180,31 +181,31 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                 
                 {/* Chapter Header */}
                 <div className="text-center mb-8">
-                    <h1 className="print-title mb-2">บทที่ ๔</h1>
+                    <h1 className="print-title mb-2">บทที่ 4</h1>
                     <h2 className="print-heading">ผลการดำเนินงานโครงการ</h2>
                 </div>
 
                 {/* Introductory Lead */}
                 <div className="thai-content thai-indent mb-6">
-                    การดำเนินงานโครงการ "{project.title}" ประจำปีการศึกษา {toThaiNumerals(project.academic_year)} ของ{project.location || 'วิทยาลัยสารพัดช่างน่าน'} ได้ดำเนินการเสร็จสิ้นเรียบร้อยตามวัตถุประสงค์และกรอบแผนงานที่กำหนด คณะทำงานขอเสนอรายงานผลการวิเคราะห์ข้อมูลและผลสัมฤทธิ์ของการดำเนินโครงการตามวงจรบริหารงานคุณภาพ PDCA ดังมีรายละเอียดตามลำดับต่อไปนี้
+                    {toArabicNumerals(`การดำเนินงานโครงการ "${project.title}" ประจำปีการศึกษา ${toArabicNumerals(project.academic_year)} ของ${project.location || 'วิทยาลัยสารพัดช่างน่าน'} ได้ดำเนินการเสร็จสิ้นเรียบร้อยตามวัตถุประสงค์และกรอบแผนงานที่กำหนด คณะทำงานขอเสนอรายงานผลการวิเคราะห์ข้อมูลและผลสัมฤทธิ์ของการดำเนินโครงการตามวงจรบริหารงานคุณภาพ PDCA ดังมีรายละเอียดตามลำดับต่อไปนี้`)}
                 </div>
 
-                {/* ๔.๑ ผลการวิเคราะห์ข้อมูลทั่วไป */}
+                {/* 4.1 ผลการวิเคราะห์ข้อมูลทั่วไป */}
                 <div className="mb-6 space-y-3">
                     <h3 className="print-heading font-bold">
-                        ๔.๑ ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบประเมิน
+                        4.1 ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบประเมิน
                     </h3>
                     <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {sections.section_4_1 || (
-                            `การนำเสนอข้อมูลทั่วไปของผู้ตอบแบบประเมินความพึงพอใจโครงการ "${project.title}" ได้ดำเนินการรวบรวมข้อมูลจากกลุ่มตัวอย่างและผู้เข้าร่วมโครงการทั้งหมดจำนวน ${toThaiNumerals(totalResponses)} คน โดยจำแนกตามเพศ ระดับการศึกษา และสถานะของผู้ตอบแบบประเมิน ดังแสดงในตารางที่ ๔.๐`
-                        )}
+                        {toArabicNumerals(sections.section_4_1 || (
+                            `การนำเสนอข้อมูลทั่วไปของผู้ตอบแบบประเมินความพึงพอใจโครงการ "${project.title}" ได้ดำเนินการรวบรวมข้อมูลจากกลุ่มตัวอย่างและผู้เข้าร่วมโครงการทั้งหมดจำนวน ${toArabicNumerals(totalResponses)} คน โดยจำแนกตามเพศ ระดับการศึกษา และสถานะของผู้ตอบแบบประเมิน ดังแสดงในตารางที่ 4.0`
+                        ))}
                     </div>
 
                     {/* Table 4.0 Demographics */}
                     {totalResponses > 0 && demographicStats && (
                         <div className="my-4">
                             <p className="text-center font-bold text-xs mb-2">
-                                ตารางที่ ๔.๐ จำนวนและร้อยละของข้อมูลทั่วไปของผู้ตอบแบบประเมิน (N = {toThaiNumerals(totalResponses)})
+                                ตารางที่ 4.0 จำนวนและร้อยละของข้อมูลทั่วไปของผู้ตอบแบบประเมิน (N = {toArabicNumerals(totalResponses)})
                             </p>
                             <table className="w-full text-xs border-collapse border border-slate-800">
                                 <thead>
@@ -216,33 +217,33 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                 </thead>
                                 <tbody>
                                     <tr className="bg-slate-50 font-bold border border-slate-800">
-                                        <td colSpan={3} className="py-1 px-3 border border-slate-800">๑. เพศ (Gender)</td>
+                                        <td colSpan={3} className="py-1 px-3 border border-slate-800">1. เพศ (Gender)</td>
                                     </tr>
                                     {demographicStats.gender?.map(g => (
                                         <tr key={g.key} className="border border-slate-800">
                                             <td className="py-1 px-3 pl-8 border border-slate-800">{g.label}</td>
-                                            <td className="py-1 px-3 text-center border border-slate-800">{toThaiNumerals(g.count)}</td>
-                                            <td className="py-1 px-3 text-center border border-slate-800">{toThaiNumerals(Number(g.percentage || 0).toFixed(1))}</td>
+                                            <td className="py-1 px-3 text-center border border-slate-800">{toArabicNumerals(g.count)}</td>
+                                            <td className="py-1 px-3 text-center border border-slate-800">{toArabicNumerals(Number(g.percentage || 0).toFixed(1))}</td>
                                         </tr>
                                     ))}
                                     <tr className="bg-slate-50 font-bold border border-slate-800">
-                                        <td colSpan={3} className="py-1 px-3 border border-slate-800">๒. ระดับการศึกษา (Education Level)</td>
+                                        <td colSpan={3} className="py-1 px-3 border border-slate-800">2. ระดับการศึกษา (Education Level)</td>
                                     </tr>
                                     {demographicStats.education_level?.map(edu => (
                                         <tr key={edu.key} className="border border-slate-800">
                                             <td className="py-1 px-3 pl-8 border border-slate-800">{edu.label}</td>
-                                            <td className="py-1 px-3 text-center border border-slate-800">{toThaiNumerals(edu.count)}</td>
-                                            <td className="py-1 px-3 text-center border border-slate-800">{toThaiNumerals(Number(edu.percentage || 0).toFixed(1))}</td>
+                                            <td className="py-1 px-3 text-center border border-slate-800">{toArabicNumerals(edu.count)}</td>
+                                            <td className="py-1 px-3 text-center border border-slate-800">{toArabicNumerals(Number(edu.percentage || 0).toFixed(1))}</td>
                                         </tr>
                                     ))}
                                     <tr className="bg-slate-50 font-bold border border-slate-800">
-                                        <td colSpan={3} className="py-1 px-3 border border-slate-800">๓. สถานะของผู้ตอบแบบประเมิน (Respondent Status)</td>
+                                        <td colSpan={3} className="py-1 px-3 border border-slate-800">3. สถานะของผู้ตอบแบบประเมิน (Respondent Status)</td>
                                     </tr>
                                     {demographicStats.respondent_type?.map(rt => (
                                         <tr key={rt.key} className="border border-slate-800">
                                             <td className="py-1 px-3 pl-8 border border-slate-800">{rt.label}</td>
-                                            <td className="py-1 px-3 text-center border border-slate-800">{toThaiNumerals(rt.count)}</td>
-                                            <td className="py-1 px-3 text-center border border-slate-800">{toThaiNumerals(Number(rt.percentage || 0).toFixed(1))}</td>
+                                            <td className="py-1 px-3 text-center border border-slate-800">{toArabicNumerals(rt.count)}</td>
+                                            <td className="py-1 px-3 text-center border border-slate-800">{toArabicNumerals(Number(rt.percentage || 0).toFixed(1))}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -251,34 +252,34 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                     )}
                 </div>
 
-                {/* ๔.๒ ผลการดำเนินงานตามตัวชี้วัดเชิงปริมาณ */}
+                {/* 4.2 ผลการดำเนินงานตามตัวชี้วัดเชิงปริมาณ */}
                 <div className="mb-6 space-y-3">
                     <h3 className="print-heading font-bold">
-                        ๔.๒ ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ
+                        4.2 ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ
                     </h3>
                     <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {sections.section_4_2 || (
-                            `โครงการได้กำหนดเป้าหมายเชิงปริมาณในบทที่ ๑ โดยมุ่งเน้นให้กลุ่มเป้าหมายเข้าร่วมกิจกรรมไม่น้อยกว่าที่กำหนด จากผลการดำเนินงานปรากฏว่ามีผู้เข้าร่วมกิจกรรมทั้งสิ้น ${toThaiNumerals(totalResponses)} คน คิดเป็นร้อยละ ๑๐๐.๐ ซึ่งถือว่าบรรลุเป้าหมายเชิงปริมาณตามแผนงานที่กำหนดไว้อย่างครบถ้วน`
-                        )}
+                        {toArabicNumerals(sections.section_4_2 || (
+                            `โครงการได้กำหนดเป้าหมายเชิงปริมาณในบทที่ 1 โดยมุ่งเน้นให้กลุ่มเป้าหมายเข้าร่วมกิจกรรมไม่น้อยกว่าที่กำหนด จากผลการดำเนินงานปรากฏว่ามีผู้เข้าร่วมกิจกรรมทั้งสิ้น ${toArabicNumerals(totalResponses)} คน คิดเป็นร้อยละ 100.0 ซึ่งถือว่าบรรลุเป้าหมายเชิงปริมาณตามแผนงานที่กำหนดไว้อย่างครบถ้วน`
+                        ))}
                     </div>
                 </div>
 
-                {/* ๔.๓ ผลการประเมินความพึงพอใจเชิงคุณภาพ */}
+                {/* 4.3 ผลการประเมินความพึงพอใจเชิงคุณภาพ */}
                 <div className="mb-6 space-y-3">
                     <h3 className="print-heading font-bold">
-                        ๔.๓ ผลการประเมินความพึงพอใจเชิงคุณภาพต่อการดำเนินโครงการ
+                        4.3 ผลการประเมินความพึงพอใจเชิงคุณภาพต่อการดำเนินโครงการ
                     </h3>
                     <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {sections.section_4_3 || (
-                            `ผลการวิเคราะห์ระดับความพึงพอใจของผู้เข้าร่วมโครงการที่มีต่อโครงการ "${project.title}" จำแนกตามกรอบการประเมิน ๔ ด้าน และภาพรวมทั้งโครงการตามเกณฑ์ของ Best (1977) พบว่า ในภาพรวมผู้เข้าร่วมโครงการมีความพึงพอใจอยู่ในระดับ${surveyStats?.overallLevel || 'มากที่สุด'} (X̄ = ${toThaiNumerals(Number(surveyStats?.overallMean || 0).toFixed(2))}, S.D. = ${toThaiNumerals(Number(surveyStats?.overallSd || 0).toFixed(2))}) ดังแสดงในตารางที่ ๔.๑`
-                        )}
+                        {toArabicNumerals(sections.section_4_3 || (
+                            `ผลการวิเคราะห์ระดับความพึงพอใจของผู้เข้าร่วมโครงการที่มีต่อโครงการ "${project.title}" จำแนกตามกรอบการประเมิน 4 ด้าน และภาพรวมทั้งโครงการตามเกณฑ์ของ Best (1977) พบว่า ในภาพรวมผู้เข้าร่วมโครงการมีความพึงพอใจอยู่ในระดับ${surveyStats?.overallLevel || 'มากที่สุด'} (X̄ = ${toArabicNumerals(Number(surveyStats?.overallMean || 0).toFixed(2))}, S.D. = ${toArabicNumerals(Number(surveyStats?.overallSd || 0).toFixed(2))}) ดังแสดงในตารางที่ 4.1`
+                        ))}
                     </div>
 
                     {/* Table 4.1 Satisfaction Table */}
                     {questionsStats.length > 0 && (
                         <div className="my-4">
                             <p className="text-center font-bold text-xs mb-2">
-                                ตารางที่ ๔.๑ ค่าเฉลี่ย ส่วนเบี่ยงเบนมาตรฐาน และระดับความพึงพอใจต่อการดำเนินโครงการ (จำแนกรายด้าน ๔ ด้าน)
+                                ตารางที่ 4.1 ค่าเฉลี่ย ส่วนเบี่ยงเบนมาตรฐาน และระดับความพึงพอใจต่อการดำเนินโครงการ (จำแนกรายด้าน 4 ด้าน)
                             </p>
                             <table className="w-full text-xs border-collapse border border-slate-800">
                                 <thead>
@@ -300,22 +301,22 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                             <React.Fragment key={dimNum}>
                                                 <tr className="bg-slate-100/70 font-bold border border-slate-800">
                                                     <td colSpan={5} className="py-1 px-3 border border-slate-800">
-                                                        {dimSummary?.title || `ด้านที่ ${toThaiNumerals(dimNum)}`}
+                                                        {dimSummary?.title ? toArabicNumerals(dimSummary.title) : `ด้านที่ ${dimNum}`}
                                                     </td>
                                                 </tr>
                                                 {dimQuestions.map((q, idx) => (
                                                     <tr key={q.id || idx} className="border border-slate-800">
                                                         <td className="py-1 px-2 text-center border border-slate-800 font-bold">
-                                                            {toThaiNumerals(q.id || idx + 1)}
+                                                            {toArabicNumerals(q.id || idx + 1)}
                                                         </td>
                                                         <td className="py-1 px-3 pl-6 border border-slate-800">
-                                                            {q.question}
+                                                            {toArabicNumerals(q.question)}
                                                         </td>
                                                         <td className="py-1 px-2 text-center border border-slate-800 font-bold">
-                                                            {toThaiNumerals(Number(q.mean || 0).toFixed(2))}
+                                                            {toArabicNumerals(Number(q.mean || 0).toFixed(2))}
                                                         </td>
                                                         <td className="py-1 px-2 text-center border border-slate-800">
-                                                            {toThaiNumerals(Number(q.sd || 0).toFixed(2))}
+                                                            {toArabicNumerals(Number(q.sd || 0).toFixed(2))}
                                                         </td>
                                                         <td className="py-1 px-3 text-center border border-slate-800">
                                                             {q.level || 'มากที่สุด'}
@@ -325,13 +326,13 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                                 {dimSummary && (
                                                     <tr className="bg-slate-50 font-bold border border-slate-800">
                                                         <td colSpan={2} className="py-1 px-3 text-right italic border border-slate-800">
-                                                            รวมเฉลี่ยด้านที่ {toThaiNumerals(dimNum)}
+                                                            รวมเฉลี่ยด้านที่ {dimNum}
                                                         </td>
                                                         <td className="py-1 px-2 text-center font-bold border border-slate-800">
-                                                            {toThaiNumerals(Number(dimSummary.mean || 0).toFixed(2))}
+                                                            {toArabicNumerals(Number(dimSummary.mean || 0).toFixed(2))}
                                                         </td>
                                                         <td className="py-1 px-2 text-center border border-slate-800">
-                                                            {toThaiNumerals(Number(dimSummary.sd || 0).toFixed(2))}
+                                                            {toArabicNumerals(Number(dimSummary.sd || 0).toFixed(2))}
                                                         </td>
                                                         <td className="py-1 px-3 text-center border border-slate-800 font-bold">
                                                             {dimSummary.level}
@@ -348,10 +349,10 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                                             รวมเฉลี่ยภาพรวมทั้งโครงการ
                                         </td>
                                         <td className="py-1.5 px-2 text-center font-bold border border-slate-800">
-                                            {toThaiNumerals(Number(surveyStats?.overallMean || 0).toFixed(2))}
+                                            {toArabicNumerals(Number(surveyStats?.overallMean || 0).toFixed(2))}
                                         </td>
                                         <td className="py-1.5 px-2 text-center border border-slate-800">
-                                            {toThaiNumerals(Number(surveyStats?.overallSd || 0).toFixed(2))}
+                                            {toArabicNumerals(Number(surveyStats?.overallSd || 0).toFixed(2))}
                                         </td>
                                         <td className="py-1.5 px-3 text-center font-bold border border-slate-800">
                                             {surveyStats?.overallLevel || 'มากที่สุด'}
@@ -363,33 +364,33 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                     )}
                 </div>
 
-                {/* ๔.๔ ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณ */}
+                {/* 4.4 ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณ */}
                 <div className="mb-6 space-y-3">
                     <h3 className="print-heading font-bold">
-                        ๔.๔ ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน
+                        4.4 ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน
                     </h3>
                     <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {sections.section_4_4 || (
-                            `โครงการได้รับการจัดสรรงบประมาณดำเนินงานตามแผนปฏิบัติการประจำปีงบประมาณ พ.ศ. ${toThaiNumerals(project.academic_year)} การเบิกจ่ายงบประมาณเป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. ๒๕๖๐ อย่างถูกต้อง โปร่งใส ประหยัด และเกิดความคุ้มค่าสูงสุด`
-                        )}
+                        {toArabicNumerals(sections.section_4_4 || (
+                            `โครงการได้รับการจัดสรรงบประมาณดำเนินงานตามแผนปฏิบัติการประจำปีงบประมาณ พ.ศ. ${toArabicNumerals(project.academic_year)} การเบิกจ่ายงบประมาณเป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 อย่างถูกต้อง โปร่งใส ประหยัด และเกิดความคุ้มค่าสูงสุด`
+                        ))}
                     </div>
                 </div>
 
-                {/* ๔.๕ การสังเคราะห์ผลลัพธ์ย้อนกลับสู่บทที่ ๑ */}
+                {/* 4.5 การสังเคราะห์ผลลัพธ์ย้อนกลับสู่บทที่ 1 */}
                 {chapter1Comparison && (
                     <div className="mb-6 space-y-3">
                         <h3 className="print-heading font-bold">
-                            ๔.๕ การสังเคราะห์ผลการประเมินเปรียบเทียบกับเป้าหมายตามบทที่ ๑
+                            4.5 การสังเคราะห์ผลการประเมินเปรียบเทียบกับเป้าหมายตามบทที่ 1
                         </h3>
                         <div className="thai-content space-y-2">
                             <p className="thai-indent">
-                                <strong>๑) ด้านการตอบโจทย์วัตถุประสงค์ของโครงการ:</strong> {chapter1Comparison.objectiveFulfillment?.summary}
+                                <strong>1) ด้านการตอบโจทย์วัตถุประสงค์ของโครงการ:</strong> {toArabicNumerals(chapter1Comparison.objectiveFulfillment?.summary)}
                             </p>
                             <p className="thai-indent">
-                                <strong>๒) ด้านการตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ:</strong> {chapter1Comparison.benefitRealization?.summary}
+                                <strong>2) ด้านการตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ:</strong> {toArabicNumerals(chapter1Comparison.benefitRealization?.summary)}
                             </p>
                             <p className="thai-indent">
-                                <strong>๓) ด้านการตอบโจทย์ตัวชี้วัดความสำเร็จ (KPIs):</strong> {chapter1Comparison.kpiAchievement?.summary}
+                                <strong>3) ด้านการตอบโจทย์ตัวชี้วัดความสำเร็จ (KPIs):</strong> {toArabicNumerals(chapter1Comparison.kpiAchievement?.summary)}
                             </p>
                         </div>
                     </div>

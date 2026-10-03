@@ -162,7 +162,7 @@ class NotificationService
     {
         $planStaff = User::all()->filter(fn($u) => $u->isPlanHead() || $u->isPlanStaff());
         $docNo = $loan->document_number ?: 'ไม่มีเลขที่';
-        $title = "📑 สัญญายืมเงิน (กค.๑๐๑) รอตัดยอดงบประมาณ";
+        $title = "📑 สัญญายืมเงิน (กค. 101) รอตัดยอดงบประมาณ";
         $message = "สัญญายืมเงินไปราชการเลขที่ {$docNo} ({$loan->borrower_name}) ยอดเงิน " . number_format($loan->total_loan_amount, 2) . " บาท รอยืนยันตัดยอดงบประมาณ";
         $actionUrl = route('dashboard', ['tab' => 'document_tracking']);
 
