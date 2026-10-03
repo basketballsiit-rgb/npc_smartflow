@@ -9,9 +9,39 @@ export default function NotificationBell() {
     const [isLoading, setIsLoading] = useState(false);
     const dropdownRef = useRef(null);
 
+    const normalizeUrl = (url) => {
+        if (!url) return '';
+        let target = url;
+        if (typeof window !== 'undefined') {
+            if (window.location.protocol === 'https:' && target.startsWith('http://')) {
+                target = target.replace('http://', 'https://');
+            }
+            try {
+                const currentOrigin = window.location.origin;
+                const parsed = new URL(target, currentOrigin);
+
+                // Fix localhost or foreign host to current origin
+                if (parsed.hostname === 'localhost' || parsed.hostname !== window.location.hostname) {
+                    const prefix = window.location.pathname.startsWith('/npc_smartflow') ? '/npc_smartflow' : '';
+                    const cleanPath = parsed.pathname.startsWith('/npc_smartflow') ? parsed.pathname : `${prefix}${parsed.pathname}`;
+                    target = currentOrigin + cleanPath + parsed.search + parsed.hash;
+                } else if (window.location.pathname.startsWith('/npc_smartflow') && !parsed.pathname.startsWith('/npc_smartflow')) {
+                    target = currentOrigin + '/npc_smartflow' + parsed.pathname + parsed.search + parsed.hash;
+                }
+            } catch (e) {
+                console.error('URL normalization error:', e);
+            }
+        }
+        return target;
+    };
+
     const fetchNotifications = async () => {
         try {
-            const res = await axios.get(route('notifications.index'));
+            let indexUrl = route('notifications.index');
+            if (typeof window !== 'undefined' && window.location.protocol === 'https:' && indexUrl.startsWith('http://')) {
+                indexUrl = indexUrl.replace('http://', 'https://');
+            }
+            const res = await axios.get(indexUrl);
             if (res.data) {
                 setNotifications(res.data.notifications || []);
                 setUnreadCount(res.data.unread_count || 0);
@@ -42,7 +72,11 @@ export default function NotificationBell() {
     const handleMarkAllRead = async () => {
         try {
             setIsLoading(true);
-            await axios.post(route('notifications.mark_all_read'));
+            let markUrl = route('notifications.mark_all_read');
+            if (typeof window !== 'undefined' && window.location.protocol === 'https:' && markUrl.startsWith('http://')) {
+                markUrl = markUrl.replace('http://', 'https://');
+            }
+            await axios.post(markUrl);
             setUnreadCount(0);
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
         } catch (err) {
@@ -52,10 +86,14 @@ export default function NotificationBell() {
         }
     };
 
-    const handleNotificationClick = async (notif) => {
+    const handleNotificationClick = (notif) => {
         if (!notif.is_read) {
             try {
-                await axios.post(route('notifications.read', notif.id));
+                let readUrl = route('notifications.read', notif.id);
+                if (typeof window !== 'undefined' && window.location.protocol === 'https:' && readUrl.startsWith('http://')) {
+                    readUrl = readUrl.replace('http://', 'https://');
+                }
+                axios.post(readUrl).catch(err => console.error('Error marking as read:', err));
                 setUnreadCount(prev => Math.max(0, prev - 1));
                 setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, is_read: true } : n));
             } catch (err) {
@@ -63,8 +101,16 @@ export default function NotificationBell() {
             }
         }
         setIsOpen(false);
+
         if (notif.action_url) {
-            router.visit(notif.action_url);
+            const targetUrl = normalizeUrl(notif.action_url);
+            if (targetUrl) {
+                try {
+                    router.visit(targetUrl);
+                } catch (e) {
+                    window.location.href = targetUrl;
+                }
+            }
         }
     };
 
@@ -207,9 +253,16 @@ export default function NotificationBell() {
                                         <div className="flex items-center justify-between mt-2 pt-1 text-[10px] text-slate-400">
                                             <span>🕒 {notif.created_at}</span>
                                             {notif.action_url && (
-                                                <span className="font-bold text-purple-700 hover:text-purple-900 flex items-center gap-0.5 group">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleNotificationClick(notif);
+                                                    }}
+                                                    className="font-bold text-purple-700 hover:text-purple-900 flex items-center gap-0.5 group cursor-pointer focus:outline-none"
+                                                >
                                                     ไปยังหน้างาน <span className="transition-transform group-hover:translate-x-0.5">➜</span>
-                                                </span>
+                                                </button>
                                             )}
                                         </div>
                                     </div>

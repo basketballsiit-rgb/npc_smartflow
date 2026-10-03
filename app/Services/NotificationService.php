@@ -138,12 +138,12 @@ class NotificationService
             if ($isFinal) {
                 $title = "🎉 โครงการได้รับอนุมัติเรียบร้อยแล้ว!";
                 $message = "โครงการ \"{$projTitle}\" ได้รับการอนุมัติขั้นสุดท้ายจากผู้อำนวยการเรียบร้อยแล้ว ท่านสามารถดำเนินการจัดซื้อจัดจ้างและดำเนินโครงการได้ทันที";
-                $actionUrl = route('dashboard', ['tab' => 'proposals']);
+                $actionUrl = route('projects.show', $project->id);
                 self::send($userId, $title, $message, $actionUrl, 'status', '🎉', 'emerald', $refId);
             } else {
                 $title = "✅ โครงการผ่านการพิจารณาในขั้นที่ " . ($project->current_approval_step - 1);
                 $message = "โครงการ \"{$projTitle}\" ผ่านการพิจารณาแล้ว และกำลังส่งต่อคิวอนุมัติในลำดับถัดไป";
-                $actionUrl = route('dashboard', ['tab' => 'proposals']);
+                $actionUrl = route('projects.show', $project->id);
                 self::send($userId, $title, $message, $actionUrl, 'status', 'ℹ️', 'blue', $refId);
             }
         } elseif ($action === 'rejected' || $action === 'revision_requested') {

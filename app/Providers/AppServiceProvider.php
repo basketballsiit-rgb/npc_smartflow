@@ -45,6 +45,8 @@ class AppServiceProvider extends ServiceProvider
             $subfolder = '/npc_smartflow';
         } elseif (request()->getBaseUrl()) {
             $subfolder = request()->getBaseUrl();
+        } elseif (str_contains($host, 'npc.ac.th')) {
+            $subfolder = '/npc_smartflow';
         }
 
         if ($subfolder) {

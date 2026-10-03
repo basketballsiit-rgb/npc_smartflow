@@ -801,6 +801,11 @@ export default function Dashboard({
                 setActiveTab(`chapter_${ch}`);
                 return;
             }
+            const tb = urlParams.get('tab');
+            if (tb) {
+                setActiveTab(tb === 'proposals' ? 'document_tracking' : tb);
+                return;
+            }
         }
         if (currentChapter) {
             setActiveTab(`chapter_${currentChapter}`);

@@ -33,12 +33,31 @@ class NotificationController extends Controller
             ->take(20)
             ->get()
             ->map(function ($n) {
+                $actionUrl = $n->action_url;
+                if ($actionUrl) {
+                    $host = request()->getHost() ?: (request()->header('Host') ?: 'service.npc.ac.th');
+                    $isSecure = str_contains($host, 'npc.ac.th') || request()->secure();
+
+                    if ($isSecure && str_starts_with($actionUrl, 'http://')) {
+                        $actionUrl = preg_replace('#^http://#', 'https://', $actionUrl);
+                    }
+
+                    if (str_contains($host, 'npc.ac.th')) {
+                        if (str_contains($actionUrl, 'localhost')) {
+                            $actionUrl = preg_replace('#^https?://[^/]+#', 'https://service.npc.ac.th', $actionUrl);
+                        }
+                        if (!str_contains($actionUrl, '/npc_smartflow')) {
+                            $actionUrl = str_replace('service.npc.ac.th/', 'service.npc.ac.th/npc_smartflow/', $actionUrl);
+                        }
+                    }
+                }
+
                 return [
                     'id' => $n->id,
                     'title' => $n->title,
                     'message' => $n->message,
                     'type' => $n->type,
-                    'action_url' => $n->action_url,
+                    'action_url' => $actionUrl,
                     'icon' => $n->icon,
                     'color' => $n->color,
                     'is_read' => $n->isRead(),
