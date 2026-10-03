@@ -521,11 +521,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
                                     className={getSubLinkClass(url.includes('tab=document_tracking'))}
-                                    title="กระดานคัมบังติดตามสถานะเอกสารและโครงการ (Kanban Board)"
+                                    title="กระดานคันบันติดตามสถานะเอกสารและโครงการ (Kanban Board)"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=document_tracking'))}>●</span>
                                     <span className="text-sm">📋</span>
-                                    {isSidebarOpen && <span>คัมบังติดตามงาน & เอกสาร (Kanban)</span>}
+                                    {isSidebarOpen && <span>คันบันติดตามงาน & เอกสาร (Kanban)</span>}
                                 </Link>
                             </div>
                             )}
@@ -640,11 +640,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
                                     className={getSubLinkClass(url.includes('tab=document_tracking'))}
-                                    title="กระดานคัมบัง & จัดทำชุดจัดซื้อจัดจ้าง 4 ฉบับจากโครงการ"
+                                    title="กระดานคันบัน & จัดทำชุดจัดซื้อจัดจ้าง 4 ฉบับจากโครงการ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=document_tracking'))}>└─</span>
                                     <span className="text-sm">📋</span>
-                                    {isSidebarOpen && <span>คัมบังจัดซื้อ & สัญญายืม (Kanban)</span>}
+                                    {isSidebarOpen && <span>คันบันจัดซื้อ & สัญญายืม (Kanban)</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'clearings' })}
