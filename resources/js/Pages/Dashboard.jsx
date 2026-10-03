@@ -4163,7 +4163,10 @@ export default function Dashboard({
             cancelButtonText: 'ยกเลิก'
         }).then((result) => {
             if (result.isConfirmed) {
-                router.post(route('projects.submit', project.id), {}, {
+                router.post(route('projects.submit', project.id), {
+                    signature_data: auth?.user?.signature_data,
+                    signature_type: 'stored',
+                }, {
                     onSuccess: () => Swal.fire('สำเร็จ!', 'ยื่นเสนอขออนุมัติโครงการเพื่อดำเนินงานต่อเรียบร้อยแล้ว', 'success')
                 });
             }

@@ -808,9 +808,9 @@ export default function Print({ project, strategyCategories = [] }) {
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig1?.signature_data ? (
+                                            {includeSignatures && (sig1?.signature_data || project.user?.signature_data) ? (
                                                 <img 
-                                                    src={sig1.signature_data} 
+                                                    src={sig1?.signature_data || project.user?.signature_data} 
                                                     alt="ลายมือชื่อ" 
                                                     className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                                 />
@@ -834,8 +834,8 @@ export default function Print({ project, strategyCategories = [] }) {
                                                 : 'หัวหน้างาน................................................')}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig1?.signed_at 
-                                            ? formatThaiSignatureDate(sig1.signed_at) 
+                                        {includeSignatures && (sig1?.signed_at || sig2?.signed_at || project.created_at) 
+                                            ? formatThaiSignatureDate(sig1?.signed_at || sig2?.signed_at || project.created_at) 
                                             : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                     </p>
                                 </div>

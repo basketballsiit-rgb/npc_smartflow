@@ -489,7 +489,9 @@ ${itemsListText}
 
     const handleConfirmSignature = (payload) => {
         if (signatureModalStep === 1) {
-            router.post(route('projects.submit', project.id), {
+            const isWorkflowStart = ['draft', 'rejected', 'budget_approved', 'preliminary'].includes(project.status);
+            const targetRoute = isWorkflowStart ? route('projects.submit', project.id) : route('projects.sign_step_one', project.id);
+            router.post(targetRoute, {
                 signature_data: payload.signature_data,
                 signature_type: payload.signature_type,
                 save_to_profile: payload.save_to_profile,
@@ -498,8 +500,10 @@ ${itemsListText}
                 onSuccess: () => {
                     setSignatureModalOpen(false);
                     Swal.fire({
-                        title: 'ลงนามและยื่นเสนอสำเร็จ!',
-                        text: 'โครงการได้รับการลงนามอิเล็กทรอนิกส์และส่งต่อไปยังขั้นตอนที่ 2 เรียบร้อยแล้ว',
+                        title: 'ลงนามผู้เสนอสำเร็จ!',
+                        text: isWorkflowStart 
+                            ? 'โครงการได้รับการลงนามอิเล็กทรอนิกส์และส่งต่อไปยังขั้นตอนที่ 2 เรียบร้อยแล้ว'
+                            : 'บันทึกลายมือชื่อผู้เสนอโครงการเรียบร้อยแล้ว',
                         icon: 'success',
                         confirmButtonColor: '#7c3aed',
                     });
@@ -1226,23 +1230,39 @@ ${itemsListText}
 
                                             {/* Signature Preview or Dotted Placeholder */}
                                             <div className="h-16 my-2 bg-white rounded-xl border border-slate-200/80 flex items-center justify-center p-1 relative overflow-hidden">
-                                                {isSigned && approval?.signature_data ? (
+                                                {isSigned && (approval?.signature_data || (item.step === 1 && project.user?.signature_data)) ? (
                                                     <img 
-                                                        src={approval.signature_data} 
+                                                        src={approval?.signature_data || project.user?.signature_data} 
                                                         alt="Digital Signature" 
                                                         className="max-h-full max-w-full object-contain filter drop-shadow-2xs"
                                                     />
                                                 ) : isSigned ? (
                                                     <div className="text-center text-[10px] text-emerald-700 font-bold">
-                                                        <span className="text-sm block">✍️</span>
-                                                        ประทับตรารับรองดิจิทัล
-                                                    </div>
+                                                         <span className="text-sm block">✍️</span>
+                                                         ประทับตรารับรองดิจิทัล
+                                                     </div>
                                                 ) : (
                                                     <div className="text-[10px] text-slate-300 border-b border-dashed border-slate-300 w-3/4 text-center pb-0.5">
-                                                        รอลายมือชื่อ
-                                                    </div>
+                                                         รอลายมือชื่อ
+                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* Quick Action Button for Step 1 if signature is missing */}
+                                            {item.step === 1 && (!approval?.signature_data || !approval?.signed_at) && (auth?.user?.id === project.user_id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSignatureModalStep(1);
+                                                        setSignatureModalTitle('ขั้นตอนที่ 1: ลงนามผู้เสนอโครงการ (Proposer Signature)');
+                                                        setSignatureModalOpen(true);
+                                                    }}
+                                                    className="w-full mt-1 py-1 px-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-[11px] font-bold shadow-2xs hover:scale-102 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                                    title="คลิกเพื่อลงลายมือชื่อผู้เสนอโครงการ"
+                                                >
+                                                    <span>✍️</span> ลงนามผู้เสนอโครงการ
+                                                </button>
+                                            )}
                                         </div>
 
                                         <div className="pt-2 border-t border-slate-200/60 text-[10px] text-slate-600 space-y-0.5">

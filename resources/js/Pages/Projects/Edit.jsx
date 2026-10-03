@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 import axios from 'axios';
 import ProjectWorkflowStepper from '@/Components/ProjectWorkflowStepper';
 import ConsistencyAuditModal from '@/Components/ConsistencyAuditModal';
+import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
 
 export default function Edit({ project, strategyCategories = [], iqaStrategies = [], ovecStrategies = [], nationalStrategies = [], provincialStrategies = [], departments = [] }) {
     const { auth } = usePage().props;
@@ -23,6 +24,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const [generatingAi, setGeneratingAi] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [signatureModalOpen, setSignatureModalOpen] = useState(false);
     const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
     const [isAuditing, setIsAuditing] = useState(false);
     const [auditResult, setAuditResult] = useState(null);
@@ -750,42 +752,45 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             });
             return;
         }
+
+        // Open Digital Signature Modal for Proposer before submitting to Step 2
+        setSignatureModalOpen(true);
+    };
+
+    const handleConfirmSignature = (payload) => {
+        setSignatureModalOpen(false);
+        setIsSubmitting(true);
         Swal.fire({
-            title: '🚀 ยื่นขออนุมัติโครงการ?',
-            text: 'ระบบจะส่งเรื่องไปยัง "ขั้นตอนที่ 2: หัวหน้าแผนกวิชา/หัวหน้างาน" พร้อมแยกรายละเอียดสัญญายืมเงินและจัดซื้อจัดจ้างรายกิจกรรมให้อัตโนมัติ (และจะล็อคการแก้ไข)',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: '#10b981',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: '🚀 ยืนยันยื่นขออนุมัติ',
-            cancelButtonText: 'ยกเลิก',
-        }).then((result) => {
-            if (result.isConfirmed) {
-                setIsSubmitting(true);
-                Swal.fire({
-                    title: 'กำลังส่งเรื่องขออนุมัติ...',
-                    text: 'ระบบกำลังบันทึกและส่งต่อไปยังขั้นตอนที่ 2 กรุณารอสักครู่',
-                    allowOutsideClick: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-                router.patch(route('projects.update', project.id), prepareSubmitData(true), {
-                    onSuccess: () => {
-                        Swal.close();
-                    },
-                    onFinish: () => setIsSubmitting(false),
-                    onError: (errors) => {
-                        setIsSubmitting(false);
-                        Swal.fire({
-                            title: 'บันทึกไม่สำเร็จ',
-                            text: 'กรุณาตรวจสอบข้อมูลที่จำเป็นในแบบฟอร์มอีกครั้ง',
-                            icon: 'error',
-                            confirmButtonText: 'ตกลง'
-                        });
-                    },
-                });
+            title: 'กำลังส่งเรื่องขออนุมัติ...',
+            text: 'ระบบกำลังบันทึกข้อมูลโครงการพร้อมลงนามผู้เสนอโครงการเพื่อส่งต่อไปยังขั้นตอนที่ 2 กรุณารอสักครู่',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
             }
+        });
+
+        const submitPayload = {
+            ...prepareSubmitData(true),
+            signature_data: payload.signature_data,
+            signature_type: payload.signature_type,
+            save_to_profile: payload.save_to_profile,
+            comments: payload.comments || 'จัดทำโครงการฉบับเต็มและยื่นขออนุมัติตามกระบวนการ 6 ขั้นตอน',
+        };
+
+        router.patch(route('projects.update', project.id), submitPayload, {
+            onSuccess: () => {
+                Swal.close();
+            },
+            onFinish: () => setIsSubmitting(false),
+            onError: (errors) => {
+                setIsSubmitting(false);
+                Swal.fire({
+                    title: 'บันทึกไม่สำเร็จ',
+                    text: 'กรุณาตรวจสอบข้อมูลที่จำเป็นในแบบฟอร์มอีกครั้ง',
+                    icon: 'error',
+                    confirmButtonText: 'ตกลง'
+                });
+            },
         });
     };
 
@@ -3244,6 +3249,18 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                 onClose={() => setIsAuditModalOpen(false)}
                 auditResult={auditResult}
                 isLoading={isAuditing}
+            />
+
+            {/* Proposer Digital Signature Modal (ก่อนยื่นเสนอต่อขั้นที่ 2) */}
+            <DigitalSignatureModal
+                isOpen={signatureModalOpen}
+                onClose={() => setSignatureModalOpen(false)}
+                onConfirm={handleConfirmSignature}
+                stepNumber={1}
+                stepTitle="ขั้นตอนที่ 1: ลงนามผู้เสนอโครงการ (ยื่นขออนุมัติและส่งต่อขั้นที่ 2)"
+                projectTitle={data.title || project.title}
+                defaultComments="จัดทำโครงการฉบับเต็มและยื่นขออนุมัติตามกระบวนการ 6 ขั้นตอน"
+                processing={isSubmitting}
             />
 
             {/* Sticky Summary & Quick Action Footer */}

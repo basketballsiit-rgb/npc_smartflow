@@ -175,6 +175,7 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/generate-ai-content', [ProjectController::class, 'generateAiContent'])->name('projects.generate_ai_content');
     Route::post('projects/ai/recommend-funding', [ProjectController::class, 'aiRecommendFunding'])->name('projects.ai.recommend_funding');
     Route::post('projects/{project}/submit', [ProjectController::class, 'submit'])->name('projects.submit');
+    Route::post('projects/{project}/sign-step-one', [ProjectController::class, 'signStepOne'])->name('projects.sign_step_one');
     Route::post('projects/{project}/approve', [ProjectController::class, 'approve'])->name('projects.approve');
     Route::post('projects/{project}/admin-approve', [ProjectController::class, 'adminApprove'])->name('projects.admin_approve');
     Route::post('projects/{project}/update-status', [ProjectController::class, 'updateStatus'])->name('projects.update_status');

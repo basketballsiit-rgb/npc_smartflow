@@ -1049,39 +1049,66 @@ class ProjectController extends Controller
             $project->save();
 
             $now = now();
-            $signatureData = $user->signature_data;
+            $signatureType = $request->input('signature_type', 'stored');
+            $signatureData = null;
+
+            if ($signatureType === 'stored') {
+                $signatureData = $user->signature_data;
+            } elseif (in_array($signatureType, ['live', 'upload'])) {
+                $signatureData = $request->input('signature_data');
+                if ($request->boolean('save_to_profile') && !empty($signatureData)) {
+                    $user->signature_data = $signatureData;
+                    $user->signature_updated_at = now();
+                    $user->save();
+                }
+            }
+            if (empty($signatureData) && !empty($request->input('signature_data'))) {
+                $signatureData = $request->input('signature_data');
+            }
+            if (empty($signatureData) && !empty($user->signature_data)) {
+                $signatureData = $user->signature_data;
+            }
+
             $sigHash = $signatureData 
                 ? hash('sha256', $user->id . '|' . $project->id . '|1|' . $now->toIso8601String() . '|' . config('app.key'))
                 : null;
 
-            ProjectApproval::create([
-                'project_id' => $project->id,
-                'user_id' => $user->id,
-                'step_number' => 1,
-                'status' => 'submitted',
-                'comments' => 'จัดทำโครงการฉบับเต็มและยื่นขออนุมัติตามกระบวนการ 6 ขั้นตอน',
-                'signature_data' => $signatureData,
-                'signature_type' => 'stored',
-                'signature_hash' => $sigHash,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'signed_at' => $now,
-            ]);
-
-            if ($isHeadProposer) {
-                ProjectApproval::create([
+            ProjectApproval::updateOrCreate(
+                [
                     'project_id' => $project->id,
+                    'step_number' => 1,
+                ],
+                [
                     'user_id' => $user->id,
-                    'step_number' => 2,
-                    'status' => 'approved',
-                    'comments' => 'เห็นชอบเสนอโครงการ (ผู้เสนอเป็นหัวหน้างาน/หัวหน้าสาขาวิชา)',
+                    'status' => 'submitted',
+                    'comments' => $request->input('comments', 'จัดทำโครงการฉบับเต็มและยื่นขออนุมัติตามกระบวนการ 6 ขั้นตอน'),
                     'signature_data' => $signatureData,
-                    'signature_type' => 'stored',
-                    'signature_hash' => $signatureData ? hash('sha256', $user->id . '|' . $project->id . '|2|' . $now->toIso8601String() . '|' . config('app.key')) : null,
+                    'signature_type' => $signatureType,
+                    'signature_hash' => $sigHash,
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
                     'signed_at' => $now,
-                ]);
+                ]
+            );
+
+            if ($isHeadProposer) {
+                ProjectApproval::updateOrCreate(
+                    [
+                        'project_id' => $project->id,
+                        'step_number' => 2,
+                    ],
+                    [
+                        'user_id' => $user->id,
+                        'status' => 'approved',
+                        'comments' => 'เห็นชอบเสนอโครงการ (ผู้เสนอเป็นหัวหน้างาน/หัวหน้าสาขาวิชา)',
+                        'signature_data' => $signatureData,
+                        'signature_type' => $signatureType,
+                        'signature_hash' => $signatureData ? hash('sha256', $user->id . '|' . $project->id . '|2|' . $now->toIso8601String() . '|' . config('app.key')) : null,
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'signed_at' => $now,
+                    ]
+                );
             }
 
             NotificationService::notifyProjectStep($project);
@@ -1192,40 +1219,111 @@ class ProjectController extends Controller
         $project->current_approval_step = $isHeadProposer ? 3 : 2;
         $project->save();
 
-        // Create submission log (Step 1: ผู้เสนอโครงการ)
-        ProjectApproval::create([
-            'project_id' => $project->id,
-            'user_id' => auth()->id(),
-            'step_number' => 1,
-            'status' => 'submitted',
-            'comments' => $request->input('comments', 'ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ (Submitted for 6-Step Approval)'),
-            'signature_data' => $signatureData,
-            'signature_type' => $signatureType,
-            'signature_hash' => $sigHash,
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'signed_at' => $now,
-        ]);
-
-        if ($isHeadProposer) {
-            ProjectApproval::create([
+        // Create/Update submission log (Step 1: ผู้เสนอโครงการ)
+        ProjectApproval::updateOrCreate(
+            [
                 'project_id' => $project->id,
+                'step_number' => 1,
+            ],
+            [
                 'user_id' => auth()->id(),
-                'step_number' => 2,
-                'status' => 'approved',
-                'comments' => 'เห็นชอบเสนอโครงการ (ผู้เสนอเป็นหัวหน้างาน/หัวหน้าสาขาวิชา)',
+                'status' => 'submitted',
+                'comments' => $request->input('comments', 'ยื่นขออนุมัติเพื่อดำเนินงานโครงการต่อ (Submitted for 6-Step Approval)'),
                 'signature_data' => $signatureData,
                 'signature_type' => $signatureType,
-                'signature_hash' => $signatureData ? hash('sha256', $user->id . '|' . $project->id . '|2|' . $now->toIso8601String() . '|' . config('app.key')) : null,
+                'signature_hash' => $sigHash,
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
                 'signed_at' => $now,
-            ]);
+            ]
+        );
+
+        if ($isHeadProposer) {
+            ProjectApproval::updateOrCreate(
+                [
+                    'project_id' => $project->id,
+                    'step_number' => 2,
+                ],
+                [
+                    'user_id' => auth()->id(),
+                    'status' => 'approved',
+                    'comments' => 'เห็นชอบเสนอโครงการ (ผู้เสนอเป็นหัวหน้างาน/หัวหน้าสาขาวิชา)',
+                    'signature_data' => $signatureData,
+                    'signature_type' => $signatureType,
+                    'signature_hash' => $signatureData ? hash('sha256', $user->id . '|' . $project->id . '|2|' . $now->toIso8601String() . '|' . config('app.key')) : null,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'signed_at' => $now,
+                ]
+            );
         }
 
         NotificationService::notifyProjectStep($project);
 
         return redirect()->back()->with('success', 'ลงนามและยื่นเสนอขออนุมัติโครงการเรียบร้อยแล้ว');
+    }
+
+    /**
+     * ลงนามผู้เสนอโครงการ (Step 1) ย้อนหลังหรืออัปเดตลายมือชื่อผู้เสนอโครงการ
+     */
+    public function signStepOne(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if ($project->user_id !== $user->id && !$user->isAdmin()) {
+            abort(403, 'เฉพาะผู้เสนอโครงการหรือผู้ดูแลระบบเท่านั้นที่สามารถลงนามผู้เสนอโครงการได้');
+        }
+
+        $signatureType = $request->input('signature_type', 'stored');
+        $signatureData = null;
+
+        if ($signatureType === 'stored') {
+            $signatureData = $user->signature_data;
+        } elseif (in_array($signatureType, ['live', 'upload'])) {
+            $signatureData = $request->input('signature_data');
+            if ($request->boolean('save_to_profile') && !empty($signatureData)) {
+                $user->signature_data = $signatureData;
+                $user->signature_updated_at = now();
+                $user->save();
+            }
+        }
+        if (empty($signatureData) && !empty($request->input('signature_data'))) {
+            $signatureData = $request->input('signature_data');
+        }
+        if (empty($signatureData) && !empty($user->signature_data)) {
+            $signatureData = $user->signature_data;
+        }
+
+        $now = now();
+        $sigHash = $signatureData 
+            ? hash('sha256', ($project->user_id ?: $user->id) . '|' . $project->id . '|1|' . $now->toIso8601String() . '|' . config('app.key'))
+            : null;
+
+        ProjectApproval::updateOrCreate(
+            [
+                'project_id' => $project->id,
+                'step_number' => 1,
+            ],
+            [
+                'user_id' => $project->user_id ?: $user->id,
+                'status' => 'submitted',
+                'comments' => $request->input('comments', 'ลงนามผู้เสนอโครงการ (Proposer Signature)'),
+                'signature_data' => $signatureData,
+                'signature_type' => $signatureType,
+                'signature_hash' => $sigHash,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'signed_at' => $now,
+            ]
+        );
+
+        AuditLog::record(
+            action: 'SIGN_PROPOSER_STEP1',
+            model: $project,
+            stepNumber: 1,
+            notes: 'ลงนามผู้เสนอโครงการ (Step 1)'
+        );
+
+        return redirect()->back()->with('success', 'บันทึกลายมือชื่อผู้เสนอโครงการเรียบร้อยแล้ว');
     }
 
     /**
