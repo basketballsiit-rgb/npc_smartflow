@@ -858,6 +858,23 @@ class ProjectController extends Controller
             unset($validated['estimated_budget']); // Keep existing allocated budget
         }
 
+        // Hard-check: Action Plan budget total must not exceed allocated budget ceiling
+        $allocatedCeiling = (float)($project->approved_budget ?? $project->allocated_budget ?? $project->estimated_budget ?? $validated['estimated_budget'] ?? 0);
+        if ($allocatedCeiling > 0 && !empty($validated['action_plan'])) {
+            $totalActionPlanBudget = 0;
+            foreach ($validated['action_plan'] as $step) {
+                $totalActionPlanBudget += (float)($step['budget_operating'] ?? 0)
+                                        + (float)($step['budget_investment'] ?? 0)
+                                        + (float)($step['budget_other'] ?? 0)
+                                        + (float)($step['budget_subsidy'] ?? 0);
+            }
+            if ($totalActionPlanBudget > ($allocatedCeiling + 0.01)) {
+                return redirect()->back()->withErrors([
+                    'action_plan' => "ยอดรวมงบประมาณในแผนการปฏิบัติงาน (ข้อ ๑๑) จำนวน " . number_format($totalActionPlanBudget, 2) . " บาท เกินกว่าวงเงินที่ได้รับการจัดสรร (" . number_format($allocatedCeiling, 2) . " บาท) เป็นเงิน " . number_format($totalActionPlanBudget - $allocatedCeiling, 2) . " บาท กรุณาปรับลดงบประมาณให้ไม่เกินวงเงินที่ได้รับจัดสรร"
+                ])->withInput();
+            }
+        }
+
         // If previously preliminary without budget approval, change to draft
         if ($project->status === 'preliminary') {
             $validated['status'] = 'draft';
@@ -2833,14 +2850,13 @@ class ProjectController extends Controller
             return response()->json(['success' => true, 'expected_benefits' => $expected_benefits]);
         }
 
-        if ($type === 'action_plan') {
+        if ($type === 'action_plan' || $type === 'contextual_standard_plan') {
             $budget = (float)$request->input('budget', 0);
-            $action_plan = [
-                ['step_name' => '1.ประชุมวางแผนเพื่อจัดทำโครงการ', 'q1' => true, 'q2' => false, 'q3' => false, 'q4' => false, 'target_count' => 'คณะทำงาน 1 ชุด', 'location_name' => 'ต.ในเวียง อ.เมืองน่าน', 'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0],
-                ['step_name' => '2.ดำเนินการเขียนโครงการเพื่อของบประมาณ ออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวันและสถานที่', 'q1' => true, 'q2' => false, 'q3' => false, 'q4' => false, 'target_count' => '1 ครั้ง', 'location_name' => 'ต.ในเวียง อ.เมืองน่าน', 'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0],
-                ['step_name' => '3.ดำเนินการตามโครงการ', 'q1' => false, 'q2' => true, 'q3' => false, 'q4' => false, 'target_count' => 'ผู้เข้าร่วม 50 คน', 'location_name' => 'ต.ในเวียง อ.เมืองน่าน', 'budget_operating' => $budget, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0],
-                ['step_name' => '4.สรุปประเมินโครงการและรายงานผล ปัญหา อุปสรรค โครงการให้กับคณะผู้บริหาร', 'q1' => false, 'q2' => false, 'q3' => false, 'q4' => true, 'target_count' => 'รายงาน 1 เล่ม', 'location_name' => 'ต.ในเวียง อ.เมืองน่าน', 'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0],
-            ];
+            $objectives = (array)$request->input('objectives', []);
+            $targets = (array)$request->input('targets', []);
+            $location = (string)$request->input('location', '');
+            $geminiService = app(\App\Services\GeminiService::class);
+            $action_plan = $geminiService->generateContextualStandardPlan($title, $objectives, $targets, $location, $budget);
             return response()->json(['success' => true, 'action_plan' => $action_plan]);
         }
 
@@ -2956,6 +2972,30 @@ class ProjectController extends Controller
         }
 
         return response()->json(['success' => false, 'message' => 'Invalid type']);
+    }
+
+    /**
+     * AI Consistency Auditor Endpoint
+     */
+    public function auditConsistency(Request $request)
+    {
+        $projectData = $request->validate([
+            'title' => 'required|string',
+            'objectives' => 'nullable|array',
+            'indicators' => 'nullable|array',
+            'action_plan' => 'nullable|array',
+            'activities' => 'nullable|array',
+            'targets' => 'nullable|array',
+            'allocated_budget' => 'nullable|numeric',
+        ]);
+
+        $geminiService = app(\App\Services\GeminiService::class);
+        $result = $geminiService->auditProjectConsistency($projectData);
+
+        return response()->json([
+            'success' => true,
+            'result' => $result,
+        ]);
     }
 
     /**

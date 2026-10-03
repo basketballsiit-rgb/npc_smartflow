@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Swal from 'sweetalert2';
 import axios from 'axios';
 import ProjectWorkflowStepper from '@/Components/ProjectWorkflowStepper';
+import ConsistencyAuditModal from '@/Components/ConsistencyAuditModal';
 
 export default function Edit({ project, strategyCategories = [], iqaStrategies = [], ovecStrategies = [], nationalStrategies = [], provincialStrategies = [], departments = [] }) {
     const { auth } = usePage().props;
@@ -22,6 +23,21 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const [generatingAi, setGeneratingAi] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [isAuditing, setIsAuditing] = useState(false);
+    const [auditResult, setAuditResult] = useState(null);
+
+    // Accordion Groups: G1 (1-3), G2 (4-7), G3 (8-12), G4 (13-14)
+    const [openGroups, setOpenGroups] = useState({
+        g1: true,
+        g2: true,
+        g3: true,
+        g4: true,
+    });
+
+    const toggleGroup = (key) => setOpenGroups(prev => ({ ...prev, [key]: !prev[key] }));
+    const expandAll = () => setOpenGroups({ g1: true, g2: true, g3: true, g4: true });
+    const collapseAll = () => setOpenGroups({ g1: false, g2: false, g3: false, g4: false });
 
     const initialQuant = Array.isArray(project?.targets?.quantitative) && project.targets.quantitative.length > 0
         ? project.targets.quantitative
@@ -222,7 +238,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     });
 
     // Multi-Activity Grand Totals & Remaining Balance Calculations
-    const allocatedBudget = parseFloat(data.estimated_budget || 0);
+    const allocatedBudget = parseFloat(project?.approved_budget || project?.allocated_budget || data.estimated_budget || 0);
     const totalLoanAllActivities = (data.activities || []).reduce((sum, act) => {
         return sum + (act.loan_items || []).reduce((lSum, item) => lSum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
     }, 0);
@@ -236,6 +252,131 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
     const grandTotalBudget = effectiveLoanBudget + effectiveProcBudget;
     const remainingBudget = allocatedBudget - grandTotalBudget;
     const usedPercentage = allocatedBudget > 0 ? ((grandTotalBudget / allocatedBudget) * 100).toFixed(1) : 0;
+
+    // Action Plan (Section 11) Budget Hard-check Calculations
+    const actionPlanTotal = (data.action_plan || []).reduce((sum, row) => {
+        return sum + (parseFloat(row.budget_operating) || 0) + (parseFloat(row.budget_investment) || 0) + (parseFloat(row.budget_other) || 0) + (parseFloat(row.budget_subsidy) || 0);
+    }, 0);
+    const isActionPlanOverBudget = allocatedBudget > 0 && actionPlanTotal > (allocatedBudget + 0.01);
+    const actionPlanRemaining = allocatedBudget - actionPlanTotal;
+
+    // Quarters Mapping Helpers
+    const getActiveQuarters = () => {
+        const quarters = new Set();
+        (data.action_plan || []).forEach(row => {
+            if (row.q1) quarters.add(1);
+            if (row.q2) quarters.add(2);
+            if (row.q3) quarters.add(3);
+            if (row.q4) quarters.add(4);
+        });
+        return Array.from(quarters).sort();
+    };
+
+    const computeQuarterPeriodText = () => {
+        const qList = getActiveQuarters();
+        if (qList.length === 0) return '';
+        const thaiYear = parseInt(data.academic_year) || 2569;
+        const prevThaiYear = thaiYear - 1;
+        
+        const qLabels = {
+            1: `ไตรมาสที่ ๑ (ต.ค. - ธ.ค. ${prevThaiYear})`,
+            2: `ไตรมาสที่ ๒ (ม.ค. - มี.ค. ${thaiYear})`,
+            3: `ไตรมาสที่ ๓ (เม.ย. - มิ.ย. ${thaiYear})`,
+            4: `ไตรมาสที่ ๔ (ก.ค. - ก.ย. ${thaiYear})`,
+        };
+
+        if (qList.length === 1) {
+            return qLabels[qList[0]];
+        }
+
+        const minQ = qList[0];
+        const maxQ = qList[qList.length - 1];
+        const startText = minQ === 1 ? `ต.ค. ${prevThaiYear}` : minQ === 2 ? `ม.ค. ${thaiYear}` : minQ === 3 ? `เม.ย. ${thaiYear}` : `ก.ค. ${thaiYear}`;
+        const endText = maxQ === 1 ? `ธ.ค. ${prevThaiYear}` : maxQ === 2 ? `มี.ค. ${thaiYear}` : maxQ === 3 ? `มิ.ย. ${thaiYear}` : `ก.ย. ${thaiYear}`;
+
+        const qNumbersThai = qList.map(q => q === 1 ? '๑' : q === 2 ? '๒' : q === 3 ? '๓' : '๔').join(', ');
+        return `${startText} – ${endText} (ไตรมาสที่ ${qNumbersThai})`;
+    };
+
+    const applyQuarterToTimeIndicator = () => {
+        const periodText = computeQuarterPeriodText();
+        if (!periodText) {
+            Swal.fire('แจ้งเตือน', 'กรุณาติ๊กเลือกไตรมาส (๑, ๒, ๓, ๔) ในตารางแผนการปฏิบัติงาน (ข้อ ๑๑) ก่อนทำการเชื่อมโยง', 'info');
+            return;
+        }
+        setData('indicators', {
+            ...data.indicators,
+            time: {
+                ...(data.indicators?.time || {}),
+                text: `ระยะเวลาดำเนินโครงการ: ${periodText} หรือดำเนินกิจกรรมให้แล้วเสร็จตามกำหนดเวลา ร้อยละ ๑๐๐`
+            }
+        });
+        Swal.fire({
+            title: '✨ เชื่อมโยงระยะเวลาสำเร็จ!',
+            text: `อัปเดตตัวชี้วัดด้านเวลา (ข้อ ๑๐.๓) เป็น "${periodText}" เรียบร้อยแล้ว`,
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    };
+
+    // AI Consistency Auditor Handler
+    const handleRunConsistencyAudit = async () => {
+        setIsAuditing(true);
+        setIsAuditModalOpen(true);
+        try {
+            const res = await axios.post(route('projects.ai.audit_consistency'), {
+                project_id: project?.id,
+                title: data.title,
+                academic_year: data.academic_year,
+                background_rationale: data.background_rationale,
+                objectives: data.objectives,
+                indicators: data.indicators,
+                targets: data.targets,
+                action_plan: data.action_plan,
+                activities: data.activities,
+                estimated_budget: allocatedBudget || data.estimated_budget,
+            });
+            if (res.data?.success) {
+                setAuditResult(res.data.audit);
+            } else {
+                Swal.fire('แจ้งเตือน', res.data?.message || 'ไม่สามารถวิเคราะห์ความสอดคล้องได้', 'warning');
+            }
+        } catch (err) {
+            console.error('Audit consistency error:', err);
+            Swal.fire('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อ AI Auditor กรุณาลองใหม่อีกครั้ง', 'error');
+        } finally {
+            setIsAuditing(false);
+        }
+    };
+
+    // Contextual PDCA Generator Handler
+    const handleGenerateContextualPlan = async () => {
+        if (!data.title.trim()) {
+            Swal.fire('คำแนะนำ', 'กรุณาระบุชื่อโครงการก่อน ให้ AI ช่วยปรับแต่งขั้นตอน', 'info');
+            return;
+        }
+        setGeneratingAi(true);
+        try {
+            const res = await axios.post(route('projects.generate_ai_content'), {
+                type: 'contextual_standard_plan',
+                title: data.title,
+                budget: allocatedBudget || data.estimated_budget,
+                target_group: (data.targets?.quantitative && data.targets.quantitative[0]) || 'นักเรียน นักศึกษา',
+                location: data.location || 'วิทยาลัยสารพัดช่างน่าน',
+            });
+            if (res.data?.success && res.data.action_plan) {
+                setData('action_plan', res.data.action_plan);
+                Swal.fire('✨ AI ปรับแต่งแผนปฏิบัติงานสำเร็จ!', 'ปรับปรุง ๔ ขั้นตอนตามบริบทโครงการ พร้อมใส่ประมาณการงบประมาณเรียบร้อยแล้ว', 'success');
+            } else {
+                Swal.fire('แจ้งเตือน', 'ไม่สามารถปรับแต่งแผนได้ในขณะนี้', 'warning');
+            }
+        } catch (err) {
+            Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อ AI ได้ในขณะนี้', 'error');
+        } finally {
+            setGeneratingAi(false);
+        }
+    };
 
     // Universal AI Generator Handler
     const handleGenerateAi = async (type, successMessage) => {
@@ -529,6 +670,16 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
     const handleSaveDraft = (e) => {
         if (e) e.preventDefault();
+        if (isActionPlanOverBudget) {
+            Swal.fire({
+                title: '⚠️ งบประมาณในแผนปฏิบัติงานเกินวงเงินจัดสรร!',
+                html: `ยอดรวมในแผนปฏิบัติงาน (ข้อ ๑๑) คือ <b style="color: #e11d48;">${actionPlanTotal.toLocaleString()}</b> บาท<br/>เกินกว่าวงเงินที่ได้รับการจัดสรร <b style="color: #047857;">${allocatedBudget.toLocaleString()}</b> บาท (เกินอยู่ <b style="color: #e11d48;">${(actionPlanTotal - allocatedBudget).toLocaleString()}</b> บาท)<br/><br/>กรุณาปรับลดงบประมาณในข้อ ๑๑ ให้ไม่เกินวงเงินที่จัดสรรก่อนบันทึก`,
+                icon: 'error',
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'รับทราบและกลับไปแก้ไข'
+            });
+            return;
+        }
         router.patch(route('projects.update', project.id), prepareSubmitData(false), {
             preserveScroll: true,
             onSuccess: () => {
@@ -547,6 +698,16 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         if (e) e.preventDefault();
         if (isApprovedOrCompleted) {
             Swal.fire('ล็อคการแก้ไข', 'โครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว ไม่สามารถดำเนินการแก้ไขใด ๆ ได้อีกต่อไป', 'warning');
+            return;
+        }
+        if (isActionPlanOverBudget) {
+            Swal.fire({
+                title: '⚠️ ไม่สามารถยื่นขออนุมัติได้!',
+                html: `ยอดรวมในแผนปฏิบัติงาน (ข้อ ๑๑) คือ <b style="color: #e11d48;">${actionPlanTotal.toLocaleString()}</b> บาท<br/>เกินกว่าวงเงินที่ได้รับการจัดสรร <b style="color: #047857;">${allocatedBudget.toLocaleString()}</b> บาท (เกินอยู่ <b style="color: #e11d48;">${(actionPlanTotal - allocatedBudget).toLocaleString()}</b> บาท)<br/><br/>กรุณาปรับลดงบประมาณในข้อ ๑๑ ให้ไม่เกินวงเงินที่จัดสรรก่อนยื่นเสนอ`,
+                icon: 'error',
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'รับทราบและกลับไปแก้ไข'
+            });
             return;
         }
         Swal.fire({
@@ -603,7 +764,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         >
             <Head title={`จัดทำโครงการฉบับเต็ม: ${project?.title}`} />
 
-            <div className="w-full max-w-[100rem] space-y-6 font-sans">
+            <div className="w-full max-w-[100rem] space-y-6 font-sans pb-32">
 
                     {/* Stepper Bar */}
                     <ProjectWorkflowStepper currentStep={project.current_approval_step || 1} status={project.status} />
@@ -732,20 +893,116 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             </div>
                         )}
 
-                        <form onSubmit={handleSubmit} className="space-y-8">
-                            <fieldset className="space-y-8 border-0 p-0 m-0">
+                        {/* Quick Navigation & Accordion Control Bar */}
+                        <div className="sticky top-2 z-20 mb-6 bg-white/95 backdrop-blur-md rounded-2xl border border-purple-200 p-3 shadow-md flex flex-wrap items-center justify-between gap-2.5">
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+                                <span className="text-slate-500 mr-1 text-[11px]">ทางลัดส่วน:</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setOpenGroups(prev => ({ ...prev, g1: true }));
+                                        document.getElementById('group-g1')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${openGroups.g1 ? 'bg-purple-100 border-purple-300 text-purple-900 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                >
+                                    ๑. ข้อมูลทั่วไป & ยุทธศาสตร์ (๑-๓)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setOpenGroups(prev => ({ ...prev, g2: true }));
+                                        document.getElementById('group-g2')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${openGroups.g2 ? 'bg-purple-100 border-purple-300 text-purple-900 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                >
+                                    ๒. วัตถุประสงค์ & กลุ่มเป้าหมาย (๔-๗)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setOpenGroups(prev => ({ ...prev, g3: true }));
+                                        document.getElementById('group-g3')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${openGroups.g3 ? 'bg-purple-100 border-purple-300 text-purple-900 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                >
+                                    ๓. แผนงาน & งบประมาณ (๘-๑๒)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setOpenGroups(prev => ({ ...prev, g4: true }));
+                                        document.getElementById('group-g4')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className={`px-3 py-1.5 rounded-xl border transition-all cursor-pointer ${openGroups.g4 ? 'bg-purple-100 border-purple-300 text-purple-900 shadow-2xs' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                                >
+                                    ๔. การประเมิน & ลงนาม (๑๓-๑๔)
+                                </button>
+                            </div>
 
-                            {/* Section 1: ข้อมูลพื้นฐาน & ผู้รับผิดชอบโครงการ */}
-                            <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
-                                <div className="border-b border-purple-100 pb-3 flex justify-between items-center">
-                                    <div>
-                                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 1 : ข้อมูลทั่วไป & ผู้รับผิดชอบโครงการ</span>
-                                        <h3 className="text-base font-bold text-purple-950">1. ชื่อโครงการ & รายละเอียดผู้เสนอโครงการ</h3>
+                            <div className="flex items-center gap-1.5 text-xs font-bold shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={expandAll}
+                                    className="px-2.5 py-1.5 rounded-xl bg-purple-50 text-purple-800 border border-purple-200 hover:bg-purple-100 transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                    <span>📂</span> กางออกทั้งหมด
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={collapseAll}
+                                    className="px-2.5 py-1.5 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200 transition-all cursor-pointer flex items-center gap-1"
+                                >
+                                    <span>📁</span> พับเก็บทั้งหมด
+                                </button>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <fieldset className="space-y-6 border-0 p-0 m-0">
+
+                            {/* Accordion Group 1: ข้อมูลทั่วไป ยุทธศาสตร์ และหลักการ (หัวข้อ ๑ - ๓) */}
+                            <div id="group-g1" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGroup('g1')}
+                                    className="w-full flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-purple-50 via-indigo-50/40 to-white text-left hover:bg-purple-100/50 transition cursor-pointer select-none"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-9 h-9 rounded-2xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                                            ๑
+                                        </span>
+                                        <div>
+                                            <h3 className="text-base font-black text-purple-950">
+                                                กลุ่มที่ ๑ : ข้อมูลทั่วไป ยุทธศาสตร์ และหลักการและเหตุผล
+                                            </h3>
+                                            <p className="text-xs text-purple-700">
+                                                หัวข้อที่ ๑ (ข้อมูลพื้นฐาน & ผู้เสนอ) • หัวข้อที่ ๒ (ยุทธศาสตร์) • หัวข้อที่ ๓ (หลักการและเหตุผล)
+                                            </p>
+                                        </div>
                                     </div>
-                                    <span className="text-xs text-purple-700 font-bold bg-purple-100 px-3 py-1 rounded-full">
-                                        ปีงบประมาณ พ.ศ. {data.academic_year}
-                                    </span>
-                                </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hidden sm:inline-block">
+                                            หัวข้อ ๑ - ๓
+                                        </span>
+                                        <span className="w-8 h-8 rounded-full bg-white border border-purple-200 text-purple-800 flex items-center justify-center text-sm font-bold shadow-2xs">
+                                            {openGroups.g1 ? '▲' : '▼'}
+                                        </span>
+                                    </div>
+                                </button>
+                                {openGroups.g1 && (
+                                    <div className="p-5 sm:p-6 space-y-8 border-t border-purple-100">
+
+                                    {/* Section 1: ข้อมูลพื้นฐาน & ผู้รับผิดชอบโครงการ */}
+                                    <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
+                                        <div className="border-b border-purple-100 pb-3 flex justify-between items-center">
+                                            <div>
+                                                <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 1 : ข้อมูลทั่วไป & ผู้รับผิดชอบโครงการ</span>
+                                                <h3 className="text-base font-bold text-purple-950">1. ชื่อโครงการ & รายละเอียดผู้เสนอโครงการ</h3>
+                                            </div>
+                                            <span className="text-xs text-purple-700 font-bold bg-purple-100 px-3 py-1 rounded-full">
+                                                ปีงบประมาณ พ.ศ. {data.academic_year}
+                                            </span>
+                                        </div>
 
                                 {/* Project Title */}
                                 <div>
@@ -1056,6 +1313,41 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 ></textarea>
                                 {errors.background_rationale && <span className="text-xs text-rose-500 mt-1 block">{errors.background_rationale}</span>}
                             </div>
+                            </div>
+                            )}
+                            </div>
+
+                            {/* Accordion Group 2: วัตถุประสงค์ ตัวชี้วัด และกลุ่มเป้าหมาย (หัวข้อ ๔ - ๗) */}
+                            <div id="group-g2" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGroup('g2')}
+                                    className="w-full flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-purple-50 via-indigo-50/40 to-white text-left hover:bg-purple-100/50 transition cursor-pointer select-none"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-9 h-9 rounded-2xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                                            ๒
+                                        </span>
+                                        <div>
+                                            <h3 className="text-base font-black text-purple-950">
+                                                กลุ่มที่ ๒ : วัตถุประสงค์ ผลผลิต ผลลัพธ์ และกลุ่มเป้าหมาย
+                                            </h3>
+                                            <p className="text-xs text-purple-700">
+                                                หัวข้อที่ ๔ (วัตถุประสงค์) • หัวข้อที่ ๕ (ผลผลิต) • หัวข้อที่ ๖ (ผลลัพธ์) • หัวข้อที่ ๗ (กลุ่มเป้าหมาย ปริมาณ & คุณภาพ)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hidden sm:inline-block">
+                                            หัวข้อ ๔ - ๗
+                                        </span>
+                                        <span className="w-8 h-8 rounded-full bg-white border border-purple-200 text-purple-800 flex items-center justify-center text-sm font-bold shadow-2xs">
+                                            {openGroups.g2 ? '▲' : '▼'}
+                                        </span>
+                                    </div>
+                                </button>
+                                {openGroups.g2 && (
+                                    <div className="p-5 sm:p-6 space-y-8 border-t border-purple-100">
 
                             {/* Section 4: Objectives */}
                             <div className="space-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-100">
@@ -1310,6 +1602,46 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     </button>
                                 </div>
                             </div>
+                            </div>
+                            )}
+                            </div>
+
+                            {/* Accordion Group 3: สถานที่ ประโยชน์ แผน และงบประมาณ (หัวข้อ ๘ - ๑๒) */}
+                            <div id="group-g3" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGroup('g3')}
+                                    className="w-full flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-purple-50 via-indigo-50/40 to-white text-left hover:bg-purple-100/50 transition cursor-pointer select-none"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-9 h-9 rounded-2xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                                            ๓
+                                        </span>
+                                        <div>
+                                            <h3 className="text-base font-black text-purple-950 flex items-center gap-2">
+                                                <span>กลุ่มที่ ๓ : แผนงาน ตัวชี้วัด 4 มิติ และรายละเอียดงบประมาณ</span>
+                                                {isActionPlanOverBudget && (
+                                                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300 animate-pulse">
+                                                        ⚠️ งบแผนเกินวงเงิน
+                                                    </span>
+                                                )}
+                                            </h3>
+                                            <p className="text-xs text-purple-700">
+                                                หัวข้อที่ ๘ (สถานที่) • หัวข้อที่ ๙ (ผลที่คาดว่าจะได้รับ) • หัวข้อที่ ๑๐ (ตัวชี้วัด ๔ มิติ) • หัวข้อที่ ๑๑ (ตารางแผนปฏิบัติงาน & ไตรมาส) • หัวข้อที่ ๑๒ (หมวดเงิน & สัญญายืมเงิน/จัดซื้อ)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hidden sm:inline-block">
+                                            หัวข้อ ๘ - ๑๒
+                                        </span>
+                                        <span className="w-8 h-8 rounded-full bg-white border border-purple-200 text-purple-800 flex items-center justify-center text-sm font-bold shadow-2xs">
+                                            {openGroups.g3 ? '▲' : '▼'}
+                                        </span>
+                                    </div>
+                                </button>
+                                {openGroups.g3 && (
+                                    <div className="p-5 sm:p-6 space-y-8 border-t border-purple-100">
 
                             {/* Section 8: พื้นที่ดำเนินการ (Location) */}
                             <div className="space-y-3 bg-purple-50/20 p-4 rounded-xl border border-purple-100">
@@ -1476,22 +1808,140 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                         <span className="text-xs font-bold uppercase tracking-wider text-purple-600 block">ส่วนที่ 5 : แผนการปฏิบัติงาน</span>
                                         <h3 className="text-base font-bold text-purple-950">11. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</h3>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <button
                                             type="button"
                                             onClick={resetToStandardActionPlan}
-                                            className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-300 shadow-2xs"
+                                            className="text-xs font-bold text-slate-700 bg-white hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-300 shadow-2xs cursor-pointer"
                                             title="รีเซ็ตเป็น 4 ขั้นตอนมาตรฐานตามแบบฟอร์มวิทยาลัย"
                                         >
                                             📋 คืนค่า 4 ขั้นตอนมาตรฐาน
                                         </button>
                                         <button
                                             type="button"
+                                            onClick={handleGenerateContextualPlan}
+                                            disabled={generatingAi}
+                                            className="text-xs font-bold text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200 shadow-2xs transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                            title="ให้ AI ปรับแต่ง 4 ขั้นตอนให้ตรงกับชื่อโครงการ กลุ่มเป้าหมาย และงบประมาณ"
+                                        >
+                                            <span>✨</span> AI ปรับแต่ง 4 ขั้นตอนตามบริบท (PDCA)
+                                        </button>
+                                        <button
+                                            type="button"
                                             onClick={() => handleGenerateAi('action_plan', 'สร้างปฏิทินปฏิบัติงาน 4 ขั้นตอนมาตรฐานเรียบร้อยแล้ว')}
-                                            className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs"
+                                            disabled={generatingAi}
+                                            className="text-xs font-bold text-purple-700 bg-white hover:bg-purple-100 px-3 py-1.5 rounded-xl border border-purple-200 shadow-2xs cursor-pointer disabled:opacity-50"
                                         >
                                             ✨ ให้ AI ช่วยสร้างแผน
                                         </button>
+                                    </div>
+                                </div>
+
+                                {/* Quarter Mapping Consistency Visualizer */}
+                                <div className="bg-white rounded-2xl p-4 border border-purple-200 shadow-2xs space-y-2.5">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="p-1.5 rounded-xl bg-purple-100 text-purple-700 text-base">🗓️</span>
+                                            <div>
+                                                <h4 className="text-xs font-bold text-purple-950">
+                                                    การวิเคราะห์ช่วงเวลาดำเนินโครงการจากไตรมาส (Quarter Mapping)
+                                                </h4>
+                                                <p className="text-[11px] text-slate-500">
+                                                    คำนวณช่วงเวลาดำเนินโครงการอัตโนมัติตามไตรมาสที่ติ๊กเลือก (๑, ๒, ๓, ๔) ในตาราง
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={applyQuarterToTimeIndicator}
+                                            className="self-start sm:self-center px-3 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                                            title="อัปเดตระยะเวลาเข้าสู่ตัวชี้วัดข้อ ๑๐.๓ เชิงเวลา อัตโนมัติ"
+                                        >
+                                            <span>✨</span> เชื่อมโยงไตรมาสสู่ตัวชี้วัดด้านเวลา (ข้อ ๑๐.๓)
+                                        </button>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-purple-100 text-xs">
+                                        <span className="text-slate-600 font-bold">ไตรมาสที่เลือกในแผน:</span>
+                                        <div className="flex items-center gap-1.5">
+                                            {[1, 2, 3, 4].map(q => {
+                                                const isActive = getActiveQuarters().includes(q);
+                                                return (
+                                                    <span
+                                                        key={q}
+                                                        className={`px-2.5 py-0.5 rounded-lg font-bold text-[11px] border transition-all ${
+                                                            isActive
+                                                                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                                                                : 'bg-slate-100 text-slate-400 border-slate-200 opacity-60'
+                                                        }`}
+                                                    >
+                                                        ไตรมาส {q === 1 ? '๑' : q === 2 ? '๒' : q === 3 ? '๓' : '๔'}
+                                                    </span>
+                                                );
+                                            })}
+                                        </div>
+                                        <span className="text-slate-400">➔</span>
+                                        <span className="font-extrabold text-purple-950 bg-purple-50 px-3 py-1 rounded-xl border border-purple-200">
+                                            {computeQuarterPeriodText() || 'ยังไม่ได้ระบุไตรมาสในแผน'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Budget Ceiling Real-time Comparison Banner */}
+                                <div className={`p-4 rounded-2xl border transition-all ${
+                                    isActionPlanOverBudget
+                                        ? 'bg-rose-50 border-rose-300 text-rose-950 shadow-sm'
+                                        : actionPlanRemaining === 0
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950 shadow-2xs'
+                                        : 'bg-indigo-50/70 border-indigo-200 text-indigo-950 shadow-2xs'
+                                }`}>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl p-1.5 rounded-xl bg-white shadow-2xs">
+                                                {isActionPlanOverBudget ? '⚠️' : actionPlanRemaining === 0 ? '🎯' : '⚖️'}
+                                            </span>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h4 className="text-xs sm:text-sm font-black">
+                                                        การควบคุมวงเงินงบประมาณแผนปฏิบัติงาน (Budget Ceiling Hard-check)
+                                                    </h4>
+                                                    {isActionPlanOverBudget ? (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white animate-pulse">
+                                                            เกินวงเงินจัดสรร!
+                                                        </span>
+                                                    ) : actionPlanRemaining === 0 ? (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white">
+                                                            ยอดเงินพอดีเป๊ะ (100%)
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-200 text-indigo-900">
+                                                            ยังคงเหลือจัดสรร
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-[11px] mt-0.5 opacity-80">
+                                                    {isActionPlanOverBudget
+                                                        ? `ยอดรวมในหมวดเงินเกินกว่าวงเงินที่ได้รับจัดสรร ${(actionPlanTotal - allocatedBudget).toLocaleString()} บาท กรุณาปรับลดก่อนบันทึก`
+                                                        : actionPlanRemaining === 0
+                                                        ? 'ยอดรวมในหมวดเงินตรงกับวงเงินที่ได้รับจัดสรรพอดี สามารถดำเนินการขั้นตอนต่อไปได้'
+                                                        : `ยังสามารถจัดสรรงบประมาณลงในขั้นตอนต่าง ๆ ได้อีก ${actionPlanRemaining.toLocaleString()} บาท`}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 text-xs font-mono shrink-0 self-end sm:self-center">
+                                            <div className="text-right">
+                                                <span className="text-[10px] text-slate-500 font-sans block">วงเงินจัดสรร</span>
+                                                <span className="font-extrabold text-slate-800 text-sm">{allocatedBudget.toLocaleString()} ฿</span>
+                                            </div>
+                                            <div className="text-slate-300 font-bold text-base">/</div>
+                                            <div className="text-right">
+                                                <span className="text-[10px] text-slate-500 font-sans block">ยอดในแผน (ข้อ ๑๑)</span>
+                                                <span className={`font-black text-sm ${isActionPlanOverBudget ? 'text-rose-600' : 'text-purple-900'}`}>
+                                                    {actionPlanTotal.toLocaleString()} ฿
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1641,7 +2091,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                         <button
                                                             type="button"
                                                             onClick={() => removeActionPlanRow(rIdx)}
-                                                            className="text-rose-400 hover:text-rose-600 font-bold p-1 rounded hover:bg-rose-50"
+                                                            className="text-rose-400 hover:text-rose-600 font-bold p-1 rounded hover:bg-rose-50 cursor-pointer"
                                                             title="ลบแถวนี้"
                                                         >
                                                             ✕
@@ -1669,12 +2119,23 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 <td></td>
                                             </tr>
                                             {/* Summary Row: งบประมาณรวมทั้งโครงการ */}
-                                            <tr className="bg-purple-200/60 font-black text-purple-950 border-t border-purple-300">
-                                                <td colSpan="7" className="p-2 text-center border-r border-purple-200">
-                                                    งบประมาณรวมทั้งโครงการ
+                                            <tr className={`border-t-2 font-black text-center ${
+                                                isActionPlanOverBudget
+                                                    ? 'bg-rose-100 text-rose-950 border-rose-400'
+                                                    : 'bg-purple-200/60 text-purple-950 border-purple-300'
+                                            }`}>
+                                                <td colSpan="7" className="p-2.5 text-center border-r border-purple-200">
+                                                    งบประมาณรวมทั้งโครงการ (ในแผน)
                                                 </td>
-                                                <td colSpan="4" className="p-2 text-center text-sm font-black text-purple-900">
-                                                    {(data.action_plan || []).reduce((s, r) => s + (parseFloat(r.budget_operating) || 0) + (parseFloat(r.budget_investment) || 0) + (parseFloat(r.budget_other) || 0) + (parseFloat(r.budget_subsidy) || 0), 0).toLocaleString()} บาท
+                                                <td colSpan="4" className="p-2.5 text-center text-sm font-black">
+                                                    <span className={isActionPlanOverBudget ? 'text-rose-700 font-mono font-black underline decoration-rose-500' : 'text-purple-900 font-mono'}>
+                                                        {actionPlanTotal.toLocaleString()} บาท
+                                                    </span>
+                                                    {isActionPlanOverBudget && (
+                                                        <span className="block text-[11px] text-rose-600 font-bold mt-0.5">
+                                                            (⚠️ เกินวงเงินที่ได้รับจัดสรร {(actionPlanTotal - allocatedBudget).toLocaleString()} บาท)
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td></td>
                                             </tr>
@@ -1684,7 +2145,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 <button
                                     type="button"
                                     onClick={addActionPlanRow}
-                                    className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block"
+                                    className="text-xs font-bold text-purple-700 hover:text-purple-900 pt-1 block cursor-pointer"
                                 >
                                     + เพิ่มขั้นตอน/วิธีดำเนินการเพิ่มเติม
                                 </button>
@@ -2394,6 +2855,41 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     </button>
                                 </div>
                             </div>
+                            </div>
+                            )}
+                            </div>
+
+                            {/* Accordion Group 4: การประเมินผล และการลงนาม (หัวข้อ ๑๓ - ๑๔) */}
+                            <div id="group-g4" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGroup('g4')}
+                                    className="w-full flex items-center justify-between p-4 sm:p-5 bg-gradient-to-r from-purple-50 via-indigo-50/40 to-white text-left hover:bg-purple-100/50 transition cursor-pointer select-none"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="w-9 h-9 rounded-2xl bg-purple-600 text-white font-black text-sm flex items-center justify-center shadow-xs">
+                                            ๔
+                                        </span>
+                                        <div>
+                                            <h3 className="text-base font-black text-purple-950">
+                                                กลุ่มที่ ๔ : ผู้รับผิดชอบ และการติดตามประเมินผลโครงการ
+                                            </h3>
+                                            <p className="text-xs text-purple-700">
+                                                หัวข้อที่ ๑๓ (ผู้รับผิดชอบ/ลงนาม) • หัวข้อที่ ๑๔ (วิธีการติดตามและประเมินผล)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200 hidden sm:inline-block">
+                                            หัวข้อ ๑๓ - ๑๔
+                                        </span>
+                                        <span className="w-8 h-8 rounded-full bg-white border border-purple-200 text-purple-800 flex items-center justify-center text-sm font-bold shadow-2xs">
+                                            {openGroups.g4 ? '▲' : '▼'}
+                                        </span>
+                                    </div>
+                                </button>
+                                {openGroups.g4 && (
+                                    <div className="p-5 sm:p-6 space-y-8 border-t border-purple-100">
 
                             {/* Section 13: ผู้รับผิดชอบโครงการ */}
                             <div className="space-y-4 bg-purple-50/20 p-5 rounded-2xl border border-purple-100">
@@ -2422,6 +2918,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     <p><span className="font-bold text-purple-900">14.1 เครื่องมือที่ใช้ในการประเมิน:</span> แบบประเมินความพึงพอใจของผู้เข้าร่วมโครงการ, แบบบันทึกการสังเกตพฤติกรรม และแบบทดสอบประเมินสมรรถนะ</p>
                                     <p><span className="font-bold text-purple-900">14.2 วิธีการประเมิน:</span> ประเมินผลก่อนและหลังการจัดกิจกรรม รวบรวมข้อมูลทางสถิติ และจัดทำสรุปรายงานผลโครงการฉบับสมบูรณ์เสนอต่อผู้บริหารสถานศึกษา</p>
                                 </div>
+                            </div>
+                            </div>
+                            )}
                             </div>
 
                             {/* Submit Action Buttons */}
@@ -2585,6 +3084,89 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                     </div>
                 </div>
             )}
+
+            {/* Consistency Auditor Modal */}
+            <ConsistencyAuditModal
+                isOpen={isAuditModalOpen}
+                onClose={() => setIsAuditModalOpen(false)}
+                auditResult={auditResult}
+                isLoading={isAuditing}
+            />
+
+            {/* Sticky Summary & Quick Action Footer */}
+            <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t-2 border-purple-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 sm:px-8 transition-all">
+                <div className="max-w-[100rem] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+                    {/* Live Stats */}
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-6 text-xs w-full md:w-auto justify-center md:justify-start">
+                        <div className="flex items-center gap-1.5 bg-purple-50/80 px-3 py-1.5 rounded-xl border border-purple-200">
+                            <span className="text-slate-500 font-bold">วงเงินจัดสรร:</span>
+                            <span className="font-black text-purple-950 text-sm">
+                                {allocatedBudget.toLocaleString()} <span className="text-[10px] font-normal">บาท</span>
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                            <span className="text-slate-500 font-bold">แผนปฏิบัติงาน (ข้อ ๑๑):</span>
+                            <span className={`font-black text-sm ${isActionPlanOverBudget ? 'text-rose-600 animate-pulse' : 'text-slate-800'}`}>
+                                {actionPlanTotal.toLocaleString()} <span className="text-[10px] font-normal">บาท</span>
+                            </span>
+                        </div>
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${
+                            isActionPlanOverBudget 
+                                ? 'bg-rose-50 border-rose-300 text-rose-700 font-bold' 
+                                : actionPlanRemaining === 0 
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                                : 'bg-amber-50 border-amber-300 text-amber-800'
+                        }`}>
+                            <span className="font-bold">
+                                {isActionPlanOverBudget ? '⚠️ จัดสรรเกิน:' : 'คงเหลือจัดสรร:'}
+                            </span>
+                            <span className="font-black text-sm">
+                                {Math.abs(actionPlanRemaining).toLocaleString()} <span className="text-[10px] font-normal">บาท</span>
+                            </span>
+                            {actionPlanRemaining === 0 && (
+                                <span className="text-[11px] bg-emerald-200 text-emerald-950 px-1.5 py-0.5 rounded-md font-bold ml-1">✓ พอดีเป๊ะ</span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end">
+                        <button
+                            type="button"
+                            onClick={handleRunConsistencyAudit}
+                            disabled={isAuditing}
+                            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-purple-600/20 flex items-center gap-1.5 transition-all hover:scale-102 active:scale-95 disabled:opacity-50 cursor-pointer"
+                        >
+                            <span className={isAuditing ? 'animate-spin' : ''}>✨</span>
+                            <span>AI ตรวจสอบความสอดคล้อง</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSaveDraft}
+                            disabled={processing || isSubmitting}
+                            className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-300 font-bold text-xs shadow-2xs transition-all hover:scale-102 active:scale-95 disabled:opacity-50 cursor-pointer"
+                        >
+                            💾 บันทึกแบบร่าง
+                        </button>
+                        {!isApprovedOrCompleted && project.status !== 'pending_approval' && (
+                            <button
+                                type="button"
+                                onClick={handleSaveAndSubmit}
+                                disabled={processing || isSubmitting || isActionPlanOverBudget}
+                                className={`px-4 py-2 rounded-xl text-white font-extrabold text-xs shadow-md transition-all flex items-center gap-1.5 ${
+                                    isActionPlanOverBudget
+                                        ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-600/25 hover:scale-102 active:scale-95 cursor-pointer'
+                                }`}
+                                title={isActionPlanOverBudget ? 'ไม่สามารถส่งได้เนื่องจากงบประมาณในแผนปฏิบัติงานเกินวงเงินจัดสรร' : 'ส่งต่อขั้นที่ 2'}
+                            >
+                                <span>🚀</span>
+                                <span>ส่งต่อขั้นที่ 2</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
         </AuthenticatedLayout>
     );
 }

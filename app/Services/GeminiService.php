@@ -1146,5 +1146,319 @@ Write the report in Thai. Include sections for:
                 : "โครงการมีความเป็นเอกเทศ สามารถดำเนินการเสนอของบประมาณตามขั้นตอนได้"
         ];
     }
+
+    /**
+     * AI Consistency Auditor: Evaluates alignment between Objectives, 4D KPIs, Action Plan, and Budget itemization.
+     */
+    public function auditProjectConsistency(array $projectData): array
+    {
+        $title = $projectData['title'] ?? 'โครงการ';
+        $objectives = (array)($projectData['objectives'] ?? []);
+        $indicators = (array)($projectData['indicators'] ?? []);
+        $actionPlan = (array)($projectData['action_plan'] ?? []);
+        $activities = (array)($projectData['activities'] ?? []);
+        $targets = (array)($projectData['targets'] ?? []);
+        $allocatedBudget = (float)($projectData['allocated_budget'] ?? 0);
+
+        if ($this->apiKey) {
+            try {
+                $client = $this->createHttpClient();
+                $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$this->apiKey}";
+
+                $prompt = "คุณคือผู้เชี่ยวชาญการตรวจสอบและประเมินคุณภาพข้อเสนอโครงการ (Project Proposal Auditor) ของสถานศึกษา สังกัดสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)\n"
+                    . "จงวิเคราะห์ความสอดคล้องเชิงตรรกะ (Consistency & Logical Alignment) ของข้อเสนอโครงการนี้:\n"
+                    . "- ชื่อโครงการ: {$title}\n"
+                    . "- วัตถุประสงค์: " . json_encode($objectives, JSON_UNESCAPED_UNICODE) . "\n"
+                    . "- ตัวชี้วัด 4 มิติ (ปริมาณ, คุณภาพ, เวลา, ค่าใช้จ่าย): " . json_encode($indicators, JSON_UNESCAPED_UNICODE) . "\n"
+                    . "- กลุ่มเป้าหมาย: " . json_encode($targets, JSON_UNESCAPED_UNICODE) . "\n"
+                    . "- แผนการปฏิบัติงาน (Action Plan): " . json_encode($actionPlan, JSON_UNESCAPED_UNICODE) . "\n"
+                    . "- รายละเอียดกิจกรรมและงบประมาณ: " . json_encode($activities, JSON_UNESCAPED_UNICODE) . "\n"
+                    . "- กรอบวงเงินงบประมาณที่จัดสรร: {$allocatedBudget} บาท\n\n"
+                    . "หลักการตรวจสอบ:\n"
+                    . "1. ความสอดคล้องระหว่างวัตถุประสงค์กับตัวชี้วัดความสำเร็จ 4 มิติ\n"
+                    . "2. ความสอดคล้องระหว่างตัวชี้วัดเชิงปริมาณกับกลุ่มเป้าหมายในตารางกิจกรรมและขั้นตอน\n"
+                    . "3. ความสอดคล้องระหว่างตัวชี้วัดด้านเวลากับไตรมาสที่ติ๊กเลือกในตารางแผนงาน\n"
+                    . "4. ความสอดคล้องระหว่างกิจกรรมกับหมวดเงินค่าใช้จ่าย (เช่น มีการจัดอบรม ต้องมีค่าอาหาร/วิทยากร/วัสดุ)\n\n"
+                    . "จงตอบกลับเป็น JSON strictly ในโครงสร้างนี้เท่านั้น:\n"
+                    . "{\n"
+                    . "  \"score\": 85,\n"
+                    . "  \"status\": \"excellent\",\n"
+                    . "  \"summary\": \"สรุปภาพรวมความสอดคล้องใน 1-2 ประโยค\",\n"
+                    . "  \"checks\": [\n"
+                    . "    {\"dimension\": \"objectives_kpi\", \"name\": \"วัตถุประสงค์ vs ตัวชี้วัด\", \"status\": \"pass\", \"detail\": \"คำอธิบาย\"},\n"
+                    . "    {\"dimension\": \"quantity_target\", \"name\": \"ตัวชี้วัดเชิงปริมาณ vs กลุ่มเป้าหมาย\", \"status\": \"pass\", \"detail\": \"คำอธิบาย\"},\n"
+                    . "    {\"dimension\": \"time_quarter\", \"name\": \"ตัวชี้วัดเวลา vs ไตรมาส\", \"status\": \"pass\", \"detail\": \"คำอธิบาย\"},\n"
+                    . "    {\"dimension\": \"budget_activities\", \"name\": \"กิจกรรม vs หมวดเงินงบประมาณ\", \"status\": \"pass\", \"detail\": \"คำอธิบาย\"}\n"
+                    . "  ],\n"
+                    . "  \"recommendations\": [\n"
+                    . "    \"ข้อแนะนำที่ 1\",\n"
+                    . "    \"ข้อแนะนำที่ 2\"\n"
+                    . "  ]\n"
+                    . "}";
+
+                $response = $client->post($url, [
+                    'json' => [
+                        'contents' => [
+                            ['parts' => [['text' => $prompt]]]
+                        ],
+                        'generationConfig' => [
+                            'temperature' => 0.2,
+                            'maxOutputTokens' => 1200,
+                            'responseMimeType' => 'application/json'
+                        ]
+                    ]
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $body = json_decode($response->getBody(), true);
+                    $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $decoded = json_decode($text, true);
+                    if ($decoded && is_array($decoded) && isset($decoded['score'])) {
+                        return $decoded;
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini Consistency Auditor Error: ' . $e->getMessage());
+            }
+        }
+
+        return $this->fallbackProjectConsistency($projectData);
+    }
+
+    /**
+     * Fallback Consistency Auditor when API key is offline
+     */
+    private function fallbackProjectConsistency(array $projectData): array
+    {
+        $objectives = (array)($projectData['objectives'] ?? []);
+        $indicators = (array)($projectData['indicators'] ?? []);
+        $actionPlan = (array)($projectData['action_plan'] ?? []);
+        $targets = (array)($projectData['targets'] ?? []);
+        $allocatedBudget = (float)($projectData['allocated_budget'] ?? 0);
+
+        $actionPlanTotal = 0;
+        $hasQ1 = false; $hasQ2 = false; $hasQ3 = false; $hasQ4 = false;
+        foreach ($actionPlan as $row) {
+            $actionPlanTotal += (float)($row['budget_operating'] ?? 0)
+                              + (float)($row['budget_investment'] ?? 0)
+                              + (float)($row['budget_other'] ?? 0)
+                              + (float)($row['budget_subsidy'] ?? 0);
+            if (!empty($row['q1'])) $hasQ1 = true;
+            if (!empty($row['q2'])) $hasQ2 = true;
+            if (!empty($row['q3'])) $hasQ3 = true;
+            if (!empty($row['q4'])) $hasQ4 = true;
+        }
+
+        $checks = [];
+        $recommendations = [];
+        $score = 85;
+
+        // Check 1: Objectives vs KPIs
+        if (count($objectives) > 0 && !empty($indicators['quantitative']['text']) && !empty($indicators['qualitative']['text'])) {
+            $checks[] = [
+                'dimension' => 'objectives_kpi',
+                'name' => 'วัตถุประสงค์ vs ตัวชี้วัด 4 มิติ',
+                'status' => 'pass',
+                'detail' => 'วัตถุประสงค์ (' . count($objectives) . ' ข้อ) มีตัวชี้วัดครอบคลุมทั้งมิติด้านปริมาณ คุณภาพ เวลา และงบประมาณ'
+            ];
+        } else {
+            $score -= 15;
+            $checks[] = [
+                'dimension' => 'objectives_kpi',
+                'name' => 'วัตถุประสงค์ vs ตัวชี้วัด 4 มิติ',
+                'status' => 'warning',
+                'detail' => 'ควรกำหนดตัวชี้วัดให้ครบทั้ง 4 มิติ เพื่อให้ครอบคลุมวัตถุประสงค์โครงการทุกข้อ'
+            ];
+            $recommendations[] = 'ทบทวนตัวชี้วัดความสำเร็จ 4 มิติในข้อ ๑๐ ให้สอดรับกับวัตถุประสงค์';
+        }
+
+        // Check 2: Quantity vs Targets
+        $quantTarget = !empty($targets['quantitative'][0]) ? $targets['quantitative'][0] : '';
+        $quantKpi = $indicators['quantitative']['unit'] ?? ($indicators['quantitative']['text'] ?? '');
+        $hasTargetMatch = !empty($quantTarget) && (!empty($quantKpi));
+        if ($hasTargetMatch) {
+            $checks[] = [
+                'dimension' => 'quantity_target',
+                'name' => 'ตัวชี้วัดเชิงปริมาณ vs กลุ่มเป้าหมาย',
+                'status' => 'pass',
+                'detail' => "กลุ่มเป้าหมายเชิงปริมาณระบุชัดเจน สอดคล้องกับตัวชี้วัดเชิงปริมาณของโครงการ ({$quantKpi})"
+            ];
+        } else {
+            $score -= 10;
+            $checks[] = [
+                'dimension' => 'quantity_target',
+                'name' => 'ตัวชี้วัดเชิงปริมาณ vs กลุ่มเป้าหมาย',
+                'status' => 'warning',
+                'detail' => 'กรุณาระบุจำนวนกลุ่มเป้าหมายเชิงปริมาณในข้อ ๗.๑ ให้ชัดเจน เช่น ๕๐ คน'
+            ];
+            $recommendations[] = 'ระบุจำนวนกลุ่มเป้าหมายเชิงปริมาณและหน่วยนับให้ตรงกับตัวชี้วัดเชิงปริมาณ';
+        }
+
+        // Check 3: Time vs Quarters
+        $hasAnyQuarter = $hasQ1 || $hasQ2 || $hasQ3 || $hasQ4;
+        if ($hasAnyQuarter) {
+            $qList = [];
+            if ($hasQ1) $qList[] = 'ไตรมาส ๑';
+            if ($hasQ2) $qList[] = 'ไตรมาส ๒';
+            if ($hasQ3) $qList[] = 'ไตรมาส ๓';
+            if ($hasQ4) $qList[] = 'ไตรมาส ๔';
+            $checks[] = [
+                'dimension' => 'time_quarter',
+                'name' => 'ตัวชี้วัดเวลา vs ไตรมาสในแผนปฏิบัติงาน',
+                'status' => 'pass',
+                'detail' => 'มีการกระจายกิจกรรมลงใน ' . implode(', ', $qList) . ' สอดคล้องกับปฏิทินปฏิบัติงาน'
+            ];
+        } else {
+            $score -= 10;
+            $checks[] = [
+                'dimension' => 'time_quarter',
+                'name' => 'ตัวชี้วัดเวลา vs ไตรมาสในแผนปฏิบัติงาน',
+                'status' => 'issue',
+                'detail' => 'ยังไม่ได้ติ๊กเลือกไตรมาสที่ดำเนินงานในตารางแผนปฏิบัติงาน (ข้อ ๑๑)'
+            ];
+            $recommendations[] = 'ติ๊กเลือกไตรมาส (๑-๔) ในตารางข้อ ๑๑ เพื่อใช้คำนวณปฏิทินปฏิบัติงานรวม';
+        }
+
+        // Check 4: Budget vs Action Plan
+        if ($allocatedBudget > 0) {
+            $diff = $actionPlanTotal - $allocatedBudget;
+            if (abs($diff) < 0.01) {
+                $checks[] = [
+                    'dimension' => 'budget_activities',
+                    'name' => 'กิจกรรม vs หมวดเงินงบประมาณ',
+                    'status' => 'pass',
+                    'detail' => 'ยอดรวมหมวดเงินในตารางแผนการปฏิบัติงาน (' . number_format($actionPlanTotal) . ' บาท) ตรงกับวงเงินที่ได้รับการจัดสรร 100%'
+                ];
+            } elseif ($diff > 0) {
+                $score -= 25;
+                $checks[] = [
+                    'dimension' => 'budget_activities',
+                    'name' => 'กิจกรรม vs หมวดเงินงบประมาณ',
+                    'status' => 'issue',
+                    'detail' => 'ยอดรวมหมวดเงิน (' . number_format($actionPlanTotal) . ' บาท) เกินกว่าวงเงินจัดสรร (' . number_format($allocatedBudget) . ' บาท) เป็นเงิน ' . number_format($diff) . ' บาท'
+                ];
+                $recommendations[] = 'ปรับลดงบประมาณในตารางแผนการปฏิบัติงาน (ข้อ ๑๑) ลง ' . number_format($diff) . ' บาท เพื่อไม่ให้เกินวงเงินที่ได้รับจัดสรร';
+            } else {
+                $checks[] = [
+                    'dimension' => 'budget_activities',
+                    'name' => 'กิจกรรม vs หมวดเงินงบประมาณ',
+                    'status' => 'warning',
+                    'detail' => 'ยอดรวมหมวดเงิน (' . number_format($actionPlanTotal) . ' บาท) ยังจัดสรรไม่เต็มวงเงิน คงเหลือ ' . number_format(abs($diff)) . ' บาท'
+                ];
+                $recommendations[] = 'สามารถจัดสรรงบประมาณลงในหมวดที่จำเป็นเพิ่มเติมได้อีก ' . number_format(abs($diff)) . ' บาท';
+            }
+        } else {
+            $checks[] = [
+                'dimension' => 'budget_activities',
+                'name' => 'กิจกรรม vs หมวดเงินงบประมาณ',
+                'status' => 'pass',
+                'detail' => 'ตารางหมวดเงินมียอดรวม ' . number_format($actionPlanTotal) . ' บาท'
+            ];
+        }
+
+        $finalScore = max(30, min(100, $score));
+        $status = $finalScore >= 80 ? 'excellent' : ($finalScore >= 60 ? 'good' : 'needs_improvement');
+
+        return [
+            'score' => $finalScore,
+            'status' => $status,
+            'summary' => $finalScore >= 80 
+                ? 'โครงสร้างโครงการมีความสอดคล้องเชิงตรรกะในเกณฑ์ดีเยี่ยม ตัวชี้วัดและแผนงานเชื่อมโยงกันอย่างเป็นระบบ'
+                : 'พบประเด็นที่ควรปรับปรุงเพื่อเพิ่มความถูกต้องสมบูรณ์ของเอกสารก่อนเสนออนุมัติ',
+            'checks' => $checks,
+            'recommendations' => $recommendations ?: ['ข้อเสนอโครงการมีความสมบูรณ์พร้อมยื่นเสนอขออนุมัติตามขั้นตอน']
+        ];
+    }
+
+    /**
+     * Contextual Standard Plan Generator (4-step PDCA for Vocational Education)
+     */
+    public function generateContextualStandardPlan(string $title, array $objectives = [], array $targets = [], string $location = '', float $allocatedBudget = 0): array
+    {
+        $targetStr = !empty($targets['quantitative'][0]) ? $targets['quantitative'][0] : 'นักเรียน นักศึกษา และบุคลากร จำนวน 50 คน';
+        $locationStr = !empty($location) ? $location : 'ณ วิทยาลัยสารพัดช่างน่าน';
+
+        if ($this->apiKey) {
+            try {
+                $client = $this->createHttpClient();
+                $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$this->apiKey}";
+
+                $prompt = "คุณคือผู้เชี่ยวชาญการเขียนโครงการของสถานศึกษา สังกัดสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)\n"
+                    . "จงปรับปรุงข้อความ '4 ขั้นตอนมาตรฐานวงจรคุณภาพ PDCA' ให้เข้ากับบริบทของโครงการนี้อย่างสมบูรณ์แบบ:\n"
+                    . "- ชื่อโครงการ: {$title}\n"
+                    . "- กลุ่มเป้าหมาย: {$targetStr}\n"
+                    . "- สถานที่จัด: {$locationStr}\n"
+                    . "- วงเงินงบประมาณที่จัดสรร: {$allocatedBudget} บาท\n\n"
+                    . "โดยมีโครงสร้าง 4 ขั้นตอน:\n"
+                    . "1. ขั้นวางแผน (Plan : P) - ประชุมคณะทำงาน วางแผน กำหนดแนวทาง\n"
+                    . "2. ขั้นเตรียมการ (Plan : P) - จัดทำคำสั่งวิทยาลัย ประสานวิทยากรและสถานที่\n"
+                    . "3. ขั้นปฏิบัติตามแผน (Do : D) - ดำเนินการจัดกิจกรรม/ฝึกอบรม/แข่งขันทักษะตามโครงการ ให้ระบุชื่อโครงการและกลุ่มเป้าหมายให้ชัดเจน\n"
+                    . "4. ขั้นตรวจสอบและปรับปรุง (Check & Act : C & A) - สรุปประเมินผลความพึงพอใจ ถอดบทเรียน AAR และจัดทำรายงาน 5 บท\n\n"
+                    . "ตอบกลับเป็น JSON array ของ 4 ขั้นตอน strictly ในโครงสร้างนี้:\n"
+                    . "[\n"
+                    . "  {\"step_name\": \"...\", \"q1\": true, \"q2\": false, \"q3\": false, \"q4\": false, \"target_count\": \"คณะทำงาน 1 ชุด\", \"location_name\": \"...\", \"budget_operating\": 0, \"budget_investment\": 0, \"budget_other\": 0, \"budget_subsidy\": 0},\n"
+                    . "  {\"step_name\": \"...\", \"q1\": true, \"q2\": false, \"q3\": false, \"q4\": false, \"target_count\": \"1 ครั้ง\", \"location_name\": \"...\", \"budget_operating\": 0, \"budget_investment\": 0, \"budget_other\": 0, \"budget_subsidy\": 0},\n"
+                    . "  {\"step_name\": \"...\", \"q1\": false, \"q2\": true, \"q3\": false, \"q4\": false, \"target_count\": \"...\", \"location_name\": \"...\", \"budget_operating\": {$allocatedBudget}, \"budget_investment\": 0, \"budget_other\": 0, \"budget_subsidy\": 0},\n"
+                    . "  {\"step_name\": \"...\", \"q1\": false, \"q2\": false, \"q3\": false, \"q4\": true, \"target_count\": \"รายงาน 1 เล่ม\", \"location_name\": \"...\", \"budget_operating\": 0, \"budget_investment\": 0, \"budget_other\": 0, \"budget_subsidy\": 0}\n"
+                    . "]";
+
+                $response = $client->post($url, [
+                    'json' => [
+                        'contents' => [
+                            ['parts' => [['text' => $prompt]]]
+                        ],
+                        'generationConfig' => [
+                            'temperature' => 0.3,
+                            'maxOutputTokens' => 1000,
+                            'responseMimeType' => 'application/json'
+                        ]
+                    ]
+                ]);
+
+                if ($response->getStatusCode() === 200) {
+                    $body = json_decode($response->getBody(), true);
+                    $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $decoded = json_decode($text, true);
+                    if ($decoded && is_array($decoded) && count($decoded) >= 4) {
+                        return $decoded;
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini Contextual Standard Plan Error: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback tailored 4 steps
+        return [
+            [
+                'step_name' => "1. ประชุมวางแผนเพื่อจัดทำโครงการ \"{$title}\" กำหนดกรอบแนวทางและแต่งตั้งคณะทำงานดำเนินงาน",
+                'q1' => true, 'q2' => false, 'q3' => false, 'q4' => false,
+                'target_count' => 'คณะทำงาน 1 ชุด',
+                'location_name' => $locationStr,
+                'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0
+            ],
+            [
+                'step_name' => "2. ดำเนินการออกคำสั่งวิทยาลัย เชิญคณะกรรมการโครงการประชุมกำหนดวัน เวลา และประสานงานสถานที่ดำเนินโครงการ",
+                'q1' => true, 'q2' => false, 'q3' => false, 'q4' => false,
+                'target_count' => '1 ครั้ง',
+                'location_name' => $locationStr,
+                'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0
+            ],
+            [
+                'step_name' => "3. ดำเนินการจัดกิจกรรมตามโครงการ \"{$title}\" ให้แก่{$targetStr}",
+                'q1' => false, 'q2' => true, 'q3' => false, 'q4' => false,
+                'target_count' => $targetStr,
+                'location_name' => $locationStr,
+                'budget_operating' => $allocatedBudget, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0
+            ],
+            [
+                'step_name' => "4. สรุปประเมินผลความพึงพอใจ ถอดบทเรียน (AAR) วิเคราะห์ปัญหา อุปสรรค และจัดทำรูปเล่มรายงานโครงการ 5 บท ฉบับสมบูรณ์ เสนอต่อคณะผู้บริหาร",
+                'q1' => false, 'q2' => false, 'q3' => false, 'q4' => true,
+                'target_count' => 'รายงาน 1 เล่ม',
+                'location_name' => $locationStr,
+                'budget_operating' => 0, 'budget_investment' => 0, 'budget_other' => 0, 'budget_subsidy' => 0
+            ],
+        ];
+    }
 }
 

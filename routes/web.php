@@ -164,6 +164,7 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/batch-allocate', [ProjectController::class, 'batchAllocateBudgets'])->name('projects.batch_allocate');
     Route::post('projects/ai/map-strategies', [ProjectController::class, 'aiAutoMapStrategies'])->name('projects.ai.map_strategies');
     Route::post('projects/ai/detect-duplicates', [ProjectController::class, 'aiDetectDuplicates'])->name('projects.ai.detect_duplicates');
+    Route::post('projects/ai/audit-consistency', [ProjectController::class, 'auditConsistency'])->name('projects.ai.audit_consistency');
     Route::resource('projects', ProjectController::class)->except(['index']);
     Route::get('projects/{project}/print', [ProjectController::class, 'print'])->name('projects.print');
     Route::post('projects/generate-ai-content', [ProjectController::class, 'generateAiContent'])->name('projects.generate_ai_content');
