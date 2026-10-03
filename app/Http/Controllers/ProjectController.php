@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Services\NotificationService;
+use App\Services\GeminiService;
 
 class ProjectController extends Controller
 {
@@ -2793,184 +2794,238 @@ class ProjectController extends Controller
      */
     public function generateAiContent(Request $request)
     {
-        $type = $request->input('type', 'rationale');
-        $title = trim($request->input('title', ''));
-        if (empty($title)) {
-            $title = 'โครงการพัฒนาทักษะวิชาชีพและการจัดการเรียนการสอน';
-        }
+        try {
+            $type = $request->input('type', 'rationale');
+            $title = trim($request->input('title', ''));
+            if (empty($title)) {
+                $title = 'โครงการพัฒนาทักษะวิชาชีพและการจัดการเรียนการสอน';
+            }
 
-        $gemini = app(GeminiService::class);
-        $data = $request->all();
-        $data['title'] = $title;
+            $gemini = app(\App\Services\GeminiService::class);
+            $data = $request->all();
+            $data['title'] = $title;
 
-        if ($type === 'rationale') {
-            $content = $gemini->generateRationale($data);
-            return response()->json(['success' => true, 'content' => $content]);
-        }
+            if ($type === 'rationale') {
+                $content = $gemini->generateRationale($data);
+                return response()->json(['success' => true, 'content' => $content]);
+            }
 
-        if ($type === 'objectives') {
-            $objectives = $gemini->generateObjectives($data);
-            return response()->json(['success' => true, 'objectives' => $objectives]);
-        }
+            if ($type === 'objectives') {
+                $objectives = $gemini->generateObjectives($data);
+                return response()->json(['success' => true, 'objectives' => $objectives]);
+            }
 
-        if ($type === 'targets' || $type === 'indicators') {
-            $indicators = $gemini->generateIndicators($data);
-            return response()->json([
-                'success' => true,
-                'quantitative' => $indicators['quantitative'] ?? [],
-                'qualitative' => $indicators['qualitative'] ?? [],
-                'time' => $indicators['time'] ?? '',
-                'cost' => $indicators['cost'] ?? ''
+            if ($type === 'targets' || $type === 'indicators') {
+                $indicators = $gemini->generateIndicators($data);
+                return response()->json([
+                    'success' => true,
+                    'quantitative' => $indicators['quantitative'] ?? [],
+                    'qualitative' => $indicators['qualitative'] ?? [],
+                    'time' => $indicators['time'] ?? '',
+                    'cost' => $indicators['cost'] ?? ''
+                ]);
+            }
+
+            if ($type === 'outputs') {
+                $outputs = [
+                    "ผู้เข้าร่วมโครงการใน{$title} ได้รับการฝึกอบรมและพัฒนาสมรรถนะครบถ้วนตามเกณฑ์ที่กำหนด จำนวนไม่น้อยกว่า 50 คน",
+                    "มีหลักสูตร เอกสารประกอบ สื่อ หรือผลงานจากการดำเนินโครงการที่นำไปใช้ประโยชน์ได้จริงอย่างน้อย 1 รายการ"
+                ];
+                return response()->json(['success' => true, 'outputs' => $outputs]);
+            }
+
+            if ($type === 'outcomes') {
+                $outcomes = [
+                    "ผู้เรียนและบุคลากรสามารถนำองค์ความรู้และทักษะที่ได้รับจาก{$title} ไปประยุกต์ใช้ในการปฏิบัติงานจริงได้อย่างมีประสิทธิภาพ",
+                    "วิทยาลัยสารพัดช่างน่านมีมาตรฐานการจัดการเรียนการสอนและการบริการวิชาชีพที่ได้รับการยอมรับจากชุมชนและสถานประกอบการ"
+                ];
+                return response()->json(['success' => true, 'outcomes' => $outcomes]);
+            }
+
+            if ($type === 'expected_benefits') {
+                $expected_benefits = [
+                    "ผู้เข้าร่วมโครงการมีทักษะและสมรรถนะตรงตามมาตรฐานวิชาชีพและความต้องการของตลาดแรงงานในยุคดิจิทัล",
+                    "สถานศึกษามีผลการดำเนินงานที่ตอบสนองต่อนโยบายของสำนักงานคณะกรรมการการอาชีวศึกษาและยุทธศาสตร์การพัฒนาจังหวัดน่าน",
+                    "สร้างภาพลักษณ์ที่ดีและเพิ่มความเชื่อมั่นให้กับผู้ปกครอง ชุมชน และสถานประกอบการในการจัดการศึกษาของวิทยาลัย"
+                ];
+                return response()->json(['success' => true, 'expected_benefits' => $expected_benefits]);
+            }
+
+            if ($type === 'action_plan' || $type === 'contextual_standard_plan') {
+                $budget = (float)$request->input('budget', 0);
+                $objectives = (array)$request->input('objectives', []);
+                $targets = (array)$request->input('targets', []);
+                $location = (string)$request->input('location', '');
+                $action_plan = $gemini->generateContextualStandardPlan($title, $objectives, $targets, $location, $budget);
+                return response()->json(['success' => true, 'action_plan' => $action_plan]);
+            }
+
+            if ($type === 'procurement_items') {
+                $budget = (float)$request->input('budget', 0);
+                if ($budget <= 0) $budget = 45000;
+                $snackCost = round($budget * 0.2, 2);
+                $lunchCost = round($budget * 0.3, 2);
+                $speakerCost = round($budget * 0.2, 2);
+                $materialCost = max(0, round($budget - ($snackCost + $lunchCost + $speakerCost), 2));
+
+                $items = [
+                    [
+                        'description' => "ค่าอาหารว่างและเครื่องดื่มสำหรับผู้เข้าร่วมโครงการ",
+                        'quantity' => 1,
+                        'unit' => 'งาน',
+                        'unit_price' => $snackCost,
+                        'total_price' => $snackCost
+                    ],
+                    [
+                        'description' => "ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ",
+                        'quantity' => 1,
+                        'unit' => 'งาน',
+                        'unit_price' => $lunchCost,
+                        'total_price' => $lunchCost
+                    ],
+                    [
+                        'description' => "ค่าตอบแทนวิทยากรบรรยายและฝึกอบรมเชิงปฏิบัติการ",
+                        'quantity' => 1,
+                        'unit' => 'งาน',
+                        'unit_price' => $speakerCost,
+                        'total_price' => $speakerCost
+                    ],
+                    [
+                        'description' => "ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการดำเนินงานตามโครงการ",
+                        'quantity' => 1,
+                        'unit' => 'ชุด',
+                        'unit_price' => $materialCost,
+                        'total_price' => $materialCost
+                    ]
+                ];
+                return response()->json(['success' => true, 'procurement_items' => $items]);
+            }
+
+            if ($type === 'activities' || $type === 'multi_activities') {
+                $budget = (float)$request->input('budget', 0);
+                if ($budget <= 0) {
+                    $budget = 10000;
+                }
+
+                $act1Budget = round($budget * 0.55, 2);
+                $act2Budget = round($budget - $act1Budget, 2);
+
+                // Dynamically scale participant counts to fit allocated budget
+                $pCount = min(40, max(10, (int)($budget / 350)));
+                if ($pCount < 10) $pCount = 10;
+
+                // Activity 1 items (Workshop / Training)
+                $act1SpeakerHours = ($act1Budget >= 4000) ? 3 : 2;
+                $act1SpeakerRate = 600;
+                $act1Speaker = $act1SpeakerHours * $act1SpeakerRate;
+                if ($act1Speaker >= $act1Budget) {
+                    $act1SpeakerHours = 1;
+                    $act1Speaker = 600;
+                }
+
+                $snackPrice = ($act1Budget > 6000) ? 70 : 35;
+                $act1Snack = $pCount * $snackPrice;
+                if ($act1Speaker + $act1Snack >= $act1Budget) {
+                    $act1Snack = max(0, $act1Budget - $act1Speaker - 500);
+                    $snackPrice = ($pCount > 0) ? round($act1Snack / $pCount, 2) : 0;
+                }
+
+                $act1Material = max(0, round($act1Budget - ($act1Speaker + $act1Snack), 2));
+
+                // Activity 2 items (Study visit / Application)
+                $act2SnackPrice = 35;
+                $act2Snack = $pCount * $act2SnackPrice;
+                $act2LunchPrice = ($act2Budget >= 3500) ? 80 : 0;
+                $act2Lunch = $pCount * $act2LunchPrice;
+
+                if ($act2Lunch + $act2Snack >= $act2Budget) {
+                    $act2Lunch = 0;
+                    $act2LunchPrice = 0;
+                    if ($act2Snack >= $act2Budget) {
+                        $act2Snack = max(0, $act2Budget - 300);
+                        $act2SnackPrice = ($pCount > 0) ? round($act2Snack / $pCount, 2) : 0;
+                    }
+                }
+
+                $act2Material = max(0, round($act2Budget - ($act2Lunch + $act2Snack), 2));
+
+                $activities = [
+                    [
+                        'name' => "กิจกรรมที่ 1 : อบรมเชิงปฏิบัติการพัฒนาทักษะวิชาชีพและการประยุกต์ใช้งาน",
+                        'location' => 'ณ วิทยาลัยสารพัดช่างน่าน',
+                        'target_group' => "นักเรียน นักศึกษา และบุคลากร จำนวน {$pCount} คน",
+                        'loan_items' => [
+                            [
+                                'description' => "1. ค่าตอบแทนวิทยากรบรรยายและฝึกอบรมเชิงปฏิบัติการ ({$act1SpeakerHours} ชม. x {$act1SpeakerRate} บาท)",
+                                'quantity' => $act1SpeakerHours,
+                                'unit' => 'ชั่วโมง',
+                                'unit_price' => $act1SpeakerRate,
+                                'total_price' => $act1Speaker
+                            ],
+                            [
+                                'description' => "2. ค่าอาหารว่างและเครื่องดื่ม ({$pCount} คน x {$snackPrice} บาท)",
+                                'quantity' => $pCount,
+                                'unit' => 'คน',
+                                'unit_price' => $snackPrice,
+                                'total_price' => $act1Snack
+                            ],
+                        ],
+                        'procurement_items' => [
+                            [
+                                'description' => '1. ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการฝึกอบรม',
+                                'quantity' => 1,
+                                'unit' => 'ชุด',
+                                'unit_price' => $act1Material,
+                                'total_price' => $act1Material
+                            ],
+                        ]
+                    ],
+                    [
+                        'name' => "กิจกรรมที่ 2 : ฝึกปฏิบัติการภาคสนามและศึกษาดูงานแลกเปลี่ยนเรียนรู้",
+                        'location' => 'สถานประกอบการและแหล่งเรียนรู้ในจังหวัดน่าน',
+                        'target_group' => "นักเรียน นักศึกษา และครูผู้ควบคุม จำนวน {$pCount} คน",
+                        'loan_items' => array_values(array_filter([
+                            $act2Lunch > 0 ? [
+                                'description' => "1. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมกิจกรรม ({$pCount} คน x {$act2LunchPrice} บาท)",
+                                'quantity' => $pCount,
+                                'unit' => 'คน',
+                                'unit_price' => $act2LunchPrice,
+                                'total_price' => $act2Lunch
+                            ] : null,
+                            [
+                                'description' => ($act2Lunch > 0 ? '2.' : '1.') . " ค่าอาหารว่างและเครื่องดื่ม ({$pCount} คน x {$act2SnackPrice} บาท)",
+                                'quantity' => $pCount,
+                                'unit' => 'คน',
+                                'unit_price' => $act2SnackPrice,
+                                'total_price' => $act2Snack
+                            ],
+                        ])),
+                        'procurement_items' => [
+                            [
+                                'description' => '1. ค่าวัสดุและคู่มือบันทึกการเรียนรู้ประจำกิจกรรม',
+                                'quantity' => 1,
+                                'unit' => 'ชุด',
+                                'unit_price' => $act2Material,
+                                'total_price' => $act2Material
+                            ],
+                        ]
+                    ]
+                ];
+
+                return response()->json(['success' => true, 'activities' => $activities]);
+            }
+
+            return response()->json(['success' => false, 'message' => 'Invalid type']);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('generateAiContent failed: ' . $e->getMessage(), [
+                'exception' => $e,
+                'request' => $request->all()
             ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'เกิดข้อผิดพลาดในการประมวลผล AI: ' . $e->getMessage()
+            ], 500);
         }
-
-        if ($type === 'outputs') {
-            $outputs = [
-                "ผู้เข้าร่วมโครงการใน{$title} ได้รับการฝึกอบรมและพัฒนาสมรรถนะครบถ้วนตามเกณฑ์ที่กำหนด จำนวนไม่น้อยกว่า 50 คน",
-                "มีหลักสูตร เอกสารประกอบ สื่อ หรือผลงานจากการดำเนินโครงการที่นำไปใช้ประโยชน์ได้จริงอย่างน้อย 1 รายการ"
-            ];
-            return response()->json(['success' => true, 'outputs' => $outputs]);
-        }
-
-        if ($type === 'outcomes') {
-            $outcomes = [
-                "ผู้เรียนและบุคลากรสามารถนำองค์ความรู้และทักษะที่ได้รับจาก{$title} ไปประยุกต์ใช้ในการปฏิบัติงานจริงได้อย่างมีประสิทธิภาพ",
-                "วิทยาลัยสารพัดช่างน่านมีมาตรฐานการจัดการเรียนการสอนและการบริการวิชาชีพที่ได้รับการยอมรับจากชุมชนและสถานประกอบการ"
-            ];
-            return response()->json(['success' => true, 'outcomes' => $outcomes]);
-        }
-
-        if ($type === 'expected_benefits') {
-            $expected_benefits = [
-                "ผู้เข้าร่วมโครงการมีทักษะและสมรรถนะตรงตามมาตรฐานวิชาชีพและความต้องการของตลาดแรงงานในยุคดิจิทัล",
-                "สถานศึกษามีผลการดำเนินงานที่ตอบสนองต่อนโยบายของสำนักงานคณะกรรมการการอาชีวศึกษาและยุทธศาสตร์การพัฒนาจังหวัดน่าน",
-                "สร้างภาพลักษณ์ที่ดีและเพิ่มความเชื่อมั่นให้กับผู้ปกครอง ชุมชน และสถานประกอบการในการจัดการศึกษาของวิทยาลัย"
-            ];
-            return response()->json(['success' => true, 'expected_benefits' => $expected_benefits]);
-        }
-
-        if ($type === 'action_plan' || $type === 'contextual_standard_plan') {
-            $budget = (float)$request->input('budget', 0);
-            $objectives = (array)$request->input('objectives', []);
-            $targets = (array)$request->input('targets', []);
-            $location = (string)$request->input('location', '');
-            $geminiService = app(\App\Services\GeminiService::class);
-            $action_plan = $geminiService->generateContextualStandardPlan($title, $objectives, $targets, $location, $budget);
-            return response()->json(['success' => true, 'action_plan' => $action_plan]);
-        }
-
-        if ($type === 'indicators') {
-            $indicators = [
-                'quantitative' => [
-                    'text' => "ผู้เข้าร่วมโครงการใน{$title} เข้าร่วมกิจกรรมครบถ้วนตามเกณฑ์ คิดเป็นร้อยละ 100",
-                    'unit' => '50 คน'
-                ],
-                'qualitative' => [
-                    'text' => 'ผู้เข้าร่วมมีความพึงพอใจต่อการดำเนินงานและได้รับความรู้ทักษะเพิ่มขึ้นในระดับดีมาก',
-                    'unit' => 'ร้อยละ 90'
-                ],
-                'time' => [
-                    'text' => 'ดำเนินการแล้วเสร็จตามระยะเวลาและปฏิทินปฏิบัติงานที่กำหนด',
-                    'unit' => '1 ภาคเรียน'
-                ],
-                'cost' => [
-                    'text' => 'ค่าใช้จ่ายในการดำเนินโครงการเป็นไปตามวงเงินงบประมาณที่ได้รับจัดสรร',
-                    'unit' => number_format((float)$request->input('budget', 0), 2) . ' บาท'
-                ],
-            ];
-            return response()->json(['success' => true, 'indicators' => $indicators]);
-        }
-
-        if ($type === 'procurement_items') {
-            $budget = (float)$request->input('budget', 45000);
-            $snackCost = 3500;
-            $lunchCost = 4000;
-            $speakerCost = 3600;
-            $materialCost = max(0, $budget - ($snackCost + $lunchCost + $speakerCost));
-
-            $items = [
-                [
-                    'description' => 'ค่าอาหารว่างและเครื่องดื่มสำหรับผู้เข้าร่วมโครงการ (50 คน x 35 บาท x 2 มื้อ)',
-                    'quantity' => 50,
-                    'unit' => 'คน',
-                    'unit_price' => 70,
-                    'total_price' => $snackCost
-                ],
-                [
-                    'description' => 'ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)',
-                    'quantity' => 50,
-                    'unit' => 'คน',
-                    'unit_price' => 80,
-                    'total_price' => $lunchCost
-                ],
-                [
-                    'description' => 'ค่าตอบแทนวิทยากรบรรยายและฝึกอบรมเชิงปฏิบัติการ (6 ชม. x 600 บาท)',
-                    'quantity' => 6,
-                    'unit' => 'ชั่วโมง',
-                    'unit_price' => 600,
-                    'total_price' => $speakerCost
-                ],
-                [
-                    'description' => "ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการดำเนินงานตามโครงการ",
-                    'quantity' => 1,
-                    'unit' => 'ชุด',
-                    'unit_price' => $materialCost,
-                    'total_price' => $materialCost
-                ]
-            ];
-            return response()->json(['success' => true, 'procurement_items' => $items]);
-        }
-
-        if ($type === 'activities' || $type === 'multi_activities') {
-            $budget = (float)$request->input('budget', 45000);
-            $act1Budget = round($budget * 0.55, 2);
-            $act2Budget = $budget - $act1Budget;
-
-            $act1Speaker = 3600;
-            $act1Lunch = 4000;
-            $act1Snack = 3500;
-            $act1Material = max(0, $act1Budget - ($act1Speaker + $act1Lunch + $act1Snack));
-
-            $act2Lunch = 4000;
-            $act2Snack = 3500;
-            $act2Travel = 5000;
-            $act2Material = max(0, $act2Budget - ($act2Lunch + $act2Snack + $act2Travel));
-
-            $activities = [
-                [
-                    'name' => "กิจกรรมที่ 1 : อบรมเชิงปฏิบัติการพัฒนาทักษะวิชาชีพและการประยุกต์ใช้งาน",
-                    'location' => 'ณ วิทยาลัยสารพัดช่างน่าน',
-                    'target_group' => 'นักเรียน นักศึกษา และบุคลากร จำนวน 50 คน',
-                    'loan_items' => [
-                        ['description' => '1. ค่าตอบแทนวิทยากรบรรยายและฝึกอบรมเชิงปฏิบัติการ (6 ชม. x 600 บาท)', 'quantity' => 6, 'unit' => 'ชั่วโมง', 'unit_price' => 600, 'total_price' => $act1Speaker],
-                        ['description' => '2. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมโครงการ (50 คน x 80 บาท x 1 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => $act1Lunch],
-                        ['description' => '3. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => $act1Snack],
-                        ['description' => '4. ค่าใช้จ่ายในการเดินทางไปราชการ / ค่าพาหนะ', 'quantity' => 1, 'unit' => 'งาน', 'unit_price' => 0, 'total_price' => 0],
-                    ],
-                    'procurement_items' => [
-                        ['description' => '1. ค่าวัสดุ อุปกรณ์ และเอกสารประกอบการฝึกอบรม', 'quantity' => 1, 'unit' => 'ชุด', 'unit_price' => $act1Material, 'total_price' => $act1Material],
-                        ['description' => '2. ค่าจัดทำป้ายประชาสัมพันธ์โครงการ', 'quantity' => 1, 'unit' => 'ป้าย', 'unit_price' => 0, 'total_price' => 0],
-                    ]
-                ],
-                [
-                    'name' => "กิจกรรมที่ 2 : ศึกษาดูงานและแลกเปลี่ยนเรียนรู้ ณ สถานประกอบการ / แหล่งเรียนรู้",
-                    'location' => 'สถานประกอบการและแหล่งเรียนรู้ในจังหวัดน่าน',
-                    'target_group' => 'นักเรียน นักศึกษา และครูผู้ควบคุม จำนวน 50 คน',
-                    'loan_items' => [
-                        ['description' => '1. ค่าอาหารกลางวันสำหรับผู้เข้าร่วมกิจกรรม (50 คน x 80 บาท x 1 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 80, 'total_price' => $act2Lunch],
-                        ['description' => '2. ค่าอาหารว่างและเครื่องดื่ม (50 คน x 35 บาท x 2 มื้อ)', 'quantity' => 50, 'unit' => 'คน', 'unit_price' => 70, 'total_price' => $act2Snack],
-                        ['description' => '3. ค่าจ้างเหมาพาหนะรับ-ส่งผู้เข้าร่วมศึกษาดูงาน', 'quantity' => 1, 'unit' => 'คัน', 'unit_price' => $act2Travel, 'total_price' => $act2Travel],
-                    ],
-                    'procurement_items' => [
-                        ['description' => '1. ค่าวัสดุและคู่มือบันทึกการเรียนรู้ประจำกิจกรรม', 'quantity' => 1, 'unit' => 'ชุด', 'unit_price' => $act2Material, 'total_price' => $act2Material],
-                    ]
-                ]
-            ];
-
-            return response()->json(['success' => true, 'activities' => $activities]);
-        }
-
-        return response()->json(['success' => false, 'message' => 'Invalid type']);
     }
 
     /**
