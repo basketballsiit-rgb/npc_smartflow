@@ -520,11 +520,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
                                     className={getSubLinkClass(url.includes('tab=document_tracking'))}
-                                    title="ติดตามเอกสารและสถานะโครงการ"
+                                    title="กระดานคัมบังติดตามสถานะเอกสารและโครงการ (Kanban Board)"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=document_tracking'))}>●</span>
-                                    <span className="text-sm">📍</span>
-                                    {isSidebarOpen && <span>ติดตามเอกสารและโครงการ</span>}
+                                    <span className="text-sm">📋</span>
+                                    {isSidebarOpen && <span>คัมบังติดตามงาน & เอกสาร (Kanban)</span>}
                                 </Link>
                             </div>
                             )}
@@ -638,12 +638,12 @@ export default function AuthenticatedLayout({ header, children }) {
                             <div className="pl-2.5 border-l-2 border-purple-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
-                                    className={getSubLinkClass(false)}
-                                    title="จัดทำชุดจัดซื้อจัดจ้าง 4 ฉบับจากโครงการ"
+                                    className={getSubLinkClass(url.includes('tab=document_tracking'))}
+                                    title="กระดานคัมบัง & จัดทำชุดจัดซื้อจัดจ้าง 4 ฉบับจากโครงการ"
                                 >
-                                    <span className={getPrefixClass(false)}>└─</span>
-                                    <span className="text-sm">📑</span>
-                                    {isSidebarOpen && <span>จัดทำชุดจัดซื้อจัดจ้าง (4 ฉบับ)</span>}
+                                    <span className={getPrefixClass(url.includes('tab=document_tracking'))}>└─</span>
+                                    <span className="text-sm">📋</span>
+                                    {isSidebarOpen && <span>คัมบังจัดซื้อ & สัญญายืม (Kanban)</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'clearings' })}

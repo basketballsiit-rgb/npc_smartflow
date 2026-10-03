@@ -2365,6 +2365,13 @@ export default function Dashboard({
     const [selectedApprovalProject, setSelectedApprovalProject] = useState(null); // all, at_procurement, at_finance, with_borrower, completed
     const [selectedFinanceDocDetails, setSelectedFinanceDocDetails] = useState(null);
     const [docTrackingSearch, setDocTrackingSearch] = useState('');
+    const [adminActiveSubTab, setAdminActiveSubTab] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('admin_tab') === 'users') return 'users';
+        }
+        return 'kanban';
+    });
 
     // Unified Document Number Settings Modal State
     const [isDocNumberModalOpen, setIsDocNumberModalOpen] = useState(false);
@@ -3779,13 +3786,64 @@ export default function Dashboard({
         });
     };
 
-    // 0. Admin Component Rendering (User Management)
+    // 0. Admin Component Rendering (Command Center / Kanban + User Management)
     const renderAdminUsersTab = () => {
         if (!adminData) return null;
         return (
             <div className="space-y-6">
-                {/* External API Integration Status (npc_eleve) */}
-                {renderApiConnectionBanner()}
+                {/* Modern Highlight Banner for 6-Pillar System Upgrades */}
+                <div className="rounded-3xl bg-gradient-to-r from-purple-950 via-indigo-950 to-slate-900 text-white p-6 shadow-xl border border-purple-800/50 relative overflow-hidden">
+                    <div className="absolute -right-12 -bottom-12 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 relative z-10">
+                        <div className="space-y-1.5 max-w-3xl">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 text-xs font-bold border border-purple-400/30">
+                                <span className="animate-pulse">✨</span> NPC SMART FLOW 2026 • ยกระดับฟังก์ชันการทำงานใหม่ 6 เสาหลัก
+                            </div>
+                            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                                ศูนย์ควบคุมหลัก & กระดานติดตามสถานะ (Workflow Kanban)
+                            </h3>
+                            <p className="text-xs sm:text-sm text-purple-200/90 leading-relaxed">
+                                ติดตามสถานะโครงการและจัดซื้อจัดจ้างแบบ Real-time พร้อมระบุ <span className="text-amber-300 font-semibold">"เอกสารอยู่ที่ใคร"</span> และเวลารอดำเนินการ (Aging), ระบบ Digital Signature Seal ป้องกันการปลอมแปลง, AI ร่างและตรวจสเปก TOR, วิเคราะห์ข้อเสนอแนะเชิงคุณภาพ และแนะนำแหล่งงบประมาณอัตโนมัติ
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2.5 shrink-0 bg-white/10 p-1.5 rounded-2xl border border-white/15 backdrop-blur-sm">
+                            <button
+                                type="button"
+                                onClick={() => setAdminActiveSubTab('kanban')}
+                                className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer ${
+                                    adminActiveSubTab === 'kanban'
+                                        ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30 font-black scale-102'
+                                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                                <span>📋</span>
+                                <span>กระดานคัมบัง (Kanban)</span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-900/60 text-amber-200 font-semibold">ใหม่</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAdminActiveSubTab('users')}
+                                className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer ${
+                                    adminActiveSubTab === 'users'
+                                        ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30 font-black scale-102'
+                                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                                <span>👥</span>
+                                <span>จัดการบุคลากร ({adminData.stats.totalUsers || 0} คน)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {adminActiveSubTab === 'kanban' ? (
+                    <div>
+                        {renderDocumentTrackingTab()}
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {/* External API Integration Status (npc_eleve) */}
+                        {renderApiConnectionBanner()}
 
                 {/* Admin Stat Overview */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-5">
@@ -4378,6 +4436,8 @@ export default function Dashboard({
                                 </div>
                             </form>
                         </div>
+                    </div>
+                )}
                     </div>
                 )}
             </div>
