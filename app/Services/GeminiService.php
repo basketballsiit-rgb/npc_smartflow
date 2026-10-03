@@ -907,8 +907,6 @@ Write the report in Thai. Include sections for:
             }
         }
 
-        $balanceScore = count($highLoad) > 5 ? 74 : (count($highLoad) > 2 ? 85 : 92);
-
         return [
             'workload_balance_score' => $balanceScore,
             'executive_summary' => "จากการประเมินภาระงานของบุคลากรจำนวน " . count($personnelData) . " ท่าน พบว่าดัชนีการกระจายงานเฉลี่ยอยู่ที่ " . $balanceScore . "/100 โดยมีบุคลากรที่มีบทบาทหน้าที่ซ้อนทับและมีโครงการในความรับผิดชอบสูงจำนวน " . count($highLoad) . " ท่าน ที่ควรได้รับการเกลี่ยภาระงาน และมีบุคลากรจำนวน " . count($balanced) . " ท่านที่มีศักยภาพพร้อมสนับสนุนโครงการเพิ่มเติม",
@@ -919,6 +917,233 @@ Write the report in Thai. Include sections for:
                 'ส่งเสริมระบบพี่เลี้ยง (Mentorship) ให้ครูรุ่นใหม่ร่วมรับผิดชอบโครงการคู่กับครูผู้มีประสบการณ์',
                 'ใช้ระบบ SmartFlow ในการตรวจสอบจำนวนโครงการค้างคาของผู้เสนอก่อนอนุมัติโครงการใหม่'
             ]
+        ];
+    }
+
+    /**
+     * AI Auto-Mapping Strategies based on project title, rationale, and objectives.
+     */
+    public function mapStrategies(string $title, string $rationale, array $objectives, array $availableCategories, array $iqaList = [], array $ovecList = []): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_recommendations', true);
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $catSummary = [];
+            foreach ($availableCategories as $cat) {
+                $items = [];
+                foreach ($cat['items'] ?? [] as $it) {
+                    $items[] = ['id' => $it['id'], 'name' => $it['name'], 'category_id' => $cat['id'], 'category_name' => $cat['name']];
+                }
+                $catSummary[] = ['category_id' => $cat['id'], 'category_name' => $cat['name'], 'items' => $items];
+            }
+
+            $prompt = "คุณคือผู้เชี่ยวชาญด้านงานแผนงานและการประกันคุณภาพการศึกษาของสถานศึกษาสังกัด สอศ.\n"
+                . "ภารกิจ: วิเคราะห์ 'ชื่อโครงการ', 'หลักการและเหตุผล', และ 'วัตถุประสงค์' ต่อไปนี้ แล้วเลือกยุทธศาสตร์/มาตรฐานที่สอดคล้องที่สุดจากรายการที่กำหนดให้ โดยคัดเลือกเฉพาะข้อที่ตรงกับเป้าหมายโครงการจริง 2-5 ข้อ\n\n"
+                . "ข้อมูลโครงการ:\n"
+                . "- ชื่อโครงการ: {$title}\n"
+                . "- หลักการและเหตุผล: {$rationale}\n"
+                . "- วัตถุประสงค์: " . implode('; ', $objectives) . "\n\n"
+                . "รายการยุทธศาสตร์ที่มีในระบบ (JSON):\n"
+                . json_encode($catSummary, JSON_UNESCAPED_UNICODE) . "\n\n"
+                . "ยุทธศาสตร์ IQA: " . json_encode($iqaList, JSON_UNESCAPED_UNICODE) . "\n"
+                . "ยุทธศาสตร์ สอศ. (OVEC): " . json_encode($ovecList, JSON_UNESCAPED_UNICODE) . "\n\n"
+                . "ตอบกลับเป็น JSON เท่านั้นในรูปแบบ:\n"
+                . "{\n"
+                . "  \"category_selections\": { \"[category_id]\": [item_ids] },\n"
+                . "  \"iqa_strategy_ids\": [ids],\n"
+                . "  \"ovec_strategy_ids\": [ids],\n"
+                . "  \"matched_reasons\": [\n"
+                . "     { \"name\": \"ชื่อยุทธศาสตร์\", \"reason\": \"เหตุผลสั้นๆ ที่สอดคล้อง\" }\n"
+                . "  ],\n"
+                . "  \"summary\": \"สรุปภาพรวมความสอดคล้อง 1-2 บรรทัด\"\n"
+                . "}";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(15)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $prompt]]]]
+                    ]);
+
+                if ($response->successful()) {
+                    $text = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $clean = preg_replace('/```(?:json)?\s*([\s\S]*?)\s*```/', '$1', trim($text));
+                    $decoded = json_decode($clean, true);
+                    if ($decoded && is_array($decoded)) {
+                        return [
+                            'category_selections' => $decoded['category_selections'] ?? [],
+                            'iqa_strategy_ids' => $decoded['iqa_strategy_ids'] ?? [],
+                            'ovec_strategy_ids' => $decoded['ovec_strategy_ids'] ?? [],
+                            'matched_reasons' => $decoded['matched_reasons'] ?? [],
+                            'summary' => $decoded['summary'] ?? 'วิเคราะห์ความสอดคล้องเชิงยุทธศาสตร์เรียบร้อย'
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini Strategy Mapping Error: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback: Keyword heuristic matching
+        return $this->fallbackStrategyMapping($title, $rationale, $objectives, $availableCategories, $iqaList, $ovecList);
+    }
+
+    private function fallbackStrategyMapping(string $title, string $rationale, array $objectives, array $categories, array $iqaList, array $ovecList): array
+    {
+        $text = mb_strtolower($title . ' ' . $rationale . ' ' . implode(' ', $objectives));
+        $catSelections = [];
+        $matchedReasons = [];
+
+        foreach ($categories as $cat) {
+            $catId = $cat['id'];
+            $selectedItems = [];
+            foreach ($cat['items'] ?? [] as $item) {
+                $itemName = mb_strtolower($item['name'] ?? '');
+                // Check common keywords
+                $keywords = array_filter(explode(' ', str_replace(['การ', 'ความ', 'ที่', 'และ', 'ของ'], ' ', $itemName)));
+                $hit = false;
+                foreach ($keywords as $kw) {
+                    if (mb_strlen(trim($kw)) >= 3 && str_contains($text, trim($kw))) {
+                        $hit = true;
+                        break;
+                    }
+                }
+                if ($hit && count($selectedItems) < 2) {
+                    $selectedItems[] = $item['id'];
+                    $matchedReasons[] = [
+                        'name' => $item['name'],
+                        'reason' => 'สอดคล้องกับคำสำคัญและเป้าหมายโครงการ'
+                    ];
+                }
+            }
+            if (!empty($selectedItems)) {
+                $catSelections[$catId] = $selectedItems;
+            }
+        }
+
+        // Default pick first item of first category if none matched
+        if (empty($catSelections) && !empty($categories[0]['items'][0])) {
+            $firstCat = $categories[0];
+            $catSelections[$firstCat['id']] = [$firstCat['items'][0]['id']];
+            $matchedReasons[] = [
+                'name' => $firstCat['items'][0]['name'],
+                'reason' => 'สอดคล้องกับยุทธศาสตร์สถานศึกษาเบื้องต้น'
+            ];
+        }
+
+        $iqaIds = !empty($iqaList) ? [$iqaList[0]['id']] : [];
+        $ovecIds = !empty($ovecList) ? [$ovecList[0]['id']] : [];
+
+        return [
+            'category_selections' => $catSelections,
+            'iqa_strategy_ids' => $iqaIds,
+            'ovec_strategy_ids' => $ovecIds,
+            'matched_reasons' => $matchedReasons,
+            'summary' => 'แนะนำยุทธศาสตร์ที่สอดคล้องกับเนื้อหาโครงการเบื้องต้น ' . count($matchedReasons) . ' รายการ'
+        ];
+    }
+
+    /**
+     * AI Duplicate Detection (ตรวจจับโครงการซ้ำซ้อน).
+     */
+    public function detectProjectDuplicates(string $title, string $rationale, array $objectives, array $existingProjects): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_recommendations', true);
+
+        if (empty($existingProjects)) {
+            return [
+                'has_duplicate' => false,
+                'similarity_score' => 0,
+                'risk_level' => 'none',
+                'matched_project' => null,
+                'analysis' => 'ไม่พบโครงการเดิมในระบบที่นำมาเปรียบเทียบ',
+                'recommendation' => 'สามารถเสนอโครงการได้ตามปกติ'
+            ];
+        }
+
+        // Limit candidates to 30 most recent projects to save context
+        $candidates = array_slice($existingProjects, 0, 30);
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $prompt = "คุณคือประธานคณะกรรมการกลั่นกรองงบประมาณสถานศึกษา (สอศ.)\n"
+                . "ภารกิจ: เปรียบเทียบโครงการที่เสนอขอใหม่กับฐานข้อมูลโครงการที่เคยได้รับการจัดสรรงบประมาณแล้วว่า 'มีความซ้ำซ้อนเชิงความหมาย (Semantic Duplicate)' ในแง่ของเนื้อหา กลุ่มเป้าหมาย หรือการจัดซื้อจัดจ้างซ้ำซ้อนหรือไม่\n\n"
+                . "โครงการที่เสนอใหม่:\n"
+                . "- ชื่อ: {$title}\n"
+                . "- เหตุผล: {$rationale}\n"
+                . "- วัตถุประสงค์: " . implode('; ', $objectives) . "\n\n"
+                . "รายการโครงการที่มีอยู่เดิม (JSON):\n"
+                . json_encode($candidates, JSON_UNESCAPED_UNICODE) . "\n\n"
+                . "ตอบกลับเป็น JSON เท่านั้นในรูปแบบ:\n"
+                . "{\n"
+                . "  \"has_duplicate\": true/false,\n"
+                . "  \"similarity_score\": 0-100,\n"
+                . "  \"risk_level\": \"none\" | \"low\" | \"medium\" | \"high\",\n"
+                . "  \"matched_project_id\": null หรือ id ของโครงการที่ใกล้เคียงที่สุด,\n"
+                . "  \"matched_project_title\": \"ชื่อโครงการเดิมที่คล้ายคลึง\",\n"
+                . "  \"analysis\": \"วิเคราะห์จุดที่เหมือนหรือแตกต่างกัน 1-2 ย่อหน้า\",\n"
+                . "  \"recommendation\": \"คำแนะนำสำหรับคณะกรรมการและผู้เสนอโครงการ (เช่น ให้บูรณาการรวมกัน หรือให้ปรับขอบเขตงานให้ชัดเจน)\"\n"
+                . "}";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->timeout(15)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $prompt]]]]
+                    ]);
+
+                if ($response->successful()) {
+                    $text = $response->json()['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $clean = preg_replace('/```(?:json)?\s*([\s\S]*?)\s*```/', '$1', trim($text));
+                    $decoded = json_decode($clean, true);
+                    if ($decoded && is_array($decoded)) {
+                        return [
+                            'has_duplicate' => (bool)($decoded['has_duplicate'] ?? false),
+                            'similarity_score' => (int)($decoded['similarity_score'] ?? 0),
+                            'risk_level' => $decoded['risk_level'] ?? 'none',
+                            'matched_project_id' => $decoded['matched_project_id'] ?? null,
+                            'matched_project_title' => $decoded['matched_project_title'] ?? '',
+                            'analysis' => $decoded['analysis'] ?? 'วิเคราะห์ความซ้ำซ้อนเรียบร้อย',
+                            'recommendation' => $decoded['recommendation'] ?? 'พิจารณาดำเนินการตามดุลยพินิจ'
+                        ];
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('Gemini Duplicate Detection Error: ' . $e->getMessage());
+            }
+        }
+
+        // Fallback: Text similarity comparison
+        $highestSim = 0;
+        $bestMatch = null;
+        $targetTitle = mb_strtolower(trim($title));
+
+        foreach ($candidates as $cand) {
+            $candTitle = mb_strtolower(trim($cand['title'] ?? ''));
+            similar_text($targetTitle, $candTitle, $percent);
+            if ($percent > $highestSim) {
+                $highestSim = $percent;
+                $bestMatch = $cand;
+            }
+        }
+
+        $highestSimInt = (int)round($highestSim);
+        $hasDup = $highestSimInt >= 60;
+        $risk = $highestSimInt >= 80 ? 'high' : ($highestSimInt >= 50 ? 'medium' : ($highestSimInt >= 30 ? 'low' : 'none'));
+
+        return [
+            'has_duplicate' => $hasDup,
+            'similarity_score' => $highestSimInt,
+            'risk_level' => $risk,
+            'matched_project_id' => $bestMatch ? $bestMatch['id'] : null,
+            'matched_project_title' => $bestMatch ? $bestMatch['title'] : '',
+            'analysis' => $hasDup 
+                ? "พบโครงการ '{$bestMatch['title']}' ของ {$bestMatch['department_name']} ที่มีชื่อหรือลักษณะคล้ายกัน (ความคล้ายคลึง {$highestSimInt}%)"
+                : "ไม่พบโครงการที่มีความซ้ำซ้อนอย่างมีนัยสำคัญในฐานข้อมูล (ความคล้ายคลึงสูงสุด {$highestSimInt}%)",
+            'recommendation' => $hasDup
+                ? "คณะกรรมการควรตรวจสอบขอบเขตกิจกรรมและกลุ่มเป้าหมายกับ {$bestMatch['department_name']} เพื่อป้องกันการเบิกจ่ายงบประมาณซ้ำซ้อน"
+                : "โครงการมีความเป็นเอกเทศ สามารถดำเนินการเสนอของบประมาณตามขั้นตอนได้"
         ];
     }
 }

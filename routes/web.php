@@ -161,6 +161,9 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/preliminary', [ProjectController::class, 'preliminaryStore'])->name('projects.preliminary_store');
     Route::post('projects/direct-allocate', [ProjectController::class, 'directStoreAndAllocate'])->name('projects.direct_allocate_store');
     Route::post('projects/{project}/committee-allocate', [ProjectController::class, 'committeeAllocateBudget'])->name('projects.committee_allocate');
+    Route::post('projects/batch-allocate', [ProjectController::class, 'batchAllocateBudgets'])->name('projects.batch_allocate');
+    Route::post('projects/ai/map-strategies', [ProjectController::class, 'aiAutoMapStrategies'])->name('projects.ai.map_strategies');
+    Route::post('projects/ai/detect-duplicates', [ProjectController::class, 'aiDetectDuplicates'])->name('projects.ai.detect_duplicates');
     Route::resource('projects', ProjectController::class)->except(['index']);
     Route::get('projects/{project}/print', [ProjectController::class, 'print'])->name('projects.print');
     Route::post('projects/generate-ai-content', [ProjectController::class, 'generateAiContent'])->name('projects.generate_ai_content');

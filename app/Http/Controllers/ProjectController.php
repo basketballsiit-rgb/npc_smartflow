@@ -416,7 +416,7 @@ class ProjectController extends Controller
         }
 
         $request->validate([
-            'action' => 'required|in:approve,reject',
+            'action' => 'required|in:approve,reject,returned_for_revision',
         ]);
 
         if ($request->input('action') === 'approve') {
@@ -425,6 +425,8 @@ class ProjectController extends Controller
                 'funding_source_id' => 'required|exists:funding_sources,id',
                 'report_category' => 'nullable|string',
                 'committee_comment' => 'nullable|string',
+                'committee_feedback' => 'nullable|string',
+                'budget_adjustment_reason' => 'nullable|string',
             ], [
                 'allocated_budget.required' => 'กรุณาระบุวงเงินที่จัดสรรจริง',
                 'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
@@ -440,11 +442,19 @@ class ProjectController extends Controller
                 else $cat = '6.1';
             }
 
-            $project->allocated_budget = $request->input('allocated_budget');
-            $project->estimated_budget = $request->input('allocated_budget');
+            $approvedAmount = (float)$request->input('allocated_budget');
+            $feedback = $request->input('committee_feedback') ?: $request->input('committee_comment', 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว');
+            $adjReason = $request->input('budget_adjustment_reason');
+
+            $project->allocated_budget = $approvedAmount;
+            $project->approved_budget = $approvedAmount;
+            $project->estimated_budget = $approvedAmount;
             $project->funding_source_id = $request->input('funding_source_id');
             $project->report_category = $cat;
-            $project->committee_comment = $request->input('committee_comment', 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว');
+            $project->allocation_status = 'allocated';
+            $project->committee_feedback = $feedback;
+            $project->committee_comment = $feedback;
+            $project->budget_adjustment_reason = $adjReason;
             $project->budget_approved_at = now();
             $project->status = 'budget_approved';
             $project->current_approval_step = 1;
@@ -455,8 +465,8 @@ class ProjectController extends Controller
                 ['project_id' => $project->id],
                 [
                     'funding_source_id' => $request->input('funding_source_id'),
-                    'allocated_amount' => $request->input('allocated_budget'),
-                    'encumbered_amount' => $request->input('allocated_budget'),
+                    'allocated_amount' => $approvedAmount,
+                    'encumbered_amount' => $approvedAmount,
                     'spent_amount' => 0.00,
                     'is_advance_payment' => false,
                 ]
@@ -470,11 +480,45 @@ class ProjectController extends Controller
                 [
                     'user_id' => $user->id,
                     'status' => 'approved',
-                    'comments' => 'มติคณะกรรมการ: อนุมัติจัดสรรงบประมาณ ' . number_format($request->input('allocated_budget'), 2) . ' บาท',
+                    'comments' => 'มติคณะกรรมการ: อนุมัติจัดสรรงบประมาณ ' . number_format($approvedAmount, 2) . ' บาท' . ($adjReason ? " (เหตุผล: {$adjReason})" : ''),
                 ]
             );
 
+            AuditLog::record(
+                action: 'BUDGET_ALLOCATED',
+                model: $project,
+                notes: "มติคณะกรรมการ: อนุมัติงบ " . number_format($approvedAmount, 2) . " บาท (จากที่ขอ " . number_format((float)$project->proposed_budget, 2) . " บาท)"
+            );
+
             return redirect()->back()->with('success', 'อนุมัติจัดสรรงบประมาณโครงการเรียบร้อยแล้ว ผู้เสนอโครงการสามารถเข้าจัดทำรายละเอียดฉบับเต็มได้');
+        } elseif ($request->input('action') === 'returned_for_revision') {
+            $feedback = $request->input('committee_feedback') ?: $request->input('committee_comment', 'ให้ปรับปรุงรายละเอียดคำของบประมาณเพิ่มเติม');
+            
+            $project->allocation_status = 'returned_for_revision';
+            $project->status = 'preliminary';
+            $project->committee_feedback = $feedback;
+            $project->committee_comment = $feedback;
+            $project->save();
+
+            ProjectApproval::updateOrCreate(
+                [
+                    'project_id' => $project->id,
+                    'step_number' => 0,
+                ],
+                [
+                    'user_id' => $user->id,
+                    'status' => 'returned',
+                    'comments' => 'มติคณะกรรมการ: ส่งกลับเพื่อแก้ไขคำขอ (' . $feedback . ')',
+                ]
+            );
+
+            AuditLog::record(
+                action: 'BUDGET_RETURNED',
+                model: $project,
+                notes: "มติคณะกรรมการ: ส่งกลับแก้ไขคำของบประมาณ ({$feedback})"
+            );
+
+            return redirect()->back()->with('success', 'ส่งกลับคำขอให้ผู้เสนอโครงการแก้ไขเรียบร้อยแล้ว');
         } else {
             $request->validate([
                 'committee_comment' => 'required|string',
@@ -482,8 +526,11 @@ class ProjectController extends Controller
                 'committee_comment.required' => 'กรุณาระบุเหตุผลหรือมติคณะกรรมการที่ไม่อนุมัติงบประมาณ',
             ]);
 
+            $comment = $request->input('committee_comment');
             $project->status = 'budget_rejected';
-            $project->committee_comment = $request->input('committee_comment');
+            $project->allocation_status = 'rejected';
+            $project->committee_feedback = $comment;
+            $project->committee_comment = $comment;
             $project->save();
 
             ProjectApproval::updateOrCreate(
@@ -494,12 +541,177 @@ class ProjectController extends Controller
                 [
                     'user_id' => $user->id,
                     'status' => 'rejected',
-                    'comments' => 'มติคณะกรรมการ: ไม่อนุมัติงบประมาณ (' . $request->input('committee_comment') . ')',
+                    'comments' => 'มติคณะกรรมการ: ไม่อนุมัติงบประมาณ (' . $comment . ')',
                 ]
+            );
+
+            AuditLog::record(
+                action: 'BUDGET_REJECTED',
+                model: $project,
+                notes: "มติคณะกรรมการ: ไม่อนุมัติงบประมาณ ({$comment})"
             );
 
             return redirect()->back()->with('success', 'บันทึกมติไม่อนุมัติงบประมาณโครงการเรียบร้อยแล้ว');
         }
+    }
+
+    /**
+     * Batch Allocate Budgets for multiple preliminary proposals at once.
+     */
+    public function batchAllocateBudgets(Request $request)
+    {
+        $user = auth()->user();
+        $isPlanStaff = $user->isAdmin() || $user->isPlanHead() || ($user->department && (str_contains($user->department->name, 'แผน') || $user->department->code === 'PLAN'));
+        if (!$isPlanStaff) {
+            return redirect()->back()->with('error', 'เฉพาะผู้ดูแลระบบและงานแผนงานเท่านั้นที่สามารถใช้งานการอนุมัติแบบกลุ่มได้');
+        }
+
+        $request->validate([
+            'project_ids' => 'required|array|min:1',
+            'project_ids.*' => 'exists:projects,id',
+            'funding_source_id' => 'required|exists:funding_sources,id',
+        ], [
+            'project_ids.required' => 'กรุณาเลือกโครงการที่ต้องการอนุมัติอย่างน้อย 1 รายการ',
+            'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุนที่ใช้จัดสรร',
+        ]);
+
+        $fundingSourceId = $request->input('funding_source_id');
+        $projectIds = $request->input('project_ids');
+        $count = 0;
+
+        DB::transaction(function () use ($projectIds, $fundingSourceId, $user, &$count) {
+            foreach ($projectIds as $pId) {
+                $project = Project::find($pId);
+                if (!$project || !in_array($project->status, ['preliminary', 'draft'])) continue;
+
+                $allocAmount = (float)($project->proposed_budget ?: $project->estimated_budget);
+                $project->allocated_budget = $allocAmount;
+                $project->approved_budget = $allocAmount;
+                $project->estimated_budget = $allocAmount;
+                $project->allocation_status = 'allocated';
+                $project->funding_source_id = $fundingSourceId;
+                $project->committee_feedback = 'อนุมัติตามวงเงินที่เสนอขอเบื้องต้น (Batch Approval โดยคณะกรรมการ)';
+                $project->committee_comment = $project->committee_feedback;
+                $project->budget_approved_at = now();
+                $project->status = 'budget_approved';
+                $project->current_approval_step = 1;
+                $project->save();
+
+                Budget::updateOrCreate(
+                    ['project_id' => $project->id],
+                    [
+                        'funding_source_id' => $fundingSourceId,
+                        'allocated_amount' => $allocAmount,
+                        'encumbered_amount' => $allocAmount,
+                        'spent_amount' => 0.00,
+                        'is_advance_payment' => false,
+                    ]
+                );
+
+                ProjectApproval::updateOrCreate(
+                    [
+                        'project_id' => $project->id,
+                        'step_number' => 0,
+                    ],
+                    [
+                        'user_id' => $user->id,
+                        'status' => 'approved',
+                        'comments' => 'มติคณะกรรมการ: อนุมัติจัดสรรงบแบบกลุ่ม ' . number_format($allocAmount, 2) . ' บาท',
+                    ]
+                );
+
+                AuditLog::record(
+                    action: 'BATCH_BUDGET_ALLOCATED',
+                    model: $project,
+                    notes: "อนุมัติจัดสรรงบแบบกลุ่ม (Batch Approval): " . number_format($allocAmount, 2) . " บาท"
+                );
+                $count++;
+            }
+        });
+
+        return redirect()->back()->with('success', "อนุมัติจัดสรรงบประมาณแบบกลุ่มสำเร็จเรียบร้อยแล้ว จำนวน {$count} โครงการ");
+    }
+
+    /**
+     * AI Auto-Mapping Strategies for preliminary project proposals.
+     */
+    public function aiAutoMapStrategies(Request $request, GeminiService $gemini)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string',
+            'background_rationale' => 'nullable|string',
+            'objectives' => 'nullable|array',
+        ]);
+
+        $title = $validated['title'];
+        $rationale = $validated['background_rationale'] ?? '';
+        $objectives = array_values(array_filter($validated['objectives'] ?? [], fn($v) => !empty(trim($v ?? ''))));
+
+        $activeCategories = [];
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('strategy_categories')) {
+                $activeCategories = \App\Models\StrategyCategory::with(['items' => function($q) {
+                    $q->where('is_active', true)->orderBy('order_index', 'asc');
+                }])->where('is_active', true)->orderBy('order_index', 'asc')->get()->toArray();
+            }
+        } catch (\Exception $e) {
+            $activeCategories = [];
+        }
+
+        $iqaList = \App\Models\IqaStrategy::all(['id', 'name'])->toArray();
+        $ovecList = \App\Models\OvecStrategy::all(['id', 'name'])->toArray();
+
+        $result = $gemini->mapStrategies($title, $rationale, $objectives, $activeCategories, $iqaList, $ovecList);
+
+        return response()->json([
+            'success' => true,
+            'mapping' => $result
+        ]);
+    }
+
+    /**
+     * AI Semantic Duplicate Detection across previous/other departments' projects.
+     */
+    public function aiDetectDuplicates(Request $request, GeminiService $gemini)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string',
+            'background_rationale' => 'nullable|string',
+            'objectives' => 'nullable|array',
+            'exclude_project_id' => 'nullable|integer',
+        ]);
+
+        $title = $validated['title'];
+        $rationale = $validated['background_rationale'] ?? '';
+        $objectives = array_values(array_filter($validated['objectives'] ?? [], fn($v) => !empty(trim($v ?? ''))));
+
+        $query = Project::with('department:id,name')
+            ->whereIn('status', ['budget_approved', 'approved', 'in_progress', 'completed', 'preliminary'])
+            ->select('id', 'title', 'academic_year', 'department_id', 'estimated_budget', 'proposed_budget', 'allocated_budget', 'status', 'background_rationale', 'objectives')
+            ->orderBy('id', 'desc');
+
+        if (!empty($validated['exclude_project_id'])) {
+            $query->where('id', '!=', $validated['exclude_project_id']);
+        }
+
+        $existing = $query->take(40)->get()->map(function($p) {
+            return [
+                'id' => $p->id,
+                'title' => $p->title,
+                'academic_year' => $p->academic_year,
+                'department_name' => $p->department?->name ?? 'ไม่ระบุ',
+                'budget' => (float)($p->allocated_budget ?: ($p->proposed_budget ?: $p->estimated_budget)),
+                'status' => $p->status,
+                'objectives' => is_array($p->objectives) ? array_slice($p->objectives, 0, 3) : [],
+            ];
+        })->toArray();
+
+        $result = $gemini->detectProjectDuplicates($title, $rationale, $objectives, $existing);
+
+        return response()->json([
+            'success' => true,
+            'result' => $result
+        ]);
     }
 
     /**

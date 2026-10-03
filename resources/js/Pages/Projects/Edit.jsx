@@ -654,6 +654,84 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 </Link>
                             </div>
                         )}
+
+                        {/* Committee Review & Budget Allocation Feedback Banner */}
+                        {(project?.committee_feedback || project?.budget_adjustment_reason || project?.approved_budget > 0 || project?.allocated_budget > 0) && (
+                            <div className="rounded-3xl border-2 border-purple-200 bg-gradient-to-r from-purple-50/90 via-indigo-50/70 to-pink-50/80 p-5 sm:p-6 shadow-sm">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-purple-200/80">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className="text-2xl p-2 rounded-2xl bg-purple-100 border border-purple-200">⚖️</span>
+                                        <div>
+                                            <h3 className="text-sm sm:text-base font-black text-purple-950">
+                                                มติคณะกรรมการพิจารณาจัดสรรงบประมาณ & ข้อเสนอแนะ
+                                            </h3>
+                                            <p className="text-xs text-purple-700">
+                                                ข้อมูลการอนุมัติงบประมาณและเงื่อนไขที่คณะกรรมการกำหนดสำหรับการจัดทำโครงการฉบับเต็ม
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="self-start sm:self-center inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        มติ: อนุมัติจัดสรรงบเรียบร้อยแล้ว
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-4 text-xs">
+                                    <div className="bg-white/90 rounded-2xl p-3.5 border border-purple-100 shadow-2xs">
+                                        <span className="text-slate-500 font-bold block text-[11px]">1. วงเงินที่ขอเสนอเบื้องต้น</span>
+                                        <span className="font-extrabold text-slate-700 text-base block mt-0.5">
+                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.proposed_budget || project.estimated_budget || 0)}
+                                        </span>
+                                    </div>
+
+                                    <div className="bg-white/90 rounded-2xl p-3.5 border border-emerald-200 shadow-2xs">
+                                        <span className="text-emerald-800 font-bold block text-[11px]">2. วงเงินที่อนุมัติจริง (กรอบงบประมาณ)</span>
+                                        <span className="font-black text-emerald-800 text-base block mt-0.5">
+                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(project.approved_budget || project.allocated_budget || 0)}
+                                        </span>
+                                    </div>
+
+                                    <div className="bg-white/90 rounded-2xl p-3.5 border border-purple-100 shadow-2xs">
+                                        <span className="text-slate-500 font-bold block text-[11px]">3. ผลการปรับลด / เพิ่ม</span>
+                                        <div className="mt-1">
+                                            {(() => {
+                                                const proposed = Number(project.proposed_budget || project.estimated_budget || 0);
+                                                const approved = Number(project.approved_budget || project.allocated_budget || 0);
+                                                const diff = approved - proposed;
+                                                if (diff === 0) {
+                                                    return <span className="inline-flex px-2 py-0.5 rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs">✓ อนุมัติตามที่ขอ (100%)</span>;
+                                                } else if (diff < 0) {
+                                                    return <span className="inline-flex px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-bold text-xs">🔻 ปรับลด {Math.abs(diff).toLocaleString()} บาท</span>;
+                                                } else {
+                                                    return <span className="inline-flex px-2 py-0.5 rounded-lg bg-blue-100 text-blue-900 font-bold text-xs">🔺 ปรับเพิ่ม {diff.toLocaleString()} บาท</span>;
+                                                }
+                                            })()}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {project.budget_adjustment_reason && (
+                                    <div className="mt-3.5 rounded-xl bg-amber-50/80 border border-amber-200 p-3 text-xs text-amber-950">
+                                        <strong className="font-bold flex items-center gap-1 text-amber-900 mb-0.5">
+                                            <span>💡</span> เหตุผลในการปรับเปลี่ยนงบประมาณ:
+                                        </strong>
+                                        <p className="pl-5 text-amber-800">{project.budget_adjustment_reason}</p>
+                                    </div>
+                                )}
+
+                                {project.committee_feedback && (
+                                    <div className="mt-3 rounded-xl bg-purple-100/70 border border-purple-200 p-3.5 text-xs text-purple-950">
+                                        <strong className="font-extrabold flex items-center gap-1.5 text-purple-900 mb-1">
+                                            <span>💬</span> ข้อเสนอแนะ / เงื่อนไขจากคณะกรรมการ (ให้ปฏิบัติตามในการจัดทำเล่มเต็มนี้):
+                                        </strong>
+                                        <p className="pl-6 text-purple-900 font-medium whitespace-pre-line leading-relaxed">
+                                            {project.committee_feedback}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="space-y-8">
                             <fieldset className="space-y-8 border-0 p-0 m-0">
 
