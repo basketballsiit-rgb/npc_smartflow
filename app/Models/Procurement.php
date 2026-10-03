@@ -86,6 +86,11 @@ class Procurement extends Model
     /**
      * Helper to get the inspection committee members.
      */
+    public function inspectionCommittee()
+    {
+        return $this->committees()->wherePivot('committee_type', 'inspection');
+    }
+
     /**
      * Get all audit trail logs for this procurement.
      */
