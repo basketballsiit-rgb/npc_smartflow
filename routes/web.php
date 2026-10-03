@@ -129,8 +129,13 @@ Route::middleware('auth')->group(function () {
     Route::put('/admin/departments/{department}', [AdminController::class, 'updateDepartment'])->name('admin.departments.update');
     Route::delete('/admin/departments/{department}', [AdminController::class, 'deleteDepartment'])->name('admin.departments.delete');
     Route::post('/admin/departments/{id}/restore', [AdminController::class, 'restoreDepartment'])->name('admin.departments.restore');
-    Route::post('/admin/departments/reorder', [AdminController::class, 'reorderDepartments'])->name('admin.departments.reorder');
     Route::post('/admin/ai/workload-analysis', [AdminController::class, 'aiAnalyzeWorkload'])->name('admin.ai.workload_analysis');
+
+    // Admin AI Agents Orchestration Hub Routes
+    Route::get('/admin/ai-agents', [AdminController::class, 'getAiAgentsConfig'])->name('admin.ai_agents.index');
+    Route::post('/admin/ai-agents/update', [AdminController::class, 'updateAiAgentsConfig'])->name('admin.ai_agents.update');
+    Route::post('/admin/ai-agents/reset-defaults', [AdminController::class, 'resetAiAgentDefaults'])->name('admin.ai_agents.reset_defaults');
+    Route::post('/admin/ai-agents/test-connection', [AdminController::class, 'testAiConnection'])->name('admin.ai_agents.test_connection');
 
     // Admin Strategy Routes
     Route::post('/admin/iqa-strategies', [AdminController::class, 'storeIqaStrategy'])->name('admin.iqa.store');

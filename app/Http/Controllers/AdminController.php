@@ -1127,4 +1127,175 @@ class AdminController extends Controller
         $msg = $res['message'] ?? 'ไม่พบข้อมูล LINE User ID ใหม่ที่ตรงกับผู้ใช้งานในระบบ หรือผู้ใช้ทุกคนผูกเรียบร้อยแล้ว';
         return redirect()->back()->with('info', "ผลการซิงค์: {$msg}");
     }
+
+    /**
+     * Get AI Agents Orchestration Configuration & Prompts
+     */
+    public function getAiAgentsConfig()
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanStaff()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
+        }
+
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiModel = SystemSetting::get('ai_model', 'gemini-2.5-flash');
+        $aiTemp = (float)SystemSetting::get('ai_temperature', 0.4);
+        $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
+        $globalDirective = SystemSetting::get('ai_global_directive', GeminiService::getDefaultGlobalDirective());
+
+        $definitions = GeminiService::getAgentsDefinitions();
+        $agents = [];
+        foreach ($definitions as $key => $agent) {
+            $agent['custom_prompt'] = SystemSetting::get("ai_prompt_{$key}", $agent['default_prompt']);
+            $agents[] = $agent;
+        }
+
+        return response()->json([
+            'success' => true,
+            'has_api_key' => !empty($apiKey),
+            'ai_model' => $aiModel,
+            'ai_temperature' => $aiTemp,
+            'ai_enabled' => $aiEnabled,
+            'global_directive' => $globalDirective,
+            'agents' => $agents
+        ]);
+    }
+
+    /**
+     * Update AI Agents Configuration & Prompts
+     */
+    public function updateAiAgentsConfig(Request $request)
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanStaff()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
+        }
+
+        if ($request->has('ai_global_directive')) {
+            SystemSetting::set('ai_global_directive', $request->input('ai_global_directive'), 'ai', 'คำสั่งนโยบายกลางของวิทยาลัย', 'textarea');
+        }
+
+        if ($request->has('ai_model')) {
+            SystemSetting::set('ai_model', $request->input('ai_model'), 'ai', 'รุ่นโมเดล AI Gemini', 'text');
+        }
+
+        if ($request->has('ai_temperature')) {
+            SystemSetting::set('ai_temperature', (string)$request->input('ai_temperature'), 'ai', 'ระดับความสร้างสรรค์ (Temperature)', 'text');
+        }
+
+        if ($request->has('gemini_api_key')) {
+            $key = trim($request->input('gemini_api_key'));
+            if (!empty($key)) {
+                SystemSetting::set('gemini_api_key', $key, 'ai', 'Google Gemini API Key', 'text');
+            }
+        }
+
+        if ($request->has('enable_ai_features')) {
+            $enabled = filter_var($request->input('enable_ai_features'), FILTER_VALIDATE_BOOLEAN);
+            SystemSetting::set('enable_ai_features', $enabled ? 'true' : 'false', 'ai', 'เปิดใช้งานฟีเจอร์ AI', 'boolean');
+            SystemSetting::set('enable_ai_recommendations', $enabled ? 'true' : 'false', 'ai', 'เปิดใช้งาน AI Gemini', 'boolean');
+        }
+
+        $prompts = $request->input('prompts', []);
+        foreach ($prompts as $agentId => $promptText) {
+            SystemSetting::set("ai_prompt_{$agentId}", $promptText, 'ai', "คำสั่งเฉพาะ AI {$agentId}", 'textarea');
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'บันทึกการตั้งค่าคำสั่ง AI ทุกส่วนงานและนโยบายกลางเรียบร้อยแล้ว'
+        ]);
+    }
+
+    /**
+     * Reset AI Agents Prompts to Standard Vocational Defaults
+     */
+    public function resetAiAgentDefaults(Request $request)
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanStaff()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
+        }
+
+        $agentId = $request->input('agent_id');
+        $definitions = GeminiService::getAgentsDefinitions();
+
+        if ($agentId && isset($definitions[$agentId])) {
+            SystemSetting::set("ai_prompt_{$agentId}", $definitions[$agentId]['default_prompt'], 'ai', "คำสั่งเฉพาะ AI {$agentId}", 'textarea');
+            return response()->json([
+                'success' => true,
+                'message' => "คืนค่าคำสั่งมาตรฐานสำหรับ {$definitions[$agentId]['title']} เรียบร้อยแล้ว",
+                'prompt' => $definitions[$agentId]['default_prompt']
+            ]);
+        }
+
+        // Reset all
+        foreach ($definitions as $key => $agent) {
+            SystemSetting::set("ai_prompt_{$key}", $agent['default_prompt'], 'ai', "คำสั่งเฉพาะ AI {$key}", 'textarea');
+        }
+        SystemSetting::set('ai_global_directive', GeminiService::getDefaultGlobalDirective(), 'ai', 'คำสั่งนโยบายกลางของวิทยาลัย', 'textarea');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'คืนค่าคำสั่งมาตรฐาน สอศ. สำหรับ AI ทุกส่วนงานและนโยบายกลางเรียบร้อยแล้ว'
+        ]);
+    }
+
+    /**
+     * Test Gemini AI Connection and Measure Latency
+     */
+    public function testAiConnection(Request $request)
+    {
+        if (!auth()->user()->isAdmin() && !auth()->user()->isPlanStaff()) {
+            abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
+        }
+
+        $apiKey = trim($request->input('gemini_api_key')) ?: SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $model = $request->input('ai_model') ?: SystemSetting::get('ai_model', 'gemini-2.5-flash');
+
+        if (empty($apiKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'ไม่พบ Gemini API Key กรุณาระบุ API Key ก่อนทดสอบ'
+            ]);
+        }
+
+        $startTime = microtime(true);
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders(['Content-Type' => 'application/json'])
+                ->withoutVerifying()
+                ->timeout(12)
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                    'contents' => [
+                        ['parts' => [['text' => 'ตอบสั้นๆ เพียง 1 คำ: พร้อมทำงาน']]]
+                    ]
+                ]);
+
+            $latency = round((microtime(true) - $startTime) * 1000);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $reply = $data['candidates'][0]['content']['parts'][0]['text'] ?? 'พร้อมทำงาน';
+                return response()->json([
+                    'success' => true,
+                    'latency_ms' => $latency,
+                    'model' => $model,
+                    'reply' => trim($reply),
+                    'message' => "เชื่อมต่อ AI สำเร็จ! ความเร็วตอบสนอง: {$latency} ms"
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'latency_ms' => $latency,
+                'status' => $response->status(),
+                'message' => 'API ปฏิเสธการเชื่อมต่อ: ' . ($response->json()['error']['message'] ?? 'Status ' . $response->status())
+            ]);
+        } catch (\Throwable $e) {
+            $latency = round((microtime(true) - $startTime) * 1000);
+            return response()->json([
+                'success' => false,
+                'latency_ms' => $latency,
+                'message' => 'เกิดข้อผิดพลาดในการเชื่อมต่อ: ' . $e->getMessage()
+            ]);
+        }
+    }
 }

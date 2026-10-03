@@ -1464,5 +1464,321 @@ Write the report in Thai. Include sections for:
             ],
         ];
     }
+
+    /**
+     * Default Global College Directive
+     */
+    public static function getDefaultGlobalDirective(): string
+    {
+        return "ข้อกำหนดและบริบทกลางของวิทยาลัยสารพัดช่างน่าน (สอศ.):\n"
+            . "1. มุ่งเน้นการจัดการศึกษาและฝึกอบรมวิชาชีพที่มีคุณภาพตามมาตรฐานอาชีวศึกษา\n"
+            . "2. สอดคล้องกับนโยบาย 'เรียนดี มีความสุข', การยกระดับทักษะ (Up-skill / Re-skill) และสมรรถนะวิชาชีพตามความต้องการของตลาดแรงงาน\n"
+            . "3. ส่งเสริมคุณธรรม จริยธรรม จิตอาสา และความร่วมมืออย่างใกล้ชิดกับสถานประกอบการ ชุมชน และหน่วยงานท้องถิ่นจังหวัดน่าน\n"
+            . "4. การดำเนินงาน ทุกขั้นตอน การจัดซื้อจัดจ้าง และการเบิกจ่ายงบประมาณต้องยึดระเบียบการเงินภาครัฐและหลักธรรมาภิบาลอย่างเคร่งครัด";
+    }
+
+    /**
+     * Get Central Agent Definitions & Metadata
+     */
+    public static function getAgentsDefinitions(): array
+    {
+        return [
+            'rationale' => [
+                'id' => 'rationale',
+                'title' => 'AI ยกร่างหลักการและเหตุผล (Background & Rationale)',
+                'icon' => '📝',
+                'role' => 'วิเคราะห์ปัญหา ความจำเป็นเร่งด่วน และยกร่างหลักการและเหตุผลตามมาตรฐาน สอศ.',
+                'upstream_inputs' => ['ชื่อโครงการ', 'ปีงบประมาณ', 'ฝ่าย/แผนก', 'ยุทธศาสตร์ที่เลือก', 'นโยบายกลางวิทยาลัย'],
+                'downstream_outputs' => ['หลักการและเหตุผล 3 ย่อหน้า', 'ส่งต่อให้ AI วัตถุประสงค์'],
+                'available_tags' => ['{title}', '{academic_year}', '{department}', '{strategies}', '{college_name}'],
+                'default_prompt' => "คุณคือผู้เชี่ยวชาญการเขียนโครงการของสถานศึกษา สังกัดสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)\nจงยกร่าง 'หลักการและเหตุผล' (Background & Rationale) จำนวน 3 ย่อหน้าอย่างเป็นทางการและสมบูรณ์แบบ:\n- ย่อหน้าที่ 1: กล่าวถึงความสำคัญ นโยบายกระทรวงศึกษาธิการ และมาตรฐานวิชาชีพอาชีวศึกษา\n- ย่อหน้าที่ 2: ชี้ให้เห็นสภาพปัญหา ความจำเป็นเร่งด่วน หรือโอกาสในการพัฒนาทักษะของผู้เรียน/บุคลากร\n- ย่อหน้าที่ 3: สรุปเหตุผลความจำเป็นที่ต้องจัดทำโครงการนี้ และประโยชน์ที่จะเกิดต่อผู้เรียนและชุมชน",
+            ],
+            'objectives' => [
+                'id' => 'objectives',
+                'title' => 'AI กำหนดวัตถุประสงค์และเป้าหมาย (Objectives & Goals)',
+                'icon' => '🎯',
+                'role' => 'กำหนดวัตถุประสงค์ 3-4 ข้อตามหลัก SMART สอดคล้องกับหลักการและชื่อโครงการ',
+                'upstream_inputs' => ['ชื่อโครงการ', 'หลักการและเหตุผล', 'ยุทธศาสตร์ที่เลือก'],
+                'downstream_outputs' => ['รายการวัตถุประสงค์ 3-4 ข้อ', 'ส่งต่อให้ AI ตัวชี้วัด 4 มิติ และ แผน PDCA'],
+                'available_tags' => ['{title}', '{rationale}', '{strategies}', '{college_name}'],
+                'default_prompt' => "คุณคือผู้เชี่ยวชาญการเขียนโครงการอาชีวศึกษา\nจงกำหนดวัตถุประสงค์ของโครงการจำนวน 3-4 ข้อที่ชัดเจน สอดคล้องกับชื่อโครงการและหลักการเหตุผล\nโดยยึดหลัก SMART (Specific, Measurable, Achievable, Relevant, Time-bound)\nขึ้นต้นด้วย 'เพื่อ...' ทุกข้อ และตอบกลับเป็น JSON array ของสตริง เช่น [\"เพื่อ...\", \"เพื่อ...\"]",
+            ],
+            'indicators' => [
+                'id' => 'indicators',
+                'title' => 'AI ออกแบบตัวชี้วัด 4 มิติ (4-Dimension Indicators)',
+                'icon' => '📊',
+                'role' => 'ออกแบบตัวชี้วัดเชิงปริมาณ คุณภาพ เวลา (ไตรมาส) และค่าใช้จ่าย ให้เชื่อมโยงกับวัตถุประสงค์',
+                'upstream_inputs' => ['ชื่อโครงการ', 'วัตถุประสงค์', 'กลุ่มเป้าหมาย', 'วงเงินจัดสรร'],
+                'downstream_outputs' => ['ตัวชี้วัดเชิงปริมาณ', 'ตัวชี้วัดเชิงคุณภาพ', 'ตัวชี้วัดเชิงเวลา', 'ตัวชี้วัดเชิงงบประมาณ', 'ส่งต่อให้ AI ตรวจสอบ'],
+                'available_tags' => ['{title}', '{objectives}', '{target_group}', '{budget}', '{college_name}'],
+                'default_prompt' => "คุณคือผู้เชี่ยวชาญด้านการประกันคุณภาพและประเมินผลโครงการอาชีวศึกษา\nจงออกแบบตัวชี้วัดความสำเร็จ 4 มิติของโครงการ:\n1. เชิงปริมาณ (Quantitative): จำนวนผู้เข้าร่วม/ผลผลิตที่เป็นตัวเลขรูปธรรม\n2. เชิงคุณภาพ (Qualitative): ระดับความพึงพอใจ ทักษะความรู้ที่เพิ่มขึ้น (เช่น ร้อยละ 85 ขึ้นไป)\n3. เชิงเวลา (Time): ดำเนินกิจกรรมแล้วเสร็จตามกำหนดการในไตรมาส ร้อยละ 100\n4. เชิงต้นทุน/ค่าใช้จ่าย (Cost): การบริหารงบประมาณอย่างคุ้มค่า ไม่เกินวงเงินจัดสรร ร้อยละ 100",
+            ],
+            'action_plan' => [
+                'id' => 'action_plan',
+                'title' => 'AI วางแผนปฏิบัติงาน 4 ขั้นตอน PDCA (Contextual PDCA Plan)',
+                'icon' => '📋',
+                'role' => 'ปรับบริบท 4 ขั้นตอนมาตรฐานวงจรคุณภาพ พร้อมจัดสรรงบประมาณไม่เกินวงเงิน',
+                'upstream_inputs' => ['ชื่อโครงการ', 'วัตถุประสงค์', 'กลุ่มเป้าหมาย', 'วงเงินจัดสรร', 'ไตรมาส'],
+                'downstream_outputs' => ['ตาราง 4 ขั้นตอน PDCA', 'การกำหนดไตรมาสและหมวดเงิน', 'ส่งต่อให้ Auditor'],
+                'available_tags' => ['{title}', '{objectives}', '{target_group}', '{budget}', '{location}'],
+                'default_prompt' => "คุณคือผู้เชี่ยวชาญการวางแผนปฏิบัติงานตามวงจรคุณภาพ PDCA สำหรับอาชีวศึกษา\nจงปรับแต่ง 4 ขั้นตอนมาตรฐาน (Plan: วางแผน, Plan: เตรียมการ, Do: ดำเนินการ, Check & Act: ตรวจสอบและรายงาน)\nให้สอดคล้องกับชื่อโครงการ กลุ่มเป้าหมาย และกระจายงบประมาณลงในขั้นตอนที่ 3 ไม่ให้เกินวงเงินจัดสรร",
+            ],
+            'auditor' => [
+                'id' => 'auditor',
+                'title' => 'AI ตรวจสอบความสอดคล้องเชิงตรรกะ (Consistency Auditor)',
+                'icon' => '🛡️',
+                'role' => 'ตรวจสอบความสอดคล้องตลอดสาย: วัตถุประสงค์ ↔ ตัวชี้วัด ↔ แผนงาน ↔ งบประมาณ พร้อมให้คะแนน 0-100',
+                'upstream_inputs' => ['ข้อมูลโครงการทั้งหมดแบบครบวงจร', 'นโยบายกลางวิทยาลัย'],
+                'downstream_outputs' => ['คะแนนความสอดคล้อง (0-100)', 'ผลตรวจ 4 มิติ (Pass/Warning/Issue)', 'ข้อเสนอแนะปรับปรุง'],
+                'available_tags' => ['{title}', '{objectives}', '{indicators}', '{action_plan}', '{budget}'],
+                'default_prompt' => "คุณคือ AI Consistency Auditor ผู้ตรวจสอบความสอดคล้องเชิงตรรกะของโครงการอาชีวศึกษา\nตรวจสอบความเชื่อมโยง วัตถุประสงค์ ↔ ตัวชี้วัด 4 มิติ ↔ แผนงาน ↔ หมวดงบประมาณ\nวิเคราะห์ความสมเหตุสมผล ให้คะแนน 0-100 ตรวจสอบ 4 มิติ และให้ข้อเสนอแนะเชิงพัฒนาที่ปฏิบัติได้จริง",
+            ],
+            'mapping' => [
+                'id' => 'mapping',
+                'title' => 'AI แนะนำยุทธศาสตร์และตรวจซ้ำซ้อน (Strategy Mapper & Duplicate Detector)',
+                'icon' => '🔗',
+                'role' => 'จับคู่ยุทธศาสตร์ สอศ., IQA, มาตรฐานสถานศึกษา และตรวจจับโครงการที่ทับซ้อนกัน',
+                'upstream_inputs' => ['ชื่อโครงการ', 'หลักการและเหตุผล', 'วัตถุประสงค์', 'ฐานข้อมูลยุทธศาสตร์'],
+                'downstream_outputs' => ['รหัสยุทธศาสตร์ที่แนะนำ', 'ระดับความเสี่ยงการซ้ำซ้อน'],
+                'available_tags' => ['{title}', '{rationale}', '{objectives}'],
+                'default_prompt' => "คุณคือผู้เชี่ยวชาญด้านยุทธศาสตร์และนโยบายการอาชีวศึกษา\nวิเคราะห์ชื่อโครงการและเนื้อหา เพื่อจับคู่ยุทธศาสตร์ นโยบาย และมาตรฐานการศึกษาที่ตรงและเหมาะสมที่สุด\nพร้อมประเมินความซ้ำซ้อนกับโครงการอื่น ๆ ในสถานศึกษา",
+            ],
+            'survey' => [
+                'id' => 'survey',
+                'title' => 'AI สร้างแบบสอบถามและประเมินผล (Survey Generator & Evaluator)',
+                'icon' => '📝',
+                'role' => 'สร้างแบบสอบถาม 5 ระดับ (Likert Scale) และวิเคราะห์ความรู้สึก (Sentiment) ของผู้ร่วมโครงการ',
+                'upstream_inputs' => ['ชื่อโครงการ', 'วัตถุประสงค์', 'กลุ่มเป้าหมาย', 'ผลการสำรวจจริง'],
+                'downstream_outputs' => ['ชุดข้อคำถาม 15 ข้อ', 'การวิเคราะห์ผลประเมิน และข้อเสนอแนะ ACT Phase'],
+                'available_tags' => ['{title}', '{objectives}', '{target_group}', '{survey_stats}'],
+                'default_prompt' => "คุณคือผู้เชี่ยวชาญการวัดและประเมินผลโครงการทางการศึกษา\nสร้างแบบสอบถามประเมินความพึงพอใจ 4 ด้านมาตรฐาน (ด้านกระบวนการ ด้านวิทยากร ด้านสิ่งอำนวยความสะดวก ด้านการนำไปใช้)\nและวิเคราะห์ข้อเสนอแนะของผู้เข้าร่วมโครงการตามวงจร Deming (PDCA)",
+            ],
+            'tor' => [
+                'id' => 'tor',
+                'title' => 'AI ยกร่างและตรวจสอบ TOR งานพัสดุ (Procurement TOR & Compliance)',
+                'icon' => '📦',
+                'role' => 'ยกร่างขอบเขตของงาน (TOR) และตรวจสอบความถูกต้องตามระเบียบจัดซื้อจัดจ้างภาครัฐ',
+                'upstream_inputs' => ['ชื่อรายการครุภัณฑ์/จ้างเหมา', 'หมวดเงิน', 'วงเงินงบประมาณ', 'แผนงาน'],
+                'downstream_outputs' => ['ร่างเอกสาร TOR', 'ผลตรวจความสอดคล้องตามระเบียบพัสดุ พ.ร.บ. 2560'],
+                'available_tags' => ['{item_name}', '{category}', '{estimated_price}', '{department}'],
+                'default_prompt' => "คุณคือผู้เชี่ยวชาญระเบียบการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560\nยกร่างขอบเขตของงาน (Terms of Reference : TOR) หรือรายละเอียดคุณลักษณะเฉพาะของพัสดุ\nที่ถูกต้อง โปร่งใส เป็นธรรม ไม่ล็อคสเปก และคุ้มค่ากับงบประมาณแผ่นดิน",
+            ],
+            'reports' => [
+                'id' => 'reports',
+                'title' => 'AI สังเคราะห์รายงานสรุปโครงการ 5 บท (Report Book Synthesizer)',
+                'icon' => '📑',
+                'role' => 'ประมวลผลข้อมูลทั้งวงจรโครงการ สังเคราะห์รายงานบทที่ 1 ถึงบทที่ 5 ฉบับสมบูรณ์',
+                'upstream_inputs' => ['ข้อมูลโครงการทั้งหมด', 'ผลสำรวจความพึงพอใจ', 'ภาพกิจกรรมและหลักฐาน'],
+                'downstream_outputs' => ['เนื้อหารายงานบทที่ 1, 2, 3, 4, 5', 'พร้อมพิมพ์รูปเล่ม A4'],
+                'available_tags' => ['{title}', '{objectives}', '{targets}', '{survey_results}'],
+                'default_prompt' => "คุณคือผู้เชี่ยวชาญการเขียนรายงานผลการดำเนินโครงการ 5 บท สำหรับสถานศึกษาอาชีวศึกษา\nสังเคราะห์ผลการดำเนินงาน เปรียบเทียบกับวัตถุประสงค์และตัวชี้วัดที่ตั้งไว้ อภิปรายผลเชิงวิชาการ\nและจัดทำข้อเสนอแนะเพื่อนำผลไปปรับปรุงในรอบปีการศึกษาถัดไป",
+            ],
+        ];
+    }
+
+    /**
+     * Shared Context Pipeline Builder: aggregates upstream data from previous AI agents and project fields.
+     */
+    public static function buildSharedProjectContext(array $projectData): string
+    {
+        $college = SystemSetting::get('college_name_th', 'วิทยาลัยสารพัดช่างน่าน');
+        $year = $projectData['academic_year'] ?? SystemSetting::get('current_academic_year', '2569');
+        $title = $projectData['title'] ?? 'โครงการพัฒนาทักษะวิชาชีพ';
+        $department = $projectData['department_name'] ?? ($projectData['department'] ?? 'งานแผนงานและงบประมาณ');
+        $budget = !empty($projectData['allocated_budget']) ? number_format((float)$projectData['allocated_budget']) . ' บาท' : (!empty($projectData['estimated_budget']) ? number_format((float)$projectData['estimated_budget']) . ' บาท' : 'ไม่ระบุ');
+        
+        $directives = SystemSetting::get('ai_global_directive', self::getDefaultGlobalDirective());
+
+        $context = "=== ข้อมูลบริบทโครงการและสถาบัน (Shared Project Context) ===\n";
+        $context .= "- สถานศึกษา: {$college}\n";
+        $context .= "- ปีงบประมาณ/ปีการศึกษา: พ.ศ. {$year}\n";
+        $context .= "- ชื่อโครงการ: {$title}\n";
+        $context .= "- หน่วยงานผู้รับผิดชอบ: {$department}\n";
+        $context .= "- วงเงินงบประมาณ: {$budget}\n";
+
+        if (!empty($projectData['rationale']) || !empty($projectData['background_rationale'])) {
+            $rat = $projectData['rationale'] ?? $projectData['background_rationale'];
+            $context .= "- หลักการและเหตุผล (ร่างแล้ว): " . mb_substr(strip_tags($rat), 0, 300) . "...\n";
+        }
+
+        if (!empty($projectData['objectives'])) {
+            $objs = is_array($projectData['objectives']) ? implode('; ', $projectData['objectives']) : $projectData['objectives'];
+            $context .= "- วัตถุประสงค์โครงการ: {$objs}\n";
+        }
+
+        if (!empty($projectData['indicators'])) {
+            $ind = $projectData['indicators'];
+            $qnt = is_array($ind['quantitative'] ?? null) ? implode('; ', $ind['quantitative']) : ($ind['quantitative'] ?? '');
+            $qlt = is_array($ind['qualitative'] ?? null) ? implode('; ', $ind['qualitative']) : ($ind['qualitative'] ?? '');
+            if ($qnt) $context .= "- ตัวชี้วัดเชิงปริมาณ: {$qnt}\n";
+            if ($qlt) $context .= "- ตัวชี้วัดเชิงคุณภาพ: {$qlt}\n";
+        }
+
+        if (!empty($projectData['strategies_text'])) {
+            $context .= "- ยุทธศาสตร์ที่เกี่ยวข้อง: {$projectData['strategies_text']}\n";
+        }
+
+        $context .= "\n=== นโยบายและข้อกำหนดเฉพาะของวิทยาลัย (Global Directives) ===\n";
+        $context .= "{$directives}\n";
+
+        return $context;
+    }
+
+    /**
+     * Generate Project Background & Rationale using Shared Pipeline and Role Prompt
+     */
+    public function generateRationale(array $data): string
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
+        $title = trim($data['title'] ?? 'โครงการพัฒนาทักษะวิชาชีพ');
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $agentPrompt = SystemSetting::get('ai_prompt_rationale', self::getAgentsDefinitions()['rationale']['default_prompt']);
+            $context = self::buildSharedProjectContext($data);
+            $model = SystemSetting::get('ai_model', 'gemini-2.5-flash');
+            $temp = (float)SystemSetting::get('ai_temperature', 0.4);
+
+            $fullPrompt = "{$agentPrompt}\n\n{$context}\n\nคำสั่ง: จงยกร่าง 'หลักการและเหตุผล' ของโครงการ \"{$title}\" จำนวน 3 ย่อหน้าอย่างสมบูรณ์แบบ ตอบเฉพาะเนื้อหาหลักการและเหตุผลภาษาไทย ไม่ต้องมีเกริ่นนำหรือหัวข้อข้อความ";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->withoutVerifying()
+                    ->timeout(22)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $fullPrompt]]]],
+                        'generationConfig' => ['temperature' => $temp, 'maxOutputTokens' => 1200]
+                    ]);
+
+                if ($response->successful()) {
+                    $body = $response->json();
+                    $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    if (!empty(trim($text))) {
+                        return trim($text);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gemini generateRationale error: ' . $e->getMessage());
+            }
+        }
+
+        // Standard Fallback Rationale
+        return "ตามที่ สำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.) มุ่งเน้นการจัดการศึกษาและการฝึกอบรมวิชาชีพที่มีคุณภาพ เพื่อพัฒนากำลังคนด้านวิชาชีพให้มีสมรรถนะตรงตามความต้องการของสถานประกอบการ สังคม และชุมชน สอดรับกับนโยบายการยกระดับคุณภาพการอาชีวศึกษาและความเปลี่ยนแปลงทางเทคโนโลยี\n\nวิทยาลัยสารพัดช่างน่าน ได้ตระหนักถึงความสำคัญในการส่งเสริมและพัฒนาศักยภาพของผู้เรียนและบุคลากร จึงมีความจำเป็นต้องขับเคลื่อนกิจกรรมที่ส่งเสริมการเรียนรู้เชิงปฏิบัติการ ทักษะวิชาชีพเฉพาะทาง ตลอดจนการปลูกฝังคุณธรรม จริยธรรม และจิตอาสา เพื่อให้การดำเนินงานบรรลุตามมาตรฐานการประกันคุณภาพการศึกษา\n\nดังนั้น เพื่อให้การดำเนินงานเกิดประสิทธิภาพสูงสุด วิทยาลัยสารพัดช่างน่านจึงได้จัดทำโครงการ \"{$title}\" ขึ้น เพื่อเป็นกลไกสำคัญในการพัฒนาทักษะ เสริมสร้างประสบการณ์จริง และสร้างประโยชน์อย่างยั่งยืนแก่ผู้เรียน สถานศึกษา และชุมชนท้องถิ่นต่อไป";
+    }
+
+    /**
+     * Generate Project Objectives using Shared Pipeline and Role Prompt
+     */
+    public function generateObjectives(array $data): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
+        $title = trim($data['title'] ?? 'โครงการพัฒนาทักษะวิชาชีพ');
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $agentPrompt = SystemSetting::get('ai_prompt_objectives', self::getAgentsDefinitions()['objectives']['default_prompt']);
+            $context = self::buildSharedProjectContext($data);
+            $model = SystemSetting::get('ai_model', 'gemini-2.5-flash');
+            $temp = (float)SystemSetting::get('ai_temperature', 0.3);
+
+            $fullPrompt = "{$agentPrompt}\n\n{$context}\n\nคำสั่ง: กำหนดวัตถุประสงค์ 3 ข้อ สำหรับโครงการ \"{$title}\" ตอบเป็น JSON array ของสตริง strictly ในรูปแบบ [\"เพื่อ...\", \"เพื่อ...\", \"เพื่อ...\"]";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->withoutVerifying()
+                    ->timeout(18)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $fullPrompt]]]],
+                        'generationConfig' => [
+                            'temperature' => $temp,
+                            'maxOutputTokens' => 600,
+                            'responseMimeType' => 'application/json'
+                        ]
+                    ]);
+
+                if ($response->successful()) {
+                    $body = $response->json();
+                    $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $clean = preg_replace('/```(?:json)?\s*([\s\S]*?)\s*```/', '$1', trim($text));
+                    $decoded = json_decode($clean, true);
+                    if (is_array($decoded) && count($decoded) >= 2) {
+                        return array_values($decoded);
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gemini generateObjectives error: ' . $e->getMessage());
+            }
+        }
+
+        return [
+            "เพื่อส่งเสริมและพัฒนาองค์ความรู้ ทักษะวิชาชีพ และสมรรถนะที่จำเป็นในการดำเนินกิจกรรมตามโครงการ {$title} ให้แก่กลุ่มเป้าหมาย",
+            "เพื่อให้ผู้เข้าร่วมโครงการสามารถนำความรู้และประสบการณ์ไปประยุกต์ใช้ในการเรียน การปฏิบัติงาน และการประกอบอาชีพได้อย่างมีประสิทธิภาพ",
+            "เพื่อสร้างความตระหนัก คุณธรรม จริยธรรม เจตคติที่ดี และความรับผิดชอบต่อตนเอง สังคม และสิ่งแวดล้อม"
+        ];
+    }
+
+    /**
+     * Generate 4-Dimension Indicators using Shared Pipeline and Role Prompt
+     */
+    public function generateIndicators(array $data): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
+        $title = trim($data['title'] ?? 'โครงการพัฒนาทักษะวิชาชีพ');
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $agentPrompt = SystemSetting::get('ai_prompt_indicators', self::getAgentsDefinitions()['indicators']['default_prompt']);
+            $context = self::buildSharedProjectContext($data);
+            $model = SystemSetting::get('ai_model', 'gemini-2.5-flash');
+            $temp = (float)SystemSetting::get('ai_temperature', 0.3);
+
+            $fullPrompt = "{$agentPrompt}\n\n{$context}\n\nคำสั่ง: ออกแบบตัวชี้วัด 4 มิติ สำหรับโครงการ \"{$title}\" ตอบกลับเป็น JSON object strictly ในรูปแบบ:\n"
+                . "{\n"
+                . "  \"quantitative\": [\"...\", \"...\"],\n"
+                . "  \"qualitative\": [\"...\", \"...\"],\n"
+                . "  \"time\": \"...\",\n"
+                . "  \"cost\": \"...\"\n"
+                . "}";
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->withoutVerifying()
+                    ->timeout(18)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $fullPrompt]]]],
+                        'generationConfig' => [
+                            'temperature' => $temp,
+                            'maxOutputTokens' => 800,
+                            'responseMimeType' => 'application/json'
+                        ]
+                    ]);
+
+                if ($response->successful()) {
+                    $body = $response->json();
+                    $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $clean = preg_replace('/```(?:json)?\s*([\s\S]*?)\s*```/', '$1', trim($text));
+                    $decoded = json_decode($clean, true);
+                    if (is_array($decoded) && (!empty($decoded['quantitative']) || !empty($decoded['qualitative']))) {
+                        return $decoded;
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gemini generateIndicators error: ' . $e->getMessage());
+            }
+        }
+
+        return [
+            'quantitative' => [
+                'นักเรียน นักศึกษา บุคลากร หรือกลุ่มเป้าหมายเข้าร่วมโครงการไม่น้อยกว่า 50 คน',
+                'มีการจัดกิจกรรมและดำเนินงานตามโครงการสำเร็จครบถ้วน จำนวน 1 โครงการ'
+            ],
+            'qualitative' => [
+                'ผู้เข้าร่วมโครงการมีความรู้ ความเข้าใจ และทักษะเพิ่มขึ้นไม่น้อยกว่าร้อยละ 85',
+                'ผู้เข้าร่วมโครงการมีความพึงพอใจต่อภาพรวมของการจัดโครงการในระดับดีมาก (ร้อยละ 90 ขึ้นไป)'
+            ],
+            'time' => 'ดำเนินกิจกรรมตามโครงการแล้วเสร็จตามกำหนดเวลาในแผนปฏิบัติงาน ร้อยละ 100',
+            'cost' => 'การใช้จ่ายงบประมาณเป็นไปตามระเบียบของทางราชการ คุ้มค่า และไม่เกินวงเงินที่ได้รับจัดสรร ร้อยละ 100'
+        ];
+    }
 }
 

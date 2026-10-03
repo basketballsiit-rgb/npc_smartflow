@@ -103,6 +103,7 @@ export default function AuthenticatedLayout({ header, children }) {
                 return currentUrl.includes('tab=admin_users') ||
                        currentUrl.includes('tab=admin_settings') ||
                        currentUrl.includes('tab=admin_strategies') ||
+                       currentUrl.includes('tab=admin_ai') ||
                        currentUrl.includes('tab=all_projects');
             default:
                 return false;
@@ -114,7 +115,7 @@ export default function AuthenticatedLayout({ header, children }) {
         if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2')) {
             return 'five_chapters';
         }
-        if (currentUrl.includes('tab=admin_users') || currentUrl.includes('tab=admin_settings')) {
+        if (currentUrl.includes('tab=admin_users') || currentUrl.includes('tab=admin_settings') || currentUrl.includes('tab=admin_strategies') || currentUrl.includes('tab=admin_ai') || currentUrl.includes('tab=all_projects')) {
             return 'admin_console';
         }
         if (currentUrl.includes('tab=executive_overview')) {
@@ -1065,6 +1066,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>ตั้งค่าระบบ & เลขที่เอกสาร</span>}
                                 </Link>
                                 <Link
+                                    href={route('dashboard', { tab: 'admin_ai' })}
+                                    className={getSubLinkClass(url.includes('tab=admin_ai'))}
+                                    title="ศูนย์ควบคุมคำสั่งและโครงข่ายข้อมูลเชื่อมโยง AI (AI Orchestration Hub)"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=admin_ai'), 'text-rose-300')}>└─</span>
+                                    <span className="text-sm">🤖</span>
+                                    {isSidebarOpen && <span>ศูนย์ควบคุมคำสั่ง AI</span>}
+                                </Link>
+                                <Link
                                     href={route('dashboard', { tab: 'all_projects' })}
                                     className={getSubLinkClass(url.includes('tab=all_projects'))}
                                     title="จัดการโครงการทั้งหมดของวิทยาลัย และปลดล็อคแก้ไข"
@@ -1293,6 +1303,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'admin_settings' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🛠️</span> ตั้งค่าระบบ
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'admin_ai' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>🤖</span> ศูนย์ควบคุมคำสั่ง AI
                                         </Link>
                                     </div>
                                 )}

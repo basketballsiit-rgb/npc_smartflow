@@ -2715,6 +2715,172 @@ export default function Dashboard({
     });
     const [settingsForm, setSettingsForm] = useState(initialSettingsObj);
 
+    // Admin AI Orchestration Hub State
+    const [aiAgentsConfig, setAiAgentsConfig] = useState(null);
+    const [loadingAiConfig, setLoadingAiConfig] = useState(false);
+    const [savingAiConfig, setSavingAiConfig] = useState(false);
+    const [testingAiConn, setTestingAiConn] = useState(false);
+    const [aiConnResult, setAiConnResult] = useState(null);
+    const [aiSearchFilter, setAiSearchFilter] = useState('');
+    const [expandedAgents, setExpandedAgents] = useState({});
+    const [activeAiViewMode, setActiveAiViewMode] = useState('pipeline'); // 'pipeline' | 'agents' | 'global'
+
+    const fetchAiAgentsConfig = async () => {
+        setLoadingAiConfig(true);
+        try {
+            const res = await axios.get(route('admin.ai_agents.index'));
+            if (res.data) {
+                setAiAgentsConfig(res.data);
+                const initExpanded = {};
+                (res.data.agents || []).forEach((ag, idx) => {
+                    initExpanded[ag.id] = idx < 3;
+                });
+                setExpandedAgents(initExpanded);
+            }
+        } catch (error) {
+            console.error('Failed to load AI agents config:', error);
+            Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถโหลดการตั้งค่า AI ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+        } finally {
+            setLoadingAiConfig(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'admin_ai' && !aiAgentsConfig && !loadingAiConfig) {
+            fetchAiAgentsConfig();
+        }
+    }, [activeTab]);
+
+    const handleSaveAiAgentsConfig = async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (!aiAgentsConfig) return;
+        setSavingAiConfig(true);
+        try {
+            const promptsMap = {};
+            (aiAgentsConfig.agents || []).forEach(ag => {
+                promptsMap[ag.id] = ag.custom_prompt;
+            });
+            const payload = {
+                global_directive: aiAgentsConfig.global_directive,
+                model: aiAgentsConfig.model,
+                temperature: aiAgentsConfig.temperature,
+                prompts: promptsMap
+            };
+            const res = await axios.post(route('admin.ai_agents.update'), payload);
+            if (res.data && res.data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกการตั้งค่าสำเร็จ',
+                    text: 'อัปเดตนโยบายกลางและคำสั่งเฉพาะงานของ AI Agent ทั้งหมดเรียบร้อยแล้ว',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                if (res.data.config) {
+                    setAiAgentsConfig(res.data.config);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to save AI config:', error);
+            Swal.fire('บันทึกไม่สำเร็จ', error.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+        } finally {
+            setSavingAiConfig(false);
+        }
+    };
+
+    const handleResetAiAgentDefault = async (agentId) => {
+        const isAll = agentId === 'all';
+        const title = isAll ? 'รีเซ็ตคำสั่ง AI ทั้งหมด?' : 'รีเซ็ตคำสั่ง AI ตัวนี้?';
+        const text = isAll 
+            ? 'ระบบจะเปลี่ยนคำสั่ง Prompt ของ AI ทุกตัวให้กลับเป็นค่ามาตรฐานอาชีวศึกษา (สอศ.)'
+            : 'ระบบจะคืนค่า Prompt ของ AI ตัวนี้กลับเป็นค่าเริ่มต้นตามมาตรฐานอาชีวศึกษา';
+        
+        const confirm = await Swal.fire({
+            title,
+            text,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ยืนยันรีเซ็ต',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#ef4444'
+        });
+
+        if (confirm.isConfirmed) {
+            try {
+                const res = await axios.post(route('admin.ai_agents.reset_defaults'), { agent_id: agentId });
+                if (res.data && res.data.success) {
+                    Swal.fire('รีเซ็ตสำเร็จ', 'คืนค่าคำสั่งมาตรฐานเรียบร้อยแล้ว', 'success');
+                    if (res.data.config) {
+                        setAiAgentsConfig(res.data.config);
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถรีเซ็ตค่าได้', 'error');
+            }
+        }
+    };
+
+    const handleTestAiConnection = async () => {
+        setTestingAiConn(true);
+        setAiConnResult(null);
+        try {
+            const res = await axios.post(route('admin.ai_agents.test_connection'));
+            setAiConnResult(res.data);
+            if (res.data.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'เชื่อมต่อ AI สำเร็จ!',
+                    html: `
+                        <div class="text-left text-xs space-y-2 p-2">
+                            <div><span class="font-bold text-slate-700">โมเดลที่ใช้งาน:</span> <code class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded">${res.data.model}</code></div>
+                            <div><span class="font-bold text-slate-700">ความเร็วตอบสนอง (Latency):</span> <span class="text-emerald-600 font-bold font-mono">${res.data.latency_ms} ms</span></div>
+                            <div class="mt-2 text-slate-500 font-semibold">ตัวอย่างข้อความตอบกลับ:</div>
+                            <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-700 italic text-[11px] leading-relaxed">"${res.data.sample_response}"</div>
+                        </div>
+                    `,
+                });
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'ทดสอบไม่สำเร็จ',
+                    text: res.data.message || 'ไม่สามารถติดต่อ AI API ได้',
+                });
+            }
+        } catch (error) {
+            Swal.fire('การเชื่อมต่อล้มเหลว', error.response?.data?.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ', 'error');
+        } finally {
+            setTestingAiConn(false);
+        }
+    };
+
+    const handleInsertTagIntoAgentPrompt = (agentId, tag) => {
+        if (!aiAgentsConfig) return;
+        const updatedAgents = (aiAgentsConfig.agents || []).map(ag => {
+            if (ag.id === agentId) {
+                const current = ag.custom_prompt || '';
+                return { ...ag, custom_prompt: current + (current.endsWith(' ') || current.endsWith('\n') ? '' : ' ') + tag };
+            }
+            return ag;
+        });
+        setAiAgentsConfig({ ...aiAgentsConfig, agents: updatedAgents });
+    };
+
+    const toggleAgentExpanded = (agentId) => {
+        setExpandedAgents(prev => ({
+            ...prev,
+            [agentId]: !prev[agentId]
+        }));
+    };
+
+    const toggleAllAgentsExpanded = (expand) => {
+        if (!aiAgentsConfig) return;
+        const map = {};
+        (aiAgentsConfig.agents || []).forEach(ag => {
+            map[ag.id] = expand;
+        });
+        setExpandedAgents(map);
+    };
+
     const getRoleTitle = (r) => {
         switch (r) {
             case 'admin': return 'ผู้ดูแลระบบสูงสุด (System Administrator)';
@@ -4784,6 +4950,32 @@ export default function Dashboard({
                         <p className="text-xs text-slate-600">กำหนดข้อมูลสถานศึกษา ปีงบประมาณ ปีการศึกษา ประกาศข่าวสาร และเปิด/ปิดฟีเจอร์การทำงานของระบบ</p>
                     </div>
 
+                    {/* AI Orchestration Hub Quick Banner */}
+                    <div className="mb-6 rounded-2xl bg-gradient-to-r from-slate-900 via-purple-950 to-indigo-900 p-5 text-white shadow-lg border border-purple-500/20 flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-2xl border border-white/20 shadow-inner">
+                                🤖
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-base text-white flex items-center gap-2">
+                                    ศูนย์ควบคุมคำสั่ง & การเชื่อมโยงข้อมูลระหว่าง AI
+                                    <span className="text-[10px] font-semibold uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">AI Orchestration Hub</span>
+                                </h4>
+                                <p className="text-xs text-purple-200 mt-1 leading-relaxed">
+                                    กำหนดนโยบายกลางวิทยาลัย ปรับแต่งคำสั่ง (Prompt) ประจำ AI แต่ละตัว และดูเส้นทางรับส่งข้อมูลเชื่อมโยงกัน (Inter-Agent Data Mesh) ในระบบ SmartFlow
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('admin_ai')}
+                            className="shrink-0 px-5 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-xs font-bold text-white transition-all shadow-md hover:scale-105 flex items-center gap-2"
+                        >
+                            <span>เปิดศูนย์ควบคุม AI</span>
+                            <span>→</span>
+                        </button>
+                    </div>
+
                     <form onSubmit={handleSaveSettingsSubmit} className="space-y-6">
                         {/* General Info */}
                         <div className="space-y-4">
@@ -4960,6 +5152,696 @@ export default function Dashboard({
                         </div>
                     </form>
                 </div>
+            </div>
+        );
+    };
+
+    // ==========================================
+    // AI Orchestration Hub Component
+    // ==========================================
+    const renderAdminAiHubTab = () => {
+        if (loadingAiConfig && !aiAgentsConfig) {
+            return (
+                <div className="rounded-3xl border border-purple-100 bg-white p-16 text-center shadow-sm">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
+                    <p className="mt-4 text-base font-bold text-purple-900">กำลังโหลดศูนย์ควบคุมคำสั่งและโครงข่าย AI...</p>
+                    <p className="text-xs text-slate-500 mt-1">กำลังดึงข้อมูล System Prompts และเชื่อมต่อสถานะโมเดล Gemini</p>
+                </div>
+            );
+        }
+
+        const config = aiAgentsConfig || {
+            global_directive: '',
+            model: 'gemini-2.5-flash',
+            temperature: 0.3,
+            has_api_key: false,
+            agents: []
+        };
+
+        const agents = config.agents || [];
+        const filteredAgents = agents.filter(ag => {
+            if (!aiSearchFilter.trim()) return true;
+            const q = aiSearchFilter.toLowerCase();
+            return (ag.name && ag.name.toLowerCase().includes(q)) ||
+                   (ag.role && ag.role.toLowerCase().includes(q)) ||
+                   (ag.id && ag.id.toLowerCase().includes(q)) ||
+                   (ag.custom_prompt && ag.custom_prompt.toLowerCase().includes(q));
+        });
+
+        return (
+            <div className="space-y-6 font-sans">
+                {/* Hero Header */}
+                <div className="rounded-3xl bg-gradient-to-r from-slate-950 via-purple-950 to-indigo-950 p-6 md:p-8 text-white shadow-xl border border-purple-500/20 relative overflow-hidden">
+                    <div className="absolute -right-10 -bottom-10 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl pointer-events-none"></div>
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="px-3 py-1 text-[11px] font-bold uppercase rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30">
+                                    SmartFlow AI Orchestration Hub
+                                </span>
+                                <span className={`px-3 py-1 text-[11px] font-bold rounded-full border ${config.has_api_key ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}`}>
+                                    {config.has_api_key ? '🟢 พร้อมใช้งาน Gemini API' : '🟡 โหมดสำรอง Template Engine'}
+                                </span>
+                            </div>
+                            <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+                                <span>🤖 ศูนย์ควบคุมคำสั่งและโครงข่ายข้อมูลเชื่อมโยง AI</span>
+                            </h2>
+                            <p className="text-xs md:text-sm text-purple-200/90 mt-2 max-w-3xl leading-relaxed">
+                                ปรับแต่งคำสั่ง (System Prompts) ตามบทบาทของ AI แต่ละตัว พร้อมโครงข่ายรับส่งข้อมูลเชื่อมโยงกันอย่างต่อเนื่อง (Inter-Agent Data Mesh) เพื่อผลลัพธ์โครงการที่รวดเร็ว ถูกต้องตามระเบียบ สอศ. และสอดคล้องกับอัตลักษณ์วิทยาลัยสารพัดช่างน่าน
+                            </p>
+                        </div>
+
+                        {/* Top Action Buttons */}
+                        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                            <button
+                                type="button"
+                                onClick={handleTestAiConnection}
+                                disabled={testingAiConn}
+                                className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold text-white transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {testingAiConn ? (
+                                    <>
+                                        <span className="inline-block animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                                        <span>กำลังทดสอบ...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>⚡ ทดสอบการเชื่อมต่อ</span>
+                                        {aiConnResult?.latency_ms && (
+                                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/30 text-emerald-200 font-mono">
+                                                {aiConnResult.latency_ms} ms
+                                            </span>
+                                        )}
+                                    </>
+                                )}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => handleResetAiAgentDefault('all')}
+                                className="px-4 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/30 text-xs font-bold text-rose-200 transition-all shadow-sm flex items-center gap-1.5"
+                                title="คืนค่า Prompt ของ AI ทุกตัวกลับเป็นค่ามาตรฐานอาชีวศึกษา (สอศ.)"
+                            >
+                                <span>↺ คืนค่า สอศ. ทั้งหมด</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleSaveAiAgentsConfig}
+                                disabled={savingAiConfig}
+                                className="px-6 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-xs font-bold text-white transition-all shadow-lg shadow-purple-500/30 hover:scale-105 flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {savingAiConfig ? (
+                                    <>
+                                        <span className="inline-block animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full"></span>
+                                        <span>กำลังบันทึก...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>💾 บันทึกการเปลี่ยนแปลง</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-white/10 text-xs">
+                        <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                            <span className="text-[11px] text-purple-300 block">AI Agent ในระบบ</span>
+                            <span className="text-lg font-bold text-white mt-0.5 block">{agents.length} ตัวงาน</span>
+                        </div>
+                        <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                            <span className="text-[11px] text-purple-300 block">โมเดลประมวลผล</span>
+                            <span className="text-base font-bold text-white mt-0.5 block font-mono">{config.model || 'gemini-2.5-flash'}</span>
+                        </div>
+                        <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                            <span className="text-[11px] text-purple-300 block">ความสร้างสรรค์ (Temperature)</span>
+                            <span className="text-base font-bold text-white mt-0.5 block font-mono">{config.temperature ?? 0.3}</span>
+                        </div>
+                        <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
+                            <span className="text-[11px] text-purple-300 block">ระบบส่งต่อข้อมูล (Context Mesh)</span>
+                            <span className="text-base font-bold text-emerald-400 mt-0.5 block">เชื่อมโยงอัตโนมัติ 100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sub-navigation tabs */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-100 pb-3">
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setActiveAiViewMode('pipeline')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                                activeAiViewMode === 'pipeline'
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                                    : 'bg-white text-slate-600 hover:bg-purple-50 border border-slate-200'
+                            }`}
+                        >
+                            <span>🌐 โครงข่ายรับส่งข้อมูล AI (Data Mesh Pipeline)</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveAiViewMode('agents')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                                activeAiViewMode === 'agents'
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                                    : 'bg-white text-slate-600 hover:bg-purple-50 border border-slate-200'
+                            }`}
+                        >
+                            <span>🤖 ปรับแต่งคำสั่งเฉพาะงาน (Specialized Prompts)</span>
+                            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-purple-100 text-purple-700 font-bold ml-1">
+                                {agents.length}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setActiveAiViewMode('global')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                                activeAiViewMode === 'global'
+                                    ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                                    : 'bg-white text-slate-600 hover:bg-purple-50 border border-slate-200'
+                            }`}
+                        >
+                            <span>🏛️ นโยบายกลาง & พารามิเตอร์โมเดล</span>
+                        </button>
+                    </div>
+
+                    {activeAiViewMode === 'agents' && (
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <input
+                                type="text"
+                                placeholder="ค้นหาชื่อ AI หรือภาระหน้าที่..."
+                                value={aiSearchFilter}
+                                onChange={(e) => setAiSearchFilter(e.target.value)}
+                                className="text-xs rounded-xl border-purple-200 px-3 py-1.5 w-full sm:w-56 focus:border-purple-500 focus:ring-purple-500"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => toggleAllAgentsExpanded(true)}
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-slate-700 whitespace-nowrap"
+                            >
+                                กางทั้งหมด
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => toggleAllAgentsExpanded(false)}
+                                className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[11px] font-bold text-slate-700 whitespace-nowrap"
+                            >
+                                ยุบทั้งหมด
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* VIEW 1: DATA MESH PIPELINE */}
+                {activeAiViewMode === 'pipeline' && (
+                    <div className="space-y-6">
+                        <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
+                            <div className="border-b border-purple-100 pb-4 mb-6">
+                                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                    <span>🌐 แผนภาพการไหลเวียนและส่งต่อข้อมูลบริบท (Inter-Agent Data Mesh)</span>
+                                </h3>
+                                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                                    แสดงการส่งมอบข้อมูลโครงการแบบลูกโซ่ (Cascading Pipeline) โดย AI แต่ละตัวจะดึงข้อมูลที่เพื่อน AI ตัวก่อนหน้าสร้างขึ้นมาใช้งานทันที ทำให้เนื้อหาโครงการทั้งเล่มมีความสอดคล้อง เชื่อมโยง และสมบูรณ์แบบโดยไม่ต้องกรอกซ้ำ
+                                </p>
+                            </div>
+
+                            {/* Cascading Pipeline Visual Flow */}
+                            <div className="space-y-6">
+                                {/* Stage 0: Input */}
+                                <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                                    <div className="flex items-center gap-3">
+                                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-200 text-sm font-bold text-slate-700">0</span>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">จุดเริ่มต้น: ข้อมูลพื้นฐานโครงการ (Project Baseline Input)</h4>
+                                            <p className="text-[11px] text-slate-500">ข้อมูลที่ผู้เสนอโครงการกรอกเข้ามาในระบบ</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-200 text-[11px]">
+                                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 font-mono text-slate-700 font-semibold">📥 {`{project_title}`}</span>
+                                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 font-mono text-slate-700 font-semibold">📥 {`{department_name}`}</span>
+                                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 font-mono text-slate-700 font-semibold">📥 {`{strategic_pillar}`}</span>
+                                        <span className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 font-mono text-slate-700 font-semibold">📥 {`{proposed_budget}`}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-center text-purple-400 font-bold text-lg">↓</div>
+
+                                {/* Stage 1: Conceptual */}
+                                <div className="rounded-2xl bg-gradient-to-br from-purple-50/60 to-indigo-50/40 border border-purple-200 p-5 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-600 text-sm font-bold text-white shadow-sm">1</span>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-purple-950">ขั้นตอนที่ 1: สถาปนิกกรอบแนวคิดและเหตุผล (Conceptual Architecture)</h4>
+                                                <p className="text-[11px] text-purple-700">ร่างที่มา ปัญหา ความจำเป็น สอดรับกับนโยบายวิทยาลัย</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-purple-200/60 text-purple-800">
+                                            Core Inception
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {agents.filter(a => ['rationale', 'objectives', 'indicators'].includes(a.id)).map(ag => (
+                                            <div key={ag.id} className="bg-white rounded-xl border border-purple-100 p-3.5 shadow-xs space-y-2 hover:border-purple-300 transition-all flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-base">{ag.icon}</span>
+                                                        <span className="text-[10px] font-mono text-slate-400 font-bold">{ag.id}</span>
+                                                    </div>
+                                                    <h5 className="text-xs font-bold text-slate-900 mt-1">{ag.name}</h5>
+                                                    <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5">{ag.role}</p>
+                                                    <div className="pt-2 border-t border-slate-100 text-[10px] space-y-1 mt-2">
+                                                        <div className="text-indigo-600 font-semibold truncate">📥 ได้รับ: {ag.inputs?.join(', ')}</div>
+                                                        <div className="text-purple-600 font-semibold truncate">📤 ส่งต่อ: {ag.outputs?.join(', ')}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveAiViewMode('agents');
+                                                        setExpandedAgents(prev => ({ ...prev, [ag.id]: true }));
+                                                    }}
+                                                    className="w-full mt-2 py-1 text-[11px] font-bold rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 transition-all text-center"
+                                                >
+                                                    ✏️ ปรับแต่ง Prompt
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-center text-purple-400 font-bold text-lg">↓</div>
+
+                                {/* Stage 2: Operational & Alignment */}
+                                <div className="rounded-2xl bg-gradient-to-br from-indigo-50/60 to-blue-50/40 border border-indigo-200 p-5 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-sm">2</span>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-indigo-950">ขั้นตอนที่ 2: การขับเคลื่อนแผนงานและการสอดรับยุทธศาสตร์ (Operations & Alignment)</h4>
+                                                <p className="text-[11px] text-indigo-700">แตกกิจกรรมตามวงจร PDCA และเชื่อมโยงนโยบายกระทรวง/สอศ./วิทยาลัย</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-indigo-200/60 text-indigo-800">
+                                            Action & Strategy
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {agents.filter(a => ['action_plan', 'mapping'].includes(a.id)).map(ag => (
+                                            <div key={ag.id} className="bg-white rounded-xl border border-indigo-100 p-3.5 shadow-xs space-y-2 hover:border-indigo-300 transition-all flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-base">{ag.icon}</span>
+                                                        <span className="text-[10px] font-mono text-slate-400 font-bold">{ag.id}</span>
+                                                    </div>
+                                                    <h5 className="text-xs font-bold text-slate-900 mt-1">{ag.name}</h5>
+                                                    <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5">{ag.role}</p>
+                                                    <div className="pt-2 border-t border-slate-100 text-[10px] space-y-1 mt-2">
+                                                        <div className="text-indigo-600 font-semibold truncate">📥 ได้รับ: {ag.inputs?.join(', ')}</div>
+                                                        <div className="text-purple-600 font-semibold truncate">📤 ส่งต่อ: {ag.outputs?.join(', ')}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveAiViewMode('agents');
+                                                        setExpandedAgents(prev => ({ ...prev, [ag.id]: true }));
+                                                    }}
+                                                    className="w-full mt-2 py-1 text-[11px] font-bold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all text-center"
+                                                >
+                                                    ✏️ ปรับแต่ง Prompt
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-center text-purple-400 font-bold text-lg">↓</div>
+
+                                {/* Stage 3: Governance, QA & Procurement */}
+                                <div className="rounded-2xl bg-gradient-to-br from-amber-50/60 to-rose-50/40 border border-amber-200 p-5 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-600 text-sm font-bold text-white shadow-sm">3</span>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-amber-950">ขั้นตอนที่ 3: การกำกับคุณภาพและงานจัดซื้อจัดจ้าง (Governance & Procurement)</h4>
+                                                <p className="text-[11px] text-amber-700">ตรวจสอบความสอดคล้องรอบด้าน (Consistency Audit) และร่างเอกสาร TOR</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-amber-200/60 text-amber-800">
+                                            Quality & Specs
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {agents.filter(a => ['auditor', 'tor'].includes(a.id)).map(ag => (
+                                            <div key={ag.id} className="bg-white rounded-xl border border-amber-100 p-3.5 shadow-xs space-y-2 hover:border-amber-300 transition-all flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-base">{ag.icon}</span>
+                                                        <span className="text-[10px] font-mono text-slate-400 font-bold">{ag.id}</span>
+                                                    </div>
+                                                    <h5 className="text-xs font-bold text-slate-900 mt-1">{ag.name}</h5>
+                                                    <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5">{ag.role}</p>
+                                                    <div className="pt-2 border-t border-slate-100 text-[10px] space-y-1 mt-2">
+                                                        <div className="text-indigo-600 font-semibold truncate">📥 ได้รับ: {ag.inputs?.join(', ')}</div>
+                                                        <div className="text-purple-600 font-semibold truncate">📤 ส่งต่อ: {ag.outputs?.join(', ')}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveAiViewMode('agents');
+                                                        setExpandedAgents(prev => ({ ...prev, [ag.id]: true }));
+                                                    }}
+                                                    className="w-full mt-2 py-1 text-[11px] font-bold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-all text-center"
+                                                >
+                                                    ✏️ ปรับแต่ง Prompt
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-center text-purple-400 font-bold text-lg">↓</div>
+
+                                {/* Stage 4: Evaluation & Reporting */}
+                                <div className="rounded-2xl bg-gradient-to-br from-emerald-50/60 to-teal-50/40 border border-emerald-200 p-5 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-sm">4</span>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-emerald-950">ขั้นตอนที่ 4: การประเมินผลและสังเคราะห์รายงาน 5 บท (Evaluation & SAR Reporting)</h4>
+                                                <p className="text-[11px] text-emerald-700">สร้างแบบสอบถามวัดความสำเร็จ และสังเคราะห์รายงานผลฉบับสมบูรณ์เสนอผู้บริหาร</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-emerald-200/60 text-emerald-800">
+                                            Evaluation & Closure
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {agents.filter(a => ['survey', 'reports'].includes(a.id)).map(ag => (
+                                            <div key={ag.id} className="bg-white rounded-xl border border-emerald-100 p-3.5 shadow-xs space-y-2 hover:border-emerald-300 transition-all flex flex-col justify-between">
+                                                <div>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-base">{ag.icon}</span>
+                                                        <span className="text-[10px] font-mono text-slate-400 font-bold">{ag.id}</span>
+                                                    </div>
+                                                    <h5 className="text-xs font-bold text-slate-900 mt-1">{ag.name}</h5>
+                                                    <p className="text-[11px] text-slate-600 line-clamp-2 mt-0.5">{ag.role}</p>
+                                                    <div className="pt-2 border-t border-slate-100 text-[10px] space-y-1 mt-2">
+                                                        <div className="text-indigo-600 font-semibold truncate">📥 ได้รับ: {ag.inputs?.join(', ')}</div>
+                                                        <div className="text-purple-600 font-semibold truncate">📤 ส่งต่อ: {ag.outputs?.join(', ')}</div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveAiViewMode('agents');
+                                                        setExpandedAgents(prev => ({ ...prev, [ag.id]: true }));
+                                                    }}
+                                                    className="w-full mt-2 py-1 text-[11px] font-bold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-all text-center"
+                                                >
+                                                    ✏️ ปรับแต่ง Prompt
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* VIEW 2: SPECIALIZED AGENT PROMPTS */}
+                {activeAiViewMode === 'agents' && (
+                    <div className="space-y-4">
+                        {filteredAgents.length === 0 ? (
+                            <div className="rounded-2xl border border-purple-100 bg-white p-12 text-center">
+                                <span className="text-3xl">🔍</span>
+                                <p className="mt-2 text-sm font-bold text-slate-700">ไม่พบ AI Agent ที่ตรงกับเงื่อนไขการค้นหา</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setAiSearchFilter('')}
+                                    className="mt-3 text-xs text-purple-600 hover:underline font-bold"
+                                >
+                                    ล้างการค้นหา
+                                </button>
+                            </div>
+                        ) : (
+                            filteredAgents.map((ag) => {
+                                const isExpanded = expandedAgents[ag.id] !== false;
+                                const isModified = (ag.custom_prompt || '').trim() !== (ag.default_prompt || '').trim();
+
+                                return (
+                                    <div
+                                        key={ag.id}
+                                        id={`agent-card-${ag.id}`}
+                                        className="rounded-2xl border border-purple-100 bg-white shadow-sm overflow-hidden transition-all hover:border-purple-300"
+                                    >
+                                        {/* Card Header Bar */}
+                                        <div
+                                            onClick={() => toggleAgentExpanded(ag.id)}
+                                            className="p-4 sm:p-5 flex items-center justify-between gap-4 cursor-pointer select-none bg-gradient-to-r from-slate-50 to-white hover:bg-purple-50/40 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3.5 min-w-0">
+                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-purple-100 text-xl border border-purple-200">
+                                                    {ag.icon}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h4 className="text-sm font-bold text-slate-900 truncate">
+                                                            {ag.name}
+                                                        </h4>
+                                                        <span className="font-mono text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                                                            ID: {ag.id}
+                                                        </span>
+                                                        {isModified ? (
+                                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                                                                ✏️ ปรับแต่งเฉพาะวิทยาลัยแล้ว
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+                                                                มาตรฐาน สอศ.
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 mt-0.5 truncate">
+                                                        {ag.role}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleResetAiAgentDefault(ag.id)}
+                                                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all border border-slate-200"
+                                                    title="คืนค่าคำสั่งตัวนี้เป็นค่ามาตรฐาน สอศ."
+                                                >
+                                                    ↺ คืนค่าเดิม
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleAgentExpanded(ag.id)}
+                                                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 transition-transform"
+                                                >
+                                                    <span className={`inline-block transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>
+                                                        ▼
+                                                    </span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Card Body */}
+                                        {isExpanded && (
+                                            <div className="p-5 border-t border-purple-100 space-y-4 bg-white">
+                                                {/* Role & Context Flow Overview */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200/80">
+                                                    <div>
+                                                        <span className="font-bold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                                                            <span>📥</span> ข้อมูลบริบทที่ AI ตัวนี้ได้รับมา (Incoming Pipeline):
+                                                        </span>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {(ag.inputs || []).map((inp, idx) => (
+                                                                <span key={idx} className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-mono font-semibold">
+                                                                    {inp}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <span className="font-bold text-slate-700 flex items-center gap-1.5 mb-1.5">
+                                                            <span>📤</span> ข้อมูลผลลัพธ์ที่ AI ตัวนี้ส่งต่อไปยังตัวถัดไป (Outgoing Output):
+                                                        </span>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {(ag.outputs || []).map((outp, idx) => (
+                                                                <span key={idx} className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-mono font-semibold">
+                                                                    {outp}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Clickable Variable Insertion Tags */}
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <label className="text-xs font-bold text-purple-900 flex items-center gap-1.5">
+                                                            <span>🏷️</span> แท็กตัวแปรเชื่อมโยงข้อมูล (คลิกเพื่อแทรกลงในคำสั่ง Prompt ด้านล่าง):
+                                                        </label>
+                                                        <span className="text-[10px] text-slate-400">ระบบจะแทนค่าจริงให้อัตโนมัติเมื่อผู้ใช้สร้างโครงการ</span>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {(ag.available_tags || []).map((tag, tIdx) => (
+                                                            <button
+                                                                key={tIdx}
+                                                                type="button"
+                                                                onClick={() => handleInsertTagIntoAgentPrompt(ag.id, tag)}
+                                                                className="px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-200 text-purple-700 border border-purple-200 text-[11px] font-mono font-semibold transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                                                                title={`คลิกเพื่อแทรก ${tag} ลงในคำสั่ง`}
+                                                            >
+                                                                + {tag}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Specialized Prompt Editor */}
+                                                <div>
+                                                    <div className="flex items-center justify-between mb-1.5">
+                                                        <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                                            <span>📝</span> คำสั่งประจำหน้าที่ของ AI ตัวนี้ (Specialized System Prompt):
+                                                        </label>
+                                                        <span className="text-[11px] font-mono text-slate-400">
+                                                            {(ag.custom_prompt || '').length} ตัวอักษร
+                                                        </span>
+                                                    </div>
+                                                    <textarea
+                                                        rows="7"
+                                                        value={ag.custom_prompt || ''}
+                                                        onChange={(e) => {
+                                                            const newPrompt = e.target.value;
+                                                            const updatedAgents = (aiAgentsConfig.agents || []).map(item => 
+                                                                item.id === ag.id ? { ...item, custom_prompt: newPrompt } : item
+                                                            );
+                                                            setAiAgentsConfig({ ...aiAgentsConfig, agents: updatedAgents });
+                                                        }}
+                                                        placeholder="ระบุกฎเกณฑ์ โครงสร้างภาษา และข้อกำหนดเฉพาะที่ AI ตัวนี้ต้องปฏิบัติตามอย่างเคร่งครัด..."
+                                                        className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3.5 font-mono text-xs text-purple-200 placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 leading-relaxed"
+                                                        spellCheck={false}
+                                                    ></textarea>
+                                                    <p className="text-[11px] text-slate-500 mt-1">
+                                                        💡 เคล็ดลับ: สามารถระบุข้อห้าม ระเบียบการจัดซื้อ หรือรูปแบบหัวข้อที่ต้องการ เพื่อให้ AI ทุกตัวสร้างเอกสารในทิศทางเดียวกัน
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                )}
+
+                {/* VIEW 3: GLOBAL DIRECTIVES & MODEL ENGINE */}
+                {activeAiViewMode === 'global' && (
+                    <div className="space-y-6">
+                        {/* Global Directives Box */}
+                        <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
+                            <div className="border-b border-purple-100 pb-4">
+                                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                    <span>🏛️</span> นโยบายและคำสั่งสถาบันกลาง (Global College Directives)
+                                </h3>
+                                <p className="text-xs text-slate-600 mt-0.5">
+                                    คำสั่งนี้จะถูกผนวกรวมเข้าไปเป็นพื้นฐาน (System Directives) ใน AI ทุกตัวโดยอัตโนมัติ เพื่อให้คำนึงถึงอัตลักษณ์ของวิทยาลัยสารพัดช่างน่านและระเบียบ สอศ. เสมอ
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                    ข้อกำหนดและบริบทกลางของสถานศึกษา:
+                                </label>
+                                <textarea
+                                    rows="9"
+                                    value={config.global_directive || ''}
+                                    onChange={(e) => setAiAgentsConfig({ ...aiAgentsConfig, global_directive: e.target.value })}
+                                    className="w-full rounded-xl border border-slate-700 bg-slate-950 p-4 font-mono text-xs text-purple-200 placeholder-slate-500 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 leading-relaxed"
+                                    placeholder="ระบุนโยบาย อัตลักษณ์ ค่านิยม และระเบียบสำคัญของวิทยาลัย..."
+                                    spellCheck={false}
+                                ></textarea>
+                                <p className="text-[11px] text-slate-500 mt-1">
+                                    แท็กที่ใช้ได้: <code className="font-mono text-purple-600 font-semibold">{`{college_name_th}`}</code>, <code className="font-mono text-purple-600 font-semibold">{`{fiscal_year}`}</code>, <code className="font-mono text-purple-600 font-semibold">{`{current_quarter}`}</code>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* AI Engine Model & Temperature Parameters */}
+                        <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
+                            <div className="border-b border-purple-100 pb-4">
+                                <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                    <span>⚙️</span> พารามิเตอร์ของระบบประมวลผล (AI Model & Generation Parameters)
+                                </h3>
+                                <p className="text-xs text-slate-600 mt-0.5">
+                                    ปรับระดับการคิดสร้างสรรค์และเลือกรุ่นโมเดล Gemini ที่เหมาะสมกับการทำงานราชการ
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                                        โมเดลประมวลผลหลัก (Active Model Engine)
+                                    </label>
+                                    <select
+                                        value={config.model || 'gemini-2.5-flash'}
+                                        onChange={(e) => setAiAgentsConfig({ ...aiAgentsConfig, model: e.target.value })}
+                                        className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-purple-500 focus:ring-purple-500"
+                                    >
+                                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (แนะนำสำหรับระบบราชการ - ตอบสนองเร็วและแม่นยำสูง)</option>
+                                        <option value="gemini-1.5-pro">Gemini 1.5 Pro (วิเคราะห์ลึกซึ้ง เหมาะกับโครงการขนาดใหญ่)</option>
+                                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (โมเดลสำรองความเร็วสูง)</option>
+                                    </select>
+                                    <p className="text-[11px] text-slate-500 mt-1">
+                                        ทุกโมเดลรองรับภาษาไทยทางการ และการอ้างอิงระเบียบกระทรวงศึกษาธิการ
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-xs font-bold text-slate-700">
+                                            ระดับความสร้างสรรค์ (Temperature: {config.temperature ?? 0.3})
+                                        </label>
+                                        <span className="text-[10px] font-bold text-purple-700">
+                                            {(config.temperature ?? 0.3) < 0.4 ? '🎯 เข้มงวด แม่นยำตามระเบียบ' : (config.temperature ?? 0.3) > 0.7 ? '💡 ยืดหยุ่น สร้างสรรค์สูง' : '⚖️ สมดุล'}
+                                        </span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0.0"
+                                        max="1.0"
+                                        step="0.05"
+                                        value={config.temperature ?? 0.3}
+                                        onChange={(e) => setAiAgentsConfig({ ...aiAgentsConfig, temperature: parseFloat(e.target.value) })}
+                                        className="w-full accent-purple-600 cursor-pointer"
+                                    />
+                                    <div className="flex justify-between text-[10px] text-slate-400 mt-1">
+                                        <span>0.0 (เข้มงวด เป๊ะตามระเบียบ)</span>
+                                        <span>0.5 (สมดุล)</span>
+                                        <span>1.0 (สร้างสรรค์ ยืดหยุ่น)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     };
@@ -18122,6 +19004,7 @@ return (
                         {activeTab === 'admin_users' && renderAdminUsersTab()}
                         {activeTab === 'admin_strategies' && renderAdminStrategiesTab()}
                         {activeTab === 'admin_settings' && renderAdminSettingsTab()}
+                        {activeTab === 'admin_ai' && renderAdminAiHubTab()}
                         {activeTab === 'all_projects' && renderAllProjectsTab()}
                         {activeTab === 'central_budgets' && renderCentralBudgetsTab()}
                         {(activeTab === 'document_tracking' || activeTab === 'proposals') && renderDocumentTrackingTab()}
