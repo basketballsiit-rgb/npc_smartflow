@@ -72,7 +72,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        (currentUrl.includes('tab=document_tracking') && !isPlanStaff && !isAdmin) ||
                        (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')));
             case 'five_chapters':
-                return currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix');
+                return currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix') || currentUrl.includes('tab=preliminary');
             case 'procurement_loan':
                 return (currentUrl.includes('routine-budgets') && !isPlanStaff && !isAdmin) ||
                        (currentUrl.includes('tab=clearings') && !isFinanceStaff && !isAdmin);
@@ -111,8 +111,7 @@ export default function AuthenticatedLayout({ header, children }) {
     };
 
     const getActiveSectionForUrl = (currentUrl) => {
-        if (!currentUrl) return null;
-        if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix')) {
+        if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix') || currentUrl.includes('tab=preliminary')) {
             return 'five_chapters';
         }
         if (currentUrl.includes('tab=admin_users') || currentUrl.includes('tab=admin_settings') || currentUrl.includes('tab=admin_strategies') || currentUrl.includes('tab=admin_ai') || currentUrl.includes('tab=all_projects')) {
@@ -555,6 +554,15 @@ export default function AuthenticatedLayout({ header, children }) {
 
                             {(!isSidebarOpen || openSections.five_chapters) && (
                             <div className="pl-2.5 border-l-2 border-emerald-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
+                                <Link
+                                    href={route('dashboard', { tab: 'proposals', chapter: 'preliminary' })}
+                                    className={getSubLinkClass(url.includes('chapter=preliminary') || url.includes('tab=preliminary'))}
+                                    title="ส่วนนำ: คำนำ สารบัญ & บทสรุปผู้บริหาร (AI Front Matter)"
+                                >
+                                    <span className={getPrefixClass(url.includes('chapter=preliminary') || url.includes('tab=preliminary'), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">📑</span>
+                                    {isSidebarOpen && <span>ส่วนนำ: คำนำ & บทสรุป (AI)</span>}
+                                </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', chapter: 1 })}
                                     className={getSubLinkClass(url.includes('chapter=1'))}

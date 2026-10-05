@@ -248,6 +248,11 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/chapter-4/save', [ProjectController::class, 'saveChapter4'])->name('projects.chapter4.save');
     Route::get('projects/{project}/chapter-4/print', [ProjectController::class, 'printChapter4'])->name('projects.chapter4.print');
 
+    // Preliminary (Front Matter - Preface, TOC, Executive Summary) AI Generation, Save, and Print
+    Route::post('projects/{project}/preliminary/generate', [ProjectController::class, 'generatePreliminary'])->name('projects.preliminary.generate');
+    Route::post('projects/{project}/preliminary/save', [ProjectController::class, 'savePreliminary'])->name('projects.preliminary.save');
+    Route::get('projects/{project}/preliminary/print', [ProjectController::class, 'printPreliminary'])->name('projects.preliminary.print');
+
     // Chapter 5 AI Generation, Save, and Print
     Route::post('projects/{project}/chapter-5/generate', [ProjectController::class, 'generateChapter5'])->name('projects.chapter5.generate');
     Route::post('projects/{project}/chapter-5/save', [ProjectController::class, 'saveChapter5'])->name('projects.chapter5.save');

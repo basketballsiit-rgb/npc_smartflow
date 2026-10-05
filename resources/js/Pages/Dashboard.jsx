@@ -7,6 +7,7 @@ import AdminDataVisualization from '@/Components/AdminDataVisualization';
 import PendingTasksWidget from '@/Components/PendingTasksWidget';
 import WorkloadAnalyzerModal from '@/Components/WorkloadAnalyzerModal';
 import AppendixManager from '@/Components/AppendixManager';
+import PreliminaryManager from '@/Components/PreliminaryManager';
 import axios from 'axios';
 
 export default function Dashboard({ 
@@ -813,6 +814,8 @@ export default function Dashboard({
             if (ch) {
                 if (ch === 'appendix') {
                     setActiveTab('appendix');
+                } else if (ch === 'preliminary') {
+                    setActiveTab('preliminary');
                 } else {
                     setActiveTab(`chapter_${ch}`);
                 }
@@ -822,6 +825,8 @@ export default function Dashboard({
             if (tb) {
                 if (tb === 'appendix') {
                     setActiveTab('appendix');
+                } else if (tb === 'preliminary') {
+                    setActiveTab('preliminary');
                 } else {
                     setActiveTab(tb === 'proposals' ? 'document_tracking' : tb);
                 }
@@ -831,6 +836,8 @@ export default function Dashboard({
         if (currentChapter) {
             if (currentChapter === 'appendix') {
                 setActiveTab('appendix');
+            } else if (currentChapter === 'preliminary') {
+                setActiveTab('preliminary');
             } else {
                 setActiveTab(`chapter_${currentChapter}`);
             }
@@ -839,6 +846,8 @@ export default function Dashboard({
         if (currentTab) {
             if (currentTab === 'appendix') {
                 setActiveTab('appendix');
+            } else if (currentTab === 'preliminary') {
+                setActiveTab('preliminary');
             } else {
                 setActiveTab(currentTab === 'proposals' ? 'document_tracking' : currentTab);
             }
@@ -17291,8 +17300,17 @@ return (
                     {/* Toolbar / Actions */}
                     <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('preliminary')}
+                                className="px-3.5 py-2 rounded-xl bg-indigo-500/40 hover:bg-indigo-500/60 text-white text-xs font-bold border border-indigo-300/40 transition flex items-center gap-1.5 shadow-sm"
+                                title="ไปยังส่วนนำ (คำนำ สารบัญ บทสรุปผู้บริหาร)"
+                            >
+                                <span>📑</span>
+                                <span>ไปยังส่วนนำ: คำนำ สารบัญ บทสรุปผู้บริหาร</span>
+                            </button>
                             <span className="px-3.5 py-2 rounded-xl bg-white/10 text-white text-xs font-bold border border-white/15 flex items-center gap-1.5">
-                                <span>✏️</span> แบบฟอร์มจัดทำเนื้อหารายงาน บทที่ 1 (บทนำ)
+                                <span>✏️</span> บทที่ 1: บทนำ
                             </span>
                         </div>
 
@@ -19759,6 +19777,15 @@ return (
         </div>
     );
 
+    const renderPreliminaryTab = () => (
+        <PreliminaryManager
+            projects={chapter1Projects}
+            activeProject={activeChapter1Project}
+            onSelectProject={(id) => setSelectedChapter1ProjectId(id)}
+            onGoToChapter1={() => setActiveTab('chapter_1')}
+        />
+    );
+
     const renderAppendixTab = () => (
         <AppendixManager
             projects={chapter1Projects}
@@ -19783,6 +19810,7 @@ return (
                     
                     {/* Content Workspace Area (Full Width Clean Layout) */}
                     <div className="w-full">
+                        {(activeTab === 'preliminary' || activeTab === 'chapter_preliminary') && renderPreliminaryTab()}
                         {activeTab === 'chapter_1' && renderChapter1Tab()}
                         {activeTab === 'chapter_2' && renderChapter2Tab()}
                         {activeTab === 'chapter_3' && renderChapter3Tab()}

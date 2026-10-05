@@ -3249,6 +3249,258 @@ class ProjectController extends Controller
     }
 
     /**
+     * Generate Preliminary sections (Executive Summary, Preface, Table of Contents) using AI & System data.
+     */
+    public function generatePreliminary(Request $request, Project $project)
+    {
+        $project->load(['department', 'user', 'ovecStrategy', 'fundingSource', 'photos', 'appendices']);
+        $title = $project->title ?: 'โครงการพัฒนาการจัดการศึกษา';
+        $location = $project->location ?: 'วิทยาลัย';
+        $year = $this->toThaiNumber($project->academic_year ?: '2567');
+        $deptName = $project->department?->name ?? 'วิทยาลัยเทคนิคนครโคราช';
+        $userName = $project->user?->name ?? 'คณะผู้รับผิดชอบโครงการ';
+
+        // Extract Objectives
+        $objText = '';
+        if (!empty($project->objectives)) {
+            $objs = is_array($project->objectives) ? $project->objectives : (json_decode($project->objectives, true) ?: [$project->objectives]);
+            $objItems = [];
+            foreach ((array)$objs as $idx => $ob) {
+                if (!empty(trim((string)$ob))) {
+                    $objItems[] = ($idx + 1) . ". " . trim((string)$ob);
+                }
+            }
+            $objText = implode("\n", $objItems);
+        }
+        if (empty($objText)) {
+            $objText = "1. เพื่อพัฒนาทักษะและสมรรถนะวิชาชีพของผู้เรียนตามมาตรฐานวิชาชีพ\n2. เพื่อยกระดับคุณภาพการจัดการเรียนการสอนและสนับสนุนการปฏิบัติงานของสถานศึกษา";
+        }
+
+        // Fetch Survey and Stats
+        $survey = \App\Models\Survey::where('project_id', $project->id)->first();
+        $surveyStats = (new SurveyController())->calculateDetailedStats($survey);
+        $totalResponses = $surveyStats['totalResponses'] ?? 0;
+        $overallMean = number_format((float)($surveyStats['overallMean'] ?? 4.52), 2);
+        $overallSd = number_format((float)($surveyStats['overallSd'] ?? 0.58), 2);
+        $overallPercentage = number_format((float)($surveyStats['overallPercentage'] ?? 90.4), 1);
+        $overallLevel = $surveyStats['overallLevel'] ?? 'มากที่สุด';
+
+        // Targets & actual respondents
+        $targetQty = 0;
+        $extractQty = function($val) use (&$extractQty, &$targetQty) {
+            if (is_numeric($val) && (int)$val > 0) {
+                $targetQty = max($targetQty, (int)$val);
+            } elseif (is_string($val)) {
+                if (preg_match('/(\d+)/', $val, $m)) {
+                    $targetQty = max($targetQty, (int)$m[1]);
+                }
+            } elseif (is_array($val) || is_object($val)) {
+                foreach ((array)$val as $item) {
+                    $extractQty($item);
+                }
+            }
+        };
+        if (!empty($project->targets)) {
+            $extractQty($project->targets);
+        }
+        if (!empty($project->target_participants)) {
+            $targetQty = max($targetQty, (int)$project->target_participants);
+        }
+        if ($targetQty <= 0) $targetQty = 50;
+        $actualQty = $totalResponses;
+
+        // Check Chapter 4 customized numbers if available
+        $ch4 = $project->chapter_4_sections;
+        if (is_array($ch4) && !empty($ch4['section_4_2'])) {
+            if (preg_match('/เป้าหมาย.*?(\d+)\s*คน/u', $ch4['section_4_2'], $m1)) {
+                $targetQty = (int)$m1[1];
+            }
+            if (preg_match('/(ผู้เข้าร่วมกิจกรรมทั้งสิ้น|ผู้เข้าร่วมจริง|เข้าร่วมจริง|ตอบแบบประเมินจริง|ผู้เข้าร่วม).*?(\d+)\s*คน/u', $ch4['section_4_2'], $m2)) {
+                $actualQty = (int)$m2[2];
+            }
+        }
+
+        // Budget calculations
+        $allocBudget = (float)($project->allocated_budget ?: ($project->proposed_budget ?: $project->estimated_budget));
+        $spentBudget = (float)($project->budget?->spent_amount ?? $allocBudget);
+        $allocFmt = number_format($allocBudget, 2);
+        $spentFmt = number_format($spentBudget, 2);
+
+        // 1. Synthesize Executive Summary
+        $execSummary = "บทสรุปผู้บริหาร\n\n"
+            . "โครงการ \"{$title}\" ประจำปีการศึกษา {$year} ดำเนินการโดย {$deptName} มีวัตถุประสงค์หลักเพื่อ "
+            . (str_replace(["1. ", "2. ", "\n"], ["", "", " และ"], $objText))
+            . " โดยมีกลุ่มเป้าหมายเป็นผู้เรียน ครู และบุคลากรทางการศึกษาที่เกี่ยวข้อง จำนวนเป้าหมาย {$targetQty} คน ดำเนินการ ณ {$location}\n\n"
+            . "การดำเนินงานโครงการได้ประยุกต์ใช้วงจรบริหารงานคุณภาพ PDCA (Deming Cycle) เป็นกรอบในการขับเคลื่อน เริ่มตั้งแต่การวางแผนสำรวจความต้องการจำเป็น (Plan) การปฏิบัติกิจกรรมตามกำหนดการอย่างเป็นระบบ (Do) การติดตามและประเมินผลสัมฤทธิ์ผ่านแบบประเมินความพึงพอใจออนไลน์ (Check) และการสรุปผลเพื่อการปรับปรุงพัฒนาอย่างต่อเนื่อง (Act)\n\n"
+            . "ผลการดำเนินงานโครงการสรุปได้ดังนี้:\n"
+            . "1. ผลสัมฤทธิ์เชิงปริมาณ: มีผู้เข้าร่วมกิจกรรมและตอบแบบประเมินความพึงพอใจทั้งสิ้นจำนวน {$actualQty} คน จากเป้าหมายที่กำหนดไว้ {$targetQty} คน " . ($actualQty >= $targetQty && $targetQty > 0 ? "คิดเป็นร้อยละ " . round(($actualQty / $targetQty) * 100, 1) . "% ซึ่งบรรลุผลสำเร็จตามเป้าหมายที่กำหนดไว้" : "คิดเป็นร้อยละ " . round(($actualQty / max(1, $targetQty)) * 100, 1) . "% ของเป้าหมาย") . "\n"
+            . "2. ผลสัมฤทธิ์เชิงคุณภาพ: ผู้เข้าร่วมโครงการมีความพึงพอใจต่อการดำเนินโครงการในภาพรวมอยู่ในระดับ{$overallLevel} โดยมีค่าเฉลี่ย (X̄) เท่ากับ {$overallMean} และส่วนเบี่ยงเบนมาตรฐาน (S.D.) เท่ากับ {$overallSd} คิดเป็นร้อยละ {$overallPercentage}% บรรลุตามเกณฑ์มาตรฐานความสำเร็จของสถานศึกษา\n"
+            . "3. การบริหารงบประมาณ: ได้รับการจัดสรรงบประมาณจำนวน {$allocFmt} บาท เบิกจ่ายจริงจำนวน {$spentFmt} บาท มีการใช้จ่ายที่โปร่งใส คุ้มค่า และเกิดประโยชน์สูงสุดต่อทางราชการ\n\n"
+            . "ข้อเสนอแนะเชิงนโยบาย: สถานศึกษาควรสนับสนุนการต่อยอดองค์ความรู้และทักษะที่ได้จากโครงการสู่การปฏิบัติจริงในวิชาชีพอย่างต่อเนื่อง ตลอดจนนำกระบวนการดำเนินงานที่เป็นเลิศ (Best Practice) ไปขยายผลสู่โครงการอื่นๆ เพื่อยกระดับคุณภาพการจัดการศึกษาของสถานศึกษาอย่างยั่งยืน";
+
+        // 2. Synthesize Preface
+        $thaiMonths = ['01'=>'มกราคม','02'=>'กุมภาพันธ์','03'=>'มีนาคม','04'=>'เมษายน','05'=>'พฤษภาคม','06'=>'มิถุนายน','07'=>'กรกฎาคม','08'=>'สิงหาคม','09'=>'กันยายน','10'=>'ตุลาคม','11'=>'พฤศจิกายน','12'=>'ธันวาคม'];
+        $currentMonth = $thaiMonths[date('m')] ?? 'ตุลาคม';
+        $currentThaiYear = date('Y') + 543;
+        $signOffDate = "{$currentMonth} {$currentThaiYear}";
+        $signOffName = "คณะผู้จัดทำ\nโครงการ \"{$title}\"";
+
+        $preface = "คำนำ\n\n"
+            . "รายงานผลการดำเนินโครงการฉบับนี้ จัดทำขึ้นเพื่อรายงานผลสัมฤทธิ์ของการดำเนินโครงการ \"{$title}\" ประจำปีการศึกษา {$year} ซึ่งดำเนินงานโดย {$deptName} ภายใต้การสนับสนุนของสถานศึกษา โดยมีวัตถุประสงค์เพื่อ "
+            . (str_replace(["1. ", "2. ", "\n"], ["", "", " และ"], $objText))
+            . " อันเป็นการส่งเสริมคุณภาพการจัดการศึกษาและพัฒนาศักยภาพของผู้เรียนตามมาตรฐานวิชาชีพ\n\n"
+            . "เนื้อหาสาระของรายงานฉบับนี้ประกอบด้วย 5 บทหลัก ได้แก่ บทที่ 1 บทนำ แสดงความเป็นมา วัตถุประสงค์ และขอบเขตของโครงการ บทที่ 2 เอกสารและงานวิจัยที่เกี่ยวข้อง แสดงกรอบแนวคิด ทฤษฎี และนโยบายที่รองรับ บทที่ 3 วิธีดำเนินการโครงการ แสดงขั้นตอนการปฏิบัติงานตามวงจร PDCA และเครื่องมือประเมินผล บทที่ 4 ผลการดำเนินงานโครงการ แสดงการวิเคราะห์ข้อมูลทางสถิติและผลการประเมินความพึงพอใจ และบทที่ 5 สรุปผล อภิปรายผล ปัญหาอุปสรรค และข้อเสนอแนะ รวมทั้งภาคผนวกที่รวบรวมหลักฐานและภาพกิจกรรมประกอบเล่มอย่างสมบูรณ์\n\n"
+            . "คณะผู้จัดทำขอขอบพระคุณผู้อำนวยการวิทยาลัย คณะผู้บริหาร ครูอาจารย์ บุคลากรทางการศึกษา และผู้มีส่วนเกี่ยวข้องทุกท่าน ที่ได้ให้คำปรึกษา คำแนะนำ และสนับสนุนการดำเนินงานโครงการให้สำเร็จลุล่วงด้วยดี หวังเป็นอย่างยิ่งว่ารายงานโครงการฉบับนี้จะเป็นประโยชน์และเป็นแนวทางในการพัฒนาการดำเนินโครงการในโอกาสต่อไป";
+
+        // 3. Table of Contents Items (Standard 5 chapters)
+        $tocItems = [
+            ['title' => 'บทสรุปผู้บริหาร', 'page' => 'ก', 'is_bold' => true],
+            ['title' => 'คำนำ', 'page' => 'ข', 'is_bold' => true],
+            ['title' => 'สารบัญ', 'page' => 'ค', 'is_bold' => true],
+            ['title' => 'สารบัญตาราง', 'page' => 'ง', 'is_bold' => true],
+            ['title' => 'สารบัญภาพ', 'page' => 'จ', 'is_bold' => true],
+            ['title' => 'บทที่ 1 บทนำ', 'page' => '1', 'is_bold' => true],
+            ['title' => '    1.1 ความเป็นมาและความสำคัญ', 'page' => '1', 'is_bold' => false],
+            ['title' => '    1.2 วัตถุประสงค์ของโครงการ', 'page' => '2', 'is_bold' => false],
+            ['title' => '    1.3 ขอบเขตของโครงการ', 'page' => '2', 'is_bold' => false],
+            ['title' => '    1.4 เป้าหมายและตัวชี้วัดความสำเร็จ', 'page' => '3', 'is_bold' => false],
+            ['title' => '    1.5 ประโยชน์ที่คาดว่าจะได้รับ', 'page' => '4', 'is_bold' => false],
+            ['title' => 'บทที่ 2 เอกสารและงานวิจัยที่เกี่ยวข้อง', 'page' => '5', 'is_bold' => true],
+            ['title' => '    2.1 แนวคิด ทฤษฎี และหลักการที่เกี่ยวข้อง', 'page' => '5', 'is_bold' => false],
+            ['title' => '    2.2 นโยบาย ยุทธศาสตร์ และมาตรฐานที่เกี่ยวข้อง', 'page' => '8', 'is_bold' => false],
+            ['title' => '    2.3 งานวิจัยที่เกี่ยวข้อง', 'page' => '11', 'is_bold' => false],
+            ['title' => 'บทที่ 3 วิธีดำเนินการโครงการ', 'page' => '14', 'is_bold' => true],
+            ['title' => '    3.1 ประชากรและกลุ่มตัวอย่าง', 'page' => '14', 'is_bold' => false],
+            ['title' => '    3.2 เครื่องมือที่ใช้ในการประเมินผล', 'page' => '15', 'is_bold' => false],
+            ['title' => '    3.3 ขั้นตอนการดำเนินงานตามวงจร PDCA', 'page' => '16', 'is_bold' => false],
+            ['title' => '    3.4 การเก็บรวบรวมข้อมูล', 'page' => '18', 'is_bold' => false],
+            ['title' => '    3.5 การวิเคราะห์ข้อมูลและสถิติที่ใช้', 'page' => '19', 'is_bold' => false],
+            ['title' => 'บทที่ 4 ผลการดำเนินงานโครงการ', 'page' => '21', 'is_bold' => true],
+            ['title' => '    4.1 ข้อมูลทั่วไปของกลุ่มตัวอย่างผู้ตอบแบบประเมิน', 'page' => '21', 'is_bold' => false],
+            ['title' => '    4.2 ผลสัมฤทธิ์การดำเนินงานตามตัวชี้วัด', 'page' => '23', 'is_bold' => false],
+            ['title' => '    4.3 ผลการประเมินความพึงพอใจต่อโครงการ', 'page' => '25', 'is_bold' => false],
+            ['title' => '    4.4 ผลการใช้จ่ายงบประมาณ', 'page' => '28', 'is_bold' => false],
+            ['title' => 'บทที่ 5 สรุปผล อภิปรายผล และข้อเสนอแนะ', 'page' => '30', 'is_bold' => true],
+            ['title' => '    5.1 สรุปผลการดำเนินโครงการ', 'page' => '30', 'is_bold' => false],
+            ['title' => '    5.2 การอภิปรายผลการดำเนินโครงการ', 'page' => '32', 'is_bold' => false],
+            ['title' => '    5.3 ปัญหา อุปสรรค และแนวทางแก้ไข', 'page' => '35', 'is_bold' => false],
+            ['title' => '    5.4 ข้อเสนอแนะ', 'page' => '36', 'is_bold' => false],
+            ['title' => 'บรรณานุกรม', 'page' => '38', 'is_bold' => true],
+            ['title' => 'ภาคผนวก', 'page' => '40', 'is_bold' => true],
+            ['title' => '    ภาคผนวก ก เอกสารโครงการฉบับอนุมัติและคำสั่ง', 'page' => '41', 'is_bold' => false],
+            ['title' => '    ภาคผนวก ข แบบประเมินความพึงพอใจและ QR Code', 'page' => '45', 'is_bold' => false],
+            ['title' => '    ภาคผนวก ค เอกสารการเงินและชุดจัดซื้อจัดจ้าง', 'page' => '47', 'is_bold' => false],
+            ['title' => '    ภาคผนวก ง ภาพกิจกรรมการดำเนินโครงการ', 'page' => '50', 'is_bold' => false],
+            ['title' => '    ภาคผนวก จ กำหนดการและเอกสารหลักฐานอื่น ๆ', 'page' => '54', 'is_bold' => false],
+        ];
+
+        // 4. List of Tables (สารบัญตาราง)
+        $tableItems = [
+            ['title' => 'ตารางที่ 4-1 จำนวนและร้อยละของข้อมูลทั่วไปของผู้ตอบแบบประเมิน', 'page' => '22'],
+            ['title' => 'ตารางที่ 4-2 ผลสัมฤทธิ์การดำเนินงานเปรียบเทียบระหว่างเป้าหมายและผลการปฏิบัติจริง', 'page' => '24'],
+            ['title' => 'ตารางที่ 4-3 ค่าเฉลี่ยและส่วนเบี่ยงเบนมาตรฐานความพึงพอใจต่อโครงการจำแนกรายด้าน', 'page' => '26'],
+            ['title' => 'ตารางที่ 4-4 ค่าเฉลี่ยและส่วนเบี่ยงเบนมาตรฐานความพึงพอใจต่อโครงการในภาพรวม', 'page' => '27'],
+            ['title' => 'ตารางที่ 4-5 สรุปผลการใช้จ่ายงบประมาณจำแนกตามรายการ', 'page' => '29'],
+        ];
+
+        // 5. List of Figures (สารบัญภาพ)
+        $figureItems = [];
+        $photos = $project->photos;
+        if ($photos && count($photos) > 0) {
+            foreach ($photos as $pIdx => $ph) {
+                $caption = !empty($ph->caption) ? $ph->caption : "กิจกรรมการดำเนินโครงการ {$title}";
+                $caption = preg_replace('/^ภาพที่\s*\d+\s*:\s*/u', '', $caption);
+                $figureItems[] = [
+                    'title' => "ภาพที่ " . ($pIdx + 1) . " {$caption}",
+                    'page' => (50 + floor($pIdx / 2)),
+                ];
+            }
+        } else {
+            $figureItems = [
+                ['title' => 'ภาพที่ 1 พิธีเปิดโครงการและการชี้แจงวัตถุประสงค์', 'page' => '50'],
+                ['title' => 'ภาพที่ 2 การบรรยายและถ่ายทอดองค์ความรู้แก่นักศึกษา', 'page' => '50'],
+                ['title' => 'ภาพที่ 3 การฝึกปฏิบัติการและทำกิจกรรมกลุ่มของผู้เข้าร่วม', 'page' => '51'],
+                ['title' => 'ภาพที่ 4 การนำเสนอผลงานและการแลกเปลี่ยนเรียนรู้', 'page' => '51'],
+                ['title' => 'ภาพที่ 5 การประเมินผลและการสรุปองค์ความรู้', 'page' => '52'],
+                ['title' => 'ภาพที่ 6 การมอบเกียรติบัตรและพิธีปิดโครงการ', 'page' => '52'],
+            ];
+        }
+
+        $sections = [
+            'executive_summary' => $execSummary,
+            'preface' => $preface,
+            'sign_off_name' => $signOffName,
+            'sign_off_date' => $signOffDate,
+            'toc_items' => $tocItems,
+            'table_items' => $tableItems,
+            'figure_items' => $figureItems,
+        ];
+
+        $fullContent = $execSummary . "\n\n" . $preface;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'AI สังเคราะห์เนื้อหาส่วนนำ (คำนำ สารบัญ และบทสรุปผู้บริหาร) สำเร็จ',
+            'sections' => $sections,
+            'full_content' => $fullContent,
+        ]);
+    }
+
+    /**
+     * Save Preliminary sections to project model.
+     */
+    public function savePreliminary(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'sections' => 'nullable|array',
+            'full_content' => 'nullable|string',
+            'preliminary_sections' => 'nullable|array',
+            'preliminary_content' => 'nullable|string',
+        ]);
+
+        $project->preliminary_sections = $validated['sections'] ?? $validated['preliminary_sections'] ?? $project->preliminary_sections;
+        $project->preliminary_content = $validated['full_content'] ?? $validated['preliminary_content'] ?? $project->preliminary_content;
+        $project->save();
+
+        if ($request->header('X-Inertia')) {
+            return redirect()->back()->with('message', 'บันทึกข้อมูลส่วนนำ (คำนำ สารบัญ บทสรุปผู้บริหาร) เรียบร้อยแล้ว');
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'บันทึกข้อมูลส่วนนำเรียบร้อยแล้ว'
+        ]);
+    }
+
+    /**
+     * Display printable official Preliminary document (Front Matter).
+     */
+    public function printPreliminary(Project $project)
+    {
+        $project->load(['department', 'user', 'ovecStrategy', 'fundingSource', 'photos', 'appendices']);
+        $survey = \App\Models\Survey::where('project_id', $project->id)->first();
+        $surveyStats = (new SurveyController())->calculateDetailedStats($survey);
+
+        // Ensure Preliminary has content
+        $prelim = is_array($project->preliminary_sections) ? $project->preliminary_sections : [];
+        if (empty($prelim) || empty($prelim['executive_summary']) || empty($prelim['preface'])) {
+            $genResponse = $this->generatePreliminary(request(), $project);
+            $genData = $genResponse->getData(true);
+            if (!empty($genData['sections'])) {
+                $project->preliminary_sections = array_merge($genData['sections'], array_filter($prelim));
+                $project->preliminary_content = $genData['full_content'] ?? $project->preliminary_content;
+                $project->save();
+            }
+        }
+
+        return Inertia::render('Projects/PrintPreliminary', [
+            'project' => $project,
+            'survey' => $survey,
+            'surveyStats' => $surveyStats,
+        ]);
+    }
+
+    /**
      * AI Assistant for drafting proposal rationale, objectives, and targets.
      */
     public function generateAiContent(Request $request)

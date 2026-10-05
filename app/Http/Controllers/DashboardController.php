@@ -738,7 +738,7 @@ class DashboardController extends Controller
             || $user->isProcurementHead() || $user->isProcurementStaff() 
             || $user->isFinanceStaff() || $user->isExecutive();
 
-        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix'])) {
+        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix'])) {
             $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices', 'photos', 'survey'])
                 ->latest();
 
@@ -822,12 +822,18 @@ class DashboardController extends Controller
                         'responsible_person' => $p->responsible_person,
                         'activities' => $p->activities,
                         'action_plan' => $p->action_plan,
+                        'preliminary_sections' => $p->preliminary_sections,
+                        'preliminary_content' => $p->preliminary_content,
                         'chapter_1_sections' => $p->chapter_1_sections,
                         'chapter_1_content' => $p->chapter_1_content,
                         'chapter_2_sections' => $p->chapter_2_sections,
                         'chapter_2_content' => $p->chapter_2_content,
                         'chapter_3_sections' => $p->chapter_3_sections,
                         'chapter_3_content' => $p->chapter_3_content,
+                        'chapter_4_sections' => $p->chapter_4_sections,
+                        'chapter_4_content' => $p->chapter_4_content,
+                        'chapter_5_sections' => $p->chapter_5_sections,
+                        'chapter_5_content' => $p->chapter_5_content,
                         'disbursement_type' => $disbType,
                         'is_advance_payment' => in_array($disbType, ['loan', 'both']) || (bool)($p->budget?->is_advance_payment ?? false),
                         'estimated_budget' => (float)$p->estimated_budget,
