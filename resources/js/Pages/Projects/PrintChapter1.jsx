@@ -107,14 +107,27 @@ export default function PrintChapter1({ project }) {
                     h3 {
                         font-size: 16pt;
                         font-weight: bold;
+                        text-align: left;
+                        text-justify: auto;
                         margin-top: 14pt;
                         margin-bottom: 6pt;
                     }
                     h4 {
                         font-size: 16pt;
                         font-weight: bold;
+                        text-align: left;
+                        text-justify: auto;
                         margin-top: 8pt;
                         margin-bottom: 4pt;
+                    }
+                    .academic-subheading {
+                        font-size: 16pt;
+                        font-weight: bold;
+                        text-align: left;
+                        text-justify: auto;
+                        margin-top: 10pt;
+                        margin-bottom: 3pt;
+                        padding-left: 0.75cm;
                     }
                     p {
                         font-size: 16pt;
@@ -130,6 +143,10 @@ export default function PrintChapter1({ project }) {
                     .thai-hanging-indent {
                         padding-left: 1.5cm;
                         text-indent: -1.5cm;
+                    }
+                    .text-left {
+                        text-align: left !important;
+                        text-justify: auto !important;
                     }
                 </style>
             </head>
@@ -178,14 +195,37 @@ export default function PrintChapter1({ project }) {
         const elements = [];
         let currentParagraphLines = [];
 
+        const joinThaiLines = (lineArray) => {
+            let result = '';
+            for (let i = 0; i < lineArray.length; i++) {
+                const line = lineArray[i].trim();
+                if (!line) continue;
+                if (!result) {
+                    result = line;
+                } else {
+                    const lastChar = result.slice(-1);
+                    const firstChar = line.charAt(0);
+                    const isThaiLast = /[\u0E00-\u0E7F]/.test(lastChar);
+                    const isThaiFirst = /[\u0E00-\u0E7F]/.test(firstChar);
+                    if (isThaiLast && isThaiFirst) {
+                        result += line;
+                    } else {
+                        result += ' ' + line;
+                    }
+                }
+            }
+            return result;
+        };
+
         const flushParagraph = (key) => {
             if (currentParagraphLines.length > 0) {
-                const pText = currentParagraphLines.join(' ').trim();
+                const pText = joinThaiLines(currentParagraphLines).trim();
                 if (pText) {
                     elements.push(
                         <p
                             key={`p-${key}`}
                             className="thai-content thai-indent my-2.5 text-justify leading-relaxed"
+                            style={{ textAlign: 'justify', textJustify: 'inter-cluster' }}
                         >
                             {renderInlineFormattedText(pText)}
                         </p>
@@ -202,21 +242,29 @@ export default function PrintChapter1({ project }) {
                 return;
             }
 
-            // Sub-heading e.g. "1.3.1 ขอบเขตด้านประชากรและกลุ่มเป้าหมาย"
-            const subSecMatch = trimmed.match(/^(?:#*\s*)?(1\.\d+\.\d+)\s*(.*)$/u);
+            // Sub-heading e.g. "1.3.1 ...", "1.3.1. ..."
+            const subSecMatch = trimmed.match(/^(?:#*\s*)?([1-5]\.\d+(?:\.\d+)+)\.?\s+(.*)$/u);
             if (subSecMatch) {
                 flushParagraph(index);
                 elements.push(
-                    <div key={`subsec-${index}`} className="mt-4 mb-2 font-bold text-slate-900 pl-4 sm:pl-6">
-                        <span>{subSecMatch[1]} </span>
-                        <span>{renderInlineFormattedText(subSecMatch[2])}</span>
+                    <div 
+                        key={`subsec-${index}`} 
+                        className="academic-subheading mt-4 mb-2 font-bold text-slate-900 pl-4 sm:pl-6 text-left flex items-start"
+                        style={{ textAlign: 'left', textJustify: 'auto' }}
+                    >
+                        <span className="shrink-0 mr-2 font-bold text-slate-900" style={{ textAlign: 'left' }}>
+                            {subSecMatch[1]}
+                        </span>
+                        <span className="flex-1 text-left font-bold text-slate-900" style={{ textAlign: 'left', textJustify: 'auto' }}>
+                            {renderInlineFormattedText(subSecMatch[2])}
+                        </span>
                     </div>
                 );
                 return;
             }
 
             // Sub-points like "(1) ..."
-            const parenSubMatch = trimmed.match(/^\(([0-9]+)\)\s*(.*)$/u);
+            const parenSubMatch = trimmed.match(/^\(([0-9]+)\)\s+(.*)$/u);
             if (parenSubMatch) {
                 flushParagraph(index);
                 const subNum = parenSubMatch[1];
@@ -230,9 +278,13 @@ export default function PrintChapter1({ project }) {
                 }
 
                 elements.push(
-                    <div key={`subnum-${index}`} className="flex items-start pl-8 sm:pl-12 my-2 text-justify leading-relaxed">
-                        <span className="shrink-0 font-bold mr-2 text-slate-900">({subNum})</span>
-                        <div className="flex-1 text-slate-800">
+                    <div 
+                        key={`subnum-${index}`} 
+                        className="flex items-start pl-8 sm:pl-12 my-2 leading-relaxed text-left"
+                        style={{ textAlign: 'left' }}
+                    >
+                        <span className="shrink-0 font-bold mr-2 text-slate-900" style={{ textAlign: 'left' }}>({subNum})</span>
+                        <div className="flex-1 text-slate-800 text-justify" style={{ textAlign: 'justify', textJustify: 'inter-cluster' }}>
                             {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
                             <span>{renderInlineFormattedText(body)}</span>
                         </div>
@@ -242,7 +294,7 @@ export default function PrintChapter1({ project }) {
             }
 
             // Bullet or dash like "- ..."
-            const bulletMatch = trimmed.match(/^[-•]\s*(.*)$/u);
+            const bulletMatch = trimmed.match(/^[-•]\s+(.*)$/u);
             if (bulletMatch) {
                 flushParagraph(index);
                 const rest = bulletMatch[1];
@@ -254,9 +306,13 @@ export default function PrintChapter1({ project }) {
                     body = rest.slice(colonIndex + 1).trim();
                 }
                 elements.push(
-                    <div key={`bullet-${index}`} className="flex items-start pl-10 sm:pl-14 my-1.5 text-justify leading-relaxed">
-                        <span className="shrink-0 w-4 font-bold text-slate-700">-</span>
-                        <div className="flex-1 text-slate-800">
+                    <div 
+                        key={`bullet-${index}`} 
+                        className="flex items-start pl-10 sm:pl-14 my-1.5 leading-relaxed text-left"
+                        style={{ textAlign: 'left' }}
+                    >
+                        <span className="shrink-0 w-4 font-bold text-slate-700" style={{ textAlign: 'left' }}>-</span>
+                        <div className="flex-1 text-slate-800 text-justify" style={{ textAlign: 'justify', textJustify: 'inter-cluster' }}>
                             {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
                             <span>{renderInlineFormattedText(body)}</span>
                         </div>
@@ -272,16 +328,22 @@ export default function PrintChapter1({ project }) {
                 const num = numListMatch[1];
                 const rest = numListMatch[2];
                 elements.push(
-                    <div key={`num-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
-                        <span className="shrink-0 w-7 font-bold text-slate-900">{num}.</span>
-                        <span className="flex-1 text-slate-800">{renderInlineFormattedText(rest)}</span>
+                    <div 
+                        key={`num-${index}`} 
+                        className="flex items-start pl-8 sm:pl-10 my-1.5 leading-relaxed text-left"
+                        style={{ textAlign: 'left' }}
+                    >
+                        <span className="shrink-0 font-bold text-slate-900 mr-2" style={{ minWidth: '24px', textAlign: 'left' }}>{num}.</span>
+                        <div className="flex-1 text-slate-800 text-justify" style={{ textAlign: 'justify', textJustify: 'inter-cluster' }}>
+                            {renderInlineFormattedText(rest)}
+                        </div>
                     </div>
                 );
                 return;
             }
 
             // Sub-items like "1) ..."
-            const itemParenMatch = trimmed.match(/^(\d+\))\s*(.+)$/u);
+            const itemParenMatch = trimmed.match(/^(\d+\))\s+(.+)$/u);
             if (itemParenMatch) {
                 flushParagraph(index);
                 const numPart = itemParenMatch[1];
@@ -293,23 +355,40 @@ export default function PrintChapter1({ project }) {
                     const body = contentPart.slice(colonIndex + 1).trim();
                     if (body) {
                         elements.push(
-                            <div key={`itemp-${index}`} className="mt-3.5 mb-2 pl-4 sm:pl-6 text-justify leading-relaxed">
-                                <span className="font-bold text-slate-900">{numPart} {label} </span>
-                                <span className="text-slate-800">{renderInlineFormattedText(body)}</span>
+                            <div 
+                                key={`itemp-${index}`} 
+                                className="flex items-start pl-8 sm:pl-10 my-2 leading-relaxed text-left"
+                                style={{ textAlign: 'left' }}
+                            >
+                                <span className="shrink-0 font-bold text-slate-900 mr-2" style={{ textAlign: 'left' }}>{numPart}</span>
+                                <div className="flex-1 text-slate-800 text-justify" style={{ textAlign: 'justify', textJustify: 'inter-cluster' }}>
+                                    <strong className="font-bold text-slate-900 mr-1">{label}</strong>
+                                    <span>{renderInlineFormattedText(body)}</span>
+                                </div>
                             </div>
                         );
                     } else {
                         elements.push(
-                            <div key={`itemp-${index}`} className="mt-4 mb-2 pl-4 sm:pl-6 font-bold text-slate-900">
+                            <div 
+                                key={`itemp-${index}`} 
+                                className="mt-4 mb-2 pl-4 sm:pl-6 font-bold text-slate-900 text-left"
+                                style={{ textAlign: 'left', textJustify: 'auto' }}
+                            >
                                 <span>{numPart} {label}</span>
                             </div>
                         );
                     }
                 } else {
                     elements.push(
-                        <div key={`itemp-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
-                            <span className="shrink-0 w-7 font-bold text-slate-900">{numPart}</span>
-                            <span className="flex-1 text-slate-800">{renderInlineFormattedText(contentPart)}</span>
+                        <div 
+                            key={`itemp-${index}`} 
+                            className="flex items-start pl-8 sm:pl-10 my-1.5 leading-relaxed text-left"
+                            style={{ textAlign: 'left' }}
+                        >
+                            <span className="shrink-0 font-bold text-slate-900 mr-2" style={{ textAlign: 'left' }}>{numPart}</span>
+                            <div className="flex-1 text-slate-800 text-justify" style={{ textAlign: 'justify', textJustify: 'inter-cluster' }}>
+                                {renderInlineFormattedText(contentPart)}
+                            </div>
                         </div>
                     );
                 }
@@ -402,6 +481,28 @@ export default function PrintChapter1({ project }) {
                     font-size: var(--heading-font-size) !important;
                     font-weight: bold !important;
                     line-height: 1.4 !important;
+                    text-align: left !important;
+                    text-justify: auto !important;
+                }
+
+                .academic-subheading {
+                    text-align: left !important;
+                    text-justify: auto !important;
+                    font-weight: bold !important;
+                }
+
+                .academic-subheading * {
+                    text-align: left !important;
+                    text-justify: auto !important;
+                }
+
+                h1, h2, h3, h4 {
+                    text-align: left !important;
+                    text-justify: auto !important;
+                }
+
+                .print-title {
+                    text-align: center !important;
                 }
 
                 @media print {
