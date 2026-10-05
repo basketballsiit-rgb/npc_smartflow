@@ -4340,5 +4340,99 @@ class ProjectController extends Controller
             ] : null,
         ]);
     }
+
+    /**
+     * Display printable unified full report document (Complete Book: Covers, Prelim, Ch 1-5, References, Appendix).
+     */
+    public function printFullReport(Project $project)
+    {
+        $project->load([
+            'department.parent',
+            'user',
+            'ovecStrategy',
+            'fundingSource',
+            'budget.fundingSource',
+            'appendices',
+            'photos' => function ($q) {
+                $q->orderBy('sort_order', 'asc')->orderBy('id', 'asc');
+            },
+            'procurement.items',
+            'approvals.user',
+            'indicators',
+            'activities',
+            'expenses',
+        ]);
+        $survey = \App\Models\Survey::where('project_id', $project->id)->first();
+        $surveyStats = (new SurveyController())->calculateDetailedStats($survey);
+
+        // Ensure Preliminary has content
+        $prelim = is_array($project->preliminary_sections) ? $project->preliminary_sections : [];
+        if (empty($prelim) || empty($prelim['executive_summary']) || empty($prelim['preface'])) {
+            $genResponse = $this->generatePreliminary(request(), $project);
+            $genData = $genResponse->getData(true);
+            if (!empty($genData['sections'])) {
+                $project->preliminary_sections = array_merge($genData['sections'], array_filter($prelim));
+                $project->preliminary_content = $genData['full_content'] ?? $project->preliminary_content;
+                $project->save();
+            }
+        }
+
+        // Ensure Chapter 5 has content
+        $ch5 = is_array($project->chapter_5_sections) ? $project->chapter_5_sections : [];
+        if (empty($ch5) || empty($ch5['section_5_2']) || mb_strlen($ch5['section_5_2']) < 150) {
+            $genResponse = $this->generateChapter5(request(), $project);
+            $genData = $genResponse->getData(true);
+            if (!empty($genData['sections'])) {
+                $project->chapter_5_sections = array_merge($genData['sections'], array_filter($ch5));
+                $project->chapter_5_content = $genData['full_content'] ?? $project->chapter_5_content;
+                $project->save();
+            }
+        }
+
+        return Inertia::render('Projects/PrintFullReport', [
+            'project' => $project,
+            'survey' => $survey,
+            'surveyStats' => $surveyStats,
+        ]);
+    }
+
+    /**
+     * Save full book completion status and report binding metadata.
+     */
+    public function saveFullReportStatus(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'is_completed' => 'nullable|boolean',
+            'compiled_by' => 'nullable|string|max:255',
+            'compiled_date' => 'nullable|string|max:50',
+            'notes' => 'nullable|string|max:1000',
+            'front_cover_title' => 'nullable|string|max:500',
+            'back_cover_text' => 'nullable|string|max:1000',
+            'include_procurement' => 'nullable|boolean',
+            'include_photos' => 'nullable|boolean',
+        ]);
+
+        $currentMeta = is_array($project->full_report_metadata) ? $project->full_report_metadata : [];
+        $mergedMeta = array_merge($currentMeta, $validated);
+
+        $project->full_report_metadata = $mergedMeta;
+        if (!empty($validated['is_completed'])) {
+            $project->full_report_completed_at = now();
+        } elseif (isset($validated['is_completed']) && !$validated['is_completed']) {
+            $project->full_report_completed_at = null;
+        }
+        $project->save();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'บันทึกสถานะการจัดทำรูปเล่มสมบูรณ์เรียบร้อยแล้ว',
+                'full_report_metadata' => $project->full_report_metadata,
+                'full_report_completed_at' => $project->full_report_completed_at,
+            ]);
+        }
+
+        return redirect()->back()->with('message', 'บันทึกสถานะการจัดทำรูปเล่มสมบูรณ์เรียบร้อยแล้ว');
+    }
 }
 

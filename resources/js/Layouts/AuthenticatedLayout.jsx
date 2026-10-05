@@ -72,7 +72,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        (currentUrl.includes('tab=document_tracking') && !isPlanStaff && !isAdmin) ||
                        (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')));
             case 'five_chapters':
-                return currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix') || currentUrl.includes('tab=preliminary');
+                return currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix') || currentUrl.includes('tab=preliminary') || currentUrl.includes('tab=full_report');
             case 'procurement_loan':
                 return (currentUrl.includes('routine-budgets') && !isPlanStaff && !isAdmin) ||
                        (currentUrl.includes('tab=clearings') && !isFinanceStaff && !isAdmin);
@@ -111,7 +111,7 @@ export default function AuthenticatedLayout({ header, children }) {
     };
 
     const getActiveSectionForUrl = (currentUrl) => {
-        if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix') || currentUrl.includes('tab=preliminary')) {
+        if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix') || currentUrl.includes('tab=preliminary') || currentUrl.includes('tab=full_report')) {
             return 'five_chapters';
         }
         if (currentUrl.includes('tab=admin_users') || currentUrl.includes('tab=admin_settings') || currentUrl.includes('tab=admin_strategies') || currentUrl.includes('tab=admin_ai') || currentUrl.includes('tab=all_projects')) {
@@ -625,6 +625,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className={getPrefixClass(url.includes('tab=appendix') || url.includes('chapter=appendix'), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📎</span>
                                     {isSidebarOpen && <span>ภาคผนวก: เอกสารแนบ & ภาพกิจกรรม</span>}
+                                </Link>
+                                <Link
+                                    href={route('dashboard', { tab: 'full_report' })}
+                                    className={getSubLinkClass(url.includes('tab=full_report') || url.includes('chapter=full_report'))}
+                                    title="รวมรูปเล่มฉบับสมบูรณ์: เรียงปกหน้า ส่วนนำ บทที่ 1-5 บรรณานุกรม ภาคผนวก และปกหลัง"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=full_report') || url.includes('chapter=full_report'), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">📚</span>
+                                    {isSidebarOpen && <span>รวมเล่มฉบับสมบูรณ์ (Full Book)</span>}
                                 </Link>
                             </div>
                             )}

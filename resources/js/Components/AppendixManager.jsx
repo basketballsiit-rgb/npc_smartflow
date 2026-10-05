@@ -372,11 +372,21 @@ export default function AppendixManager({
                             href={route('projects.appendix.print', activeProject.id)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs shadow-lg transition transform active:scale-95"
+                            className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs shadow-lg transition transform active:scale-95"
                             title="เปิดหน้าต่างพิมพ์ภาคผนวกขนาด A4"
                         >
                             <span>🖨️</span>
-                            <span>พิมพ์เอกสารภาคผนวก (A4)</span>
+                            <span>พิมพ์ภาคผนวก (A4)</span>
+                        </a>
+
+                        {/* Go to Full Book Compilation */}
+                        <a
+                            href={route('dashboard', { tab: 'full_report' })}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-lg transition transform active:scale-95"
+                            title="ไปยังหน้ารวมรูปเล่มรายงานฉบับสมบูรณ์ (Full Book)"
+                        >
+                            <span>📚</span>
+                            <span>รวมเล่มสมบูรณ์</span>
                         </a>
                     </div>
                 </div>

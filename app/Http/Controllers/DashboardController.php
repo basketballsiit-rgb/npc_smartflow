@@ -834,6 +834,8 @@ class DashboardController extends Controller
                         'chapter_4_content' => $p->chapter_4_content,
                         'chapter_5_sections' => $p->chapter_5_sections,
                         'chapter_5_content' => $p->chapter_5_content,
+                        'full_report_metadata' => $p->full_report_metadata,
+                        'full_report_completed_at' => $p->full_report_completed_at ? $p->full_report_completed_at->format('Y-m-d H:i:s') : null,
                         'disbursement_type' => $disbType,
                         'is_advance_payment' => in_array($disbType, ['loan', 'both']) || (bool)($p->budget?->is_advance_payment ?? false),
                         'estimated_budget' => (float)$p->estimated_budget,

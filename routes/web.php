@@ -259,6 +259,10 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/chapter-5/save', [ProjectController::class, 'saveChapter5'])->name('projects.chapter5.save');
     Route::get('projects/{project}/chapter-5/print', [ProjectController::class, 'printChapter5'])->name('projects.chapter5.print');
 
+    // Full Report (Complete Book - Covers, Prelim, Ch1-5, References, Appendix) Print & Status Save
+    Route::get('projects/{project}/full-report/print', [ProjectController::class, 'printFullReport'])->name('projects.full_report.print');
+    Route::post('projects/{project}/full-report/save-status', [ProjectController::class, 'saveFullReportStatus'])->name('projects.full_report.save_status');
+
     // Expense & Loan Clearing Routes (With Loan & Direct Reimbursement)
     Route::post('/clearings', [\App\Http\Controllers\ExpenseClearingController::class, 'store'])->name('clearings.store');
     Route::post('/clearings/{clearing}/plan-approve', [\App\Http\Controllers\ExpenseClearingController::class, 'planApprove'])->name('clearings.plan_approve');

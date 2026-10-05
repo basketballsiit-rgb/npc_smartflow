@@ -8,6 +8,7 @@ import PendingTasksWidget from '@/Components/PendingTasksWidget';
 import WorkloadAnalyzerModal from '@/Components/WorkloadAnalyzerModal';
 import AppendixManager from '@/Components/AppendixManager';
 import PreliminaryManager from '@/Components/PreliminaryManager';
+import FullReportManager from '@/Components/FullReportManager';
 import axios from 'axios';
 
 export default function Dashboard({ 
@@ -764,8 +765,16 @@ export default function Dashboard({
     const getDefaultTab = () => {
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
+            const tb = urlParams.get('tab');
+            if (tb === 'full_report') return 'full_report';
+            if (tb === 'appendix') return 'appendix';
+            if (tb === 'preliminary') return 'preliminary';
             const ch = urlParams.get('chapter');
+            if (ch === 'full_report') return 'full_report';
+            if (ch === 'appendix') return 'appendix';
+            if (ch === 'preliminary') return 'preliminary';
             if (ch) return `chapter_${ch}`;
+            if (tb) return tb === 'proposals' ? 'document_tracking' : tb;
         }
         if (currentTab) {
             if (currentTab === 'proposals') return 'document_tracking';
@@ -816,6 +825,8 @@ export default function Dashboard({
                     setActiveTab('appendix');
                 } else if (ch === 'preliminary') {
                     setActiveTab('preliminary');
+                } else if (ch === 'full_report') {
+                    setActiveTab('full_report');
                 } else {
                     setActiveTab(`chapter_${ch}`);
                 }
@@ -827,6 +838,8 @@ export default function Dashboard({
                     setActiveTab('appendix');
                 } else if (tb === 'preliminary') {
                     setActiveTab('preliminary');
+                } else if (tb === 'full_report') {
+                    setActiveTab('full_report');
                 } else {
                     setActiveTab(tb === 'proposals' ? 'document_tracking' : tb);
                 }
@@ -838,6 +851,8 @@ export default function Dashboard({
                 setActiveTab('appendix');
             } else if (currentChapter === 'preliminary') {
                 setActiveTab('preliminary');
+            } else if (currentChapter === 'full_report') {
+                setActiveTab('full_report');
             } else {
                 setActiveTab(`chapter_${currentChapter}`);
             }
@@ -848,6 +863,8 @@ export default function Dashboard({
                 setActiveTab('appendix');
             } else if (currentTab === 'preliminary') {
                 setActiveTab('preliminary');
+            } else if (currentTab === 'full_report') {
+                setActiveTab('full_report');
             } else {
                 setActiveTab(currentTab === 'proposals' ? 'document_tracking' : currentTab);
             }
@@ -19795,6 +19812,15 @@ return (
         />
     );
 
+    const renderFullReportTab = () => (
+        <FullReportManager
+            projects={chapter1Projects}
+            activeProject={activeChapter1Project}
+            onSelectProject={(id) => setSelectedChapter1ProjectId(id)}
+            onGoToChapter={(tab) => setActiveTab(tab)}
+        />
+    );
+
     return (
         <AuthenticatedLayout
             header={
@@ -19817,6 +19843,7 @@ return (
                         {activeTab === 'chapter_4' && renderChapter4Tab()}
                         {activeTab === 'chapter_5' && renderChapter5Tab()}
                         {(activeTab === 'appendix' || activeTab === 'chapter_appendix') && renderAppendixTab()}
+                        {(activeTab === 'full_report' || activeTab === 'chapter_full_report') && renderFullReportTab()}
                         {activeTab === 'admin_users' && renderAdminUsersTab()}
                         {activeTab === 'admin_strategies' && renderAdminStrategiesTab()}
                         {activeTab === 'admin_settings' && renderAdminSettingsTab()}
