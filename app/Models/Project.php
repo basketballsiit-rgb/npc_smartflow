@@ -83,6 +83,7 @@ class Project extends Model
             'chapter_2_sections' => 'array',
             'chapter_3_sections' => 'array',
             'chapter_4_sections' => 'array',
+            'chapter_5_sections' => 'array',
             'strategy_selections' => 'array',
             'iqa_strategy_ids' => 'array',
             'ovec_strategy_ids' => 'array',

@@ -942,6 +942,18 @@ export default function Dashboard({
     const [isAnalyzingChapter4, setIsAnalyzingChapter4] = useState(false);
     const [isSavingChapter4, setIsSavingChapter4] = useState(false);
 
+    // Chapter 5 States
+    const [chapter5Sections, setChapter5Sections] = useState({
+        intro: '',
+        section_5_1: '',
+        section_5_2: '',
+        section_5_3: '',
+        section_5_4: '',
+    });
+    const [chapter5ActiveSectionTab, setChapter5ActiveSectionTab] = useState('all');
+    const [isGeneratingChapter5, setIsGeneratingChapter5] = useState(false);
+    const [isSavingChapter5, setIsSavingChapter5] = useState(false);
+
     // Survey Questionnaire Builder & Chapter 4 Integration States
     const [surveyQuestions, setSurveyQuestions] = useState([]);
     const [surveyTitle, setSurveyTitle] = useState('');
@@ -1136,6 +1148,26 @@ export default function Dashboard({
             });
         }
         setChapter4Analysis(null);
+
+        // Chapter 5 populate
+        const savedCh5 = activeChapter1Project.chapter_5_sections;
+        if (savedCh5 && typeof savedCh5 === 'object' && Object.keys(savedCh5).length > 0) {
+            setChapter5Sections({
+                intro: safeString(savedCh5.intro),
+                section_5_1: safeString(savedCh5.section_5_1),
+                section_5_2: safeString(savedCh5.section_5_2),
+                section_5_3: safeString(savedCh5.section_5_3),
+                section_5_4: safeString(savedCh5.section_5_4),
+            });
+        } else {
+            setChapter5Sections({
+                intro: '',
+                section_5_1: '',
+                section_5_2: '',
+                section_5_3: '',
+                section_5_4: '',
+            });
+        }
 
         if (activeChapter1Project?.id) {
             fetchSurveyData(activeChapter1Project.id);
@@ -1871,6 +1903,92 @@ export default function Dashboard({
             });
         } finally {
             setIsSavingChapter4(false);
+        }
+    };
+
+    const handleGenerateChapter5 = async () => {
+        if (!activeChapter1Project) return;
+        setIsGeneratingChapter5(true);
+        try {
+            const res = await window.axios.post(route('projects.chapter5.generate', activeChapter1Project.id));
+            if (res.data?.success && res.data?.sections) {
+                setChapter5Sections({
+                    intro: safeString(res.data.sections.intro),
+                    section_5_1: safeString(res.data.sections.section_5_1),
+                    section_5_2: safeString(res.data.sections.section_5_2),
+                    section_5_3: safeString(res.data.sections.section_5_3),
+                    section_5_4: safeString(res.data.sections.section_5_4),
+                });
+                Swal.fire({
+                    icon: 'success',
+                    title: 'AI สังเคราะห์บทที่ 5 สำเร็จ',
+                    text: 'ระบบได้สรุปผล อภิปรายผล ปัญหาอุปสรรค และข้อเสนอแนะให้เรียบร้อยแล้ว ท่านสามารถตรวจสอบ ปรับแต่ง และกดบันทึกได้ทันที',
+                    confirmButtonText: 'ตกลง',
+                    confirmButtonColor: '#7c3aed',
+                    timer: 2500,
+                    timerProgressBar: true
+                });
+            }
+        } catch (error) {
+            console.error('Error generating Chapter 5:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการสังเคราะห์',
+                text: error.response?.data?.message || 'ไม่สามารถสังเคราะห์เนื้อหาบทที่ 5 ได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#ef4444'
+            });
+        } finally {
+            setIsGeneratingChapter5(false);
+        }
+    };
+
+    const handleSaveChapter5 = async () => {
+        if (!activeChapter1Project) return;
+        setIsSavingChapter5(true);
+
+        const updatedSections = { ...chapter5Sections };
+        const fullContent = [
+            "บทที่ 5",
+            "สรุปผล อภิปรายผล และข้อเสนอแนะ\n",
+            updatedSections.intro,
+            updatedSections.section_5_1,
+            updatedSections.section_5_2,
+            updatedSections.section_5_3,
+            updatedSections.section_5_4
+        ].filter(Boolean).join("\n\n");
+
+        try {
+            await window.axios.post(route('projects.chapter5.save', activeChapter1Project.id), {
+                sections: updatedSections,
+                chapter_5_sections: updatedSections,
+                full_content: fullContent,
+                chapter_5_content: fullContent
+            });
+
+            activeChapter1Project.chapter_5_sections = updatedSections;
+            activeChapter1Project.chapter_5_content = fullContent;
+
+            Swal.fire({
+                icon: 'success',
+                title: 'บันทึกบทที่ 5 สำเร็จ',
+                text: 'บันทึกข้อมูลรายงานบทที่ 5 เรียบร้อยแล้ว พร้อมสำหรับจัดพิมพ์รูปเล่ม',
+                confirmButtonText: 'ตกลง',
+                confirmButtonColor: '#7c3aed',
+                timer: 2000,
+                timerProgressBar: true
+            });
+        } catch (error) {
+            console.error('Error saving Chapter 5:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการบันทึก',
+                text: error.response?.data?.message || 'ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง',
+                confirmButtonText: 'ปิด',
+                confirmButtonColor: '#ef4444'
+            });
+        } finally {
+            setIsSavingChapter5(false);
         }
     };
 
@@ -19468,30 +19586,228 @@ return (
                 </div>
             </div>
 
+            {/* Chapter 5 Content Editor Form */}
+            <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[11px] font-bold mb-1">
+                            <span>✏️ จัดทำและสรุปเนื้อหาบทที่ 5</span>
+                        </div>
+                        <h3 className="text-base md:text-lg font-bold text-slate-900 flex items-center gap-2">
+                            <span>📝</span> เนื้อหารายละเอียดบทที่ 5: สรุปผล อภิปรายผล และข้อเสนอแนะ
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                            สังเคราะห์ อภิปรายผล บันทึก และจัดพิมพ์บทที่ 5 เพื่อประกอบเล่มรายงานโครงการ 5 บท ฉบับสมบูรณ์
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleGenerateChapter5}
+                            disabled={isGeneratingChapter5}
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                            {isGeneratingChapter5 ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>AI กำลังประมวลผล...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>✨</span>
+                                    <span>AI สังเคราะห์เนื้อหาบทที่ 5</span>
+                                </>
+                            )}
+                        </button>
+
+                        {activeChapter1Project && (
+                            <a
+                                href={route('projects.chapter5.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                            >
+                                <span>🖨️</span>
+                                <span>พิมพ์บทที่ 5 (A4)</span>
+                            </a>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={handleSaveChapter5}
+                            disabled={isSavingChapter5}
+                            className="px-5 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                            {isSavingChapter5 ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>กำลังบันทึก...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>💾</span>
+                                    <span>บันทึกเนื้อหาบทที่ 5</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Intro */}
+                <div className="space-y-1.5">
+                    <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">บทนำ</span>
+                        ความนำบทที่ 5 (เกริ่นนำวัตถุประสงค์และภาพรวมการประเมินผลโครงการ)
+                    </label>
+                    <p className="text-[11px] text-slate-400">เกริ่นนำความเป็นมา วัตถุประสงค์ ขอบเขต และภาพรวมของกระบวนการติดตามประเมินผลโครงการ</p>
+                    <textarea
+                        rows={4}
+                        value={safeString(chapter5Sections.intro)}
+                        onChange={(e) => setChapter5Sections({ ...chapter5Sections, intro: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed font-sans"
+                        placeholder="การดำเนินโครงการ... ได้ดำเนินการเสร็จสิ้นเรียบร้อยแล้ว คณะผู้ดำเนินโครงการจึงได้ทำการสรุปผลการดำเนินงาน อภิปรายผล และข้อเสนอแนะ..."
+                    />
+                </div>
+
+                {/* Section 5.1 */}
+                <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">5.1</span>
+                            สรุปผลการดำเนินโครงการ (Summary of Findings)
+                        </label>
+                        <span className="text-[11px] text-slate-400">สรุปตามวัตถุประสงค์ เป้าหมายเชิงปริมาณ และผลประเมินความพึงพอใจ 4 ด้าน</span>
+                    </div>
+                    <textarea
+                        rows={8}
+                        value={safeString(chapter5Sections.section_5_1)}
+                        onChange={(e) => setChapter5Sections({ ...chapter5Sections, section_5_1: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed font-sans"
+                        placeholder="5.1 สรุปผลการดำเนินโครงการ..."
+                    />
+                </div>
+
+                {/* Section 5.2 */}
+                <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">5.2</span>
+                            การอภิปรายผลการดำเนินโครงการ (Discussion of Findings)
+                        </label>
+                        <span className="text-[11px] text-slate-400">อภิปรายผลเชื่อมโยงเทียบเคียงกับทฤษฎีและงานวิจัยที่เกี่ยวข้อง (บทที่ 2)</span>
+                    </div>
+                    <textarea
+                        rows={8}
+                        value={safeString(chapter5Sections.section_5_2)}
+                        onChange={(e) => setChapter5Sections({ ...chapter5Sections, section_5_2: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed font-sans"
+                        placeholder="5.2 การอภิปรายผลการดำเนินโครงการ..."
+                    />
+                </div>
+
+                {/* Section 5.3 */}
+                <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">5.3</span>
+                            ปัญหา อุปสรรค และแนวทางแก้ไข (Problems, Obstacles and Solutions)
+                        </label>
+                        <span className="text-[11px] text-slate-400">ข้อจำกัดที่พบระหว่างดำเนินงาน และแนวทางแก้ไข/ปรับปรุงที่ได้ดำเนินการ</span>
+                    </div>
+                    <textarea
+                        rows={6}
+                        value={safeString(chapter5Sections.section_5_3)}
+                        onChange={(e) => setChapter5Sections({ ...chapter5Sections, section_5_3: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed font-sans"
+                        placeholder="5.3 ปัญหา อุปสรรค และแนวทางแก้ไข..."
+                    />
+                </div>
+
+                {/* Section 5.4 */}
+                <div className="space-y-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">5.4</span>
+                            ข้อเสนอแนะ (Recommendations)
+                        </label>
+                        <span className="text-[11px] text-slate-400">5.4.1 ข้อเสนอแนะในการนำผลไปใช้ และ 5.4.2 ข้อเสนอแนะสำหรับการจัดทำโครงการครั้งต่อไป</span>
+                    </div>
+                    <textarea
+                        rows={7}
+                        value={safeString(chapter5Sections.section_5_4)}
+                        onChange={(e) => setChapter5Sections({ ...chapter5Sections, section_5_4: e.target.value })}
+                        className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed font-sans"
+                        placeholder="5.4 ข้อเสนอแนะ..."
+                    />
+                </div>
+
+                {/* Bottom Action Bar */}
+                <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <p className="text-xs text-slate-500">
+                        เมื่อบันทึกข้อมูลเรียบร้อยแล้ว สามารถกดปุ่มพิมพ์ A4 เพื่อเปิดหน้าพิมพ์เอกสารบทที่ 5 ฉบับมาตรฐานการอาชีวศึกษาได้ทันที
+                    </p>
+
+                    <div className="flex items-center gap-3">
+                        {activeChapter1Project && (
+                            <a
+                                href={route('projects.chapter5.print', activeChapter1Project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                            >
+                                <span>🖨️</span>
+                                <span>ดูตัวอย่างและพิมพ์ A4 (บทที่ 5)</span>
+                            </a>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={handleSaveChapter5}
+                            disabled={isSavingChapter5}
+                            className="px-6 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold transition shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                            {isSavingChapter5 ? (
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    <span>กำลังบันทึก...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span>💾</span>
+                                    <span>บันทึกเนื้อหาบทที่ 5</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Reference Guidelines & Document Suite */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-4">
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                        <span>📝</span> สาระสำคัญบทที่ 5
+                        <span>📖</span> สาระสำคัญและแนวทางการจัดทำบทที่ 5
                     </h3>
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2 text-slate-700">
-                        <ul className="list-disc pl-5 space-y-1.5">
-                            <li>5.1 สรุปผลการดำเนินโครงการ</li>
-                            <li>5.2 การอภิปรายผล (เทียบเคียงกับทฤษฎีและงานวิจัยในบทที่ 2)</li>
-                            <li>5.3 ปัญหา อุปสรรค และแนวทางแก้ไข</li>
-                            <li>5.4 ข้อเสนอแนะในการนำผลไปใช้ และข้อเสนอแนะสำหรับการจัดทำโครงการครั้งต่อไป</li>
+                    <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 text-xs space-y-2 text-slate-700">
+                        <ul className="list-disc pl-5 space-y-1.5 leading-relaxed">
+                            <li><strong>5.1 สรุปผลการดำเนินโครงการ:</strong> สรุปการบรรลุวัตถุประสงค์ เป้าหมายเชิงปริมาณ ยอดผู้เข้าร่วม และผลการประเมินความพึงพอใจ 4 ด้านอย่างกระชับ</li>
+                            <li><strong>5.2 การอภิปรายผล:</strong> วิเคราะห์เทียบเคียงผลการดำเนินงานกับทฤษฎี งานวิจัย และเอกสารอ้างอิงที่ระบุไว้ในบทที่ 2 (เช่น ทฤษฎี PDCA, Best 1977)</li>
+                            <li><strong>5.3 ปัญหา อุปสรรค และแนวทางแก้ไข:</strong> สะท้อนบทเรียนจากการปฏิบัติงานจริง (Lessons Learned) และแนวทางการบริหารจัดการความเสี่ยง</li>
+                            <li><strong>5.4 ข้อเสนอแนะ:</strong> จำแนกเป็นข้อเสนอแนะในการนำผลไปใช้ประโยชน์ และข้อเสนอแนะสำหรับการวางแผนโครงการในครั้งต่อไป</li>
                         </ul>
                     </div>
                 </div>
 
                 <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-slate-200 space-y-4">
                     <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                        <span>📚</span> รวมชุดเอกสารและสั่งพิมพ์
+                        <span>📚</span> รวมชุดเอกสารและสั่งพิมพ์รูปเล่มโครงการ
                     </h3>
                     <p className="text-xs text-slate-500">
                         พิมพ์เอกสารแยกแต่ละบทหรือเปิดดูฉบับสมบูรณ์สำหรับโครงการ "{activeChapter1Project?.title || ''}"
                     </p>
 
-                    <div className="space-y-2.5 pt-1">
+                    <div className="space-y-2 pt-1">
                         {activeChapter1Project && (
                             <>
                                 <a
@@ -19511,6 +19827,36 @@ return (
                                     className="w-full px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 rounded-xl text-xs font-bold border border-emerald-200 transition flex items-center justify-between"
                                 >
                                     <span>📗 พิมพ์บทที่ 2: เอกสารและงานวิจัยที่เกี่ยวข้อง (A4)</span>
+                                    <span>🖨️</span>
+                                </a>
+
+                                <a
+                                    href={route('projects.chapter3.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 rounded-xl text-xs font-bold border border-blue-200 transition flex items-center justify-between"
+                                >
+                                    <span>📙 พิมพ์บทที่ 3: วิธีดำเนินการโครงการ (A4)</span>
+                                    <span>🖨️</span>
+                                </a>
+
+                                <a
+                                    href={route('projects.chapter4.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-900 rounded-xl text-xs font-bold border border-rose-200 transition flex items-center justify-between"
+                                >
+                                    <span>📕 พิมพ์บทที่ 4: ผลการดำเนินงานโครงการ (A4)</span>
+                                    <span>🖨️</span>
+                                </a>
+
+                                <a
+                                    href={route('projects.chapter5.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center justify-between"
+                                >
+                                    <span>📓 พิมพ์บทที่ 5: สรุปผล อภิปรายผล & ข้อเสนอแนะ (A4)</span>
                                     <span>🖨️</span>
                                 </a>
 
