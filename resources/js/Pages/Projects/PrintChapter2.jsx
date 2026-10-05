@@ -124,6 +124,176 @@ export default function PrintChapter2({ project }) {
         URL.revokeObjectURL(url);
     };
 
+    // Helper to render inline markdown formatting such as **bold**
+    const renderInlineFormattedText = (str) => {
+        if (!str) return null;
+        const parts = str.split(/(\*\*[^*]+\*\*)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+            }
+            return part;
+        });
+    };
+
+    // Academic section renderer that parses headings, hanging indent lists, and sub-points
+    const renderAcademicSection = (rawContent, sectionPrefix = '') => {
+        if (!rawContent) return null;
+        let text = toArabicNumerals(rawContent);
+
+        const headingPattern = new RegExp(`^(?:#*\\s*)?(?:${sectionPrefix}|2\\.[1-4])\\s*[^\\n]*\\n*`, 'u');
+        text = text.replace(headingPattern, '').trim();
+
+        const lines = text.split(/\r?\n/);
+        const elements = [];
+        let currentParagraphLines = [];
+
+        const flushParagraph = (key) => {
+            if (currentParagraphLines.length > 0) {
+                const pText = currentParagraphLines.join(' ').trim();
+                if (pText) {
+                    elements.push(
+                        <p
+                            key={`p-${key}`}
+                            className="thai-content thai-indent my-2.5 text-justify leading-relaxed"
+                        >
+                            {renderInlineFormattedText(pText)}
+                        </p>
+                    );
+                }
+                currentParagraphLines = [];
+            }
+        };
+
+        lines.forEach((line, index) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                flushParagraph(index);
+                return;
+            }
+
+            // Sub-heading e.g. "2.1.1 ..."
+            const subSecMatch = trimmed.match(/^(?:#*\s*)?(2\.\d+\.\d+)\s*(.*)$/u);
+            if (subSecMatch) {
+                flushParagraph(index);
+                elements.push(
+                    <div key={`subsec-${index}`} className="mt-4 mb-2 font-bold text-slate-900 pl-4 sm:pl-6">
+                        <span>{subSecMatch[1]} </span>
+                        <span>{renderInlineFormattedText(subSecMatch[2])}</span>
+                    </div>
+                );
+                return;
+            }
+
+            // Sub-points like "(1) ..."
+            const parenSubMatch = trimmed.match(/^\(([0-9]+)\)\s*(.*)$/u);
+            if (parenSubMatch) {
+                flushParagraph(index);
+                const subNum = parenSubMatch[1];
+                const rest = parenSubMatch[2];
+                const colonIndex = rest.indexOf(':');
+                let label = '';
+                let body = rest;
+                if (colonIndex !== -1 && colonIndex < 80) {
+                    label = rest.slice(0, colonIndex + 1);
+                    body = rest.slice(colonIndex + 1).trim();
+                }
+
+                elements.push(
+                    <div key={`subnum-${index}`} className="flex items-start pl-8 sm:pl-12 my-2 text-justify leading-relaxed">
+                        <span className="shrink-0 font-bold mr-2 text-slate-900">({subNum})</span>
+                        <div className="flex-1 text-slate-800">
+                            {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
+                            <span>{renderInlineFormattedText(body)}</span>
+                        </div>
+                    </div>
+                );
+                return;
+            }
+
+            // Bullet or dash like "- ..."
+            const bulletMatch = trimmed.match(/^[-•]\s*(.*)$/u);
+            if (bulletMatch) {
+                flushParagraph(index);
+                const rest = bulletMatch[1];
+                const colonIndex = rest.indexOf(':');
+                let label = '';
+                let body = rest;
+                if (colonIndex !== -1 && colonIndex < 60) {
+                    label = rest.slice(0, colonIndex + 1);
+                    body = rest.slice(colonIndex + 1).trim();
+                }
+                elements.push(
+                    <div key={`bullet-${index}`} className="flex items-start pl-10 sm:pl-14 my-1.5 text-justify leading-relaxed">
+                        <span className="shrink-0 w-4 font-bold text-slate-700">-</span>
+                        <div className="flex-1 text-slate-800">
+                            {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
+                            <span>{renderInlineFormattedText(body)}</span>
+                        </div>
+                    </div>
+                );
+                return;
+            }
+
+            // Numbered list item e.g. "1. ..." with hanging indent
+            const numListMatch = trimmed.match(/^(\d+)\.\s+(.+)$/u);
+            if (numListMatch) {
+                flushParagraph(index);
+                const num = numListMatch[1];
+                const rest = numListMatch[2];
+                elements.push(
+                    <div key={`num-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                        <span className="shrink-0 w-7 font-bold text-slate-900">{num}.</span>
+                        <span className="flex-1 text-slate-800">{renderInlineFormattedText(rest)}</span>
+                    </div>
+                );
+                return;
+            }
+
+            // Sub-items like "1) ..."
+            const itemParenMatch = trimmed.match(/^(\d+\))\s*(.+)$/u);
+            if (itemParenMatch) {
+                flushParagraph(index);
+                const numPart = itemParenMatch[1];
+                const contentPart = itemParenMatch[2];
+
+                const colonIndex = contentPart.indexOf(':');
+                if (colonIndex !== -1 && colonIndex < 80) {
+                    const label = contentPart.slice(0, colonIndex + 1);
+                    const body = contentPart.slice(colonIndex + 1).trim();
+                    if (body) {
+                        elements.push(
+                            <div key={`itemp-${index}`} className="mt-3.5 mb-2 pl-4 sm:pl-6 text-justify leading-relaxed">
+                                <span className="font-bold text-slate-900">{numPart} {label} </span>
+                                <span className="text-slate-800">{renderInlineFormattedText(body)}</span>
+                            </div>
+                        );
+                    } else {
+                        elements.push(
+                            <div key={`itemp-${index}`} className="mt-4 mb-2 pl-4 sm:pl-6 font-bold text-slate-900">
+                                <span>{numPart} {label}</span>
+                            </div>
+                        );
+                    }
+                } else {
+                    elements.push(
+                        <div key={`itemp-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                            <span className="shrink-0 w-7 font-bold text-slate-900">{numPart}</span>
+                            <span className="flex-1 text-slate-800">{renderInlineFormattedText(contentPart)}</span>
+                        </div>
+                    );
+                }
+                return;
+            }
+
+            currentParagraphLines.push(trimmed);
+        });
+
+        flushParagraph(lines.length);
+
+        return <div className="space-y-1">{elements}</div>;
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
             <Head>
@@ -146,15 +316,6 @@ export default function PrintChapter2({ project }) {
 
                 .font-sarabun {
                     font-family: 'TH Sarabun PSK', 'TH Sarabun Chula', 'THSarabunNew', 'Sarabun', sans-serif !important;
-                }
-
-                .thai-indent {
-                    text-indent: 1.5cm !important;
-                }
-
-                .thai-hanging-indent {
-                    padding-left: 1.5cm !important;
-                    text-indent: -1.5cm !important;
                 }
 
                 .thai-indent {
@@ -351,8 +512,8 @@ export default function PrintChapter2({ project }) {
                         
                         {/* Intro */}
                         {sections.intro && (
-                            <div className="thai-indent whitespace-pre-line text-justify leading-relaxed">
-                                {toArabicNumerals(sections.intro)}
+                            <div>
+                                {renderAcademicSection(sections.intro)}
                             </div>
                         )}
 
@@ -362,9 +523,7 @@ export default function PrintChapter2({ project }) {
                                 <h3 className="print-heading mb-2 text-black">
                                     2.1 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง
                                 </h3>
-                                <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {toArabicNumerals(sections.section_2_1.replace(/^[๒2]\.[๑1]\s*แนวคิด[^\n]*\n+/u, ''))}
-                                </div>
+                                {renderAcademicSection(sections.section_2_1, '2\\.1')}
                             </div>
                         )}
 
@@ -374,9 +533,7 @@ export default function PrintChapter2({ project }) {
                                 <h3 className="print-heading mb-2 text-black">
                                     2.2 ยุทธศาสตร์และนโยบายจุดเน้นของสำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.) ที่เกี่ยวข้อง
                                 </h3>
-                                <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {toArabicNumerals(sections.section_2_2.replace(/^[๒2]\.[๒2]\s*ยุทธศาสตร์[^\n]*\n+/u, ''))}
-                                </div>
+                                {renderAcademicSection(sections.section_2_2, '2\\.2')}
                             </div>
                         )}
 
@@ -386,9 +543,7 @@ export default function PrintChapter2({ project }) {
                                 <h3 className="print-heading mb-2 text-black">
                                     2.3 เอกสารและงานวิจัยที่เกี่ยวข้อง
                                 </h3>
-                                <div className="whitespace-pre-line thai-indent text-justify leading-relaxed space-y-2">
-                                    {toArabicNumerals(sections.section_2_3.replace(/^[๒2]\.[๓3]\s*เอกสาร[^\n]*\n+/u, ''))}
-                                </div>
+                                {renderAcademicSection(sections.section_2_3, '2\\.3')}
                             </div>
                         )}
 
@@ -405,7 +560,7 @@ export default function PrintChapter2({ project }) {
                                         .filter(line => line.trim().length > 0)
                                         .map((refLine, idx) => (
                                             <p key={idx} className="thai-hanging-indent text-justify">
-                                                {refLine.trim()}
+                                                {renderInlineFormattedText(refLine.trim())}
                                             </p>
                                         ))
                                     }
@@ -414,8 +569,8 @@ export default function PrintChapter2({ project }) {
                         )}
                     </div>
                 ) : fullContent ? (
-                    <div className="whitespace-pre-line text-justify text-black leading-relaxed space-y-4 thai-indent">
-                        {toArabicNumerals(fullContent)}
+                    <div>
+                        {renderAcademicSection(fullContent)}
                     </div>
                 ) : (
                     <div className="p-8 bg-amber-50 rounded-2xl border border-amber-200 text-center font-sans print:hidden">

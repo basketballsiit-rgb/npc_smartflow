@@ -36,6 +36,107 @@ export default function Print({ project, strategyCategories = [] }) {
         window.print();
     };
 
+    const exportToWord = (filename = 'แบบเสนอโครงการ') => {
+        const contentElement = document.querySelector('.print-doc-container');
+        if (!contentElement) return;
+
+        const clone = contentElement.cloneNode(true);
+        clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+        const cleanFilename = (filename || 'แบบเสนอโครงการ').replace(/[\/\\?%*:|"<>]/g, '_');
+
+        const header = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                  xmlns:w='urn:schemas-microsoft-com:office:word' 
+                  xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>${cleanFilename}</title>
+                <!--[if gte mso 9]>
+                <xml>
+                    <w:WordDocument>
+                        <w:View>Print</w:View>
+                        <w:Zoom>100</w:Zoom>
+                        <w:DoNotOptimizeForBrowser/>
+                    </w:WordDocument>
+                </xml>
+                <![endif]-->
+                <style>
+                    @page Section1 {
+                        size: 21.0cm 29.7cm;
+                        margin: 2.54cm 2.54cm 2.54cm 2.54cm;
+                        mso-header-margin: 1.27cm;
+                        mso-footer-margin: 1.27cm;
+                        mso-paper-source: 0;
+                    }
+                    div.Section1 { page: Section1; }
+                    body {
+                        font-family: 'TH Sarabun New', 'TH Sarabun PSK', 'Sarabun', 'Cordia New', sans-serif;
+                        font-size: 16pt;
+                        line-height: 1.5;
+                        color: #000000;
+                    }
+                    h1 {
+                        font-size: 18pt;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-top: 0;
+                        margin-bottom: 4pt;
+                    }
+                    h2 {
+                        font-size: 16pt;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-top: 0;
+                        margin-bottom: 12pt;
+                    }
+                    p {
+                        font-size: 16pt;
+                        line-height: 1.5;
+                        margin-top: 0;
+                        margin-bottom: 6pt;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 14pt;
+                        margin-top: 8pt;
+                        margin-bottom: 8pt;
+                    }
+                    th, td {
+                        border: 1px solid #333333;
+                        padding: 4pt 6pt;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                        font-weight: bold;
+                    }
+                    .thai-indent {
+                        text-indent: 1.5cm;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="Section1">
+                    ${clone.innerHTML}
+                </div>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff', header], {
+            type: 'application/msword;charset=utf-8'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${cleanFilename}.doc`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     // Helper to extract selected strategy items for each category
     const getSelectedCategoryItems = (cat) => {
         if (!cat || !cat.items || cat.items.length === 0) return [];
@@ -333,6 +434,15 @@ export default function Print({ project, strategyCategories = [] }) {
                             <span>📄</span> ไม่มีลายเซ็นต์
                         </button>
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={() => exportToWord(`แบบเสนอโครงการ_${project.title || ''}`)}
+                        className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                        title="ดาวน์โหลดแบบเสนอโครงการเป็นไฟล์ Microsoft Word (.doc)"
+                    >
+                        <span>📥</span> ดาวน์โหลด Word (.doc)
+                    </button>
 
                     <button
                         onClick={() => window.close()}

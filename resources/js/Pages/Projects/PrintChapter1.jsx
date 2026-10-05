@@ -154,6 +154,176 @@ export default function PrintChapter1({ project }) {
         URL.revokeObjectURL(url);
     };
 
+    // Helper to render inline markdown formatting such as **bold**
+    const renderInlineFormattedText = (str) => {
+        if (!str) return null;
+        const parts = str.split(/(\*\*[^*]+\*\*)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+            }
+            return part;
+        });
+    };
+
+    // Academic section renderer that parses headings, hanging indent lists, and sub-points
+    const renderAcademicSection = (rawContent, sectionPrefix = '') => {
+        if (!rawContent) return null;
+        let text = toArabicNumerals(rawContent);
+
+        const headingPattern = new RegExp(`^(?:#*\\s*)?(?:${sectionPrefix}|1\\.[1-6])\\s*[^\\n]*\\n*`, 'u');
+        text = text.replace(headingPattern, '').trim();
+
+        const lines = text.split(/\r?\n/);
+        const elements = [];
+        let currentParagraphLines = [];
+
+        const flushParagraph = (key) => {
+            if (currentParagraphLines.length > 0) {
+                const pText = currentParagraphLines.join(' ').trim();
+                if (pText) {
+                    elements.push(
+                        <p
+                            key={`p-${key}`}
+                            className="thai-content thai-indent my-2.5 text-justify leading-relaxed"
+                        >
+                            {renderInlineFormattedText(pText)}
+                        </p>
+                    );
+                }
+                currentParagraphLines = [];
+            }
+        };
+
+        lines.forEach((line, index) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                flushParagraph(index);
+                return;
+            }
+
+            // Sub-heading e.g. "1.3.1 ขอบเขตด้านประชากรและกลุ่มเป้าหมาย"
+            const subSecMatch = trimmed.match(/^(?:#*\s*)?(1\.\d+\.\d+)\s*(.*)$/u);
+            if (subSecMatch) {
+                flushParagraph(index);
+                elements.push(
+                    <div key={`subsec-${index}`} className="mt-4 mb-2 font-bold text-slate-900 pl-4 sm:pl-6">
+                        <span>{subSecMatch[1]} </span>
+                        <span>{renderInlineFormattedText(subSecMatch[2])}</span>
+                    </div>
+                );
+                return;
+            }
+
+            // Sub-points like "(1) ..."
+            const parenSubMatch = trimmed.match(/^\(([0-9]+)\)\s*(.*)$/u);
+            if (parenSubMatch) {
+                flushParagraph(index);
+                const subNum = parenSubMatch[1];
+                const rest = parenSubMatch[2];
+                const colonIndex = rest.indexOf(':');
+                let label = '';
+                let body = rest;
+                if (colonIndex !== -1 && colonIndex < 80) {
+                    label = rest.slice(0, colonIndex + 1);
+                    body = rest.slice(colonIndex + 1).trim();
+                }
+
+                elements.push(
+                    <div key={`subnum-${index}`} className="flex items-start pl-8 sm:pl-12 my-2 text-justify leading-relaxed">
+                        <span className="shrink-0 font-bold mr-2 text-slate-900">({subNum})</span>
+                        <div className="flex-1 text-slate-800">
+                            {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
+                            <span>{renderInlineFormattedText(body)}</span>
+                        </div>
+                    </div>
+                );
+                return;
+            }
+
+            // Bullet or dash like "- ..."
+            const bulletMatch = trimmed.match(/^[-•]\s*(.*)$/u);
+            if (bulletMatch) {
+                flushParagraph(index);
+                const rest = bulletMatch[1];
+                const colonIndex = rest.indexOf(':');
+                let label = '';
+                let body = rest;
+                if (colonIndex !== -1 && colonIndex < 60) {
+                    label = rest.slice(0, colonIndex + 1);
+                    body = rest.slice(colonIndex + 1).trim();
+                }
+                elements.push(
+                    <div key={`bullet-${index}`} className="flex items-start pl-10 sm:pl-14 my-1.5 text-justify leading-relaxed">
+                        <span className="shrink-0 w-4 font-bold text-slate-700">-</span>
+                        <div className="flex-1 text-slate-800">
+                            {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
+                            <span>{renderInlineFormattedText(body)}</span>
+                        </div>
+                    </div>
+                );
+                return;
+            }
+
+            // Numbered list item e.g. "1. ..." with hanging indent
+            const numListMatch = trimmed.match(/^(\d+)\.\s+(.+)$/u);
+            if (numListMatch) {
+                flushParagraph(index);
+                const num = numListMatch[1];
+                const rest = numListMatch[2];
+                elements.push(
+                    <div key={`num-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                        <span className="shrink-0 w-7 font-bold text-slate-900">{num}.</span>
+                        <span className="flex-1 text-slate-800">{renderInlineFormattedText(rest)}</span>
+                    </div>
+                );
+                return;
+            }
+
+            // Sub-items like "1) ..."
+            const itemParenMatch = trimmed.match(/^(\d+\))\s*(.+)$/u);
+            if (itemParenMatch) {
+                flushParagraph(index);
+                const numPart = itemParenMatch[1];
+                const contentPart = itemParenMatch[2];
+
+                const colonIndex = contentPart.indexOf(':');
+                if (colonIndex !== -1 && colonIndex < 80) {
+                    const label = contentPart.slice(0, colonIndex + 1);
+                    const body = contentPart.slice(colonIndex + 1).trim();
+                    if (body) {
+                        elements.push(
+                            <div key={`itemp-${index}`} className="mt-3.5 mb-2 pl-4 sm:pl-6 text-justify leading-relaxed">
+                                <span className="font-bold text-slate-900">{numPart} {label} </span>
+                                <span className="text-slate-800">{renderInlineFormattedText(body)}</span>
+                            </div>
+                        );
+                    } else {
+                        elements.push(
+                            <div key={`itemp-${index}`} className="mt-4 mb-2 pl-4 sm:pl-6 font-bold text-slate-900">
+                                <span>{numPart} {label}</span>
+                            </div>
+                        );
+                    }
+                } else {
+                    elements.push(
+                        <div key={`itemp-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                            <span className="shrink-0 w-7 font-bold text-slate-900">{numPart}</span>
+                            <span className="flex-1 text-slate-800">{renderInlineFormattedText(contentPart)}</span>
+                        </div>
+                    );
+                }
+                return;
+            }
+
+            currentParagraphLines.push(trimmed);
+        });
+
+        flushParagraph(lines.length);
+
+        return <div className="space-y-1">{elements}</div>;
+    };
+
     // Helper to format objectives array
     const rawObjectives = Array.isArray(project.objectives) ? project.objectives : (project.objectives ? [project.objectives] : []);
     const rawBenefits = Array.isArray(project.expected_benefits) ? project.expected_benefits : (project.expected_benefits ? [project.expected_benefits] : []);
@@ -372,10 +542,10 @@ export default function PrintChapter1({ project }) {
                     <h1 className="print-title tracking-wide text-black">บทนำ</h1>
                 </div>
 
-                {/* If full custom content is provided, display it directly */}
+                {/* If full custom content is provided, display it directly with academic parsing */}
                 {fullContent ? (
-                    <div className="space-y-6 text-black whitespace-pre-wrap leading-relaxed text-justify">
-                        {toArabicNumerals(fullContent)}
+                    <div className="space-y-4 text-black">
+                        {renderAcademicSection(fullContent, 'บทที่ 1')}
                     </div>
                 ) : (
                     <div className="space-y-6 text-black leading-relaxed">
@@ -385,8 +555,11 @@ export default function PrintChapter1({ project }) {
                             <h3 className="print-heading text-black mb-2">
                                 1.1 ความเป็นมาและความสำคัญของปัญหา
                             </h3>
-                            <div className="text-justify thai-indent whitespace-pre-wrap leading-relaxed">
-                                {toArabicNumerals(safeString(sections.background) || safeString(project.background_rationale) || 'ไม่ได้ระบุความเป็นมาและความสำคัญของปัญหา')}
+                            <div>
+                                {renderAcademicSection(
+                                    safeString(sections.background) || safeString(project.background_rationale) || 'ไม่ได้ระบุความเป็นมาและความสำคัญของปัญหา',
+                                    '1.1'
+                                )}
                             </div>
                         </div>
 
@@ -397,7 +570,7 @@ export default function PrintChapter1({ project }) {
                             </h3>
                             <div className="space-y-1.5">
                                 {sections.objectives ? (
-                                    <div className="whitespace-pre-wrap thai-indent leading-relaxed">{toArabicNumerals(safeString(sections.objectives))}</div>
+                                    renderAcademicSection(safeString(sections.objectives), '1.2')
                                 ) : rawObjectives.length > 0 ? (
                                     rawObjectives.map((obj, idx) => (
                                         <div key={idx} className="flex items-start pl-6 sm:pl-8 my-1.5 text-justify leading-relaxed">
@@ -412,49 +585,58 @@ export default function PrintChapter1({ project }) {
                         </div>
 
                         {/* 1.3 ขอบเขตของโครงการ */}
-                        <div className="print-break-inside-avoid space-y-3">
+                        <div className="print-break-inside-avoid space-y-4">
                             <h3 className="print-heading text-black mb-1">
                                 1.3 ขอบเขตของโครงการ
                             </h3>
 
                             {/* 1.3.1 ประชากรและกลุ่มเป้าหมาย */}
-                            <div className="pl-4">
+                            <div className="pl-2 sm:pl-4">
                                 <h4 className="font-bold text-black mb-1">
                                     1.3.1 ขอบเขตด้านประชากรและกลุ่มเป้าหมาย
                                 </h4>
-                                <div className="thai-indent whitespace-pre-wrap">
-                                    {toArabicNumerals(safeString(sections.scope_target) || (
-                                        rawTargets.length > 0
-                                            ? rawTargets.map(t => safeString(t)).filter(Boolean).join(', ')
-                                            : 'นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษาที่เกี่ยวข้อง'
-                                    ))}
+                                <div>
+                                    {renderAcademicSection(
+                                        safeString(sections.scope_target) || (
+                                            rawTargets.length > 0
+                                                ? rawTargets.map(t => safeString(t)).filter(Boolean).join(', ')
+                                                : 'นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษาที่เกี่ยวข้อง'
+                                        ),
+                                        '1.3.1'
+                                    )}
                                 </div>
                             </div>
 
                             {/* 1.3.2 ด้านเนื้อหาและกิจกรรม */}
-                            <div className="pl-4">
+                            <div className="pl-2 sm:pl-4">
                                 <h4 className="font-bold text-black mb-1">
                                     1.3.2 ขอบเขตด้านเนื้อหาและกิจกรรมการดำเนินงาน
                                 </h4>
-                                <div className="thai-indent whitespace-pre-wrap">
-                                    {toArabicNumerals(safeString(sections.scope_content) || (
-                                        rawActivities.length > 0
-                                            ? rawActivities.map((a, i) => `${toArabicNumerals(i + 1)}. ${safeString(a)}`).join('\n')
-                                            : 'ดำเนินงานตามกิจกรรมและขั้นตอนการดำเนินงานที่ระบุไว้ในแผนปฏิบัติการ'
-                                    ))}
+                                <div>
+                                    {renderAcademicSection(
+                                        safeString(sections.scope_content) || (
+                                            rawActivities.length > 0
+                                                ? rawActivities.map((a, i) => `${toArabicNumerals(i + 1)}. ${safeString(a)}`).join('\n')
+                                                : 'ดำเนินงานตามกิจกรรมและขั้นตอนการดำเนินงานที่ระบุไว้ในแผนปฏิบัติการ'
+                                        ),
+                                        '1.3.2'
+                                    )}
                                 </div>
                             </div>
 
                             {/* 1.3.3 ด้านสถานที่และระยะเวลา */}
-                            <div className="pl-4">
+                            <div className="pl-2 sm:pl-4">
                                 <h4 className="font-bold text-black mb-1">
                                     1.3.3 ขอบเขตด้านสถานที่และระยะเวลาดำเนินการ
                                 </h4>
-                                <div className="thai-indent">
-                                    {toArabicNumerals(safeString(sections.scope_location_time) || (
-                                        `สถานที่ดำเนินโครงการ: ${project.location || 'วิทยาลัยสารพัดช่างน่าน'} ` +
-                                        (project.start_date ? `ระยะเวลาตั้งแต่วันที่ ${toArabicNumerals(project.start_date)} ถึง ${toArabicNumerals(project.end_date || project.start_date)}` : '')
-                                    ))}
+                                <div>
+                                    {renderAcademicSection(
+                                        safeString(sections.scope_location_time) || (
+                                            `สถานที่ดำเนินโครงการ: ${project.location || 'วิทยาลัยสารพัดช่างน่าน'} ` +
+                                            (project.start_date ? `ระยะเวลาตั้งแต่วันที่ ${toArabicNumerals(project.start_date)} ถึง ${toArabicNumerals(project.end_date || project.start_date)}` : '')
+                                        ),
+                                        '1.3.3'
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -464,17 +646,17 @@ export default function PrintChapter1({ project }) {
                             <h3 className="print-heading text-black mb-2">
                                 1.4 ตัวชี้วัดและเป้าหมายความสำเร็จ
                             </h3>
-                            <div className="space-y-2 pl-4">
-                                <div>
-                                    <span className="font-bold">1.4.1 ตัวชี้วัดเชิงปริมาณ: </span>
-                                    <span>
+                            <div className="space-y-2 pl-2 sm:pl-4">
+                                <div className="flex items-start pl-6 sm:pl-8 my-1 text-justify leading-relaxed">
+                                    <span className="font-bold shrink-0 w-28 sm:w-32">1.4.1 ตัวชี้วัดเชิงปริมาณ:</span>
+                                    <span className="flex-1">
                                         {toArabicNumerals(safeString(sections.indicators_quantitative) || 
                                          safeString(project.indicators?.quantitative) || 'ผู้เข้าร่วมโครงการไม่น้อยกว่าร้อยละ 80 ของกลุ่มเป้าหมาย')}
                                     </span>
                                 </div>
-                                <div>
-                                    <span className="font-bold">1.4.2 ตัวชี้วัดเชิงคุณภาพ: </span>
-                                    <span>
+                                <div className="flex items-start pl-6 sm:pl-8 my-1 text-justify leading-relaxed">
+                                    <span className="font-bold shrink-0 w-28 sm:w-32">1.4.2 ตัวชี้วัดเชิงคุณภาพ:</span>
+                                    <span className="flex-1">
                                         {toArabicNumerals(safeString(sections.indicators_qualitative) || 
                                          safeString(project.indicators?.qualitative) || 'ผู้เข้าร่วมโครงการมีความพึงพอใจในระดับดีขึ้นไป (ค่าเฉลี่ย 3.51 ขึ้นไป)')}
                                     </span>
@@ -489,7 +671,7 @@ export default function PrintChapter1({ project }) {
                             </h3>
                             <div className="space-y-1.5">
                                 {sections.benefits || sections.expected_benefits ? (
-                                    <div className="whitespace-pre-wrap thai-indent leading-relaxed">{toArabicNumerals(safeString(sections.benefits || sections.expected_benefits))}</div>
+                                    renderAcademicSection(safeString(sections.benefits || sections.expected_benefits), '1.5')
                                 ) : rawBenefits.length > 0 ? (
                                     rawBenefits.map((b, idx) => (
                                         <div key={idx} className="flex items-start pl-6 sm:pl-8 my-1.5 text-justify leading-relaxed">
@@ -509,8 +691,8 @@ export default function PrintChapter1({ project }) {
                                 <h3 className="print-heading text-black mb-2">
                                     1.6 นิยามศัพท์เฉพาะ
                                 </h3>
-                                <div className="text-justify thai-indent whitespace-pre-wrap">
-                                    {toArabicNumerals(safeString(sections.definitions))}
+                                <div>
+                                    {renderAcademicSection(safeString(sections.definitions), '1.6')}
                                 </div>
                             </div>
                         )}

@@ -147,6 +147,176 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
     const chapter1Comparison = surveyStats?.chapter1Comparison || null;
     const totalResponses = surveyStats?.totalResponses || 0;
 
+    // Helper to render inline markdown formatting such as **bold**
+    const renderInlineFormattedText = (str) => {
+        if (!str) return null;
+        const parts = str.split(/(\*\*[^*]+\*\*)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+            }
+            return part;
+        });
+    };
+
+    // Academic section renderer that parses headings, hanging indent lists, and sub-points
+    const renderAcademicSection = (rawContent, sectionPrefix = '') => {
+        if (!rawContent) return null;
+        let text = toArabicNumerals(rawContent);
+
+        const headingPattern = new RegExp(`^(?:#*\\s*)?(?:${sectionPrefix}|4\\.[1-5])\\s*[^\\n]*\\n*`, 'u');
+        text = text.replace(headingPattern, '').trim();
+
+        const lines = text.split(/\r?\n/);
+        const elements = [];
+        let currentParagraphLines = [];
+
+        const flushParagraph = (key) => {
+            if (currentParagraphLines.length > 0) {
+                const pText = currentParagraphLines.join(' ').trim();
+                if (pText) {
+                    elements.push(
+                        <p
+                            key={`p-${key}`}
+                            className="thai-content thai-indent my-2.5 text-justify leading-relaxed"
+                        >
+                            {renderInlineFormattedText(pText)}
+                        </p>
+                    );
+                }
+                currentParagraphLines = [];
+            }
+        };
+
+        lines.forEach((line, index) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                flushParagraph(index);
+                return;
+            }
+
+            // Sub-heading e.g. "4.1.1 ..."
+            const subSecMatch = trimmed.match(/^(?:#*\s*)?(4\.\d+\.\d+)\s*(.*)$/u);
+            if (subSecMatch) {
+                flushParagraph(index);
+                elements.push(
+                    <div key={`subsec-${index}`} className="mt-4 mb-2 font-bold text-slate-900 pl-4 sm:pl-6">
+                        <span>{subSecMatch[1]} </span>
+                        <span>{renderInlineFormattedText(subSecMatch[2])}</span>
+                    </div>
+                );
+                return;
+            }
+
+            // Sub-points like "(1) ..."
+            const parenSubMatch = trimmed.match(/^\(([0-9]+)\)\s*(.*)$/u);
+            if (parenSubMatch) {
+                flushParagraph(index);
+                const subNum = parenSubMatch[1];
+                const rest = parenSubMatch[2];
+                const colonIndex = rest.indexOf(':');
+                let label = '';
+                let body = rest;
+                if (colonIndex !== -1 && colonIndex < 80) {
+                    label = rest.slice(0, colonIndex + 1);
+                    body = rest.slice(colonIndex + 1).trim();
+                }
+
+                elements.push(
+                    <div key={`subnum-${index}`} className="flex items-start pl-8 sm:pl-12 my-2 text-justify leading-relaxed">
+                        <span className="shrink-0 font-bold mr-2 text-slate-900">({subNum})</span>
+                        <div className="flex-1 text-slate-800">
+                            {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
+                            <span>{renderInlineFormattedText(body)}</span>
+                        </div>
+                    </div>
+                );
+                return;
+            }
+
+            // Bullet or dash like "- ..."
+            const bulletMatch = trimmed.match(/^[-•]\s*(.*)$/u);
+            if (bulletMatch) {
+                flushParagraph(index);
+                const rest = bulletMatch[1];
+                const colonIndex = rest.indexOf(':');
+                let label = '';
+                let body = rest;
+                if (colonIndex !== -1 && colonIndex < 60) {
+                    label = rest.slice(0, colonIndex + 1);
+                    body = rest.slice(colonIndex + 1).trim();
+                }
+                elements.push(
+                    <div key={`bullet-${index}`} className="flex items-start pl-10 sm:pl-14 my-1.5 text-justify leading-relaxed">
+                        <span className="shrink-0 w-4 font-bold text-slate-700">-</span>
+                        <div className="flex-1 text-slate-800">
+                            {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
+                            <span>{renderInlineFormattedText(body)}</span>
+                        </div>
+                    </div>
+                );
+                return;
+            }
+
+            // Numbered list item e.g. "1. ..." with hanging indent
+            const numListMatch = trimmed.match(/^(\d+)\.\s+(.+)$/u);
+            if (numListMatch) {
+                flushParagraph(index);
+                const num = numListMatch[1];
+                const rest = numListMatch[2];
+                elements.push(
+                    <div key={`num-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                        <span className="shrink-0 w-7 font-bold text-slate-900">{num}.</span>
+                        <span className="flex-1 text-slate-800">{renderInlineFormattedText(rest)}</span>
+                    </div>
+                );
+                return;
+            }
+
+            // Sub-items like "1) ..."
+            const itemParenMatch = trimmed.match(/^(\d+\))\s*(.+)$/u);
+            if (itemParenMatch) {
+                flushParagraph(index);
+                const numPart = itemParenMatch[1];
+                const contentPart = itemParenMatch[2];
+
+                const colonIndex = contentPart.indexOf(':');
+                if (colonIndex !== -1 && colonIndex < 80) {
+                    const label = contentPart.slice(0, colonIndex + 1);
+                    const body = contentPart.slice(colonIndex + 1).trim();
+                    if (body) {
+                        elements.push(
+                            <div key={`itemp-${index}`} className="mt-3.5 mb-2 pl-4 sm:pl-6 text-justify leading-relaxed">
+                                <span className="font-bold text-slate-900">{numPart} {label} </span>
+                                <span className="text-slate-800">{renderInlineFormattedText(body)}</span>
+                            </div>
+                        );
+                    } else {
+                        elements.push(
+                            <div key={`itemp-${index}`} className="mt-4 mb-2 pl-4 sm:pl-6 font-bold text-slate-900">
+                                <span>{numPart} {label}</span>
+                            </div>
+                        );
+                    }
+                } else {
+                    elements.push(
+                        <div key={`itemp-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                            <span className="shrink-0 w-7 font-bold text-slate-900">{numPart}</span>
+                            <span className="flex-1 text-slate-800">{renderInlineFormattedText(contentPart)}</span>
+                        </div>
+                    );
+                }
+                return;
+            }
+
+            currentParagraphLines.push(trimmed);
+        });
+
+        flushParagraph(lines.length);
+
+        return <div className="space-y-1">{elements}</div>;
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
             <Head>
@@ -310,20 +480,18 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
                 </div>
 
                 {/* Introductory Lead */}
-                <div className="thai-content thai-indent mb-6">
-                    {toArabicNumerals(`การดำเนินงานโครงการ "${project.title}" ประจำปีการศึกษา ${toArabicNumerals(project.academic_year)} ของ${project.location || 'วิทยาลัยสารพัดช่างน่าน'} ได้ดำเนินการเสร็จสิ้นเรียบร้อยตามวัตถุประสงค์และกรอบแผนงานที่กำหนด คณะทำงานขอเสนอรายงานผลการวิเคราะห์ข้อมูลและผลสัมฤทธิ์ของการดำเนินโครงการตามวงจรบริหารงานคุณภาพ PDCA ดังมีรายละเอียดตามลำดับต่อไปนี้`)}
+                <div className="mb-6">
+                    {renderAcademicSection(`การดำเนินงานโครงการ "${project.title}" ประจำปีการศึกษา ${toArabicNumerals(project.academic_year)} ของ${project.location || 'วิทยาลัยสารพัดช่างน่าน'} ได้ดำเนินการเสร็จสิ้นเรียบร้อยตามวัตถุประสงค์และกรอบแผนงานที่กำหนด คณะทำงานขอเสนอรายงานผลการวิเคราะห์ข้อมูลและผลสัมฤทธิ์ของการดำเนินโครงการตามวงจรบริหารงานคุณภาพ PDCA ดังมีรายละเอียดตามลำดับต่อไปนี้`)}
                 </div>
 
                 {/* 4.1 ผลการวิเคราะห์ข้อมูลทั่วไป */}
                 <div className="mb-6 space-y-3">
-                    <h3 className="print-heading font-bold">
+                    <h3 className="print-heading font-bold mb-2">
                         4.1 ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบประเมิน
                     </h3>
-                    <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {toArabicNumerals(sections.section_4_1 || (
-                            `การนำเสนอข้อมูลทั่วไปของผู้ตอบแบบประเมินความพึงพอใจโครงการ "${project.title}" ได้ดำเนินการรวบรวมข้อมูลจากกลุ่มตัวอย่างและผู้เข้าร่วมโครงการทั้งหมดจำนวน ${toArabicNumerals(totalResponses)} คน โดยจำแนกตามเพศ ระดับการศึกษา และสถานะของผู้ตอบแบบประเมิน ดังแสดงในตารางที่ 4.0`
-                        ))}
-                    </div>
+                    {renderAcademicSection(sections.section_4_1 || (
+                        `การนำเสนอข้อมูลทั่วไปของผู้ตอบแบบประเมินความพึงพอใจโครงการ "${project.title}" ได้ดำเนินการรวบรวมข้อมูลจากกลุ่มตัวอย่างและผู้เข้าร่วมโครงการทั้งหมดจำนวน ${toArabicNumerals(totalResponses)} คน โดยจำแนกตามเพศ ระดับการศึกษา และสถานะของผู้ตอบแบบประเมิน ดังแสดงในตารางที่ 4.0`
+                    ), '4\\.1')}
 
                     {/* Table 4.0 Demographics */}
                     {totalResponses > 0 && demographicStats && (
@@ -378,26 +546,22 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
 
                 {/* 4.2 ผลการดำเนินงานตามตัวชี้วัดเชิงปริมาณ */}
                 <div className="mb-6 space-y-3">
-                    <h3 className="print-heading font-bold">
+                    <h3 className="print-heading font-bold mb-2">
                         4.2 ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ
                     </h3>
-                    <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {toArabicNumerals(sections.section_4_2 || (
-                            `โครงการได้กำหนดเป้าหมายเชิงปริมาณในบทที่ 1 โดยมุ่งเน้นให้กลุ่มเป้าหมายเข้าร่วมกิจกรรมไม่น้อยกว่าที่กำหนด จากผลการดำเนินงานปรากฏว่ามีผู้เข้าร่วมกิจกรรมทั้งสิ้น ${toArabicNumerals(totalResponses)} คน คิดเป็นร้อยละ 100.0 ซึ่งถือว่าบรรลุเป้าหมายเชิงปริมาณตามแผนงานที่กำหนดไว้อย่างครบถ้วน`
-                        ))}
-                    </div>
+                    {renderAcademicSection(sections.section_4_2 || (
+                        `โครงการได้กำหนดเป้าหมายเชิงปริมาณในบทที่ 1 โดยมุ่งเน้นให้กลุ่มเป้าหมายเข้าร่วมกิจกรรมไม่น้อยกว่าที่กำหนด จากผลการดำเนินงานปรากฏว่ามีผู้เข้าร่วมกิจกรรมทั้งสิ้น ${toArabicNumerals(totalResponses)} คน คิดเป็นร้อยละ 100.0 ซึ่งถือว่าบรรลุเป้าหมายเชิงปริมาณตามแผนงานที่กำหนดไว้อย่างครบถ้วน`
+                    ), '4\\.2')}
                 </div>
 
                 {/* 4.3 ผลการประเมินความพึงพอใจเชิงคุณภาพ */}
                 <div className="mb-6 space-y-3">
-                    <h3 className="print-heading font-bold">
+                    <h3 className="print-heading font-bold mb-2">
                         4.3 ผลการประเมินความพึงพอใจเชิงคุณภาพต่อการดำเนินโครงการ
                     </h3>
-                    <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {toArabicNumerals(sections.section_4_3 || (
-                            `ผลการวิเคราะห์ระดับความพึงพอใจของผู้เข้าร่วมโครงการที่มีต่อโครงการ "${project.title}" จำแนกตามกรอบการประเมิน 4 ด้าน และภาพรวมทั้งโครงการตามเกณฑ์ของ Best (1977) พบว่า ในภาพรวมผู้เข้าร่วมโครงการมีความพึงพอใจอยู่ในระดับ${surveyStats?.overallLevel || 'มากที่สุด'} (X̄ = ${toArabicNumerals(Number(surveyStats?.overallMean || 0).toFixed(2))}, S.D. = ${toArabicNumerals(Number(surveyStats?.overallSd || 0).toFixed(2))}) ดังแสดงในตารางที่ 4.1`
-                        ))}
-                    </div>
+                    {renderAcademicSection(sections.section_4_3 || (
+                        `ผลการวิเคราะห์ระดับความพึงพอใจของผู้เข้าร่วมโครงการที่มีต่อโครงการ "${project.title}" จำแนกตามกรอบการประเมิน 4 ด้าน และภาพรวมทั้งโครงการตามเกณฑ์ของ Best (1977) พบว่า ในภาพรวมผู้เข้าร่วมโครงการมีความพึงพอใจอยู่ในระดับ${surveyStats?.overallLevel || 'มากที่สุด'} (X̄ = ${toArabicNumerals(Number(surveyStats?.overallMean || 0).toFixed(2))}, S.D. = ${toArabicNumerals(Number(surveyStats?.overallSd || 0).toFixed(2))}) ดังแสดงในตารางที่ 4.1`
+                    ), '4\\.3')}
 
                     {/* Table 4.1 Satisfaction Table */}
                     {questionsStats.length > 0 && (
@@ -490,32 +654,48 @@ export default function PrintChapter4({ project, survey, surveyStats }) {
 
                 {/* 4.4 ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณ */}
                 <div className="mb-6 space-y-3">
-                    <h3 className="print-heading font-bold">
+                    <h3 className="print-heading font-bold mb-2">
                         4.4 ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน
                     </h3>
-                    <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {toArabicNumerals(sections.section_4_4 || (
-                            `โครงการได้รับการจัดสรรงบประมาณดำเนินงานตามแผนปฏิบัติการประจำปีงบประมาณ พ.ศ. ${toArabicNumerals(project.academic_year)} การเบิกจ่ายงบประมาณเป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 อย่างถูกต้อง โปร่งใส ประหยัด และเกิดความคุ้มค่าสูงสุด`
-                        ))}
-                    </div>
+                    {renderAcademicSection(sections.section_4_4 || (
+                        `โครงการได้รับการจัดสรรงบประมาณดำเนินงานตามแผนปฏิบัติการประจำปีงบประมาณ พ.ศ. ${toArabicNumerals(project.academic_year)} การเบิกจ่ายงบประมาณเป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 อย่างถูกต้อง โปร่งใส ประหยัด และเกิดความคุ้มค่าสูงสุด`
+                    ), '4\\.4')}
                 </div>
 
                 {/* 4.5 การสังเคราะห์ผลลัพธ์ย้อนกลับสู่บทที่ 1 */}
                 {chapter1Comparison && (
                     <div className="mb-6 space-y-3">
-                        <h3 className="print-heading font-bold">
+                        <h3 className="print-heading font-bold mb-2">
                             4.5 การสังเคราะห์ผลการประเมินเปรียบเทียบกับเป้าหมายตามบทที่ 1
                         </h3>
-                        <div className="thai-content space-y-2">
-                            <p className="thai-indent">
-                                <strong>1) ด้านการตอบโจทย์วัตถุประสงค์ของโครงการ:</strong> {toArabicNumerals(chapter1Comparison.objectiveFulfillment?.summary)}
-                            </p>
-                            <p className="thai-indent">
-                                <strong>2) ด้านการตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ:</strong> {toArabicNumerals(chapter1Comparison.benefitRealization?.summary)}
-                            </p>
-                            <p className="thai-indent">
-                                <strong>3) ด้านการตอบโจทย์ตัวชี้วัดความสำเร็จ (KPIs):</strong> {toArabicNumerals(chapter1Comparison.kpiAchievement?.summary)}
-                            </p>
+                        <div className="space-y-2">
+                            {chapter1Comparison.objectiveFulfillment?.summary && (
+                                <div className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                                    <span className="shrink-0 w-7 font-bold text-slate-900">1)</span>
+                                    <div className="flex-1 text-slate-800">
+                                        <strong className="font-bold text-slate-900 mr-1">ด้านการตอบโจทย์วัตถุประสงค์ของโครงการ:</strong>
+                                        <span>{renderInlineFormattedText(toArabicNumerals(chapter1Comparison.objectiveFulfillment.summary))}</span>
+                                    </div>
+                                </div>
+                            )}
+                            {chapter1Comparison.benefitRealization?.summary && (
+                                <div className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                                    <span className="shrink-0 w-7 font-bold text-slate-900">2)</span>
+                                    <div className="flex-1 text-slate-800">
+                                        <strong className="font-bold text-slate-900 mr-1">ด้านการตอบโจทย์ประโยชน์ที่คาดว่าจะได้รับ:</strong>
+                                        <span>{renderInlineFormattedText(toArabicNumerals(chapter1Comparison.benefitRealization.summary))}</span>
+                                    </div>
+                                </div>
+                            )}
+                            {chapter1Comparison.kpiAchievement?.summary && (
+                                <div className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                                    <span className="shrink-0 w-7 font-bold text-slate-900">3)</span>
+                                    <div className="flex-1 text-slate-800">
+                                        <strong className="font-bold text-slate-900 mr-1">ด้านการตอบโจทย์ตัวชี้วัดความสำเร็จ (KPIs):</strong>
+                                        <span>{renderInlineFormattedText(toArabicNumerals(chapter1Comparison.kpiAchievement.summary))}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
