@@ -20,10 +20,186 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
     };
 
     const fontStyles = {
-        compact: { docSize: '14px', lineHeight: '1.45', titleSize: '18px', headingSize: '15px' },
-        normal: { docSize: '15px', lineHeight: '1.5', titleSize: '20px', headingSize: '16px' },
-        large: { docSize: '16.5px', lineHeight: '1.55', titleSize: '22px', headingSize: '17.5px' },
+        compact: { docSize: '14px', lineHeight: '1.6', titleSize: '18px', headingSize: '15px' },
+        normal: { docSize: '15px', lineHeight: '1.68', titleSize: '20px', headingSize: '16px' },
+        large: { docSize: '16.5px', lineHeight: '1.75', titleSize: '22px', headingSize: '17.5px' },
     }[fontSizePreset];
+
+    // Helper to render inline markdown formatting such as **bold**
+    const renderInlineFormattedText = (str) => {
+        if (!str) return null;
+        const parts = str.split(/(\*\*[^*]+\*\*)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+                return <strong key={i} className="font-bold text-slate-900">{part.slice(2, -2)}</strong>;
+            }
+            return part;
+        });
+    };
+
+    // Academic section renderer that parses headings, hanging indent lists, and sub-points
+    const renderAcademicSection = (rawContent, sectionPrefix = '') => {
+        if (!rawContent) return null;
+        let text = toArabicNumerals(rawContent);
+
+        // 1. Strip redundant heading at the very beginning of the section
+        // e.g. "5.1 สรุปผลการดำเนินโครงการ", "5.2 การอภิปรายผล...", "5.3...", "5.4...", or markdown "# 5.1 ..."
+        const headingPattern = new RegExp(`^(?:#*\\s*)?(?:${sectionPrefix}|5\\.[1-4])\\s*[^\\n]*\\n*`, 'u');
+        text = text.replace(headingPattern, '').trim();
+
+        // 2. Split lines
+        const lines = text.split(/\r?\n/);
+        const elements = [];
+        let currentParagraphLines = [];
+
+        const flushParagraph = (key) => {
+            if (currentParagraphLines.length > 0) {
+                const pText = currentParagraphLines.join(' ').trim();
+                if (pText) {
+                    elements.push(
+                        <p
+                            key={`p-${key}`}
+                            className="thai-content thai-indent my-2.5 text-justify leading-relaxed"
+                        >
+                            {renderInlineFormattedText(pText)}
+                        </p>
+                    );
+                }
+                currentParagraphLines = [];
+            }
+        };
+
+        lines.forEach((line, index) => {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                flushParagraph(index);
+                return;
+            }
+
+            // Sub-heading e.g. "5.4.1 ข้อเสนอแนะในการนำผลไปใช้ประโยชน์:"
+            const subSecMatch = trimmed.match(/^(?:#*\s*)?(5\.\d+\.\d+)\s*(.*)$/u);
+            if (subSecMatch) {
+                flushParagraph(index);
+                elements.push(
+                    <div key={`subsec-${index}`} className="mt-5 mb-2.5 font-bold text-slate-900 pl-4 sm:pl-6">
+                        <span>{subSecMatch[1]} </span>
+                        <span>{renderInlineFormattedText(subSecMatch[2])}</span>
+                    </div>
+                );
+                return;
+            }
+
+            // Sub-points like "(1) ความสอดคล้องกับความต้องการ..."
+            const parenSubMatch = trimmed.match(/^\(([0-9]+)\)\s*(.*)$/u);
+            if (parenSubMatch) {
+                flushParagraph(index);
+                const subNum = parenSubMatch[1];
+                const rest = parenSubMatch[2];
+                const colonIndex = rest.indexOf(':');
+                let label = '';
+                let body = rest;
+                if (colonIndex !== -1 && colonIndex < 80) {
+                    label = rest.slice(0, colonIndex + 1);
+                    body = rest.slice(colonIndex + 1).trim();
+                }
+
+                elements.push(
+                    <div key={`subnum-${index}`} className="flex items-start pl-8 sm:pl-12 my-2 text-justify leading-relaxed">
+                        <span className="shrink-0 font-bold mr-2 text-slate-900">({subNum})</span>
+                        <div className="flex-1 text-slate-800">
+                            {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
+                            <span>{renderInlineFormattedText(body)}</span>
+                        </div>
+                    </div>
+                );
+                return;
+            }
+
+            // Bullet or dash like "- ปัญหา/อุปสรรค: ..."
+            const bulletMatch = trimmed.match(/^[-•]\s*(.*)$/u);
+            if (bulletMatch) {
+                flushParagraph(index);
+                const rest = bulletMatch[1];
+                const colonIndex = rest.indexOf(':');
+                let label = '';
+                let body = rest;
+                if (colonIndex !== -1 && colonIndex < 60) {
+                    label = rest.slice(0, colonIndex + 1);
+                    body = rest.slice(colonIndex + 1).trim();
+                }
+                elements.push(
+                    <div key={`bullet-${index}`} className="flex items-start pl-10 sm:pl-14 my-1.5 text-justify leading-relaxed">
+                        <span className="shrink-0 w-4 font-bold text-slate-700">-</span>
+                        <div className="flex-1 text-slate-800">
+                            {label && <strong className="font-bold text-slate-900 mr-1">{label}</strong>}
+                            <span>{renderInlineFormattedText(body)}</span>
+                        </div>
+                    </div>
+                );
+                return;
+            }
+
+            // Numbered list item e.g. "1. เพื่อส่งเสริม..." with hanging indent
+            const numListMatch = trimmed.match(/^(\d+)\.\s+(.+)$/u);
+            if (numListMatch) {
+                flushParagraph(index);
+                const num = numListMatch[1];
+                const rest = numListMatch[2];
+                elements.push(
+                    <div key={`num-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                        <span className="shrink-0 w-7 font-bold text-slate-900">{num}.</span>
+                        <span className="flex-1 text-slate-800">{renderInlineFormattedText(rest)}</span>
+                    </div>
+                );
+                return;
+            }
+
+            // Main sub-items like "1) วัตถุประสงค์ของโครงการ:" or "1) ควรสนับสนุน..."
+            const itemParenMatch = trimmed.match(/^(\d+\))\s*(.+)$/u);
+            if (itemParenMatch) {
+                flushParagraph(index);
+                const numPart = itemParenMatch[1];
+                const contentPart = itemParenMatch[2];
+
+                const colonIndex = contentPart.indexOf(':');
+                if (colonIndex !== -1 && colonIndex < 80) {
+                    // It has a colon like "1) วัตถุประสงค์ของโครงการ:" or "2) ผลการดำเนินงานเชิงปริมาณ: จากผล..."
+                    const label = contentPart.slice(0, colonIndex + 1);
+                    const body = contentPart.slice(colonIndex + 1).trim();
+                    if (body) {
+                        elements.push(
+                            <div key={`itemp-${index}`} className="mt-3.5 mb-2 pl-4 sm:pl-6 text-justify leading-relaxed">
+                                <span className="font-bold text-slate-900">{numPart} {label} </span>
+                                <span className="text-slate-800">{renderInlineFormattedText(body)}</span>
+                            </div>
+                        );
+                    } else {
+                        elements.push(
+                            <div key={`itemp-${index}`} className="mt-4 mb-2 pl-4 sm:pl-6 font-bold text-slate-900">
+                                <span>{numPart} {label}</span>
+                            </div>
+                        );
+                    }
+                } else {
+                    // It is a list item like "1) ควรสนับสนุนให้ผู้เรียนและบุคลากรนำองค์ความรู้..."
+                    elements.push(
+                        <div key={`itemp-${index}`} className="flex items-start pl-8 sm:pl-10 my-1.5 text-justify leading-relaxed">
+                            <span className="shrink-0 w-7 font-bold text-slate-900">{numPart}</span>
+                            <span className="flex-1 text-slate-800">{renderInlineFormattedText(contentPart)}</span>
+                        </div>
+                    );
+                }
+                return;
+            }
+
+            // Regular paragraph line
+            currentParagraphLines.push(trimmed);
+        });
+
+        flushParagraph(lines.length);
+
+        return <div className="space-y-1">{elements}</div>;
+    };
 
     const getDefaultSection52 = () => {
         const title = project.title || 'โครงการ';
@@ -211,56 +387,54 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
                 </div>
 
                 {/* Introductory Lead */}
-                <div className="thai-content thai-indent mb-6">
+                <div className="thai-content thai-indent mb-7 text-justify leading-relaxed">
                     {toArabicNumerals(sections.intro || (
                         `การดำเนินงานโครงการ "${project.title}" ประจำปีการศึกษา ${toArabicNumerals(project.academic_year)} ของ${project.location || 'วิทยาลัยสารพัดช่างน่าน'} ได้ดำเนินการเสร็จสิ้นสมบูรณ์ตามวัตถุประสงค์และกรอบแผนงานที่กำหนด คณะผู้รับผิดชอบโครงการจึงได้ทำการประมวลผล สรุปผลการดำเนินงาน อภิปรายผล พร้อมทั้งรวบรวมปัญหา อุปสรรค และข้อเสนอแนะในการพัฒนาปรับปรุงสำหรับการดำเนินงานในโอกาสต่อไป โดยมีรายละเอียดดังนี้`
                     ))}
                 </div>
 
                 {/* 5.1 สรุปผลการดำเนินโครงการ */}
-                <div className="mb-6 space-y-2">
-                    <h3 className="print-heading font-bold">
+                <div className="mb-7">
+                    <h3 className="print-heading font-bold mb-3 text-slate-900">
                         5.1 สรุปผลการดำเนินโครงการ
                     </h3>
-                    <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {toArabicNumerals(sections.section_5_1 || (
-                            `การดำเนินงานโครงการ "${project.title}" สามารถสรุปผลการดำเนินงานตามวัตถุประสงค์ ตัวชี้วัด และการใช้จ่ายงบประมาณได้อย่างครบถ้วนสมบูรณ์`
-                        ))}
-                    </div>
+                    {renderAcademicSection(
+                        sections.section_5_1 || `การดำเนินงานโครงการ "${project.title}" สามารถสรุปผลการดำเนินงานตามวัตถุประสงค์ ตัวชี้วัด และการใช้จ่ายงบประมาณได้อย่างครบถ้วนสมบูรณ์`,
+                        '5.1'
+                    )}
                 </div>
 
                 {/* 5.2 การอภิปรายผลการดำเนินโครงการ */}
-                <div className="mb-6 space-y-2">
-                    <h3 className="print-heading font-bold">
+                <div className="mb-7">
+                    <h3 className="print-heading font-bold mb-3 text-slate-900">
                         5.2 การอภิปรายผลการดำเนินโครงการ
                     </h3>
-                    <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {toArabicNumerals(sections.section_5_2 || getDefaultSection52())}
-                    </div>
+                    {renderAcademicSection(
+                        sections.section_5_2 || getDefaultSection52(),
+                        '5.2'
+                    )}
                 </div>
 
                 {/* 5.3 ปัญหา อุปสรรค และแนวทางแก้ไข */}
-                <div className="mb-6 space-y-2">
-                    <h3 className="print-heading font-bold">
+                <div className="mb-7">
+                    <h3 className="print-heading font-bold mb-3 text-slate-900">
                         5.3 ปัญหา อุปสรรค และแนวทางแก้ไข
                     </h3>
-                    <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {toArabicNumerals(sections.section_5_3 || (
-                            `จากการติดตามและประเมินผลการจัดกิจกรรม พบปัญหา อุปสรรค และมีแนวทางแก้ไขที่คณะผู้ดำเนินงานได้แก้ไขปัญหาอย่างมีประสิทธิภาพ`
-                        ))}
-                    </div>
+                    {renderAcademicSection(
+                        sections.section_5_3 || `จากการติดตามและประเมินผลการจัดกิจกรรม พบปัญหา อุปสรรค และมีแนวทางแก้ไขที่คณะผู้ดำเนินงานได้แก้ไขปัญหาอย่างมีประสิทธิภาพ`,
+                        '5.3'
+                    )}
                 </div>
 
                 {/* 5.4 ข้อเสนอแนะ */}
-                <div className="mb-8 space-y-2">
-                    <h3 className="print-heading font-bold">
+                <div className="mb-8">
+                    <h3 className="print-heading font-bold mb-3 text-slate-900">
                         5.4 ข้อเสนอแนะ
                     </h3>
-                    <div className="thai-content thai-indent whitespace-pre-line leading-relaxed">
-                        {toArabicNumerals(sections.section_5_4 || (
-                            `ข้อเสนอแนะในการนำผลไปใช้ประโยชน์ และข้อเสนอแนะสำหรับการจัดทำโครงการครั้งต่อไป`
-                        ))}
-                    </div>
+                    {renderAcademicSection(
+                        sections.section_5_4 || `ข้อเสนอแนะในการนำผลไปใช้ประโยชน์ และข้อเสนอแนะสำหรับการจัดทำโครงการครั้งต่อไป`,
+                        '5.4'
+                    )}
                 </div>
 
                 {/* Signature Block */}
