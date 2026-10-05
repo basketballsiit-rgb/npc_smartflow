@@ -107,12 +107,12 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
                     <div 
                         key={`subsec-${index}`} 
                         className="academic-subheading mt-4 mb-2 font-bold text-slate-900 pl-4 sm:pl-6 text-left flex items-start"
-                        style={{ textAlign: 'left', textJustify: 'auto' }}
+                        style={{ textAlign: 'left', textJustify: 'none' }}
                     >
-                        <span className="shrink-0 mr-2 font-bold text-slate-900" style={{ textAlign: 'left' }}>
+                        <span className="shrink-0 mr-2 font-bold text-slate-900" style={{ textAlign: 'left', textJustify: 'none' }}>
                             {subSecMatch[1]}
                         </span>
-                        <span className="flex-1 text-left font-bold text-slate-900" style={{ textAlign: 'left', textJustify: 'auto' }}>
+                        <span className="flex-1 text-left font-bold text-slate-900" style={{ textAlign: 'left', textJustify: 'none' }}>
                             {renderInlineFormattedText(subSecMatch[2])}
                         </span>
                     </div>
@@ -299,6 +299,11 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
 
         const clone = contentElement.cloneNode(true);
         clone.querySelectorAll('.no-print').forEach(el => el.remove());
+        clone.querySelectorAll('.academic-subheading').forEach(el => {
+            el.setAttribute('align', 'left');
+            el.style.textAlign = 'left';
+            el.style.textJustify = 'none';
+        });
 
         const cleanFilename = (filename || 'รายงานโครงการ').replace(/[\/\\?%*:|"<>]/g, '_');
 
@@ -350,19 +355,23 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
                     h3 {
                         font-size: 16pt;
                         font-weight: bold;
-                        text-align: left;
-                        text-justify: auto;
+                        text-align: left !important;
+                        text-justify: none !important;
                         margin-top: 14pt;
                         margin-bottom: 6pt;
                     }
                     .academic-subheading {
-                        font-size: 16pt;
-                        font-weight: bold;
-                        text-align: left;
-                        text-justify: auto;
+                        font-size: 16pt !important;
+                        font-weight: bold !important;
+                        text-align: left !important;
+                        text-justify: none !important;
                         margin-top: 10pt;
                         margin-bottom: 3pt;
                         padding-left: 0.75cm;
+                    }
+                    .academic-subheading * {
+                        text-align: left !important;
+                        text-justify: none !important;
                     }
                     p {
                         font-size: 16pt;
@@ -381,7 +390,7 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
                     }
                     .text-left {
                         text-align: left !important;
-                        text-justify: auto !important;
+                        text-justify: none !important;
                     }
                     table {
                         border-collapse: collapse;
@@ -497,23 +506,23 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
                     font-weight: bold !important;
                     line-height: 1.4 !important;
                     text-align: left !important;
-                    text-justify: auto !important;
+                    text-justify: none !important;
                 }
 
                 .academic-subheading {
                     text-align: left !important;
-                    text-justify: auto !important;
+                    text-justify: none !important;
                     font-weight: bold !important;
                 }
 
                 .academic-subheading * {
                     text-align: left !important;
-                    text-justify: auto !important;
+                    text-justify: none !important;
                 }
 
                 h1, h2, h3, h4 {
                     text-align: left !important;
-                    text-justify: auto !important;
+                    text-justify: none !important;
                 }
 
                 .print-title {
