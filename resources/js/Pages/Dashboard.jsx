@@ -19677,32 +19677,45 @@ return (
                             <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">5.1</span>
                             สรุปผลการดำเนินโครงการ (Summary of Findings)
                         </label>
-                        <span className="text-[11px] text-slate-400">สรุปตามวัตถุประสงค์ เป้าหมายเชิงปริมาณ และผลประเมินความพึงพอใจ 4 ด้าน</span>
+                        <span className="text-[11px] text-slate-400">สรุปตามวัตถุประสงค์ ผลเชิงปริมาณ (นำยอดเป้าหมายและยอดจริงจากบทที่ 4) และผลประเมินเชิงคุณภาพ</span>
                     </div>
                     <textarea
                         rows={8}
                         value={safeString(chapter5Sections.section_5_1)}
                         onChange={(e) => setChapter5Sections({ ...chapter5Sections, section_5_1: e.target.value })}
                         className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed font-sans"
-                        placeholder="5.1 สรุปผลการดำเนินโครงการ..."
+                        placeholder="5.1 สรุปผลการดำเนินโครงการ (1. วัตถุประสงค์ 2. ผลการดำเนินงานเชิงปริมาณจากบทที่ 4 3. ผลการดำเนินงานเชิงคุณภาพ 4. ผลการเบิกจ่ายงบประมาณ)..."
                     />
                 </div>
 
                 {/* Section 5.2 */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                         <label className="text-xs md:text-sm font-bold text-slate-800 flex items-center gap-2">
                             <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">5.2</span>
                             การอภิปรายผลการดำเนินโครงการ (Discussion of Findings)
                         </label>
-                        <span className="text-[11px] text-slate-400">อภิปรายผลเชื่อมโยงเทียบเคียงกับทฤษฎีและงานวิจัยที่เกี่ยวข้อง (บทที่ 2)</span>
+                        <span className="text-[11px] text-purple-700 font-semibold">นำผลเชิงปริมาณและคุณภาพจากบทที่ 4 มาดำเนินการวิเคราะห์เชิงลึก</span>
                     </div>
+
+                    <div className="p-3.5 bg-purple-50/80 border border-purple-200 rounded-2xl text-xs text-purple-950 space-y-1.5">
+                        <div className="font-bold flex items-center gap-1.5 text-purple-900">
+                            <span>📊</span> แนวทางการนำผลจากบทที่ 4 มาวิเคราะห์ต่อในหัวข้อ 5.2:
+                        </div>
+                        <ul className="list-disc pl-5 space-y-1 text-[11px] text-purple-900 leading-relaxed">
+                            <li><strong>1) การวิเคราะห์ผลเชิงปริมาณ (Quantitative Analysis):</strong> นำยอดผู้เข้าร่วมจริงเทียบเป้าหมายและร้อยละความสำเร็จจากข้อ 4.2 มาวิเคราะห์สาเหตุและปัจจัยความสำเร็จ (เช่น ความสอดคล้องของกลุ่มเป้าหมายในบทที่ 1, การสื่อสารประชาสัมพันธ์ตาม PDCA ในบทที่ 3, และการกระจายตัวของกลุ่มผู้เข้าร่วมตามเพศและระดับการศึกษาจากข้อ 4.1)</li>
+                            <li><strong>2) การวิเคราะห์ผลเชิงคุณภาพ (Qualitative Analysis):</strong> นำผลความพึงพอใจ 4 ด้านจากข้อ 4.3 มาวิเคราะห์เทียบเคียงกับเกณฑ์ Best (1977) และทฤษฎีในบทที่ 2</li>
+                            <li><strong>3) การวิเคราะห์งบประมาณและความคุ้มค่า:</strong> วิเคราะห์ความคุ้มค่า ความประหยัด และประสิทธิภาพตามข้อ 4.4</li>
+                            <li><strong>4) การวิเคราะห์ตามวงจรคุณภาพ PDCA:</strong> วิเคราะห์ตามมาตรฐานของ Deming (1986)</li>
+                        </ul>
+                    </div>
+
                     <textarea
-                        rows={8}
+                        rows={11}
                         value={safeString(chapter5Sections.section_5_2)}
                         onChange={(e) => setChapter5Sections({ ...chapter5Sections, section_5_2: e.target.value })}
                         className="w-full text-xs md:text-sm rounded-2xl border-slate-300 focus:border-purple-500 focus:ring-purple-500 leading-relaxed font-sans"
-                        placeholder="5.2 การอภิปรายผลการดำเนินโครงการ..."
+                        placeholder="5.2 การอภิปรายผลการดำเนินโครงการ (1. การอภิปรายและวิเคราะห์ผลการดำเนินงานเชิงปริมาณ 2. การอภิปรายและวิเคราะห์ผลการดำเนินงานเชิงคุณภาพ 3. การอภิปรายผลด้านงบประมาณ 4. การอภิปรายผลตามวงจร PDCA)..."
                     />
                 </div>
 
