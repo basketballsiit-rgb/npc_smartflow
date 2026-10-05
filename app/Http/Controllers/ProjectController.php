@@ -3384,7 +3384,7 @@ class ProjectController extends Controller
      */
     private function calculatePaginationItems(Project $project, string $execSummary = '', string $preface = ''): array
     {
-        $project->loadMissing(['photos', 'appendices']);
+        $project->loadMissing(['photos', 'appendices', 'procurement.items']);
         $title = $project->title ?: 'โครงการ';
 
         // 1. Preliminary Pages (ก, ข, ค, ...)
@@ -3395,131 +3395,352 @@ class ProjectController extends Controller
         $tableStart = ($execPages > 1) ? 'จ' : 'ง';
         $figureStart = ($execPages > 1) ? 'ฉ' : 'จ';
 
-        // 2. Chapter 1 (Starts at page 1)
+        // Standard Thai 16pt Sarabun with 1.65 line height per A4 page (~1,600 chars or ~30 lines)
+        $charsPerPage = 1600;
+
+        // =========================================================================
+        // 2. CHAPTER 1 (Starts at Page 1)
+        // =========================================================================
         $ch1Start = 1;
         $ch1Sections = is_array($project->chapter_1_sections) ? $project->chapter_1_sections : [];
-        $bgText = $ch1Sections['background'] ?? ($project->background_rationale ?? '');
-        $bgPages = max(1, (int)ceil(mb_strlen($bgText) / 1600));
-        $ch1_1 = $ch1Start;
-        $ch1_2 = $ch1Start + min($bgPages, 2);
-        $ch1_3 = $ch1_2 + 1;
-        $ch1_4 = $ch1_3 + 1;
-        $ch1_5 = $ch1_4 + 1;
-        $ch1Pages = max(3, $ch1_5 - $ch1Start + 1);
 
-        // 3. Chapter 2 (Starts after Chapter 1)
+        $text1_1 = $ch1Sections['background'] ?? ($project->background_rationale ?? '');
+        $text1_2 = '';
+        if (!empty($ch1Sections['objectives'])) {
+            $text1_2 = is_array($ch1Sections['objectives']) ? implode("\n", $ch1Sections['objectives']) : (string)$ch1Sections['objectives'];
+        } elseif (!empty($project->objectives)) {
+            $objs = is_array($project->objectives) ? $project->objectives : (json_decode($project->objectives, true) ?: [$project->objectives]);
+            $text1_2 = implode("\n", (array)$objs);
+        }
+        $text1_3 = ($ch1Sections['scope_target'] ?? '') . "\n" . ($ch1Sections['scope_content'] ?? '') . "\n" . ($ch1Sections['scope_location_time'] ?? '');
+        $text1_4 = ($ch1Sections['indicators_quantitative'] ?? '') . "\n" . ($ch1Sections['indicators_qualitative'] ?? '');
+        $text1_5 = $ch1Sections['benefits'] ?? ($ch1Sections['expected_benefits'] ?? '');
+        if (empty($text1_5) && !empty($project->benefits)) {
+            $bens = is_array($project->benefits) ? $project->benefits : (json_decode($project->benefits, true) ?: [$project->benefits]);
+            $text1_5 = implode("\n", (array)$bens);
+        }
+        $text1_6 = $ch1Sections['definitions'] ?? '';
+        $hasDef = !empty(trim($text1_6));
+
+        // If custom full content was saved:
+        if (!empty($project->chapter_1_content)) {
+            $totalCh1Chars = mb_strlen($project->chapter_1_content);
+        } else {
+            $totalCh1Chars = mb_strlen($text1_1) + mb_strlen($text1_2) + mb_strlen($text1_3) + mb_strlen($text1_4) + mb_strlen($text1_5) + mb_strlen($text1_6) + 250;
+        }
+
+        // Real page capacity calculation:
+        $ch1Pages = max(1, (int)ceil($totalCh1Chars / $charsPerPage));
+
+        // Heading positions inside Chapter 1:
+        $accum1 = 150; // Chapter title allowance
+        $ch1_1 = $ch1Start + (int)floor($accum1 / $charsPerPage);
+        $accum1 += mb_strlen($text1_1) + 80;
+
+        $ch1_2 = $ch1Start + (int)floor($accum1 / $charsPerPage);
+        $accum1 += mb_strlen($text1_2) + 80;
+
+        $ch1_3 = $ch1Start + (int)floor($accum1 / $charsPerPage);
+        $accum1 += mb_strlen($text1_3) + 80;
+
+        $ch1_4 = $ch1Start + (int)floor($accum1 / $charsPerPage);
+        $accum1 += mb_strlen($text1_4) + 80;
+
+        $ch1_5 = $ch1Start + (int)floor($accum1 / $charsPerPage);
+        $accum1 += mb_strlen($text1_5) + 80;
+
+        if ($hasDef) {
+            $ch1_6 = $ch1Start + (int)floor($accum1 / $charsPerPage);
+            $accum1 += mb_strlen($text1_6) + 80;
+        }
+
+        // =========================================================================
+        // 3. CHAPTER 2 (Starts after Chapter 1)
+        // =========================================================================
         $ch2Start = $ch1Start + $ch1Pages;
         $ch2Sections = is_array($project->chapter_2_sections) ? $project->chapter_2_sections : [];
         $sec2_1 = $ch2Sections['section_2_1'] ?? '';
         $sec2_2 = $ch2Sections['section_2_2'] ?? '';
         $sec2_3 = $ch2Sections['section_2_3'] ?? '';
-        $sec2_1_pages = max(1, (int)ceil(mb_strlen($sec2_1) / 1600));
-        $sec2_2_pages = max(1, (int)ceil(mb_strlen($sec2_2) / 1600));
-        $sec2_3_pages = max(1, (int)ceil(mb_strlen($sec2_3) / 1600));
-        $ch2_1 = $ch2Start;
-        $ch2_2 = $ch2_1 + $sec2_1_pages;
-        $ch2_3 = $ch2_2 + $sec2_2_pages;
-        $ch2Pages = max(3, $sec2_1_pages + $sec2_2_pages + $sec2_3_pages);
+        $sec2_intro = $ch2Sections['intro'] ?? '';
 
-        // 4. Chapter 3 (Starts after Chapter 2)
+        if (!empty($project->chapter_2_content)) {
+            $totalCh2Chars = mb_strlen($project->chapter_2_content);
+        } else {
+            $totalCh2Chars = mb_strlen($sec2_intro) + mb_strlen($sec2_1) + mb_strlen($sec2_2) + mb_strlen($sec2_3) + 250;
+        }
+
+        if ($totalCh2Chars <= 250) {
+            $ch2_1 = $ch2Start;
+            $ch2_2 = $ch2Start;
+            $ch2_3 = $ch2Start;
+            $ch2Pages = 1;
+        } else {
+            $accum2 = 150 + mb_strlen($sec2_intro);
+            $ch2_1 = $ch2Start + (int)floor($accum2 / $charsPerPage);
+            $accum2 += mb_strlen($sec2_1) + 80;
+
+            $ch2_2 = $ch2Start + (int)floor($accum2 / $charsPerPage);
+            $accum2 += mb_strlen($sec2_2) + 80;
+
+            $ch2_3 = $ch2Start + (int)floor($accum2 / $charsPerPage);
+            $accum2 += mb_strlen($sec2_3) + 80;
+
+            $ch2Pages = max(1, (int)ceil($totalCh2Chars / $charsPerPage));
+        }
+
+        // =========================================================================
+        // 4. CHAPTER 3 (Starts after Chapter 2)
+        // =========================================================================
         $ch3Start = $ch2Start + $ch2Pages;
-        $ch3_1 = $ch3Start;
-        $ch3_2 = $ch3Start + 1;
-        $ch3_3 = $ch3Start + 2; // PDCA steps table
-        $ch3_4 = $ch3Start + 3;
-        $ch3_5 = $ch3Start + 3;
-        $ch3Pages = 4;
+        $ch3Sections = is_array($project->chapter_3_sections) ? $project->chapter_3_sections : [];
+        $sec3_1 = $ch3Sections['section_3_1'] ?? '';
+        $sec3_2 = $ch3Sections['section_3_2'] ?? '';
+        $sec3_3 = $ch3Sections['section_3_3'] ?? '';
+        $sec3_4 = $ch3Sections['section_3_4'] ?? '';
+        $sec3_5 = $ch3Sections['section_3_5'] ?? '';
+        $sec3_intro = $ch3Sections['intro'] ?? '';
 
-        // 5. Chapter 4 (Starts after Chapter 3)
+        if (!empty($project->chapter_3_content)) {
+            $totalCh3Chars = mb_strlen($project->chapter_3_content);
+        } else {
+            $totalCh3Chars = mb_strlen($sec3_intro) + mb_strlen($sec3_1) + mb_strlen($sec3_2) + mb_strlen($sec3_3) + mb_strlen($sec3_4) + mb_strlen($sec3_5) + 250;
+        }
+
+        if ($totalCh3Chars <= 250) {
+            $ch3_1 = $ch3Start;
+            $ch3_2 = $ch3Start;
+            $ch3_3 = $ch3Start;
+            $ch3_4 = $ch3Start;
+            $ch3_5 = $ch3Start;
+            $ch3Pages = 1;
+        } else {
+            $accum3 = 150 + mb_strlen($sec3_intro);
+            $ch3_1 = $ch3Start + (int)floor($accum3 / $charsPerPage);
+            $accum3 += mb_strlen($sec3_1) + 80;
+
+            $ch3_2 = $ch3Start + (int)floor($accum3 / $charsPerPage);
+            $accum3 += mb_strlen($sec3_2) + 80;
+
+            $ch3_3 = $ch3Start + (int)floor($accum3 / $charsPerPage);
+            $accum3 += mb_strlen($sec3_3) + 120; // PDCA steps
+
+            $ch3_4 = $ch3Start + (int)floor($accum3 / $charsPerPage);
+            $accum3 += mb_strlen($sec3_4) + 80;
+
+            $ch3_5 = $ch3Start + (int)floor($accum3 / $charsPerPage);
+            $accum3 += mb_strlen($sec3_5) + 80;
+
+            $ch3Pages = max(1, (int)ceil($totalCh3Chars / $charsPerPage));
+        }
+
+        // =========================================================================
+        // 5. CHAPTER 4 (Starts after Chapter 3)
+        // =========================================================================
         $ch4Start = $ch3Start + $ch3Pages;
-        $ch4_1 = $ch4Start;             // Demographics
-        $table4_1_page = $ch4Start + 1; // ตารางที่ 4-1
-        $ch4_2 = $ch4Start + 2;         // Indicators
-        $table4_2_page = $ch4Start + 2; // ตารางที่ 4-2
-        $ch4_3 = $ch4Start + 3;         // Evaluation
-        $table4_3_page = $ch4Start + 4; // ตารางที่ 4-3 (รายด้าน)
-        $table4_4_page = $ch4Start + 5; // ตารางที่ 4-4 (ภาพรวม)
-        $ch4_4 = $ch4Start + 6;         // Budget
-        $table4_5_page = $ch4Start + 6; // ตารางที่ 4-5 (งบประมาณ)
-        $ch4Pages = 7;
+        $ch4Sections = is_array($project->chapter_4_sections) ? $project->chapter_4_sections : [];
+        $sec4_1 = $ch4Sections['section_4_1'] ?? '';
+        $sec4_2 = $ch4Sections['section_4_2'] ?? '';
+        $sec4_3 = $ch4Sections['section_4_3'] ?? '';
+        $sec4_4 = $ch4Sections['section_4_4'] ?? '';
 
-        // 6. Chapter 5 (Starts after Chapter 4)
+        $survey = \App\Models\Survey::where('project_id', $project->id)->first();
+        $qCount = $survey && $survey->questions ? count((array)$survey->questions) : 0;
+        $demoTableHeight = 350;
+        $satisfactionTableHeight = max(450, $qCount * 100);
+
+        if (!empty($project->chapter_4_content)) {
+            $totalCh4Chars = mb_strlen($project->chapter_4_content);
+        } else {
+            $totalCh4Chars = mb_strlen($sec4_1) + mb_strlen($sec4_2) + mb_strlen($sec4_3) + mb_strlen($sec4_4) + $demoTableHeight + $satisfactionTableHeight + 250;
+        }
+
+        if ($totalCh4Chars <= 250) {
+            $ch4_1 = $ch4Start;
+            $table4_1_page = $ch4Start;
+            $ch4_2 = $ch4Start;
+            $table4_2_page = $ch4Start;
+            $ch4_3 = $ch4Start;
+            $table4_3_page = $ch4Start;
+            $table4_4_page = $ch4Start;
+            $ch4_4 = $ch4Start;
+            $table4_5_page = $ch4Start;
+            $ch4_5 = $ch4Start;
+            $ch4Pages = 1;
+        } else {
+            $accum4 = 150;
+            $ch4_1 = $ch4Start + (int)floor($accum4 / $charsPerPage);
+            $table4_1_page = $ch4_1;
+            $accum4 += mb_strlen($sec4_1) + $demoTableHeight + 80;
+
+            $ch4_2 = $ch4Start + (int)floor($accum4 / $charsPerPage);
+            $table4_2_page = $ch4_2;
+            $accum4 += mb_strlen($sec4_2) + 80;
+
+            $ch4_3 = $ch4Start + (int)floor($accum4 / $charsPerPage);
+            $table4_3_page = $ch4_3;
+            $table4_4_page = $ch4Start + (int)floor(($accum4 + $satisfactionTableHeight * 0.7) / $charsPerPage);
+            $accum4 += mb_strlen($sec4_3) + $satisfactionTableHeight + 120;
+
+            $ch4_4 = $ch4Start + (int)floor($accum4 / $charsPerPage);
+            $table4_5_page = $ch4_4;
+            $accum4 += mb_strlen($sec4_4) + 80;
+
+            $ch4_5 = $ch4Start + (int)floor($accum4 / $charsPerPage);
+            $accum4 += 250;
+
+            $ch4Pages = max(1, (int)ceil($totalCh4Chars / $charsPerPage));
+        }
+
+        // =========================================================================
+        // 6. CHAPTER 5 (Starts after Chapter 4)
+        // =========================================================================
         $ch5Start = $ch4Start + $ch4Pages;
-        $ch5_1 = $ch5Start;
-        $ch5_2 = $ch5Start + 1;
-        $ch5_3 = $ch5Start + 3;
-        $ch5_4 = $ch5Start + 4;
-        $ch5Pages = 5;
+        $ch5Sections = is_array($project->chapter_5_sections) ? $project->chapter_5_sections : [];
+        $sec5_1 = $ch5Sections['section_5_1'] ?? '';
+        $sec5_2 = $ch5Sections['section_5_2'] ?? '';
+        $sec5_3 = $ch5Sections['section_5_3'] ?? '';
+        $sec5_4 = $ch5Sections['section_5_4'] ?? '';
+        $sec5_intro = $ch5Sections['intro'] ?? '';
 
-        // 7. References (บรรณานุกรม)
+        if (!empty($project->chapter_5_content)) {
+            $totalCh5Chars = mb_strlen($project->chapter_5_content);
+        } else {
+            $totalCh5Chars = mb_strlen($sec5_intro) + mb_strlen($sec5_1) + mb_strlen($sec5_2) + mb_strlen($sec5_3) + mb_strlen($sec5_4) + 250;
+        }
+
+        if ($totalCh5Chars <= 250) {
+            $ch5_1 = $ch5Start;
+            $ch5_2 = $ch5Start;
+            $ch5_3 = $ch5Start;
+            $ch5_4 = $ch5Start;
+            $ch5Pages = 1;
+        } else {
+            $accum5 = 150 + mb_strlen($sec5_intro);
+            $ch5_1 = $ch5Start + (int)floor($accum5 / $charsPerPage);
+            $accum5 += mb_strlen($sec5_1) + 80;
+
+            $ch5_2 = $ch5Start + (int)floor($accum5 / $charsPerPage);
+            $accum5 += mb_strlen($sec5_2) + 80;
+
+            $ch5_3 = $ch5Start + (int)floor($accum5 / $charsPerPage);
+            $accum5 += mb_strlen($sec5_3) + 80;
+
+            $ch5_4 = $ch5Start + (int)floor($accum5 / $charsPerPage);
+            $accum5 += mb_strlen($sec5_4) + 80;
+
+            $ch5Pages = max(1, (int)ceil($totalCh5Chars / $charsPerPage));
+        }
+
+        // =========================================================================
+        // 7. REFERENCES (บรรณานุกรม)
+        // =========================================================================
         $refStart = $ch5Start + $ch5Pages;
-        $refPages = 2;
+        $refPages = 1;
 
-        // 8. Appendices (ภาคผนวก)
-        $appStart = $refStart + $refPages;
-        $app_A = $appStart + 1; // ภาคผนวก ก: โครงการฉบับอนุมัติและคำสั่ง (3 หน้า)
-        $app_B = $app_A + 3;    // ภาคผนวก ข: แบบประเมินความพึงพอใจและ QR Code (2 หน้า)
-        $app_C = $app_B + 2;    // ภาคผนวก ค: เอกสารการเงินและชุดจัดซื้อจัดจ้าง (2 หน้า)
-        $app_D = $app_C + 2;    // ภาคผนวก ง: ภาพกิจกรรม (หน้าละ 2 ภาพอย่างแม่นยำ)
+        // =========================================================================
+        // 8. APPENDICES (ภาคผนวก)
+        // =========================================================================
+        $appTitlePage = $refStart + $refPages; // แผ่นคั่นภาคผนวก (1 หน้า)
+        $app_A = $appTitlePage + 1;            // ภาคผนวก ก
 
-        // Calculate exact photo pages (2 photos per page)
+        $hasMemo = $project->appendices && $project->appendices->whereIn('type', ['memo', 'order', 'approved_proposal'])->count() > 0;
+        $app_A_pages = $hasMemo ? 2 : 1;
+
+        $app_B = $app_A + $app_A_pages;        // ภาคผนวก ข (QR Code & Link)
+        $app_B_pages = 1;
+
+        $app_C = $app_B + $app_B_pages;        // ภาคผนวก ค (การเงินและจัดซื้อจัดจ้าง)
+        $procurement = $project->procurement;
+        $procItemCount = $procurement && $procurement->items ? count($procurement->items) : 0;
+        $app_C_pages = ($procItemCount > 8) ? 2 : 1;
+
+        $app_D = $app_C + $app_C_pages;        // ภาคผนวก ง (ภาพกิจกรรม จัดวางหน้าละ 2 ภาพ)
         $photos = $project->photos ?: [];
         $photoCount = count($photos);
         $photoPages = max(1, (int)ceil($photoCount / 2));
-        $app_E = $app_D + $photoPages; // ภาคผนวก จ: กำหนดการและเอกสารอื่น ๆ
 
-        // Table of Contents Items
+        $app_E = $app_D + $photoPages;         // ภาคผนวก จ (กำหนดการ คำกล่าว เกียรติบัตร และอื่น ๆ)
+        $hasCertOrSpeech = $project->appendices && $project->appendices->whereIn('type', ['certificate', 'speech', 'schedule', 'other'])->count() > 0;
+        $app_E_pages = $hasCertOrSpeech ? 2 : 1;
+
+        $totalPages = $app_E + $app_E_pages - 1;
+
+        // =========================================================================
+        // TABLE OF CONTENTS (สารบัญเนื้อหา - ตรงกับชื่อหัวข้อจริงในบทที่ 1–5 และภาคผนวก)
+        // =========================================================================
         $tocItems = [
             ['title' => 'บทสรุปผู้บริหาร', 'page' => 'ก', 'is_bold' => true],
             ['title' => 'คำนำ', 'page' => (string)$prefaceStart, 'is_bold' => true],
             ['title' => 'สารบัญ', 'page' => (string)$tocStart, 'is_bold' => true],
             ['title' => 'สารบัญตาราง', 'page' => (string)$tableStart, 'is_bold' => true],
             ['title' => 'สารบัญภาพ', 'page' => (string)$figureStart, 'is_bold' => true],
+
+            // บทที่ 1
             ['title' => 'บทที่ 1 บทนำ', 'page' => (string)$ch1Start, 'is_bold' => true],
-            ['title' => '    1.1 ความเป็นมาและความสำคัญ', 'page' => (string)$ch1_1, 'is_bold' => false],
+            ['title' => '    1.1 ความเป็นมาและความสำคัญของปัญหา', 'page' => (string)$ch1_1, 'is_bold' => false],
             ['title' => '    1.2 วัตถุประสงค์ของโครงการ', 'page' => (string)$ch1_2, 'is_bold' => false],
             ['title' => '    1.3 ขอบเขตของโครงการ', 'page' => (string)$ch1_3, 'is_bold' => false],
-            ['title' => '    1.4 เป้าหมายและตัวชี้วัดความสำเร็จ', 'page' => (string)$ch1_4, 'is_bold' => false],
+            ['title' => '    1.4 ตัวชี้วัดและเป้าหมายความสำเร็จ', 'page' => (string)$ch1_4, 'is_bold' => false],
             ['title' => '    1.5 ประโยชน์ที่คาดว่าจะได้รับ', 'page' => (string)$ch1_5, 'is_bold' => false],
-            ['title' => 'บทที่ 2 เอกสารและงานวิจัยที่เกี่ยวข้อง', 'page' => (string)$ch2Start, 'is_bold' => true],
-            ['title' => '    2.1 แนวคิด ทฤษฎี และหลักการที่เกี่ยวข้อง', 'page' => (string)$ch2_1, 'is_bold' => false],
-            ['title' => '    2.2 นโยบาย ยุทธศาสตร์ และมาตรฐานที่เกี่ยวข้อง', 'page' => (string)$ch2_2, 'is_bold' => false],
-            ['title' => '    2.3 งานวิจัยที่เกี่ยวข้อง', 'page' => (string)$ch2_3, 'is_bold' => false],
-            ['title' => 'บทที่ 3 วิธีดำเนินการโครงการ', 'page' => (string)$ch3Start, 'is_bold' => true],
-            ['title' => '    3.1 ประชากรและกลุ่มตัวอย่าง', 'page' => (string)$ch3_1, 'is_bold' => false],
-            ['title' => '    3.2 เครื่องมือที่ใช้ในการประเมินผล', 'page' => (string)$ch3_2, 'is_bold' => false],
-            ['title' => '    3.3 ขั้นตอนการดำเนินงานตามวงจร PDCA', 'page' => (string)$ch3_3, 'is_bold' => false],
-            ['title' => '    3.4 การเก็บรวบรวมข้อมูล', 'page' => (string)$ch3_4, 'is_bold' => false],
-            ['title' => '    3.5 การวิเคราะห์ข้อมูลและสถิติที่ใช้', 'page' => (string)$ch3_5, 'is_bold' => false],
-            ['title' => 'บทที่ 4 ผลการดำเนินงานโครงการ', 'page' => (string)$ch4Start, 'is_bold' => true],
-            ['title' => '    4.1 ข้อมูลทั่วไปของกลุ่มตัวอย่างผู้ตอบแบบประเมิน', 'page' => (string)$ch4_1, 'is_bold' => false],
-            ['title' => '    4.2 ผลสัมฤทธิ์การดำเนินงานตามตัวชี้วัด', 'page' => (string)$ch4_2, 'is_bold' => false],
-            ['title' => '    4.3 ผลการประเมินความพึงพอใจต่อโครงการ', 'page' => (string)$ch4_3, 'is_bold' => false],
-            ['title' => '    4.4 ผลการใช้จ่ายงบประมาณ', 'page' => (string)$ch4_4, 'is_bold' => false],
-            ['title' => 'บทที่ 5 สรุปผล อภิปรายผล และข้อเสนอแนะ', 'page' => (string)$ch5Start, 'is_bold' => true],
-            ['title' => '    5.1 สรุปผลการดำเนินโครงการ', 'page' => (string)$ch5_1, 'is_bold' => false],
-            ['title' => '    5.2 การอภิปรายผลการดำเนินโครงการ', 'page' => (string)$ch5_2, 'is_bold' => false],
-            ['title' => '    5.3 ปัญหา อุปสรรค และแนวทางแก้ไข', 'page' => (string)$ch5_3, 'is_bold' => false],
-            ['title' => '    5.4 ข้อเสนอแนะ', 'page' => (string)$ch5_4, 'is_bold' => false],
-            ['title' => 'บรรณานุกรม', 'page' => (string)$refStart, 'is_bold' => true],
-            ['title' => 'ภาคผนวก', 'page' => (string)$appStart, 'is_bold' => true],
-            ['title' => '    ภาคผนวก ก เอกสารโครงการฉบับอนุมัติและคำสั่ง', 'page' => (string)$app_A, 'is_bold' => false],
-            ['title' => '    ภาคผนวก ข แบบประเมินความพึงพอใจและ QR Code', 'page' => (string)$app_B, 'is_bold' => false],
-            ['title' => '    ภาคผนวก ค เอกสารการเงินและชุดจัดซื้อจัดจ้าง', 'page' => (string)$app_C, 'is_bold' => false],
-            ['title' => '    ภาคผนวก ง ภาพกิจกรรมการดำเนินโครงการ', 'page' => (string)$app_D, 'is_bold' => false],
-            ['title' => '    ภาคผนวก จ กำหนดการและเอกสารหลักฐานอื่น ๆ', 'page' => (string)$app_E, 'is_bold' => false],
         ];
 
-        // List of Tables with precise pages
+        if ($hasDef) {
+            $tocItems[] = ['title' => '    1.6 นิยามศัพท์เฉพาะ', 'page' => (string)$ch1_6, 'is_bold' => false];
+        }
+
+        // บทที่ 2
+        $tocItems[] = ['title' => 'บทที่ 2 เอกสารและงานวิจัยที่เกี่ยวข้อง', 'page' => (string)$ch2Start, 'is_bold' => true];
+        $tocItems[] = ['title' => '    2.1 แนวคิด หลักการ และทฤษฎีที่เกี่ยวข้อง', 'page' => (string)$ch2_1, 'is_bold' => false];
+        $tocItems[] = ['title' => '    2.2 ยุทธศาสตร์และนโยบายจุดเน้นของ สอศ. ที่เกี่ยวข้อง', 'page' => (string)$ch2_2, 'is_bold' => false];
+        $tocItems[] = ['title' => '    2.3 งานวิจัยหรือรายงานโครงการที่เกี่ยวข้อง', 'page' => (string)$ch2_3, 'is_bold' => false];
+
+        // บทที่ 3
+        $tocItems[] = ['title' => 'บทที่ 3 วิธีดำเนินงานโครงการ', 'page' => (string)$ch3Start, 'is_bold' => true];
+        $tocItems[] = ['title' => '    3.1 ประชากรและกลุ่มตัวอย่าง / กลุ่มเป้าหมาย', 'page' => (string)$ch3_1, 'is_bold' => false];
+        $tocItems[] = ['title' => '    3.2 เครื่องมือที่ใช้ในการประเมินผลโครงการ', 'page' => (string)$ch3_2, 'is_bold' => false];
+        $tocItems[] = ['title' => '    3.3 ขั้นตอนและกิจกรรมการดำเนินงานตามวงจรคุณภาพ PDCA', 'page' => (string)$ch3_3, 'is_bold' => false];
+        $tocItems[] = ['title' => '    3.4 การเก็บรวบรวมข้อมูล', 'page' => (string)$ch3_4, 'is_bold' => false];
+        $tocItems[] = ['title' => '    3.5 สถิติที่ใช้ในการวิเคราะห์ข้อมูล', 'page' => (string)$ch3_5, 'is_bold' => false];
+
+        // บทที่ 4
+        $tocItems[] = ['title' => 'บทที่ 4 ผลการดำเนินงานโครงการ', 'page' => (string)$ch4Start, 'is_bold' => true];
+        $tocItems[] = ['title' => '    4.1 ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบประเมิน', 'page' => (string)$ch4_1, 'is_bold' => false];
+        $tocItems[] = ['title' => '    4.2 ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ', 'page' => (string)$ch4_2, 'is_bold' => false];
+        $tocItems[] = ['title' => '    4.3 ผลการประเมินความพึงพอใจเชิงคุณภาพต่อการดำเนินโครงการ', 'page' => (string)$ch4_3, 'is_bold' => false];
+        $tocItems[] = ['title' => '    4.4 ผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน', 'page' => (string)$ch4_4, 'is_bold' => false];
+        $tocItems[] = ['title' => '    4.5 การสังเคราะห์ผลการประเมินเปรียบเทียบกับเป้าหมายตามบทที่ 1', 'page' => (string)$ch4_5, 'is_bold' => false];
+
+        // บทที่ 5
+        $tocItems[] = ['title' => 'บทที่ 5 สรุปผล อภิปรายผล และข้อเสนอแนะ', 'page' => (string)$ch5Start, 'is_bold' => true];
+        $tocItems[] = ['title' => '    5.1 สรุปผลการดำเนินโครงการ', 'page' => (string)$ch5_1, 'is_bold' => false];
+        $tocItems[] = ['title' => '    5.2 การอภิปรายผลการดำเนินโครงการ', 'page' => (string)$ch5_2, 'is_bold' => false];
+        $tocItems[] = ['title' => '    5.3 ปัญหา อุปสรรค และแนวทางแก้ไข', 'page' => (string)$ch5_3, 'is_bold' => false];
+        $tocItems[] = ['title' => '    5.4 ข้อเสนอแนะ', 'page' => (string)$ch5_4, 'is_bold' => false];
+
+        // ส่วนท้าย
+        $tocItems[] = ['title' => 'บรรณานุกรม', 'page' => (string)$refStart, 'is_bold' => true];
+        $tocItems[] = ['title' => 'ภาคผนวก', 'page' => (string)$appTitlePage, 'is_bold' => true];
+        $tocItems[] = ['title' => '    ภาคผนวก ก เอกสารแบบเสนอโครงการที่ได้รับอนุมัติ และบันทึกข้อความ', 'page' => (string)$app_A, 'is_bold' => false];
+        $tocItems[] = ['title' => '    ภาคผนวก ข แบบประเมินความพึงพอใจต่อการดำเนินงานโครงการ (QR Code & Link)', 'page' => (string)$app_B, 'is_bold' => false];
+        $tocItems[] = ['title' => '    ภาคผนวก ค เอกสารการเงิน ชุดขอซื้อขอจ้าง และสัญญายืมเงิน', 'page' => (string)$app_C, 'is_bold' => false];
+        $tocItems[] = ['title' => '    ภาคผนวก ง ภาพกิจกรรมการดำเนินงานโครงการ', 'page' => (string)$app_D, 'is_bold' => false];
+        $tocItems[] = ['title' => '    ภาคผนวก จ กำหนดการ คำกล่าว เกียรติบัตร และเอกสารหลักฐานอื่น ๆ', 'page' => (string)$app_E, 'is_bold' => false];
+
+        // =========================================================================
+        // LIST OF TABLES (สารบัญตาราง)
+        // =========================================================================
         $tableItems = [
-            ['title' => 'ตารางที่ 4-1 จำนวนและร้อยละของข้อมูลทั่วไปของผู้ตอบแบบประเมิน', 'page' => (string)$table4_1_page],
-            ['title' => 'ตารางที่ 4-2 ผลสัมฤทธิ์การดำเนินงานเปรียบเทียบระหว่างเป้าหมายและผลการปฏิบัติจริง', 'page' => (string)$table4_2_page],
-            ['title' => 'ตารางที่ 4-3 ค่าเฉลี่ยและส่วนเบี่ยงเบนมาตรฐานความพึงพอใจต่อโครงการจำแนกรายด้าน', 'page' => (string)$table4_3_page],
-            ['title' => 'ตารางที่ 4-4 ค่าเฉลี่ยและส่วนเบี่ยงเบนมาตรฐานความพึงพอใจต่อโครงการในภาพรวม', 'page' => (string)$table4_4_page],
-            ['title' => 'ตารางที่ 4-5 สรุปผลการใช้จ่ายงบประมาณจำแนกตามรายการ', 'page' => (string)$table4_5_page],
+            ['title' => 'ตารางที่ 4-1 ผลการวิเคราะห์ข้อมูลทั่วไปของผู้ตอบแบบประเมิน', 'page' => (string)$table4_1_page],
+            ['title' => 'ตารางที่ 4-2 ผลการดำเนินงานตามตัวชี้วัดความสำเร็จเชิงปริมาณ', 'page' => (string)$table4_2_page],
+            ['title' => 'ตารางที่ 4-3 ค่าเฉลี่ย ส่วนเบี่ยงเบนมาตรฐาน และระดับความพึงพอใจจำแนกตามรายด้าน', 'page' => (string)$table4_3_page],
+            ['title' => 'ตารางที่ 4-4 ค่าเฉลี่ยและระดับความพึงพอใจต่อการดำเนินโครงการในภาพรวม', 'page' => (string)$table4_4_page],
+            ['title' => 'ตารางที่ 4-5 สรุปผลสัมฤทธิ์ในการใช้จ่ายงบประมาณเทียบกับแผนงาน', 'page' => (string)$table4_5_page],
         ];
 
-        // List of Figures with exact photo pages (2 photos per page)
+        // =========================================================================
+        // LIST OF FIGURES (สารบัญภาพ - 2 ภาพต่อหน้ากระดาษ A4 ในภาคผนวก ง)
+        // =========================================================================
         $figureItems = [];
         if ($photos && count($photos) > 0) {
             foreach ($photos as $pIdx => $ph) {
@@ -3553,7 +3774,7 @@ class ProjectController extends Controller
                 'ch4_pages' => $ch4Pages,
                 'ch5_pages' => $ch5Pages,
                 'photo_pages' => $photoPages,
-                'total_pages' => $app_E + 2,
+                'total_pages' => $totalPages,
             ]
         ];
     }
@@ -3567,6 +3788,17 @@ class ProjectController extends Controller
         $preface = $request->input('preface', '');
 
         $pagination = $this->calculatePaginationItems($project, $execSummary, $preface);
+
+        // Auto-persist into preliminary_sections if already created so it syncs immediately
+        $prelim = is_array($project->preliminary_sections) ? $project->preliminary_sections : [];
+        if (!empty($prelim)) {
+            $prelim['toc_items'] = $pagination['toc_items'];
+            $prelim['table_items'] = $pagination['table_items'];
+            $prelim['figure_items'] = $pagination['figure_items'];
+            $prelim['page_breakdown'] = $pagination['page_breakdown'];
+            $project->preliminary_sections = $prelim;
+            $project->save();
+        }
 
         return response()->json([
             'success' => true,

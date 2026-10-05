@@ -474,10 +474,18 @@ export default function PreliminaryManager({
                                 onClick={handleCalculatePages}
                                 disabled={isCalculatingPages}
                                 className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-                                title="คำนวณและปรับรันเลขหน้าตามความยาวจริงของบทที่ 1–5 และจำนวนภาพกิจกรรมในภาคผนวก"
+                                title="ดึงหัวข้อสำคัญให้ตรงกับทุกบท (บทที่ 1–5 และภาคผนวก) และคำนวณรันเลขหน้าตามเนื้อหาจริง"
                             >
                                 <span>🔄</span>
-                                <span>{isCalculatingPages ? 'กำลังคำนวณเลขหน้า...' : 'คำนวณเลขหน้าจากเนื้อหาจริง'}</span>
+                                <span>{isCalculatingPages ? 'กำลังคำนวณเลขหน้า...' : 'ซิงค์หัวข้อและคำนวณเลขหน้าจากเนื้อหาจริง'}</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-bold shadow-sm transition"
+                            >
+                                {isSaving ? 'กำลังบันทึก...' : '💾 บันทึก'}
                             </button>
                         </div>
                     </div>
