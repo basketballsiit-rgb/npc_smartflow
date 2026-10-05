@@ -45,10 +45,114 @@ export default function PrintChapter1({ project }) {
     };
 
     const fontStyles = {
-        compact: { docSize: '14px', lineHeight: '1.45', titleSize: '18px', headingSize: '15px' },
-        normal: { docSize: '15px', lineHeight: '1.5', titleSize: '20px', headingSize: '16px' },
-        large: { docSize: '16.5px', lineHeight: '1.55', titleSize: '22px', headingSize: '17.5px' },
+        compact: { docSize: '14px', lineHeight: '1.6', titleSize: '18px', headingSize: '15px' },
+        normal: { docSize: '15px', lineHeight: '1.68', titleSize: '20px', headingSize: '16px' },
+        large: { docSize: '16.5px', lineHeight: '1.75', titleSize: '22px', headingSize: '17.5px' },
     }[fontSizePreset];
+
+    const exportToWord = (filename = 'รายงานผลโครงการ_บทที่_1') => {
+        const contentElement = document.querySelector('.print-doc-container');
+        if (!contentElement) return;
+
+        const clone = contentElement.cloneNode(true);
+        clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+        const cleanFilename = (filename || 'รายงานโครงการ').replace(/[\/\\?%*:|"<>]/g, '_');
+
+        const header = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                  xmlns:w='urn:schemas-microsoft-com:office:word' 
+                  xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>${cleanFilename}</title>
+                <!--[if gte mso 9]>
+                <xml>
+                    <w:WordDocument>
+                        <w:View>Print</w:View>
+                        <w:Zoom>100</w:Zoom>
+                        <w:DoNotOptimizeForBrowser/>
+                    </w:WordDocument>
+                </xml>
+                <![endif]-->
+                <style>
+                    @page Section1 {
+                        size: 21.0cm 29.7cm;
+                        margin: 2.54cm 2.54cm 2.54cm 2.54cm;
+                        mso-header-margin: 1.27cm;
+                        mso-footer-margin: 1.27cm;
+                        mso-paper-source: 0;
+                    }
+                    div.Section1 { page: Section1; }
+                    body {
+                        font-family: 'TH Sarabun New', 'TH Sarabun PSK', 'Sarabun', 'Cordia New', sans-serif;
+                        font-size: 16pt;
+                        line-height: 1.65;
+                        color: #000000;
+                    }
+                    h1 {
+                        font-size: 20pt;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-top: 0;
+                        margin-bottom: 8pt;
+                    }
+                    h2 {
+                        font-size: 18pt;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-top: 0;
+                        margin-bottom: 16pt;
+                    }
+                    h3 {
+                        font-size: 16pt;
+                        font-weight: bold;
+                        margin-top: 14pt;
+                        margin-bottom: 6pt;
+                    }
+                    h4 {
+                        font-size: 16pt;
+                        font-weight: bold;
+                        margin-top: 8pt;
+                        margin-bottom: 4pt;
+                    }
+                    p {
+                        font-size: 16pt;
+                        line-height: 1.65;
+                        margin-top: 0;
+                        margin-bottom: 6pt;
+                        text-align: justify;
+                        text-justify: inter-cluster;
+                    }
+                    .thai-indent {
+                        text-indent: 1.5cm;
+                    }
+                    .thai-hanging-indent {
+                        padding-left: 1.5cm;
+                        text-indent: -1.5cm;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="Section1">
+                    ${clone.innerHTML}
+                </div>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff', header], {
+            type: 'application/msword;charset=utf-8'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${cleanFilename}.doc`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
 
     // Helper to format objectives array
     const rawObjectives = Array.isArray(project.objectives) ? project.objectives : (project.objectives ? [project.objectives] : []);
@@ -242,6 +346,15 @@ export default function PrintChapter1({ project }) {
                     </Link>
 
                     <button
+                        type="button"
+                        onClick={() => exportToWord(`รายงานผลโครงการ_บทที่_1_${project.title || ''}`)}
+                        className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                        title="ดาวน์โหลดเนื้อหาบทที่ 1 เป็นไฟล์ Microsoft Word (.doc)"
+                    >
+                        <span>📥</span> ดาวน์โหลด Word (.doc)
+                    </button>
+
+                    <button
                         onClick={handlePrint}
                         className="rounded-xl bg-gradient-to-r from-purple-700 to-indigo-700 px-4 py-2 text-xs font-bold text-white shadow-md hover:from-purple-800 hover:to-indigo-800 transition flex items-center gap-1.5 cursor-pointer"
                     >
@@ -272,7 +385,7 @@ export default function PrintChapter1({ project }) {
                             <h3 className="print-heading text-black mb-2">
                                 1.1 ความเป็นมาและความสำคัญของปัญหา
                             </h3>
-                            <div className="text-justify thai-indent whitespace-pre-wrap">
+                            <div className="text-justify thai-indent whitespace-pre-wrap leading-relaxed">
                                 {toArabicNumerals(safeString(sections.background) || safeString(project.background_rationale) || 'ไม่ได้ระบุความเป็นมาและความสำคัญของปัญหา')}
                             </div>
                         </div>
@@ -282,18 +395,18 @@ export default function PrintChapter1({ project }) {
                             <h3 className="print-heading text-black mb-2">
                                 1.2 วัตถุประสงค์ของโครงการ
                             </h3>
-                            <div className="space-y-1 pl-6">
+                            <div className="space-y-1.5">
                                 {sections.objectives ? (
-                                    <div className="whitespace-pre-wrap">{toArabicNumerals(safeString(sections.objectives))}</div>
+                                    <div className="whitespace-pre-wrap thai-indent leading-relaxed">{toArabicNumerals(safeString(sections.objectives))}</div>
                                 ) : rawObjectives.length > 0 ? (
                                     rawObjectives.map((obj, idx) => (
-                                        <div key={idx} className="flex items-start gap-2">
-                                            <span className="font-bold shrink-0">1.2.{toArabicNumerals(idx + 1)}</span>
-                                            <span>{toArabicNumerals(safeString(obj))}</span>
+                                        <div key={idx} className="flex items-start pl-6 sm:pl-8 my-1.5 text-justify leading-relaxed">
+                                            <span className="font-bold shrink-0 w-12 sm:w-14">1.2.{toArabicNumerals(idx + 1)}</span>
+                                            <span className="flex-1">{toArabicNumerals(safeString(obj))}</span>
                                         </div>
                                     ))
                                 ) : (
-                                    <div>ไม่ได้ระบุวัตถุประสงค์โครงการ</div>
+                                    <div className="thai-indent">ไม่ได้ระบุวัตถุประสงค์โครงการ</div>
                                 )}
                             </div>
                         </div>
@@ -374,18 +487,18 @@ export default function PrintChapter1({ project }) {
                             <h3 className="print-heading text-black mb-2">
                                 1.5 ประโยชน์ที่คาดว่าจะได้รับ
                             </h3>
-                            <div className="space-y-1 pl-6">
+                            <div className="space-y-1.5">
                                 {sections.benefits || sections.expected_benefits ? (
-                                    <div className="whitespace-pre-wrap">{toArabicNumerals(safeString(sections.benefits || sections.expected_benefits))}</div>
+                                    <div className="whitespace-pre-wrap thai-indent leading-relaxed">{toArabicNumerals(safeString(sections.benefits || sections.expected_benefits))}</div>
                                 ) : rawBenefits.length > 0 ? (
                                     rawBenefits.map((b, idx) => (
-                                        <div key={idx} className="flex items-start gap-2">
-                                            <span className="font-bold shrink-0">1.5.{toArabicNumerals(idx + 1)}</span>
-                                            <span>{toArabicNumerals(safeString(b))}</span>
+                                        <div key={idx} className="flex items-start pl-6 sm:pl-8 my-1.5 text-justify leading-relaxed">
+                                            <span className="font-bold shrink-0 w-12 sm:w-14">1.5.{toArabicNumerals(idx + 1)}</span>
+                                            <span className="flex-1">{toArabicNumerals(safeString(b))}</span>
                                         </div>
                                     ))
                                 ) : (
-                                    <div>การดำเนินงานบรรลุผลสำเร็จตามเป้าหมายและเกิดประโยชน์ต่อผู้เรียนและสถานศึกษา</div>
+                                    <div className="thai-indent">การดำเนินงานบรรลุผลสำเร็จตามเป้าหมายและเกิดประโยชน์ต่อผู้เรียนและสถานศึกษา</div>
                                 )}
                             </div>
                         </div>

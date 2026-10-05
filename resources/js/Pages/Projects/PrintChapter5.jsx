@@ -233,6 +233,121 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
         return text;
     };
 
+    const exportToWord = (filename = 'รายงานผลโครงการ_บทที่_5') => {
+        const contentElement = document.querySelector('.print-doc-container');
+        if (!contentElement) return;
+
+        const clone = contentElement.cloneNode(true);
+        clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+        const cleanFilename = (filename || 'รายงานโครงการ').replace(/[\/\\?%*:|"<>]/g, '_');
+
+        const header = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                  xmlns:w='urn:schemas-microsoft-com:office:word' 
+                  xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>${cleanFilename}</title>
+                <!--[if gte mso 9]>
+                <xml>
+                    <w:WordDocument>
+                        <w:View>Print</w:View>
+                        <w:Zoom>100</w:Zoom>
+                        <w:DoNotOptimizeForBrowser/>
+                    </w:WordDocument>
+                </xml>
+                <![endif]-->
+                <style>
+                    @page Section1 {
+                        size: 21.0cm 29.7cm;
+                        margin: 2.54cm 2.54cm 2.54cm 2.54cm;
+                        mso-header-margin: 1.27cm;
+                        mso-footer-margin: 1.27cm;
+                        mso-paper-source: 0;
+                    }
+                    div.Section1 { page: Section1; }
+                    body {
+                        font-family: 'TH Sarabun New', 'TH Sarabun PSK', 'Sarabun', 'Cordia New', sans-serif;
+                        font-size: 16pt;
+                        line-height: 1.65;
+                        color: #000000;
+                    }
+                    h1 {
+                        font-size: 20pt;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-top: 0;
+                        margin-bottom: 8pt;
+                    }
+                    h2 {
+                        font-size: 18pt;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-top: 0;
+                        margin-bottom: 16pt;
+                    }
+                    h3 {
+                        font-size: 16pt;
+                        font-weight: bold;
+                        margin-top: 14pt;
+                        margin-bottom: 6pt;
+                    }
+                    p {
+                        font-size: 16pt;
+                        line-height: 1.65;
+                        margin-top: 0;
+                        margin-bottom: 6pt;
+                        text-align: justify;
+                        text-justify: inter-cluster;
+                    }
+                    .thai-indent {
+                        text-indent: 1.5cm;
+                    }
+                    .thai-hanging-indent {
+                        padding-left: 1.5cm;
+                        text-indent: -1.5cm;
+                    }
+                    table {
+                        border-collapse: collapse;
+                        width: 100%;
+                        margin-top: 12pt;
+                        margin-bottom: 12pt;
+                        font-size: 14pt;
+                    }
+                    th, td {
+                        border: 1px solid #333333;
+                        padding: 6pt;
+                        vertical-align: top;
+                    }
+                    th {
+                        background-color: #f2f2f2;
+                        font-weight: bold;
+                        text-align: center;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="Section1">
+                    ${clone.innerHTML}
+                </div>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff', header], {
+            type: 'application/msword;charset=utf-8'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${cleanFilename}.doc`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
             <Head>
@@ -369,6 +484,15 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
 
                     <button
                         type="button"
+                        onClick={() => exportToWord(`รายงานผลโครงการ_บทที่_5_${project.title || ''}`)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                        title="ดาวน์โหลดเนื้อหาบทที่ 5 เป็นไฟล์ Microsoft Word (.doc)"
+                    >
+                        <span>📥</span> ดาวน์โหลด Word (.doc)
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={handlePrint}
                         className="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer"
                     >
@@ -435,16 +559,6 @@ export default function PrintChapter5({ project, survey, surveyStats }) {
                         sections.section_5_4 || `ข้อเสนอแนะในการนำผลไปใช้ประโยชน์ และข้อเสนอแนะสำหรับการจัดทำโครงการครั้งต่อไป`,
                         '5.4'
                     )}
-                </div>
-
-                {/* Signature Block */}
-                <div className="mt-12 pt-6 flex justify-end page-break-inside-avoid">
-                    <div className="text-center w-72 space-y-1">
-                        <p className="text-xs">ลงชื่อ........................................................</p>
-                        <p className="text-xs font-bold">({project.user?.name || project.responsible_person || 'ผู้รับผิดชอบโครงการ'})</p>
-                        <p className="text-xs text-slate-600">ผู้รับผิดชอบโครงการ</p>
-                        <p className="text-xs text-slate-500 mt-2">วันที่ ..... เดือน .................... พ.ศ. ........</p>
-                    </div>
                 </div>
 
             </div>

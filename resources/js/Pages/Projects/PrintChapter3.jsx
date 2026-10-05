@@ -24,10 +24,108 @@ export default function PrintChapter3({ project }) {
     };
 
     const fontStyles = {
-        compact: { docSize: '14px', lineHeight: '1.45', titleSize: '18px', headingSize: '15px' },
-        normal: { docSize: '15px', lineHeight: '1.5', titleSize: '20px', headingSize: '16px' },
-        large: { docSize: '16.5px', lineHeight: '1.55', titleSize: '22px', headingSize: '17.5px' },
+        compact: { docSize: '14px', lineHeight: '1.6', titleSize: '18px', headingSize: '15px' },
+        normal: { docSize: '15px', lineHeight: '1.68', titleSize: '20px', headingSize: '16px' },
+        large: { docSize: '16.5px', lineHeight: '1.75', titleSize: '22px', headingSize: '17.5px' },
     }[fontSizePreset];
+
+    const exportToWord = (filename = 'รายงานผลโครงการ_บทที่_3') => {
+        const contentElement = document.querySelector('.print-doc-container');
+        if (!contentElement) return;
+
+        const clone = contentElement.cloneNode(true);
+        clone.querySelectorAll('.no-print').forEach(el => el.remove());
+
+        const cleanFilename = (filename || 'รายงานโครงการ').replace(/[\/\\?%*:|"<>]/g, '_');
+
+        const header = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' 
+                  xmlns:w='urn:schemas-microsoft-com:office:word' 
+                  xmlns='http://www.w3.org/TR/REC-html40'>
+            <head>
+                <meta charset='utf-8'>
+                <title>${cleanFilename}</title>
+                <!--[if gte mso 9]>
+                <xml>
+                    <w:WordDocument>
+                        <w:View>Print</w:View>
+                        <w:Zoom>100</w:Zoom>
+                        <w:DoNotOptimizeForBrowser/>
+                    </w:WordDocument>
+                </xml>
+                <![endif]-->
+                <style>
+                    @page Section1 {
+                        size: 21.0cm 29.7cm;
+                        margin: 2.54cm 2.54cm 2.54cm 2.54cm;
+                        mso-header-margin: 1.27cm;
+                        mso-footer-margin: 1.27cm;
+                        mso-paper-source: 0;
+                    }
+                    div.Section1 { page: Section1; }
+                    body {
+                        font-family: 'TH Sarabun New', 'TH Sarabun PSK', 'Sarabun', 'Cordia New', sans-serif;
+                        font-size: 16pt;
+                        line-height: 1.65;
+                        color: #000000;
+                    }
+                    h1 {
+                        font-size: 20pt;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-top: 0;
+                        margin-bottom: 8pt;
+                    }
+                    h2 {
+                        font-size: 18pt;
+                        font-weight: bold;
+                        text-align: center;
+                        margin-top: 0;
+                        margin-bottom: 16pt;
+                    }
+                    h3 {
+                        font-size: 16pt;
+                        font-weight: bold;
+                        margin-top: 14pt;
+                        margin-bottom: 6pt;
+                    }
+                    p {
+                        font-size: 16pt;
+                        line-height: 1.65;
+                        margin-top: 0;
+                        margin-bottom: 6pt;
+                        text-align: justify;
+                        text-justify: inter-cluster;
+                    }
+                    .thai-indent {
+                        text-indent: 1.5cm;
+                    }
+                    .thai-hanging-indent {
+                        padding-left: 1.5cm;
+                        text-indent: -1.5cm;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="Section1">
+                    ${clone.innerHTML}
+                </div>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff', header], {
+            type: 'application/msword;charset=utf-8'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${cleanFilename}.doc`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
 
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0 text-slate-900">
@@ -213,6 +311,15 @@ export default function PrintChapter3({ project }) {
                     >
                         ← กลับหน้าโครงการ
                     </Link>
+
+                    <button
+                        type="button"
+                        onClick={() => exportToWord(`รายงานผลโครงการ_บทที่_3_${project.title || ''}`)}
+                        className="rounded-xl bg-blue-600 hover:bg-blue-700 px-4 py-2 text-xs font-bold text-white shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                        title="ดาวน์โหลดเนื้อหาบทที่ 3 เป็นไฟล์ Microsoft Word (.doc)"
+                    >
+                        <span>📥</span> ดาวน์โหลด Word (.doc)
+                    </button>
 
                     <button
                         onClick={handlePrint}
