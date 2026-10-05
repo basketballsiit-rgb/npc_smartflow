@@ -251,6 +251,7 @@ Route::middleware('auth')->group(function () {
     // Preliminary (Front Matter - Preface, TOC, Executive Summary) AI Generation, Save, and Print
     Route::post('projects/{project}/preliminary/generate', [ProjectController::class, 'generatePreliminary'])->name('projects.preliminary.generate');
     Route::post('projects/{project}/preliminary/save', [ProjectController::class, 'savePreliminary'])->name('projects.preliminary.save');
+    Route::post('projects/{project}/preliminary/calculate-pages', [ProjectController::class, 'calculatePreliminaryPages'])->name('projects.preliminary.calculate_pages');
     Route::get('projects/{project}/preliminary/print', [ProjectController::class, 'printPreliminary'])->name('projects.preliminary.print');
 
     // Chapter 5 AI Generation, Save, and Print

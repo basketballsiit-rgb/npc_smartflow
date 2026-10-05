@@ -3352,79 +3352,11 @@ class ProjectController extends Controller
             . "เนื้อหาสาระของรายงานฉบับนี้ประกอบด้วย 5 บทหลัก ได้แก่ บทที่ 1 บทนำ แสดงความเป็นมา วัตถุประสงค์ และขอบเขตของโครงการ บทที่ 2 เอกสารและงานวิจัยที่เกี่ยวข้อง แสดงกรอบแนวคิด ทฤษฎี และนโยบายที่รองรับ บทที่ 3 วิธีดำเนินการโครงการ แสดงขั้นตอนการปฏิบัติงานตามวงจร PDCA และเครื่องมือประเมินผล บทที่ 4 ผลการดำเนินงานโครงการ แสดงการวิเคราะห์ข้อมูลทางสถิติและผลการประเมินความพึงพอใจ และบทที่ 5 สรุปผล อภิปรายผล ปัญหาอุปสรรค และข้อเสนอแนะ รวมทั้งภาคผนวกที่รวบรวมหลักฐานและภาพกิจกรรมประกอบเล่มอย่างสมบูรณ์\n\n"
             . "คณะผู้จัดทำขอขอบพระคุณผู้อำนวยการวิทยาลัย คณะผู้บริหาร ครูอาจารย์ บุคลากรทางการศึกษา และผู้มีส่วนเกี่ยวข้องทุกท่าน ที่ได้ให้คำปรึกษา คำแนะนำ และสนับสนุนการดำเนินงานโครงการให้สำเร็จลุล่วงด้วยดี หวังเป็นอย่างยิ่งว่ารายงานโครงการฉบับนี้จะเป็นประโยชน์และเป็นแนวทางในการพัฒนาการดำเนินโครงการในโอกาสต่อไป";
 
-        // 3. Table of Contents Items (Standard 5 chapters)
-        $tocItems = [
-            ['title' => 'บทสรุปผู้บริหาร', 'page' => 'ก', 'is_bold' => true],
-            ['title' => 'คำนำ', 'page' => 'ข', 'is_bold' => true],
-            ['title' => 'สารบัญ', 'page' => 'ค', 'is_bold' => true],
-            ['title' => 'สารบัญตาราง', 'page' => 'ง', 'is_bold' => true],
-            ['title' => 'สารบัญภาพ', 'page' => 'จ', 'is_bold' => true],
-            ['title' => 'บทที่ 1 บทนำ', 'page' => '1', 'is_bold' => true],
-            ['title' => '    1.1 ความเป็นมาและความสำคัญ', 'page' => '1', 'is_bold' => false],
-            ['title' => '    1.2 วัตถุประสงค์ของโครงการ', 'page' => '2', 'is_bold' => false],
-            ['title' => '    1.3 ขอบเขตของโครงการ', 'page' => '2', 'is_bold' => false],
-            ['title' => '    1.4 เป้าหมายและตัวชี้วัดความสำเร็จ', 'page' => '3', 'is_bold' => false],
-            ['title' => '    1.5 ประโยชน์ที่คาดว่าจะได้รับ', 'page' => '4', 'is_bold' => false],
-            ['title' => 'บทที่ 2 เอกสารและงานวิจัยที่เกี่ยวข้อง', 'page' => '5', 'is_bold' => true],
-            ['title' => '    2.1 แนวคิด ทฤษฎี และหลักการที่เกี่ยวข้อง', 'page' => '5', 'is_bold' => false],
-            ['title' => '    2.2 นโยบาย ยุทธศาสตร์ และมาตรฐานที่เกี่ยวข้อง', 'page' => '8', 'is_bold' => false],
-            ['title' => '    2.3 งานวิจัยที่เกี่ยวข้อง', 'page' => '11', 'is_bold' => false],
-            ['title' => 'บทที่ 3 วิธีดำเนินการโครงการ', 'page' => '14', 'is_bold' => true],
-            ['title' => '    3.1 ประชากรและกลุ่มตัวอย่าง', 'page' => '14', 'is_bold' => false],
-            ['title' => '    3.2 เครื่องมือที่ใช้ในการประเมินผล', 'page' => '15', 'is_bold' => false],
-            ['title' => '    3.3 ขั้นตอนการดำเนินงานตามวงจร PDCA', 'page' => '16', 'is_bold' => false],
-            ['title' => '    3.4 การเก็บรวบรวมข้อมูล', 'page' => '18', 'is_bold' => false],
-            ['title' => '    3.5 การวิเคราะห์ข้อมูลและสถิติที่ใช้', 'page' => '19', 'is_bold' => false],
-            ['title' => 'บทที่ 4 ผลการดำเนินงานโครงการ', 'page' => '21', 'is_bold' => true],
-            ['title' => '    4.1 ข้อมูลทั่วไปของกลุ่มตัวอย่างผู้ตอบแบบประเมิน', 'page' => '21', 'is_bold' => false],
-            ['title' => '    4.2 ผลสัมฤทธิ์การดำเนินงานตามตัวชี้วัด', 'page' => '23', 'is_bold' => false],
-            ['title' => '    4.3 ผลการประเมินความพึงพอใจต่อโครงการ', 'page' => '25', 'is_bold' => false],
-            ['title' => '    4.4 ผลการใช้จ่ายงบประมาณ', 'page' => '28', 'is_bold' => false],
-            ['title' => 'บทที่ 5 สรุปผล อภิปรายผล และข้อเสนอแนะ', 'page' => '30', 'is_bold' => true],
-            ['title' => '    5.1 สรุปผลการดำเนินโครงการ', 'page' => '30', 'is_bold' => false],
-            ['title' => '    5.2 การอภิปรายผลการดำเนินโครงการ', 'page' => '32', 'is_bold' => false],
-            ['title' => '    5.3 ปัญหา อุปสรรค และแนวทางแก้ไข', 'page' => '35', 'is_bold' => false],
-            ['title' => '    5.4 ข้อเสนอแนะ', 'page' => '36', 'is_bold' => false],
-            ['title' => 'บรรณานุกรม', 'page' => '38', 'is_bold' => true],
-            ['title' => 'ภาคผนวก', 'page' => '40', 'is_bold' => true],
-            ['title' => '    ภาคผนวก ก เอกสารโครงการฉบับอนุมัติและคำสั่ง', 'page' => '41', 'is_bold' => false],
-            ['title' => '    ภาคผนวก ข แบบประเมินความพึงพอใจและ QR Code', 'page' => '45', 'is_bold' => false],
-            ['title' => '    ภาคผนวก ค เอกสารการเงินและชุดจัดซื้อจัดจ้าง', 'page' => '47', 'is_bold' => false],
-            ['title' => '    ภาคผนวก ง ภาพกิจกรรมการดำเนินโครงการ', 'page' => '50', 'is_bold' => false],
-            ['title' => '    ภาคผนวก จ กำหนดการและเอกสารหลักฐานอื่น ๆ', 'page' => '54', 'is_bold' => false],
-        ];
-
-        // 4. List of Tables (สารบัญตาราง)
-        $tableItems = [
-            ['title' => 'ตารางที่ 4-1 จำนวนและร้อยละของข้อมูลทั่วไปของผู้ตอบแบบประเมิน', 'page' => '22'],
-            ['title' => 'ตารางที่ 4-2 ผลสัมฤทธิ์การดำเนินงานเปรียบเทียบระหว่างเป้าหมายและผลการปฏิบัติจริง', 'page' => '24'],
-            ['title' => 'ตารางที่ 4-3 ค่าเฉลี่ยและส่วนเบี่ยงเบนมาตรฐานความพึงพอใจต่อโครงการจำแนกรายด้าน', 'page' => '26'],
-            ['title' => 'ตารางที่ 4-4 ค่าเฉลี่ยและส่วนเบี่ยงเบนมาตรฐานความพึงพอใจต่อโครงการในภาพรวม', 'page' => '27'],
-            ['title' => 'ตารางที่ 4-5 สรุปผลการใช้จ่ายงบประมาณจำแนกตามรายการ', 'page' => '29'],
-        ];
-
-        // 5. List of Figures (สารบัญภาพ)
-        $figureItems = [];
-        $photos = $project->photos;
-        if ($photos && count($photos) > 0) {
-            foreach ($photos as $pIdx => $ph) {
-                $caption = !empty($ph->caption) ? $ph->caption : "กิจกรรมการดำเนินโครงการ {$title}";
-                $caption = preg_replace('/^ภาพที่\s*\d+\s*:\s*/u', '', $caption);
-                $figureItems[] = [
-                    'title' => "ภาพที่ " . ($pIdx + 1) . " {$caption}",
-                    'page' => (50 + floor($pIdx / 2)),
-                ];
-            }
-        } else {
-            $figureItems = [
-                ['title' => 'ภาพที่ 1 พิธีเปิดโครงการและการชี้แจงวัตถุประสงค์', 'page' => '50'],
-                ['title' => 'ภาพที่ 2 การบรรยายและถ่ายทอดองค์ความรู้แก่นักศึกษา', 'page' => '50'],
-                ['title' => 'ภาพที่ 3 การฝึกปฏิบัติการและทำกิจกรรมกลุ่มของผู้เข้าร่วม', 'page' => '51'],
-                ['title' => 'ภาพที่ 4 การนำเสนอผลงานและการแลกเปลี่ยนเรียนรู้', 'page' => '51'],
-                ['title' => 'ภาพที่ 5 การประเมินผลและการสรุปองค์ความรู้', 'page' => '52'],
-                ['title' => 'ภาพที่ 6 การมอบเกียรติบัตรและพิธีปิดโครงการ', 'page' => '52'],
-            ];
-        }
+        // 3. Dynamic Calculation of Table of Contents, Tables, and Figures based on actual content length
+        $pagination = $this->calculatePaginationItems($project, $execSummary, $preface);
+        $tocItems = $pagination['toc_items'];
+        $tableItems = $pagination['table_items'];
+        $figureItems = $pagination['figure_items'];
 
         $sections = [
             'executive_summary' => $execSummary,
@@ -3434,15 +3366,215 @@ class ProjectController extends Controller
             'toc_items' => $tocItems,
             'table_items' => $tableItems,
             'figure_items' => $figureItems,
+            'page_breakdown' => $pagination['page_breakdown'],
         ];
 
         $fullContent = $execSummary . "\n\n" . $preface;
 
         return response()->json([
             'success' => true,
-            'message' => 'AI สังเคราะห์เนื้อหาส่วนนำ (คำนำ สารบัญ และบทสรุปผู้บริหาร) สำเร็จ',
+            'message' => 'AI สังเคราะห์เนื้อหาส่วนนำ และคำนวณรันเลขหน้าตามเนื้อหาเอกสารจริงสำเร็จ',
             'sections' => $sections,
             'full_content' => $fullContent,
+        ]);
+    }
+
+    /**
+     * Compute dynamic page numbers for Table of Contents, Tables, and Figures based on actual content length of chapters.
+     */
+    private function calculatePaginationItems(Project $project, string $execSummary = '', string $preface = ''): array
+    {
+        $project->loadMissing(['photos', 'appendices']);
+        $title = $project->title ?: 'โครงการ';
+
+        // 1. Preliminary Pages (ก, ข, ค, ...)
+        $execSummaryLen = mb_strlen($execSummary);
+        $execPages = ($execSummaryLen > 1800) ? 2 : 1;
+        $prefaceStart = ($execPages > 1) ? 'ค' : 'ข';
+        $tocStart = ($execPages > 1) ? 'ง' : 'ค';
+        $tableStart = ($execPages > 1) ? 'จ' : 'ง';
+        $figureStart = ($execPages > 1) ? 'ฉ' : 'จ';
+
+        // 2. Chapter 1 (Starts at page 1)
+        $ch1Start = 1;
+        $ch1Sections = is_array($project->chapter_1_sections) ? $project->chapter_1_sections : [];
+        $bgText = $ch1Sections['background'] ?? ($project->background_rationale ?? '');
+        $bgPages = max(1, (int)ceil(mb_strlen($bgText) / 1600));
+        $ch1_1 = $ch1Start;
+        $ch1_2 = $ch1Start + min($bgPages, 2);
+        $ch1_3 = $ch1_2 + 1;
+        $ch1_4 = $ch1_3 + 1;
+        $ch1_5 = $ch1_4 + 1;
+        $ch1Pages = max(3, $ch1_5 - $ch1Start + 1);
+
+        // 3. Chapter 2 (Starts after Chapter 1)
+        $ch2Start = $ch1Start + $ch1Pages;
+        $ch2Sections = is_array($project->chapter_2_sections) ? $project->chapter_2_sections : [];
+        $sec2_1 = $ch2Sections['section_2_1'] ?? '';
+        $sec2_2 = $ch2Sections['section_2_2'] ?? '';
+        $sec2_3 = $ch2Sections['section_2_3'] ?? '';
+        $sec2_1_pages = max(1, (int)ceil(mb_strlen($sec2_1) / 1600));
+        $sec2_2_pages = max(1, (int)ceil(mb_strlen($sec2_2) / 1600));
+        $sec2_3_pages = max(1, (int)ceil(mb_strlen($sec2_3) / 1600));
+        $ch2_1 = $ch2Start;
+        $ch2_2 = $ch2_1 + $sec2_1_pages;
+        $ch2_3 = $ch2_2 + $sec2_2_pages;
+        $ch2Pages = max(3, $sec2_1_pages + $sec2_2_pages + $sec2_3_pages);
+
+        // 4. Chapter 3 (Starts after Chapter 2)
+        $ch3Start = $ch2Start + $ch2Pages;
+        $ch3_1 = $ch3Start;
+        $ch3_2 = $ch3Start + 1;
+        $ch3_3 = $ch3Start + 2; // PDCA steps table
+        $ch3_4 = $ch3Start + 3;
+        $ch3_5 = $ch3Start + 3;
+        $ch3Pages = 4;
+
+        // 5. Chapter 4 (Starts after Chapter 3)
+        $ch4Start = $ch3Start + $ch3Pages;
+        $ch4_1 = $ch4Start;             // Demographics
+        $table4_1_page = $ch4Start + 1; // ตารางที่ 4-1
+        $ch4_2 = $ch4Start + 2;         // Indicators
+        $table4_2_page = $ch4Start + 2; // ตารางที่ 4-2
+        $ch4_3 = $ch4Start + 3;         // Evaluation
+        $table4_3_page = $ch4Start + 4; // ตารางที่ 4-3 (รายด้าน)
+        $table4_4_page = $ch4Start + 5; // ตารางที่ 4-4 (ภาพรวม)
+        $ch4_4 = $ch4Start + 6;         // Budget
+        $table4_5_page = $ch4Start + 6; // ตารางที่ 4-5 (งบประมาณ)
+        $ch4Pages = 7;
+
+        // 6. Chapter 5 (Starts after Chapter 4)
+        $ch5Start = $ch4Start + $ch4Pages;
+        $ch5_1 = $ch5Start;
+        $ch5_2 = $ch5Start + 1;
+        $ch5_3 = $ch5Start + 3;
+        $ch5_4 = $ch5Start + 4;
+        $ch5Pages = 5;
+
+        // 7. References (บรรณานุกรม)
+        $refStart = $ch5Start + $ch5Pages;
+        $refPages = 2;
+
+        // 8. Appendices (ภาคผนวก)
+        $appStart = $refStart + $refPages;
+        $app_A = $appStart + 1; // ภาคผนวก ก: โครงการฉบับอนุมัติและคำสั่ง (3 หน้า)
+        $app_B = $app_A + 3;    // ภาคผนวก ข: แบบประเมินความพึงพอใจและ QR Code (2 หน้า)
+        $app_C = $app_B + 2;    // ภาคผนวก ค: เอกสารการเงินและชุดจัดซื้อจัดจ้าง (2 หน้า)
+        $app_D = $app_C + 2;    // ภาคผนวก ง: ภาพกิจกรรม (หน้าละ 2 ภาพอย่างแม่นยำ)
+
+        // Calculate exact photo pages (2 photos per page)
+        $photos = $project->photos ?: [];
+        $photoCount = count($photos);
+        $photoPages = max(1, (int)ceil($photoCount / 2));
+        $app_E = $app_D + $photoPages; // ภาคผนวก จ: กำหนดการและเอกสารอื่น ๆ
+
+        // Table of Contents Items
+        $tocItems = [
+            ['title' => 'บทสรุปผู้บริหาร', 'page' => 'ก', 'is_bold' => true],
+            ['title' => 'คำนำ', 'page' => (string)$prefaceStart, 'is_bold' => true],
+            ['title' => 'สารบัญ', 'page' => (string)$tocStart, 'is_bold' => true],
+            ['title' => 'สารบัญตาราง', 'page' => (string)$tableStart, 'is_bold' => true],
+            ['title' => 'สารบัญภาพ', 'page' => (string)$figureStart, 'is_bold' => true],
+            ['title' => 'บทที่ 1 บทนำ', 'page' => (string)$ch1Start, 'is_bold' => true],
+            ['title' => '    1.1 ความเป็นมาและความสำคัญ', 'page' => (string)$ch1_1, 'is_bold' => false],
+            ['title' => '    1.2 วัตถุประสงค์ของโครงการ', 'page' => (string)$ch1_2, 'is_bold' => false],
+            ['title' => '    1.3 ขอบเขตของโครงการ', 'page' => (string)$ch1_3, 'is_bold' => false],
+            ['title' => '    1.4 เป้าหมายและตัวชี้วัดความสำเร็จ', 'page' => (string)$ch1_4, 'is_bold' => false],
+            ['title' => '    1.5 ประโยชน์ที่คาดว่าจะได้รับ', 'page' => (string)$ch1_5, 'is_bold' => false],
+            ['title' => 'บทที่ 2 เอกสารและงานวิจัยที่เกี่ยวข้อง', 'page' => (string)$ch2Start, 'is_bold' => true],
+            ['title' => '    2.1 แนวคิด ทฤษฎี และหลักการที่เกี่ยวข้อง', 'page' => (string)$ch2_1, 'is_bold' => false],
+            ['title' => '    2.2 นโยบาย ยุทธศาสตร์ และมาตรฐานที่เกี่ยวข้อง', 'page' => (string)$ch2_2, 'is_bold' => false],
+            ['title' => '    2.3 งานวิจัยที่เกี่ยวข้อง', 'page' => (string)$ch2_3, 'is_bold' => false],
+            ['title' => 'บทที่ 3 วิธีดำเนินการโครงการ', 'page' => (string)$ch3Start, 'is_bold' => true],
+            ['title' => '    3.1 ประชากรและกลุ่มตัวอย่าง', 'page' => (string)$ch3_1, 'is_bold' => false],
+            ['title' => '    3.2 เครื่องมือที่ใช้ในการประเมินผล', 'page' => (string)$ch3_2, 'is_bold' => false],
+            ['title' => '    3.3 ขั้นตอนการดำเนินงานตามวงจร PDCA', 'page' => (string)$ch3_3, 'is_bold' => false],
+            ['title' => '    3.4 การเก็บรวบรวมข้อมูล', 'page' => (string)$ch3_4, 'is_bold' => false],
+            ['title' => '    3.5 การวิเคราะห์ข้อมูลและสถิติที่ใช้', 'page' => (string)$ch3_5, 'is_bold' => false],
+            ['title' => 'บทที่ 4 ผลการดำเนินงานโครงการ', 'page' => (string)$ch4Start, 'is_bold' => true],
+            ['title' => '    4.1 ข้อมูลทั่วไปของกลุ่มตัวอย่างผู้ตอบแบบประเมิน', 'page' => (string)$ch4_1, 'is_bold' => false],
+            ['title' => '    4.2 ผลสัมฤทธิ์การดำเนินงานตามตัวชี้วัด', 'page' => (string)$ch4_2, 'is_bold' => false],
+            ['title' => '    4.3 ผลการประเมินความพึงพอใจต่อโครงการ', 'page' => (string)$ch4_3, 'is_bold' => false],
+            ['title' => '    4.4 ผลการใช้จ่ายงบประมาณ', 'page' => (string)$ch4_4, 'is_bold' => false],
+            ['title' => 'บทที่ 5 สรุปผล อภิปรายผล และข้อเสนอแนะ', 'page' => (string)$ch5Start, 'is_bold' => true],
+            ['title' => '    5.1 สรุปผลการดำเนินโครงการ', 'page' => (string)$ch5_1, 'is_bold' => false],
+            ['title' => '    5.2 การอภิปรายผลการดำเนินโครงการ', 'page' => (string)$ch5_2, 'is_bold' => false],
+            ['title' => '    5.3 ปัญหา อุปสรรค และแนวทางแก้ไข', 'page' => (string)$ch5_3, 'is_bold' => false],
+            ['title' => '    5.4 ข้อเสนอแนะ', 'page' => (string)$ch5_4, 'is_bold' => false],
+            ['title' => 'บรรณานุกรม', 'page' => (string)$refStart, 'is_bold' => true],
+            ['title' => 'ภาคผนวก', 'page' => (string)$appStart, 'is_bold' => true],
+            ['title' => '    ภาคผนวก ก เอกสารโครงการฉบับอนุมัติและคำสั่ง', 'page' => (string)$app_A, 'is_bold' => false],
+            ['title' => '    ภาคผนวก ข แบบประเมินความพึงพอใจและ QR Code', 'page' => (string)$app_B, 'is_bold' => false],
+            ['title' => '    ภาคผนวก ค เอกสารการเงินและชุดจัดซื้อจัดจ้าง', 'page' => (string)$app_C, 'is_bold' => false],
+            ['title' => '    ภาคผนวก ง ภาพกิจกรรมการดำเนินโครงการ', 'page' => (string)$app_D, 'is_bold' => false],
+            ['title' => '    ภาคผนวก จ กำหนดการและเอกสารหลักฐานอื่น ๆ', 'page' => (string)$app_E, 'is_bold' => false],
+        ];
+
+        // List of Tables with precise pages
+        $tableItems = [
+            ['title' => 'ตารางที่ 4-1 จำนวนและร้อยละของข้อมูลทั่วไปของผู้ตอบแบบประเมิน', 'page' => (string)$table4_1_page],
+            ['title' => 'ตารางที่ 4-2 ผลสัมฤทธิ์การดำเนินงานเปรียบเทียบระหว่างเป้าหมายและผลการปฏิบัติจริง', 'page' => (string)$table4_2_page],
+            ['title' => 'ตารางที่ 4-3 ค่าเฉลี่ยและส่วนเบี่ยงเบนมาตรฐานความพึงพอใจต่อโครงการจำแนกรายด้าน', 'page' => (string)$table4_3_page],
+            ['title' => 'ตารางที่ 4-4 ค่าเฉลี่ยและส่วนเบี่ยงเบนมาตรฐานความพึงพอใจต่อโครงการในภาพรวม', 'page' => (string)$table4_4_page],
+            ['title' => 'ตารางที่ 4-5 สรุปผลการใช้จ่ายงบประมาณจำแนกตามรายการ', 'page' => (string)$table4_5_page],
+        ];
+
+        // List of Figures with exact photo pages (2 photos per page)
+        $figureItems = [];
+        if ($photos && count($photos) > 0) {
+            foreach ($photos as $pIdx => $ph) {
+                $caption = !empty($ph->caption) ? $ph->caption : "กิจกรรมการดำเนินโครงการ {$title}";
+                $caption = preg_replace('/^ภาพที่\s*\d+\s*:\s*/u', '', $caption);
+                $exactPhotoPage = $app_D + (int)floor($pIdx / 2);
+                $figureItems[] = [
+                    'title' => "ภาพที่ " . ($pIdx + 1) . " {$caption}",
+                    'page' => (string)$exactPhotoPage,
+                ];
+            }
+        } else {
+            $figureItems = [
+                ['title' => 'ภาพที่ 1 พิธีเปิดโครงการและการชี้แจงวัตถุประสงค์', 'page' => (string)$app_D],
+                ['title' => 'ภาพที่ 2 การบรรยายและถ่ายทอดองค์ความรู้แก่นักศึกษา', 'page' => (string)$app_D],
+                ['title' => 'ภาพที่ 3 การฝึกปฏิบัติการและทำกิจกรรมกลุ่มของผู้เข้าร่วม', 'page' => (string)($app_D + 1)],
+                ['title' => 'ภาพที่ 4 การนำเสนอผลงานและการแลกเปลี่ยนเรียนรู้', 'page' => (string)($app_D + 1)],
+                ['title' => 'ภาพที่ 5 การประเมินผลและการสรุปองค์ความรู้', 'page' => (string)($app_D + 2)],
+                ['title' => 'ภาพที่ 6 การมอบเกียรติบัตรและพิธีปิดโครงการ', 'page' => (string)($app_D + 2)],
+            ];
+        }
+
+        return [
+            'toc_items' => $tocItems,
+            'table_items' => $tableItems,
+            'figure_items' => $figureItems,
+            'page_breakdown' => [
+                'ch1_pages' => $ch1Pages,
+                'ch2_pages' => $ch2Pages,
+                'ch3_pages' => $ch3Pages,
+                'ch4_pages' => $ch4Pages,
+                'ch5_pages' => $ch5Pages,
+                'photo_pages' => $photoPages,
+                'total_pages' => $app_E + 2,
+            ]
+        ];
+    }
+
+    /**
+     * API Endpoint to calculate and return exact page numbers based on actual project contents.
+     */
+    public function calculatePreliminaryPages(Request $request, Project $project)
+    {
+        $execSummary = $request->input('executive_summary', '');
+        $preface = $request->input('preface', '');
+
+        $pagination = $this->calculatePaginationItems($project, $execSummary, $preface);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'คำนวณและปรับรันเลขหน้าตามเนื้อหาเอกสารจริงเรียบร้อยแล้ว',
+            'toc_items' => $pagination['toc_items'],
+            'table_items' => $pagination['table_items'],
+            'figure_items' => $pagination['figure_items'],
+            'page_breakdown' => $pagination['page_breakdown'],
         ]);
     }
 

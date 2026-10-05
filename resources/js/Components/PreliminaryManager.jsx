@@ -12,6 +12,8 @@ export default function PreliminaryManager({
     const [activeSubTab, setActiveSubTab] = useState('executive_summary'); // 'executive_summary' | 'preface' | 'toc' | 'tables_figures'
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isCalculatingPages, setIsCalculatingPages] = useState(false);
+    const [pageBreakdown, setPageBreakdown] = useState(null);
 
     // Form state
     const [executiveSummary, setExecutiveSummary] = useState('');
@@ -21,6 +23,44 @@ export default function PreliminaryManager({
     const [tocItems, setTocItems] = useState([]);
     const [tableItems, setTableItems] = useState([]);
     const [figureItems, setFigureItems] = useState([]);
+
+    // Auto-Calculate Pages based on actual chapter content length
+    const handleCalculatePages = async () => {
+        setIsCalculatingPages(true);
+        try {
+            const response = await axios.post(route('projects.preliminary.calculate_pages', activeProject.id), {
+                executive_summary: executiveSummary,
+                preface: preface,
+            }, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (response.data.success) {
+                setTocItems(response.data.toc_items || []);
+                setTableItems(response.data.table_items || []);
+                setFigureItems(response.data.figure_items || []);
+                setPageBreakdown(response.data.page_breakdown || null);
+
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: '🔄 คำนวณและปรับรันเลขหน้าตามเนื้อหาเอกสารจริงเรียบร้อยแล้ว',
+                    showConfirmButton: false,
+                    timer: 2500
+                });
+            }
+        } catch (error) {
+            console.error('Calculate pages error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'ไม่สามารถคำนวณเลขหน้าได้',
+                text: error.response?.data?.message || 'เกิดข้อผิดพลาดในการคำนวณเลขหน้า',
+            });
+        } finally {
+            setIsCalculatingPages(false);
+        }
+    };
 
     // Initialize state from activeProject
     useEffect(() => {
@@ -427,9 +467,35 @@ export default function PreliminaryManager({
                                 โครงสร้างหัวข้อหลักและหัวข้อย่อย บทที่ 1 ถึง บทที่ 5 และภาคผนวก พร้อมเลขหน้า
                             </p>
                         </div>
-                        <span className="text-xs text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                            จัดเรียงตามมาตรฐานงานวิจัยและโครงการ 5 บท
-                        </span>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleCalculatePages}
+                                disabled={isCalculatingPages}
+                                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                                title="คำนวณและปรับรันเลขหน้าตามความยาวจริงของบทที่ 1–5 และจำนวนภาพกิจกรรมในภาคผนวก"
+                            >
+                                <span>🔄</span>
+                                <span>{isCalculatingPages ? 'กำลังคำนวณเลขหน้า...' : 'คำนวณเลขหน้าจากเนื้อหาจริง'}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Informational Banner */}
+                    <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">💡</span>
+                            <div>
+                                <span className="font-bold">ระบบคำนวณและรันเลขหน้าตามเนื้อหาจริง: </span>
+                                <span className="text-emerald-800">รันต่อเนื่องตามความยาวของบทที่ 1–5, ตารางในบทที่ 4, และจัดวางภาพกิจกรรมหน้าละ 2 ภาพในภาคผนวก (สามารถคลิกแก้ไขตัวเลขในช่องตารางได้โดยตรง)</span>
+                            </div>
+                        </div>
+                        {pageBreakdown && (
+                            <span className="shrink-0 bg-white px-2.5 py-1 rounded-xl font-bold border border-emerald-200 text-emerald-800 text-[11px]">
+                                ประมาณการทั้งเล่ม ~{pageBreakdown.total_pages} หน้า
+                            </span>
+                        )}
                     </div>
 
                     {tocItems.length === 0 ? (
@@ -494,68 +560,170 @@ export default function PreliminaryManager({
 
             {/* TAB 4: สารบัญตาราง & สารบัญภาพ */}
             {activeSubTab === 'tables_figures' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* สารบัญตาราง */}
-                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
-                        <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
-                            <div>
-                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold mb-1">
-                                    หน้า ง
-                                </span>
-                                <h4 className="font-bold text-slate-900 text-sm">สารบัญตาราง (List of Tables)</h4>
-                            </div>
-                            <span className="text-[11px] text-slate-400">{tableItems.length} ตาราง</span>
+                <div className="space-y-6">
+                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                                <span>📊</span> สารบัญตาราง & สารบัญภาพ
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-1">
+                                จัดการเลขหน้าตารางในบทที่ 4 และภาพกิจกรรมในภาคผนวก โดยอิงจากการคำนวณเนื้อหาจริง
+                            </p>
                         </div>
-
-                        <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-                            <table className="w-full">
-                                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                                    <tr>
-                                        <th className="px-3 py-2 text-left">ตารางที่</th>
-                                        <th className="px-3 py-2 text-right w-20">หน้า</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {tableItems.map((t, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50">
-                                            <td className="px-3 py-2 text-slate-800">{t.title}</td>
-                                            <td className="px-3 py-2 text-right font-mono text-slate-600">{t.page}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleCalculatePages}
+                                disabled={isCalculatingPages}
+                                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-bold shadow-sm transition flex items-center gap-2"
+                            >
+                                {isCalculatingPages ? (
+                                    <>
+                                        <svg className="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                        </svg>
+                                        กำลังคำนวณหน้าจริง...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>🔄</span> คำนวณเลขหน้าจากเนื้อหาจริง
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSave}
+                                disabled={isSaving}
+                                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs font-bold shadow-sm transition"
+                            >
+                                {isSaving ? 'กำลังบันทึก...' : '💾 บันทึก'}
+                            </button>
                         </div>
                     </div>
 
-                    {/* สารบัญภาพ */}
-                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
-                        <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+                    <div className="bg-emerald-50/60 border border-emerald-200/70 rounded-2xl p-4 text-xs text-emerald-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                            <span className="text-lg">💡</span>
                             <div>
-                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold mb-1">
-                                    หน้า จ
-                                </span>
-                                <h4 className="font-bold text-slate-900 text-sm">สารบัญภาพ (List of Figures)</h4>
+                                <span className="font-bold">กติกาการคำนวณตำแหน่งหน้า: </span>
+                                <span className="text-emerald-800">ตารางที่ 4-1 ถึง 4-5 อ้างอิงตามตำแหน่งข้อความจริงในบทที่ 4 ส่วนภาพกิจกรรมคำนวณตามสูตร 2 ภาพต่อหน้ากระดาษ A4 ในภาคผนวก</span>
                             </div>
-                            <span className="text-[11px] text-slate-400">{figureItems.length} ภาพ</span>
+                        </div>
+                        {pageBreakdown && (
+                            <span className="shrink-0 bg-white px-2.5 py-1 rounded-xl font-bold border border-emerald-200 text-emerald-800 text-[11px]">
+                                ประมาณการทั้งเล่ม ~{pageBreakdown.total_pages} หน้า
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* สารบัญตาราง */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+                            <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold mb-1">
+                                        หน้า ง
+                                    </span>
+                                    <h4 className="font-bold text-slate-900 text-sm">สารบัญตาราง (List of Tables)</h4>
+                                </div>
+                                <span className="text-[11px] text-slate-400">{tableItems.length} ตาราง</span>
+                            </div>
+
+                            <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left">ตารางที่</th>
+                                            <th className="px-3 py-2 text-right w-20">หน้า</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {tableItems.map((t, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-50">
+                                                <td className="px-3 py-2">
+                                                    <input
+                                                        type="text"
+                                                        value={t.title}
+                                                        onChange={(e) => {
+                                                            const updated = [...tableItems];
+                                                            updated[idx].title = e.target.value;
+                                                            setTableItems(updated);
+                                                        }}
+                                                        className="w-full bg-transparent border-0 p-0 text-xs focus:ring-0 text-slate-800"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-2 text-right">
+                                                    <input
+                                                        type="text"
+                                                        value={t.page}
+                                                        onChange={(e) => {
+                                                            const updated = [...tableItems];
+                                                            updated[idx].page = e.target.value;
+                                                            setTableItems(updated);
+                                                        }}
+                                                        className="w-14 bg-transparent border-0 p-0 text-right font-mono text-slate-600 focus:ring-0 text-xs ml-auto"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
-                        <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
-                            <table className="w-full">
-                                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                                    <tr>
-                                        <th className="px-3 py-2 text-left">ภาพที่</th>
-                                        <th className="px-3 py-2 text-right w-20">หน้า</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {figureItems.map((f, idx) => (
-                                        <tr key={idx} className="hover:bg-slate-50">
-                                            <td className="px-3 py-2 text-slate-800 truncate max-w-[240px]">{f.title}</td>
-                                            <td className="px-3 py-2 text-right font-mono text-slate-600">{f.page}</td>
+                        {/* สารบัญภาพ */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+                            <div className="pb-3 border-b border-slate-100 flex items-center justify-between">
+                                <div>
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold mb-1">
+                                        หน้า จ
+                                    </span>
+                                    <h4 className="font-bold text-slate-900 text-sm">สารบัญภาพ (List of Figures)</h4>
+                                </div>
+                                <span className="text-[11px] text-slate-400">{figureItems.length} ภาพ</span>
+                            </div>
+
+                            <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                                        <tr>
+                                            <th className="px-3 py-2 text-left">ภาพที่</th>
+                                            <th className="px-3 py-2 text-right w-20">หน้า</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {figureItems.map((f, idx) => (
+                                            <tr key={idx} className="hover:bg-slate-50">
+                                                <td className="px-3 py-2">
+                                                    <input
+                                                        type="text"
+                                                        value={f.title}
+                                                        onChange={(e) => {
+                                                            const updated = [...figureItems];
+                                                            updated[idx].title = e.target.value;
+                                                            setFigureItems(updated);
+                                                        }}
+                                                        className="w-full bg-transparent border-0 p-0 text-xs focus:ring-0 text-slate-800 truncate"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-2 text-right">
+                                                    <input
+                                                        type="text"
+                                                        value={f.page}
+                                                        onChange={(e) => {
+                                                            const updated = [...figureItems];
+                                                            updated[idx].page = e.target.value;
+                                                            setFigureItems(updated);
+                                                        }}
+                                                        className="w-14 bg-transparent border-0 p-0 text-right font-mono text-slate-600 focus:ring-0 text-xs ml-auto"
+                                                    />
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
