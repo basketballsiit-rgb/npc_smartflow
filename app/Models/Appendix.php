@@ -11,7 +11,10 @@ class Appendix extends Model
     protected $fillable = [
         'project_id',
         'title',
+        'category',
+        'caption',
         'file_path',
+        'external_url',
         'file_type',
         'file_size',
         'sort_order',

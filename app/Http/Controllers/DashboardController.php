@@ -738,8 +738,8 @@ class DashboardController extends Controller
             || $user->isProcurementHead() || $user->isProcurementStaff() 
             || $user->isFinanceStaff() || $user->isExecutive();
 
-        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5'])) {
-            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices'])
+        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix'])) {
+            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices', 'photos', 'survey'])
                 ->latest();
 
             // Non-power users (e.g. general teachers/proposers) only track their own projects
@@ -881,11 +881,30 @@ class DashboardController extends Controller
                             return [
                                 'id' => $app->id,
                                 'title' => $app->title,
-                                'file_url' => asset('storage/' . $app->file_path),
+                                'category' => $app->category ?? 'others',
+                                'caption' => $app->caption ?? '',
+                                'external_url' => $app->external_url ?? '',
+                                'file_url' => $app->file_path ? asset('storage/' . $app->file_path) : null,
                                 'file_type' => $app->file_type,
                                 'file_size' => (int)$app->file_size,
+                                'sort_order' => (int)$app->sort_order,
                             ];
                         }) : [],
+                        'photos' => $p->photos ? $p->photos->map(function ($ph) {
+                            return [
+                                'id' => $ph->id,
+                                'photo_url' => asset('storage/' . $ph->photo_path),
+                                'caption' => $ph->caption ?? '',
+                                'sort_order' => (int)$ph->sort_order,
+                            ];
+                        }) : [],
+                        'survey' => $p->survey ? [
+                            'id' => $p->survey->id,
+                            'title' => $p->survey->title,
+                            'evaluate_url' => route('surveys.evaluate', $p->id),
+                        ] : [
+                            'evaluate_url' => route('surveys.evaluate', $p->id),
+                        ],
                         'print_url' => route('projects.print', $p->id),
                         'procurement_items' => $p->procurement?->items ? $p->procurement->items->map(function ($it) {
                             return [

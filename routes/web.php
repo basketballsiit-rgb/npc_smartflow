@@ -222,7 +222,9 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/appendices', [AppendixController::class, 'store'])->name('appendices.store');
     Route::delete('appendices/{appendix}', [AppendixController::class, 'destroy'])->name('appendices.destroy');
     Route::post('projects/{project}/photos', [AppendixController::class, 'storePhoto'])->name('appendices.store_photo');
+    Route::post('photos/{photo}/caption', [AppendixController::class, 'updatePhotoCaption'])->name('appendices.update_photo_caption');
     Route::delete('photos/{photo}', [AppendixController::class, 'destroyPhoto'])->name('appendices.destroy_photo');
+    Route::get('projects/{project}/appendix/print', [AppendixController::class, 'printAppendix'])->name('projects.appendix.print');
 
     // Final stitched report download
     Route::get('projects/{project}/download-report', [ProjectController::class, 'downloadReport'])->name('projects.download_report');

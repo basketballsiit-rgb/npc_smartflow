@@ -72,7 +72,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        (currentUrl.includes('tab=document_tracking') && !isPlanStaff && !isAdmin) ||
                        (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')));
             case 'five_chapters':
-                return currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2');
+                return currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix');
             case 'procurement_loan':
                 return (currentUrl.includes('routine-budgets') && !isPlanStaff && !isAdmin) ||
                        (currentUrl.includes('tab=clearings') && !isFinanceStaff && !isAdmin);
@@ -112,7 +112,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const getActiveSectionForUrl = (currentUrl) => {
         if (!currentUrl) return null;
-        if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2')) {
+        if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix')) {
             return 'five_chapters';
         }
         if (currentUrl.includes('tab=admin_users') || currentUrl.includes('tab=admin_settings') || currentUrl.includes('tab=admin_strategies') || currentUrl.includes('tab=admin_ai') || currentUrl.includes('tab=all_projects')) {
@@ -602,12 +602,21 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'proposals', filter: 'reporting', chapter: 5 })}
-                                    className={getSubLinkClass(url.includes('chapter=5') || (url.includes('filter=reporting') && !url.includes('chapter=')))}
+                                    className={getSubLinkClass(url.includes('chapter=5') || (url.includes('filter=reporting') && !url.includes('chapter=') && !url.includes('tab=appendix')))}
                                     title="บทที่ 5: สรุปผล อภิปรายผล & พิมพ์รูปเล่ม (Act Phase)"
                                 >
-                                    <span className={getPrefixClass(url.includes('chapter=5') || (url.includes('filter=reporting') && !url.includes('chapter=')), 'text-emerald-300')}>└─</span>
+                                    <span className={getPrefixClass(url.includes('chapter=5') || (url.includes('filter=reporting') && !url.includes('chapter=') && !url.includes('tab=appendix')), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📓</span>
                                     {isSidebarOpen && <span>บทที่ 5: สรุปผล & พิมพ์เล่ม 5 บท</span>}
+                                </Link>
+                                <Link
+                                    href={route('dashboard', { tab: 'appendix' })}
+                                    className={getSubLinkClass(url.includes('tab=appendix') || url.includes('chapter=appendix'))}
+                                    title="ภาคผนวก: รวบรวมเอกสารแนบ ภาพกิจกรรม และหลักฐานประกอบเล่ม"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=appendix') || url.includes('chapter=appendix'), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">📎</span>
+                                    {isSidebarOpen && <span>ภาคผนวก: เอกสารแนบ & ภาพกิจกรรม</span>}
                                 </Link>
                             </div>
                             )}
@@ -1207,6 +1216,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'proposals', filter: 'reporting', chapter: 5 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📓</span> บทที่ 5: สรุปผล & พิมพ์เล่ม 5 บท
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'appendix' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📎</span> ภาคผนวก: เอกสารแนบ & ภาพกิจกรรม
                                         </Link>
                                     </div>
                                 )}

@@ -6,6 +6,7 @@ import WorkflowKanbanBoard from '@/Components/WorkflowKanbanBoard';
 import AdminDataVisualization from '@/Components/AdminDataVisualization';
 import PendingTasksWidget from '@/Components/PendingTasksWidget';
 import WorkloadAnalyzerModal from '@/Components/WorkloadAnalyzerModal';
+import AppendixManager from '@/Components/AppendixManager';
 import axios from 'axios';
 
 export default function Dashboard({ 
@@ -810,21 +811,37 @@ export default function Dashboard({
             const urlParams = new URLSearchParams(window.location.search);
             const ch = urlParams.get('chapter');
             if (ch) {
-                setActiveTab(`chapter_${ch}`);
+                if (ch === 'appendix') {
+                    setActiveTab('appendix');
+                } else {
+                    setActiveTab(`chapter_${ch}`);
+                }
                 return;
             }
             const tb = urlParams.get('tab');
             if (tb) {
-                setActiveTab(tb === 'proposals' ? 'document_tracking' : tb);
+                if (tb === 'appendix') {
+                    setActiveTab('appendix');
+                } else {
+                    setActiveTab(tb === 'proposals' ? 'document_tracking' : tb);
+                }
                 return;
             }
         }
         if (currentChapter) {
-            setActiveTab(`chapter_${currentChapter}`);
+            if (currentChapter === 'appendix') {
+                setActiveTab('appendix');
+            } else {
+                setActiveTab(`chapter_${currentChapter}`);
+            }
             return;
         }
         if (currentTab) {
-            setActiveTab(currentTab === 'proposals' ? 'document_tracking' : currentTab);
+            if (currentTab === 'appendix') {
+                setActiveTab('appendix');
+            } else {
+                setActiveTab(currentTab === 'proposals' ? 'document_tracking' : currentTab);
+            }
         }
     }, [currentTab, currentChapter]);
 
@@ -19715,12 +19732,40 @@ return (
                                     <span>📄 พิมพ์แบบเสนอโครงการฉบับเต็ม (Proposal)</span>
                                     <span>🖨️</span>
                                 </a>
+
+                                <a
+                                    href={route('projects.appendix.print', activeChapter1Project.id)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="w-full px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow transition flex items-center justify-between"
+                                >
+                                    <span>📎 พิมพ์ภาคผนวก & เอกสารแนบทั้งหมด (A4)</span>
+                                    <span>🖨️</span>
+                                </a>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('appendix')}
+                                    className="w-full px-4 py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-900 rounded-xl text-xs font-bold border border-teal-200 transition flex items-center justify-between"
+                                >
+                                    <span>📁 ไปยังเมนูภาคผนวก (เอกสารแนบ & ภาพกิจกรรม)</span>
+                                    <span>👉</span>
+                                </button>
                             </>
                         )}
                     </div>
                 </div>
             </div>
         </div>
+    );
+
+    const renderAppendixTab = () => (
+        <AppendixManager
+            projects={chapter1Projects}
+            activeProject={activeChapter1Project}
+            onSelectProject={(id) => setSelectedChapter1ProjectId(id)}
+            onProjectUpdated={() => router.reload({ preserveScroll: true })}
+        />
     );
 
     return (
@@ -19743,6 +19788,7 @@ return (
                         {activeTab === 'chapter_3' && renderChapter3Tab()}
                         {activeTab === 'chapter_4' && renderChapter4Tab()}
                         {activeTab === 'chapter_5' && renderChapter5Tab()}
+                        {(activeTab === 'appendix' || activeTab === 'chapter_appendix') && renderAppendixTab()}
                         {activeTab === 'admin_users' && renderAdminUsersTab()}
                         {activeTab === 'admin_strategies' && renderAdminStrategiesTab()}
                         {activeTab === 'admin_settings' && renderAdminSettingsTab()}
