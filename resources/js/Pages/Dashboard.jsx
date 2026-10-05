@@ -16141,190 +16141,23 @@ return (
                     spentSublabel: "รวมยอดชุดจัดซื้อจัดจ้าง & สัญญายืมเงินที่ปิดยอดแล้ว"
                 })}
 
-                {/* KPI Cards */}
-                {isStrictFinanceUser ? (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <button
-                            onClick={() => setDocTrackingFilter(docTrackingFilter === 'fin_pending_receive' ? 'all' : 'fin_pending_receive')}
-                            className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
-                                docTrackingFilter === 'fin_pending_receive'
-                                    ? 'bg-amber-500 text-white border-amber-600 shadow-md ring-2 ring-amber-400/50'
-                                    : 'bg-white text-slate-800 border-amber-200 hover:bg-amber-50/50 shadow-xs'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-2xl">⏳</span>
-                                <span className={`text-2xl font-black ${docTrackingFilter === 'fin_pending_receive' ? 'text-white' : 'text-amber-700'}`}>
-                                    {countFinPendingReceive}
-                                </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">รอการเงินลงรับ</h4>
-                            <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'fin_pending_receive' ? 'text-amber-100' : 'text-slate-600'}`}>
-                                แผนงานตัดยอดส่งมา / รอลงรับเลข กง.
-                            </p>
-                        </button>
-
-                        <button
-                            onClick={() => setDocTrackingFilter(docTrackingFilter === 'fin_pending_loan' ? 'all' : 'fin_pending_loan')}
-                            className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
-                                docTrackingFilter === 'fin_pending_loan'
-                                    ? 'bg-blue-600 text-white border-blue-700 shadow-md ring-2 ring-blue-400/50'
-                                    : 'bg-white text-slate-800 border-blue-200 hover:bg-blue-50/50 shadow-xs'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-2xl">📥</span>
-                                <span className={`text-2xl font-black ${docTrackingFilter === 'fin_pending_loan' ? 'text-white' : 'text-blue-700'}`}>
-                                    {countFinPendingLoanDisburse}
-                                </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">ลงรับแล้ว/รอโอนเงิน</h4>
-                            <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'fin_pending_loan' ? 'text-blue-100' : 'text-slate-600'}`}>
-                                ลงรับ กค. 101 แล้ว / รอสั่งจ่ายเงินยืม
-                            </p>
-                        </button>
-
-                        <button
-                            onClick={() => setDocTrackingFilter(docTrackingFilter === 'fin_proc_pay' ? 'all' : 'fin_proc_pay')}
-                            className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
-                                docTrackingFilter === 'fin_proc_pay'
-                                    ? 'bg-purple-600 text-white border-purple-700 shadow-md ring-2 ring-purple-400/50'
-                                    : 'bg-white text-slate-800 border-purple-200 hover:bg-purple-50/50 shadow-xs'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-2xl">📦</span>
-                                <span className={`text-2xl font-black ${docTrackingFilter === 'fin_proc_pay' ? 'text-white' : 'text-purple-700'}`}>
-                                    {countFinProcToPay}
-                                </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">ชุดจัดซื้อรอเบิกจ่าย</h4>
-                            <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'fin_proc_pay' ? 'text-purple-100' : 'text-slate-600'}`}>
-                                พัสดุส่งเรื่อง 4 ฉบับมาการเงิน
-                            </p>
-                        </button>
-
-                        <button
-                            onClick={() => setDocTrackingFilter(docTrackingFilter === 'fin_completed' ? 'all' : 'fin_completed')}
-                            className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
-                                docTrackingFilter === 'fin_completed'
-                                    ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-400/50'
-                                    : 'bg-white text-slate-800 border-teal-200 hover:bg-teal-50/50 shadow-xs'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-2xl">✅</span>
-                                <span className={`text-2xl font-black ${docTrackingFilter === 'fin_completed' ? 'text-white' : 'text-teal-700'}`}>
-                                    {countFinCompleted}
-                                </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">จ่าย/ปิดยอดแล้ว</h4>
-                            <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'fin_completed' ? 'text-teal-100' : 'text-slate-600'}`}>
-                                โอนเงิน/เคลียร์ปิดยอดเรียบร้อย
-                            </p>
-                        </button>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <button
-                            onClick={() => setDocTrackingFilter('at_procurement')}
-                            className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
-                                docTrackingFilter === 'at_procurement'
-                                    ? 'bg-blue-500 text-white border-blue-600 shadow-md ring-2 ring-blue-400/50'
-                                    : 'bg-white text-slate-800 border-blue-200 hover:bg-blue-50/50 shadow-xs'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-2xl">📦</span>
-                                <span className={`text-2xl font-black ${docTrackingFilter === 'at_procurement' ? 'text-white' : 'text-blue-700'}`}>
-                                    {countProcurement}
-                                </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">อยู่ที่งานพัสดุ</h4>
-                            <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'at_procurement' ? 'text-blue-100' : 'text-slate-600'}`}>
-                                รอลงรับ / กำลังทำเอกสารขอซื้อขอจ้าง
-                            </p>
-                        </button>
-
-                        <button
-                            onClick={() => setDocTrackingFilter('at_finance')}
-                            className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
-                                docTrackingFilter === 'at_finance'
-                                    ? 'bg-emerald-600 text-white border-emerald-700 shadow-md ring-2 ring-emerald-400/50'
-                                    : 'bg-white text-slate-800 border-emerald-200 hover:bg-emerald-50/50 shadow-xs'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-2xl">💰</span>
-                                <span className={`text-2xl font-black ${docTrackingFilter === 'at_finance' ? 'text-white' : 'text-emerald-700'}`}>
-                                    {countFinance}
-                                </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">อยู่ที่งานการเงิน</h4>
-                            <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'at_finance' ? 'text-emerald-100' : 'text-slate-600'}`}>
-                                ตรวจสัญญา กค. 101 / รอเบิกจ่าย
-                            </p>
-                        </button>
-
-                        <button
-                            onClick={() => setDocTrackingFilter('with_borrower')}
-                            className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
-                                docTrackingFilter === 'with_borrower'
-                                    ? 'bg-purple-600 text-white border-purple-700 shadow-md ring-2 ring-purple-400/50'
-                                    : 'bg-white text-slate-800 border-purple-200 hover:bg-purple-50/50 shadow-xs'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-2xl">⭐</span>
-                                <span className={`text-2xl font-black ${docTrackingFilter === 'with_borrower' ? 'text-white' : 'text-purple-700'}`}>
-                                    {countBorrower}
-                                </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">อยู่ที่ผู้ยืมเงิน</h4>
-                            <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'with_borrower' ? 'text-purple-100' : 'text-slate-600'}`}>
-                                รับเงินแล้ว / กำลังดำเนินกิจกรรม
-                            </p>
-                        </button>
-
-                        <button
-                            onClick={() => setDocTrackingFilter('completed')}
-                            className={`p-4 rounded-2xl border text-left transition-all hover:scale-102 ${
-                                docTrackingFilter === 'completed'
-                                    ? 'bg-teal-600 text-white border-teal-700 shadow-md ring-2 ring-teal-400/50'
-                                    : 'bg-white text-slate-800 border-teal-200 hover:bg-teal-50/50 shadow-xs'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between">
-                                <span className="text-2xl">✅</span>
-                                <span className={`text-2xl font-black ${docTrackingFilter === 'completed' ? 'text-white' : 'text-teal-700'}`}>
-                                    {countCompleted}
-                                </span>
-                            </div>
-                            <h4 className="text-sm sm:text-base font-extrabold mt-2 tracking-tight leading-snug">เคลียร์เงินยืมสมบูรณ์</h4>
-                            <p className={`text-xs mt-1 leading-normal ${docTrackingFilter === 'completed' ? 'text-teal-100' : 'text-slate-600'}`}>
-                                ส่งใบเสร็จล้างหนี้และปิดสัญญาแล้ว
-                            </p>
-                        </button>
-                    </div>
-                )}
-
                 {/* Filter and Search Bar */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
                     <div className="flex flex-wrap items-center gap-1.5">
                         {isStrictFinanceUser ? (
                             [
-                                { id: 'all', label: 'ทั้งหมด' },
-                                { id: 'fin_pending_receive', label: '⏳ รอการเงินลงรับ' },
-                                { id: 'fin_pending_loan', label: '📥 ลงรับแล้ว/รอโอนเงินยืม' },
-                                { id: 'fin_proc_pay', label: '📦 ชุดจัดซื้อรอเบิกจ่าย' },
-                                { id: 'fin_completed', label: '✅ จ่าย/ปิดยอดแล้ว' },
+                                { id: 'all', label: `ทั้งหมด (${trackingList.length})` },
+                                { id: 'fin_pending_receive', label: `⏳ รอการเงินลงรับ (${countFinPendingReceive})` },
+                                { id: 'fin_pending_loan', label: `📥 ลงรับแล้ว/รอโอนเงินยืม (${countFinPendingLoanDisburse})` },
+                                { id: 'fin_proc_pay', label: `📦 ชุดจัดซื้อรอเบิกจ่าย (${countFinProcToPay})` },
+                                { id: 'fin_completed', label: `✅ จ่าย/ปิดยอดแล้ว (${countFinCompleted})` },
                             ].map(tab => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setDocTrackingFilter(tab.id)}
-                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all ${
+                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
                                         docTrackingFilter === tab.id
-                                            ? 'bg-purple-700 text-white shadow-xs scale-102'
+                                            ? 'bg-purple-700 text-white shadow-xs scale-102 ring-2 ring-purple-400/50'
                                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                                     }`}
                                 >
@@ -16333,20 +16166,20 @@ return (
                             ))
                         ) : (
                             [
-                                { id: 'all', label: 'ทั้งหมด' },
+                                { id: 'all', label: `ทั้งหมด (${trackingList.length})` },
                                 ...(countPreliminary > 0 ? [{ id: 'preliminary', label: `💡 รอจัดสรรงบ (${countPreliminary})` }] : []),
                                 ...(countBudgetApproved > 0 ? [{ id: 'budget_approved', label: `📝 รอทำฉบับเต็ม (${countBudgetApproved})` }] : []),
-                                { id: 'at_procurement', label: '📦 อยู่ที่งานพัสดุ' },
-                                { id: 'at_finance', label: '💰 อยู่ที่งานการเงิน' },
-                                { id: 'with_borrower', label: '⭐ อยู่ที่ผู้ยืมเงิน' },
-                                { id: 'completed', label: '✅ เคลียร์สมบูรณ์' },
+                                { id: 'at_procurement', label: `📦 อยู่ที่งานพัสดุ (${countProcurement})` },
+                                { id: 'at_finance', label: `💰 อยู่ที่งานการเงิน (${countFinance})` },
+                                { id: 'with_borrower', label: `⭐ อยู่ที่ผู้ยืมเงิน (${countBorrower})` },
+                                { id: 'completed', label: `✅ เคลียร์สมบูรณ์ (${countCompleted})` },
                             ].map(tab => (
                                 <button
                                     key={tab.id}
                                     onClick={() => setDocTrackingFilter(tab.id)}
-                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all ${
+                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
                                         docTrackingFilter === tab.id
-                                            ? 'bg-purple-700 text-white shadow-xs scale-102'
+                                            ? 'bg-purple-700 text-white shadow-xs scale-102 ring-2 ring-purple-400/50'
                                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                                     }`}
                                 >
