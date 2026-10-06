@@ -20,14 +20,6 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
     // Group appendices
     const byCategory = (cat) => appendices.filter(a => a.category === cat);
     const approvedProposalDoc = byCategory('approved_proposal')[0];
-    const memoDocs = byCategory('memo_request');
-    const procurementDocs = byCategory('procurement_loan');
-    const surveyDocs = byCategory('evaluation_survey');
-    const orderDocs = byCategory('official_order');
-    const scheduleDocs = byCategory('schedule');
-    const speechDocs = byCategory('speech');
-    const certDocs = byCategory('certificate_sample');
-    const otherDocs = byCategory('others');
     const frontCoverDoc = byCategory('front_cover')[0];
     const backCoverDoc = byCategory('back_cover')[0];
 
@@ -81,7 +73,7 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
         : `/surveys/${project?.id}/evaluate`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(evaluationUrl)}`;
 
-    // Group photos 2 per page
+    // Group photos 2 per page for strict page layout
     const photoPairs = [];
     for (let i = 0; i < photos.length; i += 2) {
         photoPairs.push(photos.slice(i, i + 2));
@@ -176,13 +168,21 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
         return elements;
     };
 
-    // Word Document Export
+    // Word Document Export with Explicit Section Breaks
     const exportToWord = () => {
         const contentElement = document.getElementById('printable-full-report-doc');
         if (!contentElement) return;
 
-        const clone = contentElement.cloneNode(true);
-        clone.querySelectorAll('.no-print').forEach(el => el.remove());
+        const pages = contentElement.querySelectorAll('.a4-page');
+        let htmlBody = '';
+        pages.forEach((page, idx) => {
+            const clone = page.cloneNode(true);
+            clone.querySelectorAll('.no-print').forEach(el => el.remove());
+            if (idx > 0) {
+                htmlBody += '<br clear="all" style="page-break-before:always; mso-break-type:section-break" />';
+            }
+            htmlBody += `<div class="word-page">${clone.innerHTML}</div>`;
+        });
 
         const html = `
             <html xmlns:o='urn:schemas-microsoft-com:office:office'
@@ -235,7 +235,7 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
             </head>
             <body>
                 <div class="Section1">
-                    ${clone.innerHTML}
+                    ${htmlBody}
                 </div>
             </body>
             </html>
@@ -262,11 +262,11 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
     };
 
     return (
-        <div className="min-h-screen bg-slate-100 text-slate-800 font-sans print:bg-white print:text-black print:min-h-0">
+        <div className="min-h-screen bg-slate-200/80 text-slate-800 font-sans print:bg-white print:text-black print:min-h-0 py-0 pb-16">
             <Head title={`รวมรูปเล่มรายงานโครงการฉบับสมบูรณ์ - ${project?.title || 'โครงการ'}`} />
 
             {/* Sticky Header Controls (Hidden on Print) */}
-            <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 sm:px-6 py-3.5 shadow-sm print:hidden">
+            <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-300 px-4 sm:px-6 py-3.5 shadow-sm print:hidden">
                 <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                     <div className="flex items-center gap-3">
                         <Link
@@ -286,7 +286,7 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                                 </h1>
                             </div>
                             <p className="text-[11px] text-slate-500">
-                                ลำดับ: ปกหน้า → ส่วนนำ → บทที่ 1-5 → บรรณานุกรม → ภาคผนวก → ปกหลัง
+                                เรียงแยกหน้าอิสระ: ปกหน้า → ส่วนนำ (ก-จ) → บทที่ 1-5 → บรรณานุกรม → ภาคผนวก → ปกหลัง
                             </p>
                         </div>
                     </div>
@@ -295,14 +295,18 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                     <div className="hidden xl:flex items-center gap-1 overflow-x-auto text-xs py-1">
                         <span className="text-slate-400 text-[11px] font-medium mr-1">ข้ามไป:</span>
                         <button onClick={() => scrollToSection('part-cover-front')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">ปกหน้า</button>
-                        <button onClick={() => scrollToSection('part-preliminary')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">ส่วนนำ</button>
+                        <button onClick={() => scrollToSection('part-prelim-exec')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">บทสรุป (ก)</button>
+                        <button onClick={() => scrollToSection('part-prelim-preface')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">คำนำ (ข)</button>
+                        <button onClick={() => scrollToSection('part-prelim-toc')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">สารบัญ (ค)</button>
+                        <button onClick={() => scrollToSection('part-prelim-tables')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">ตาราง (ง)</button>
+                        <button onClick={() => scrollToSection('part-prelim-figures')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">ภาพ (จ)</button>
                         <button onClick={() => scrollToSection('part-chapter-1')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">บทที่ 1</button>
                         <button onClick={() => scrollToSection('part-chapter-2')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">บทที่ 2</button>
                         <button onClick={() => scrollToSection('part-chapter-3')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">บทที่ 3</button>
                         <button onClick={() => scrollToSection('part-chapter-4')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">บทที่ 4</button>
                         <button onClick={() => scrollToSection('part-chapter-5')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">บทที่ 5</button>
                         <button onClick={() => scrollToSection('part-references')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">บรรณานุกรม</button>
-                        <button onClick={() => scrollToSection('part-appendix')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">ภาคผนวก</button>
+                        <button onClick={() => scrollToSection('part-appendix-divider')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">ภาคผนวก</button>
                         <button onClick={() => scrollToSection('part-cover-back')} className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-[11px]">ปกหลัง</button>
                     </div>
 
@@ -361,47 +365,69 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                 </div>
             </header>
 
-            {/* Document Stylesheet */}
+            {/* Document Stylesheet for True A4 Paged Media */}
             <style dangerouslySetInnerHTML={{ __html: `
                 @page {
                     size: A4 portrait;
-                    margin: 3.81cm 2.54cm 2.54cm 2.54cm; /* ซ้าย 1.5 นิ้ว, บน/ขวา/ล่าง 1 นิ้ว สำหรับเข้าเล่ม */
+                    margin: 3.81cm 2.54cm 2.54cm 3.81cm; /* ซ้าย 1.5 นิ้ว, บน/ขวา/ล่าง 1 นิ้ว สำหรับเข้าเล่ม */
+                }
+                @page :first {
+                    margin: 2.54cm 2.54cm 2.54cm 2.54cm;
                 }
                 @media print {
-                    body {
+                    body, html {
                         background-color: #ffffff !important;
                         color: #000000 !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
                     .no-print {
                         display: none !important;
                     }
+                    .a4-page {
+                        width: 100% !important;
+                        min-height: 0 !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        page-break-before: always !important;
+                        break-before: page !important;
+                        page-break-inside: auto !important;
+                    }
+                    .a4-page.first-page {
+                        page-break-before: avoid !important;
+                        break-before: avoid !important;
+                    }
                     .page-break {
                         page-break-before: always !important;
                         break-before: page !important;
-                    }
-                    .print-doc-container {
-                        box-shadow: none !important;
-                        border: none !important;
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        width: 100% !important;
-                        max-width: 100% !important;
+                        height: 0 !important;
+                        display: block !important;
                     }
                 }
                 .font-sarabun {
                     font-family: 'TH Sarabun New', 'TH Sarabun PSK', 'Sarabun', 'Cordia New', sans-serif;
                 }
-                .print-doc-container {
+                /* Interactive Screen View: Distinct A4 Paper Sheets */
+                .a4-page {
                     width: 210mm;
                     min-height: 297mm;
                     padding: 3.81cm 2.54cm 2.54cm 3.81cm;
                     box-sizing: border-box;
                     background-color: #ffffff;
                     color: #000000;
+                    margin: 24px auto;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+                    border: 1px solid #e2e8f0;
+                    position: relative;
                     font-size: ${fontStyles.docSize};
                     line-height: ${fontStyles.lineHeight};
+                }
+                .a4-page.cover-page {
+                    padding: 2.54cm 2.54cm 2.54cm 2.54cm;
                 }
                 .print-title {
                     font-size: ${fontStyles.titleSize};
@@ -450,17 +476,14 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
             `}} />
 
             {/* Complete Unified Book Container */}
-            <div
-                id="printable-full-report-doc"
-                className="print-doc-container font-sarabun mx-auto my-6 shadow-xl print:my-0 print:shadow-none border border-slate-200 print:border-none"
-            >
+            <div id="printable-full-report-doc" className="font-sarabun">
 
                 {/* =========================================================================
-                    1. ปกหน้า (FRONT COVER)
+                    1. ปกหน้า (FRONT COVER) - แผ่นที่ 1
                 ========================================================================= */}
-                <section id="part-cover-front" className="relative flex flex-col justify-between items-center text-center min-h-[250mm] py-8">
+                <section id="part-cover-front" className="a4-page cover-page first-page flex flex-col justify-between items-center text-center">
                     {frontCoverDoc?.file_url ? (
-                        <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-full h-full flex items-center justify-center my-auto">
                             <img
                                 src={frontCoverDoc.file_url}
                                 alt="ปกหน้ารายงานโครงการ"
@@ -468,15 +491,14 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                             />
                         </div>
                     ) : (
-                        <div className="w-full flex flex-col justify-between items-center h-full min-h-[240mm]">
+                        <div className="w-full flex flex-col justify-between items-center h-full min-h-[245mm]">
                             {/* Emblem */}
-                            <div className="pt-6">
+                            <div className="pt-8">
                                 <img
                                     src="/images/garuda.png"
                                     alt="ตราครุฑ"
                                     className="h-28 w-auto mx-auto mb-6 object-contain"
                                     onError={(e) => {
-                                        // Fallback to vocational logo
                                         e.target.onerror = null;
                                         e.target.src = '/LogoNPC_PNG.png';
                                     }}
@@ -490,7 +512,7 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                             </div>
 
                             {/* Center Info */}
-                            <div className="my-12 space-y-4">
+                            <div className="my-10 space-y-4">
                                 <div className="inline-block border-y-2 border-slate-800 py-3 px-8">
                                     <p className="text-lg font-bold text-slate-900">
                                         ประจำปีการศึกษา {toArabicNumerals(project?.academic_year || '2569')}
@@ -524,15 +546,13 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                     )}
                 </section>
 
-                {/* Page Break to Preliminary */}
-                <div className="page-break" />
-
                 {/* =========================================================================
                     2. ส่วนนำ (PRELIMINARY / FRONT MATTER)
                 ========================================================================= */}
-                <section id="part-preliminary" className="space-y-12">
-                    {/* 2.1 บทสรุปผู้บริหาร (Executive Summary) */}
-                    <div className="prelim-item">
+
+                {/* 2.1 บทสรุปผู้บริหาร (Executive Summary) - แผ่นที่ 2 (หน้า ก) */}
+                <section id="part-prelim-exec" className="a4-page flex flex-col justify-between">
+                    <div>
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-6 print:text-black">
                             <span>รายงานโครงการฉบับสมบูรณ์</span>
                             <span className="font-bold">หน้า ก</span>
@@ -545,11 +565,11 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                             {renderAcademicSection(prelim.executive_summary || `การดำเนินงานโครงการ "${project?.title || ''}" ประจำปีการศึกษา ${toArabicNumerals(project?.academic_year || '')} ของ${project?.location || 'วิทยาลัยสารพัดช่างน่าน'} มีวัตถุประสงค์หลักเพื่อส่งเสริมและพัฒนาศักยภาพผู้เรียนตามเกณฑ์มาตรฐานการอาชีวศึกษา โดยการดำเนินงานเสร็จสิ้นสมบูรณ์ตามเป้าหมายและตัวชี้วัดที่กำหนดไว้ทุกประการ`, 'exec')}
                         </div>
                     </div>
+                </section>
 
-                    <div className="page-break" />
-
-                    {/* 2.2 คำนำ (Preface) */}
-                    <div className="prelim-item">
+                {/* 2.2 คำนำ (Preface) - แผ่นที่ 3 (หน้า ข) */}
+                <section id="part-prelim-preface" className="a4-page flex flex-col justify-between">
+                    <div>
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-6 print:text-black">
                             <span>รายงานโครงการฉบับสมบูรณ์</span>
                             <span className="font-bold">หน้า ข</span>
@@ -561,16 +581,16 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                             {renderAcademicSection(prelim.preface || `รายงานผลการดำเนินโครงการฉบับนี้ จัดทำขึ้นเพื่อรายงานผลสัมฤทธิ์ของการดำเนินโครงการ "${project?.title || ''}" ซึ่งได้ดำเนินการตามกรอบแผนปฏิบัติการประจำปี เพื่อให้การบริหารจัดการและการพัฒนาคุณภาพการศึกษาบรรลุเป้าหมายอย่างมีประสิทธิภาพ คณะผู้จัดทำขอขอบคุณผู้บริหาร ครู บุคลากร และผู้เกี่ยวข้องทุกฝ่ายที่ให้การสนับสนุนจนโครงการสำเร็จลุล่วงด้วยดี`, 'pref')}
                         </div>
                         {/* Sign-off */}
-                        <div className="mt-12 text-right pr-6 space-y-1">
-                            <p className="font-bold">{prelim.sign_off_name || `คณะผู้รับผิดชอบโครงการ\n${project?.department?.name || 'วิทยาลัยสารพัดช่างน่าน'}`}</p>
+                        <div className="mt-14 text-right pr-6 space-y-1">
+                            <p className="font-bold whitespace-pre-line">{prelim.sign_off_name || `คณะผู้รับผิดชอบโครงการ\n${project?.department?.name || 'วิทยาลัยสารพัดช่างน่าน'}`}</p>
                             <p className="text-sm text-slate-600">{prelim.sign_off_date || 'ตุลาคม 2569'}</p>
                         </div>
                     </div>
+                </section>
 
-                    <div className="page-break" />
-
-                    {/* 2.3 สารบัญ (Table of Contents) */}
-                    <div className="prelim-item">
+                {/* 2.3 สารบัญเนื้อหา (Table of Contents) - แผ่นที่ 4 (หน้า ค) */}
+                <section id="part-prelim-toc" className="a4-page flex flex-col justify-between">
+                    <div>
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-6 print:text-black">
                             <span>รายงานโครงการฉบับสมบูรณ์</span>
                             <span className="font-bold">หน้า ค</span>
@@ -776,11 +796,11 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                             )}
                         </div>
                     </div>
+                </section>
 
-                    <div className="page-break" />
-
-                    {/* 2.4 สารบัญตาราง & สารบัญภาพ */}
-                    <div className="prelim-item">
+                {/* 2.4 สารบัญตาราง (List of Tables) - แผ่นที่ 5 (หน้า ง) */}
+                <section id="part-prelim-tables" className="a4-page flex flex-col justify-between">
+                    <div>
                         <div className="flex justify-between items-center text-xs text-slate-500 mb-6 print:text-black">
                             <span>รายงานโครงการฉบับสมบูรณ์</span>
                             <span className="font-bold">หน้า ง</span>
@@ -831,55 +851,59 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                                 </>
                             )}
                         </div>
+                    </div>
+                </section>
 
-                        {/* Figure TOC */}
-                        <div className="mt-12 pt-6 border-t border-slate-300 print:border-black">
-                            <div className="text-center mb-6">
-                                <h2 className="print-title">สารบัญภาพ</h2>
+                {/* 2.5 สารบัญภาพ (List of Figures) - แผ่นที่ 6 (หน้า จ) แยกเป็นหน้าของตัวเอง */}
+                <section id="part-prelim-figures" className="a4-page flex flex-col justify-between">
+                    <div>
+                        <div className="flex justify-between items-center text-xs text-slate-500 mb-6 print:text-black">
+                            <span>รายงานโครงการฉบับสมบูรณ์</span>
+                            <span className="font-bold">หน้า จ</span>
+                        </div>
+                        <div className="text-center mb-6">
+                            <h2 className="print-title">สารบัญภาพ</h2>
+                        </div>
+                        <div className="space-y-2 mt-4 text-sm leading-relaxed">
+                            <div className="flex justify-between font-bold border-b border-black pb-1 mb-2">
+                                <span>ภาพที่</span>
+                                <span>หน้า</span>
                             </div>
-                            <div className="space-y-2 mt-4 text-sm leading-relaxed">
-                                <div className="flex justify-between font-bold border-b border-black pb-1 mb-2">
-                                    <span>ภาพที่</span>
-                                    <span>หน้า</span>
-                                </div>
-                                {(prelim.figure_items && prelim.figure_items.length > 0) ? (
-                                    prelim.figure_items.map((fig, idx) => (
-                                        <div key={idx} className="flex justify-between items-baseline py-0.5">
-                                            <span>{fig.title}</span>
-                                            <span className="dots flex-1 mx-2"></span>
-                                            <span className="font-mono">{toArabicNumerals(fig.page)}</span>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <>
-                                        <div className="flex justify-between items-baseline py-0.5">
-                                            <span>ภาพที่ 3-1 กรอบวงจรคุณภาพ PDCA ในการดำเนินงานโครงการ</span>
-                                            <span className="dots flex-1 mx-2"></span>
-                                            <span className="font-mono">12</span>
-                                        </div>
-                                        <div className="flex justify-between items-baseline py-0.5">
-                                            <span>ภาพที่ ง-1 ภาพกิจกรรมการดำเนินโครงการ (ชุดที่ 1)</span>
-                                            <span className="dots flex-1 mx-2"></span>
-                                            <span className="font-mono">32</span>
-                                        </div>
-                                        <div className="flex justify-between items-baseline py-0.5">
-                                            <span>ภาพที่ ง-2 ภาพกิจกรรมการดำเนินโครงการ (ชุดที่ 2)</span>
-                                            <span className="dots flex-1 mx-2"></span>
-                                            <span className="font-mono">33</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
+                            {(prelim.figure_items && prelim.figure_items.length > 0) ? (
+                                prelim.figure_items.map((fig, idx) => (
+                                    <div key={idx} className="flex justify-between items-baseline py-0.5">
+                                        <span>{fig.title}</span>
+                                        <span className="dots flex-1 mx-2"></span>
+                                        <span className="font-mono">{toArabicNumerals(fig.page)}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <>
+                                    <div className="flex justify-between items-baseline py-0.5">
+                                        <span>ภาพที่ 3-1 กรอบวงจรคุณภาพ PDCA ในการดำเนินงานโครงการ</span>
+                                        <span className="dots flex-1 mx-2"></span>
+                                        <span className="font-mono">12</span>
+                                    </div>
+                                    <div className="flex justify-between items-baseline py-0.5">
+                                        <span>ภาพที่ ง-1 ภาพกิจกรรมการดำเนินโครงการ (ชุดที่ 1)</span>
+                                        <span className="dots flex-1 mx-2"></span>
+                                        <span className="font-mono">32</span>
+                                    </div>
+                                    <div className="flex justify-between items-baseline py-0.5">
+                                        <span>ภาพที่ ง-2 ภาพกิจกรรมการดำเนินโครงการ (ชุดที่ 2)</span>
+                                        <span className="dots flex-1 mx-2"></span>
+                                        <span className="font-mono">33</span>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </section>
 
-                <div className="page-break" />
-
                 {/* =========================================================================
-                    3. บทที่ 1: บทนำ
+                    3. บทที่ 1: บทนำ - ขึ้นหน้าใหม่ (หน้า 1 เป็นต้นไป)
                 ========================================================================= */}
-                <section id="part-chapter-1" className="space-y-6">
+                <section id="part-chapter-1" className="a4-page space-y-6">
                     <div className="text-center mb-6">
                         <h1 className="print-title mb-1">บทที่ 1</h1>
                         <h2 className="print-heading">บทนำ</h2>
@@ -959,12 +983,10 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                     </div>
                 </section>
 
-                <div className="page-break" />
-
                 {/* =========================================================================
-                    4. บทที่ 2: เอกสารและงานวิจัยที่เกี่ยวข้อง
+                    4. บทที่ 2: เอกสารและงานวิจัยที่เกี่ยวข้อง - ขึ้นหน้าใหม่
                 ========================================================================= */}
-                <section id="part-chapter-2" className="space-y-6">
+                <section id="part-chapter-2" className="a4-page space-y-6">
                     <div className="text-center mb-6">
                         <h1 className="print-title mb-1">บทที่ 2</h1>
                         <h2 className="print-heading">เอกสารและงานวิจัยที่เกี่ยวข้อง</h2>
@@ -1005,12 +1027,10 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                     </div>
                 </section>
 
-                <div className="page-break" />
-
                 {/* =========================================================================
-                    5. บทที่ 3: วิธีดำเนินการโครงการ
+                    5. บทที่ 3: วิธีดำเนินการโครงการ - ขึ้นหน้าใหม่
                 ========================================================================= */}
-                <section id="part-chapter-3" className="space-y-6">
+                <section id="part-chapter-3" className="a4-page space-y-6">
                     <div className="text-center mb-6">
                         <h1 className="print-title mb-1">บทที่ 3</h1>
                         <h2 className="print-heading">วิธีดำเนินการโครงการ</h2>
@@ -1074,12 +1094,10 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                     </div>
                 </section>
 
-                <div className="page-break" />
-
                 {/* =========================================================================
-                    6. บทที่ 4: ผลการดำเนินงานและการวิเคราะห์ข้อมูล
+                    6. บทที่ 4: ผลการดำเนินงานและการวิเคราะห์ข้อมูล - ขึ้นหน้าใหม่
                 ========================================================================= */}
-                <section id="part-chapter-4" className="space-y-6">
+                <section id="part-chapter-4" className="a4-page space-y-6">
                     <div className="text-center mb-6">
                         <h1 className="print-title mb-1">บทที่ 4</h1>
                         <h2 className="print-heading">ผลการดำเนินงานและการวิเคราะห์ข้อมูล</h2>
@@ -1238,12 +1256,10 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                     </div>
                 </section>
 
-                <div className="page-break" />
-
                 {/* =========================================================================
-                    7. บทที่ 5: สรุปผล อภิปรายผล และข้อเสนอแนะ
+                    7. บทที่ 5: สรุปผล อภิปรายผล และข้อเสนอแนะ - ขึ้นหน้าใหม่
                 ========================================================================= */}
-                <section id="part-chapter-5" className="space-y-6">
+                <section id="part-chapter-5" className="a4-page space-y-6">
                     <div className="text-center mb-6">
                         <h1 className="print-title mb-1">บทที่ 5</h1>
                         <h2 className="print-heading">สรุปผล อภิปรายผล และข้อเสนอแนะ</h2>
@@ -1293,12 +1309,10 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                     </div>
                 </section>
 
-                <div className="page-break" />
-
                 {/* =========================================================================
-                    8. บรรณานุกรม (REFERENCES / BIBLIOGRAPHY)
+                    8. บรรณานุกรม (REFERENCES / BIBLIOGRAPHY) - ขึ้นหน้าใหม่
                 ========================================================================= */}
-                <section id="part-references" className="space-y-6">
+                <section id="part-references" className="a4-page space-y-6">
                     <div className="text-center mb-8">
                         <h1 className="print-title mb-2">บรรณานุกรม</h1>
                         <p className="text-xs text-slate-500">References</p>
@@ -1338,14 +1352,13 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                     </div>
                 </section>
 
-                <div className="page-break" />
-
                 {/* =========================================================================
                     9. ภาคผนวก (APPENDICES)
                 ========================================================================= */}
-                <section id="part-appendix" className="space-y-12">
-                    {/* Divider Page */}
-                    <div className="flex flex-col items-center justify-center min-h-[220mm] text-center">
+
+                {/* 9.0 แผ่นคั่นหน้าภาคผนวก - ขึ้นหน้าใหม่ */}
+                <section id="part-appendix-divider" className="a4-page flex flex-col items-center justify-center text-center">
+                    <div className="my-auto py-24">
                         <h1 className="text-3xl font-black text-slate-900 mb-4 tracking-wider">
                             ภาคผนวก
                         </h1>
@@ -1353,189 +1366,180 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                             (Appendices)
                         </p>
                         <div className="w-24 h-1 bg-slate-800 my-6 mx-auto"></div>
-                        <p className="text-sm text-slate-500 max-w-md mx-auto">
+                        <p className="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
                             รวบรวมเอกสารอนุมัติโครงการ แบบสอบถามประเมินผล หลักฐานการจัดซื้อจัดจ้าง ภาพกิจกรรม และคำสั่งแต่งตั้ง
                         </p>
                     </div>
+                </section>
 
-                    <div className="page-break" />
-
-                    {/* ภาคผนวก ก: โครงการที่ได้รับอนุมัติ */}
-                    <div className="appendix-subpart">
-                        <div className="text-center mb-6">
-                            <h2 className="print-title font-bold">ภาคผนวก ก</h2>
-                            <p className="text-sm font-semibold text-slate-700">โครงการที่ได้รับอนุมัติ และบันทึกข้อความขออนุมัติ</p>
-                        </div>
-                        <div className="space-y-4">
-                            {approvedProposalDoc?.file_url ? (
-                                <div className="text-center my-6">
-                                    <p className="text-xs text-slate-500 mb-2">เอกสารแนบ: {approvedProposalDoc.title}</p>
-                                    <img src={approvedProposalDoc.file_url} alt="โครงการอนุมัติ" className="max-h-[200mm] mx-auto border border-slate-300" />
-                                </div>
-                            ) : (
-                                <div className="border border-slate-300 rounded-xl p-6 bg-slate-50 print:bg-white text-sm space-y-3">
-                                    <div className="font-bold border-b pb-2 flex justify-between">
-                                        <span>บันทึกข้อความและข้อเสนอโครงการที่ได้รับการอนุมัติ</span>
-                                        <span className="font-mono text-xs">{project?.code}</span>
-                                    </div>
-                                    <p><strong>ชื่อโครงการ:</strong> {project?.title}</p>
-                                    <p><strong>หน่วยงานที่รับผิดชอบ:</strong> {project?.department?.name}</p>
-                                    <p><strong>ผู้รับผิดชอบโครงการ:</strong> {project?.responsible_person || project?.user?.name}</p>
-                                    <p><strong>งบประมาณที่ได้รับอนุมัติ:</strong> {Number(project?.allocated_budget || project?.estimated_budget || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
-                                    <p><strong>สถานะการอนุมัติ:</strong> ได้รับการอนุมัติจากผู้บริหารสถานศึกษาเรียบร้อยแล้ว</p>
-                                </div>
-                            )}
-                        </div>
+                {/* 9.1 ภาคผนวก ก: โครงการที่ได้รับอนุมัติ - ขึ้นหน้าใหม่ */}
+                <section id="part-appendix-a" className="a4-page space-y-6">
+                    <div className="text-center mb-6">
+                        <h2 className="print-title font-bold">ภาคผนวก ก</h2>
+                        <p className="text-sm font-semibold text-slate-700">โครงการที่ได้รับอนุมัติ และบันทึกข้อความขออนุมัติ</p>
                     </div>
-
-                    <div className="page-break" />
-
-                    {/* ภาคผนวก ข: แบบประเมินผล & QR Code */}
-                    <div className="appendix-subpart">
-                        <div className="text-center mb-6">
-                            <h2 className="print-title font-bold">ภาคผนวก ข</h2>
-                            <p className="text-sm font-semibold text-slate-700">เครื่องมือประเมินผลและแบบสอบถามออนไลน์</p>
-                        </div>
-
-                        <div className="flex flex-col items-center justify-center p-8 border border-slate-300 rounded-2xl text-center my-8 bg-slate-50 print:bg-white">
-                            <h3 className="text-base font-bold text-slate-900 mb-3">
-                                คิวอาร์โค้ด (QR Code) สำหรับทำแบบประเมินความพึงพอใจออนไลน์
-                            </h3>
-                            <img
-                                src={qrCodeUrl}
-                                alt="QR Code ประเมินผล"
-                                className="w-56 h-56 border-4 border-white shadow-md print:shadow-none my-4"
-                            />
-                            <p className="text-xs text-slate-600 font-mono mt-2 break-all max-w-md">
-                                {evaluationUrl}
-                            </p>
-                            <p className="text-xs text-slate-500 mt-2">
-                                (สามารถสแกนผ่านสมาร์ทโฟนเพื่อตอบแบบสอบถามและดูผลประเมินแบบเรียลไทม์)
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="page-break" />
-
-                    {/* ภาคผนวก ค: หลักฐานการจัดซื้อจัดจ้าง */}
-                    <div className="appendix-subpart">
-                        <div className="text-center mb-6">
-                            <h2 className="print-title font-bold">ภาคผนวก ค</h2>
-                            <p className="text-sm font-semibold text-slate-700">หลักฐานการจัดซื้อจัดจ้างและการเบิกจ่ายงบประมาณ</p>
-                        </div>
-
-                        {procurement?.items && procurement.items.length > 0 ? (
-                            <table className="academic-table text-sm">
-                                <thead>
-                                    <tr>
-                                        <th className="text-center w-12">ลำดับ</th>
-                                        <th className="text-left">รายการพัสดุ / ค่าใช้จ่าย</th>
-                                        <th className="text-center w-20">จำนวน</th>
-                                        <th className="text-center w-20">หน่วย</th>
-                                        <th className="text-right w-24">ราคา/หน่วย</th>
-                                        <th className="text-right w-28">รวมเป็นเงิน (บาท)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {procurement.items.map((item, idx) => (
-                                        <tr key={idx}>
-                                            <td className="text-center">{idx + 1}</td>
-                                            <td>{item.item_name || item.name}</td>
-                                            <td className="text-center">{item.quantity}</td>
-                                            <td className="text-center">{item.unit || 'รายการ'}</td>
-                                            <td className="text-right">{Number(item.unit_price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                                            <td className="text-right">{Number(item.total_price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                                        </tr>
-                                    ))}
-                                    <tr className="total-row">
-                                        <td colSpan={5} className="text-right font-bold">รวมเป็นเงินทั้งสิ้น</td>
-                                        <td className="text-right font-bold">{Number(procurement.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <div className="space-y-4">
+                        {approvedProposalDoc?.file_url ? (
+                            <div className="text-center my-6">
+                                <p className="text-xs text-slate-500 mb-2">เอกสารแนบ: {approvedProposalDoc.title}</p>
+                                <img src={approvedProposalDoc.file_url} alt="โครงการอนุมัติ" className="max-h-[200mm] mx-auto border border-slate-300" />
+                            </div>
                         ) : (
-                            <div className="p-8 border border-slate-200 rounded-xl text-center text-sm text-slate-600 bg-slate-50 print:bg-white">
-                                <p className="font-bold text-slate-800">สรุปการเบิกจ่ายงบประมาณตามระเบียบงานพัสดุและการเงิน</p>
-                                <p className="text-xs text-slate-500 mt-2">
-                                    โครงการได้รับอนุมัติจัดซื้อจัดจ้างตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 ครบถ้วนถูกต้อง
-                                </p>
+                            <div className="border border-slate-300 rounded-xl p-6 bg-slate-50 print:bg-white text-sm space-y-3">
+                                <div className="font-bold border-b pb-2 flex justify-between">
+                                    <span>บันทึกข้อความและข้อเสนอโครงการที่ได้รับการอนุมัติ</span>
+                                    <span className="font-mono text-xs">{project?.code}</span>
+                                </div>
+                                <p><strong>ชื่อโครงการ:</strong> {project?.title}</p>
+                                <p><strong>หน่วยงานที่รับผิดชอบ:</strong> {project?.department?.name}</p>
+                                <p><strong>ผู้รับผิดชอบโครงการ:</strong> {project?.responsible_person || project?.user?.name}</p>
+                                <p><strong>งบประมาณที่ได้รับอนุมัติ:</strong> {Number(project?.allocated_budget || project?.estimated_budget || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
+                                <p><strong>สถานะการอนุมัติ:</strong> ได้รับการอนุมัติจากผู้บริหารสถานศึกษาเรียบร้อยแล้ว</p>
                             </div>
                         )}
                     </div>
+                </section>
 
-                    <div className="page-break" />
+                {/* 9.2 ภาคผนวก ข: แบบประเมินผล & QR Code - ขึ้นหน้าใหม่ */}
+                <section id="part-appendix-b" className="a4-page space-y-6">
+                    <div className="text-center mb-6">
+                        <h2 className="print-title font-bold">ภาคผนวก ข</h2>
+                        <p className="text-sm font-semibold text-slate-700">เครื่องมือประเมินผลและแบบสอบถามออนไลน์</p>
+                    </div>
 
-                    {/* ภาคผนวก ง: ภาพถ่ายกิจกรรม (จัด 2 ภาพต่อหน้า) */}
-                    <div className="appendix-subpart">
+                    <div className="flex flex-col items-center justify-center p-8 border border-slate-300 rounded-2xl text-center my-8 bg-slate-50 print:bg-white">
+                        <h3 className="text-base font-bold text-slate-900 mb-3">
+                            คิวอาร์โค้ด (QR Code) สำหรับทำแบบประเมินความพึงพอใจออนไลน์
+                        </h3>
+                        <img
+                            src={qrCodeUrl}
+                            alt="QR Code ประเมินผล"
+                            className="w-56 h-56 border-4 border-white shadow-md print:shadow-none my-4"
+                        />
+                        <p className="text-xs text-slate-600 font-mono mt-2 break-all max-w-md">
+                            {evaluationUrl}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-2">
+                            (สามารถสแกนผ่านสมาร์ทโฟนเพื่อตอบแบบสอบถามและดูผลประเมินแบบเรียลไทม์)
+                        </p>
+                    </div>
+                </section>
+
+                {/* 9.3 ภาคผนวก ค: หลักฐานการจัดซื้อจัดจ้าง - ขึ้นหน้าใหม่ */}
+                <section id="part-appendix-c" className="a4-page space-y-6">
+                    <div className="text-center mb-6">
+                        <h2 className="print-title font-bold">ภาคผนวก ค</h2>
+                        <p className="text-sm font-semibold text-slate-700">หลักฐานการจัดซื้อจัดจ้างและการเบิกจ่ายงบประมาณ</p>
+                    </div>
+
+                    {procurement?.items && procurement.items.length > 0 ? (
+                        <table className="academic-table text-sm">
+                            <thead>
+                                <tr>
+                                    <th className="text-center w-12">ลำดับ</th>
+                                    <th className="text-left">รายการพัสดุ / ค่าใช้จ่าย</th>
+                                    <th className="text-center w-20">จำนวน</th>
+                                    <th className="text-center w-20">หน่วย</th>
+                                    <th className="text-right w-24">ราคา/หน่วย</th>
+                                    <th className="text-right w-28">รวมเป็นเงิน (บาท)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {procurement.items.map((item, idx) => (
+                                    <tr key={idx}>
+                                        <td className="text-center">{idx + 1}</td>
+                                        <td>{item.item_name || item.name}</td>
+                                        <td className="text-center">{item.quantity}</td>
+                                        <td className="text-center">{item.unit || 'รายการ'}</td>
+                                        <td className="text-right">{Number(item.unit_price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                                        <td className="text-right">{Number(item.total_price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                                    </tr>
+                                ))}
+                                <tr className="total-row">
+                                    <td colSpan={5} className="text-right font-bold">รวมเป็นเงินทั้งสิ้น</td>
+                                    <td className="text-right font-bold">{Number(procurement.total_amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="p-8 border border-slate-200 rounded-xl text-center text-sm text-slate-600 bg-slate-50 print:bg-white">
+                            <p className="font-bold text-slate-800">สรุปการเบิกจ่ายงบประมาณตามระเบียบงานพัสดุและการเงิน</p>
+                            <p className="text-xs text-slate-500 mt-2">
+                                โครงการได้รับอนุมัติจัดซื้อจัดจ้างตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 ครบถ้วนถูกต้อง
+                            </p>
+                        </div>
+                    )}
+                </section>
+
+                {/* 9.4 ภาคผนวก ง: ภาพถ่ายกิจกรรม (2 ภาพต่อหน้า) - แต่ละคู่ขึ้นหน้าใหม่ */}
+                {photoPairs.length > 0 ? (
+                    photoPairs.map((pair, pIdx) => (
+                        <section key={pIdx} id={pIdx === 0 ? "part-appendix-d" : undefined} className="a4-page space-y-6">
+                            <div className="text-center mb-6">
+                                <h2 className="print-title font-bold">ภาคผนวก ง</h2>
+                                <p className="text-sm font-semibold text-slate-700">ภาพถ่ายการดำเนินกิจกรรมโครงการ {photoPairs.length > 1 ? `(ชุดที่ ${pIdx + 1}/${photoPairs.length})` : ''}</p>
+                            </div>
+
+                            <div className="space-y-8 my-4">
+                                {pair.map((photo, phIdx) => (
+                                    <div key={phIdx} className="photo-box text-center">
+                                        <div className="inline-block p-1 bg-white border border-slate-300 rounded shadow-sm print:shadow-none">
+                                            <img
+                                                src={photo.photo_url || (photo.photo_path ? `/storage/${photo.photo_path}` : '')}
+                                                alt={photo.caption || 'ภาพกิจกรรม'}
+                                                className="max-h-[85mm] w-auto max-w-full object-contain mx-auto"
+                                            />
+                                        </div>
+                                        <p className="text-xs font-bold text-slate-800 mt-2 text-center">
+                                            ภาพที่ ง-{pIdx * 2 + phIdx + 1}: {photo.caption || 'บรรยากาศการดำเนินกิจกรรมโครงการ'}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    ))
+                ) : (
+                    <section id="part-appendix-d" className="a4-page space-y-6">
                         <div className="text-center mb-6">
                             <h2 className="print-title font-bold">ภาคผนวก ง</h2>
                             <p className="text-sm font-semibold text-slate-700">ภาพถ่ายการดำเนินกิจกรรมโครงการ</p>
                         </div>
+                        <div className="p-12 border-2 border-dashed border-slate-300 rounded-2xl text-center text-sm text-slate-500 my-12">
+                            📷 ไม่มีภาพถ่ายกิจกรรมที่อัพโหลดไว้ในระบบสำหรับโครงการนี้
+                        </div>
+                    </section>
+                )}
 
-                        {photoPairs.length > 0 ? (
-                            photoPairs.map((pair, pIdx) => (
-                                <div key={pIdx}>
-                                    <div className="space-y-8 my-4">
-                                        {pair.map((photo, phIdx) => (
-                                            <div key={phIdx} className="photo-box text-center">
-                                                <div className="inline-block p-1 bg-white border border-slate-300 rounded shadow-sm print:shadow-none">
-                                                    <img
-                                                        src={photo.photo_url || (photo.photo_path ? `/storage/${photo.photo_path}` : '')}
-                                                        alt={photo.caption || 'ภาพกิจกรรม'}
-                                                        className="max-h-[85mm] w-auto max-w-full object-contain mx-auto"
-                                                    />
-                                                </div>
-                                                <p className="text-xs font-bold text-slate-800 mt-2 text-center">
-                                                    ภาพที่ ง-{pIdx * 2 + phIdx + 1}: {photo.caption || 'บรรยากาศการดำเนินกิจกรรมโครงการ'}
-                                                </p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    {pIdx < photoPairs.length - 1 && <div className="page-break" />}
-                                </div>
-                            ))
-                        ) : (
-                            <div className="p-12 border-2 border-dashed border-slate-300 rounded-2xl text-center text-sm text-slate-500">
-                                📷 ไม่มีภาพถ่ายกิจกรรมที่อัพโหลดไว้ในระบบสำหรับโครงการนี้
-                            </div>
-                        )}
+                {/* 9.5 ภาคผนวก จ: คำสั่งแต่งตั้งและเอกสารอื่น ๆ - ขึ้นหน้าใหม่ */}
+                <section id="part-appendix-e" className="a4-page space-y-6">
+                    <div className="text-center mb-6">
+                        <h2 className="print-title font-bold">ภาคผนวก จ</h2>
+                        <p className="text-sm font-semibold text-slate-700">คำสั่งแต่งตั้งคณะกรรมการ กำหนดการ และเอกสารอื่น ๆ</p>
                     </div>
 
-                    <div className="page-break" />
-
-                    {/* ภาคผนวก จ: คำสั่งแต่งตั้ง กำหนดการ เกียรติบัตร และอื่นๆ */}
-                    <div className="appendix-subpart">
-                        <div className="text-center mb-6">
-                            <h2 className="print-title font-bold">ภาคผนวก จ</h2>
-                            <p className="text-sm font-semibold text-slate-700">คำสั่งแต่งตั้งคณะกรรมการ กำหนดการ และเอกสารอื่น ๆ</p>
-                        </div>
-
-                        <div className="space-y-4 text-sm leading-relaxed">
-                            <div className="p-6 border border-slate-300 rounded-xl bg-slate-50 print:bg-white space-y-3">
-                                <p className="font-bold text-slate-900 border-b pb-2">
-                                    คำสั่งแต่งตั้งคณะกรรมการดำเนินงานโครงการ
-                                </p>
-                                <p className="text-xs text-slate-700">
-                                    สถานศึกษาได้มีคำสั่งแต่งตั้งคณะกรรมการดำเนินโครงการ "{project?.title}" เพื่อให้การดำเนินงานเป็นไปด้วยความเรียบร้อย มีประสิทธิภาพ และบรรลุวัตถุประสงค์ตามนโยบายของสำนักงานคณะกรรมการการอาชีวศึกษา
-                                </p>
-                                <div className="pt-2 text-xs text-slate-600">
-                                    <p>• ประธานกรรมการ: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</p>
-                                    <p>• รองประธานกรรมการ: รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ</p>
-                                    <p>• กรรมการและเลขานุการ: {project?.responsible_person || project?.user?.name || 'หัวหน้าโครงการ'}</p>
-                                </div>
+                    <div className="space-y-4 text-sm leading-relaxed">
+                        <div className="p-6 border border-slate-300 rounded-xl bg-slate-50 print:bg-white space-y-3">
+                            <p className="font-bold text-slate-900 border-b pb-2">
+                                คำสั่งแต่งตั้งคณะกรรมการดำเนินงานโครงการ
+                            </p>
+                            <p className="text-xs text-slate-700">
+                                สถานศึกษาได้มีคำสั่งแต่งตั้งคณะกรรมการดำเนินโครงการ "{project?.title}" เพื่อให้การดำเนินงานเป็นไปด้วยความเรียบร้อย มีประสิทธิภาพ และบรรลุวัตถุประสงค์ตามนโยบายของสำนักงานคณะกรรมการการอาชีวศึกษา
+                            </p>
+                            <div className="pt-2 text-xs text-slate-600 space-y-1">
+                                <p>• ประธานกรรมการ: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</p>
+                                <p>• รองประธานกรรมการ: รองผู้อำนวยการฝ่ายแผนงานและความร่วมมือ</p>
+                                <p>• กรรมการและเลขานุการ: {project?.responsible_person || project?.user?.name || 'หัวหน้าโครงการ'}</p>
                             </div>
                         </div>
                     </div>
                 </section>
 
-                <div className="page-break" />
-
                 {/* =========================================================================
-                    10. ปกหลัง (BACK COVER)
+                    10. ปกหลัง (BACK COVER) - ขึ้นหน้าใหม่ แผ่นสุดท้าย
                 ========================================================================= */}
-                <section id="part-cover-back" className="flex flex-col justify-between items-center text-center min-h-[240mm] py-12">
+                <section id="part-cover-back" className="a4-page cover-page flex flex-col justify-between items-center text-center">
                     {backCoverDoc?.file_url ? (
-                        <div className="w-full h-full flex items-center justify-center">
+                        <div className="w-full h-full flex items-center justify-center my-auto">
                             <img
                                 src={backCoverDoc.file_url}
                                 alt="ปกหลังรายงานโครงการ"
@@ -1543,8 +1547,8 @@ export default function PrintFullReport({ project, survey, surveyStats }) {
                             />
                         </div>
                     ) : (
-                        <div className="w-full flex flex-col justify-between items-center h-full min-h-[230mm]">
-                            <div className="pt-12">
+                        <div className="w-full flex flex-col justify-between items-center h-full min-h-[245mm]">
+                            <div className="pt-16">
                                 <img
                                     src="/LogoNPC_PNG.png"
                                     alt="ตราสัญลักษณ์สถานศึกษา"
