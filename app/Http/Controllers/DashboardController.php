@@ -133,14 +133,21 @@ class DashboardController extends Controller
         $data['fundingChannelProgress'] = $fundingChannelProgress;
         $data['fundingSources'] = $fundingSources;
 
-        $advancePayments = Budget::where('is_advance_payment', true)
+        $isPowerFinanceUser = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || $user->isFinanceStaff();
+
+        $advancePaymentsQuery = Budget::where('is_advance_payment', true)
             ->whereNull('advance_cleared_at')
             ->with(['project.user', 'project.department'])
-            ->latest()
-            ->get();
+            ->latest();
+        if (!$isPowerFinanceUser) {
+            $advancePaymentsQuery->whereHas('project', function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            });
+        }
+        $advancePayments = $advancePaymentsQuery->get();
         $data['advancePayments'] = $advancePayments;
 
-        $expenseClearings = \App\Models\ExpenseClearing::with([
+        $expenseClearingsQuery = \App\Models\ExpenseClearing::with([
             'project.department',
             'routineBudgetPlan.department',
             'fundingSource',
@@ -148,18 +155,40 @@ class DashboardController extends Controller
             'user',
             'planApprover',
             'financeApprover'
-        ])->latest()->get();
+        ])->latest();
+        if (!$isPowerFinanceUser) {
+            $expenseClearingsQuery->where(function($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->orWhere('claimant_name', 'like', '%' . $user->name . '%');
+            });
+        }
+        $expenseClearings = $expenseClearingsQuery->get();
         $data['expenseClearings'] = $expenseClearings;
 
-        $data['availableProjectsForClearing'] = Project::whereIn('status', ['approved', 'in_progress', 'completed'])
+        $availProjectsQuery = Project::whereIn('status', ['approved', 'in_progress', 'completed'])
             ->with(['department', 'budget'])
-            ->latest()
-            ->get(['id', 'title', 'academic_year', 'department_id', 'allocated_budget', 'estimated_budget']);
+            ->latest();
+        if (!$isPowerFinanceUser) {
+            $availProjectsQuery->where('user_id', $user->id);
+        }
+        $data['availableProjectsForClearing'] = $availProjectsQuery->get(['id', 'title', 'academic_year', 'department_id', 'allocated_budget', 'estimated_budget']);
 
         // Load External Travel Loans (from npc_eleve / npc_hr)
-        $allTravelLoans = TravelLoan::with(['fundingSource', 'planCutByUser', 'project'])
-            ->latest()
-            ->get()
+        $travelLoansQuery = TravelLoan::with(['fundingSource', 'planCutByUser', 'project'])
+            ->latest();
+        if (!$isPowerFinanceUser) {
+            $travelLoansQuery->where(function($q) use ($user) {
+                if (!empty($user->citizen_id)) {
+                    $q->where('borrower_citizen_id', $user->citizen_id)
+                      ->orWhere('borrower_user_id', $user->id)
+                      ->orWhere('borrower_name', 'like', '%' . $user->name . '%');
+                } else {
+                    $q->where('borrower_user_id', $user->id)
+                      ->orWhere('borrower_name', 'like', '%' . $user->name . '%');
+                }
+            });
+        }
+        $allTravelLoans = $travelLoansQuery->get()
             ->map(function ($tl) {
                 return [
                     'id' => $tl->id,

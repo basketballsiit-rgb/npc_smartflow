@@ -10729,12 +10729,27 @@ ${itemsListText}
     const renderClearingsTab = () => {
         const formatMoney = (val) => new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(parseFloat(val) || 0);
 
-        // 1. Pending Loans List (allTravelLoans + advancePayments not yet cleared)
-        const rawTravelLoans = (planHeadData && planHeadData.externalTravelLoans) || (financeData && financeData.externalTravelLoans) || allTravelLoans || [];
-        const pendingTravelLoans = rawTravelLoans.filter(l => l.loan_status !== 'cleared' && !l.cleared_at);
+        const isPowerClearingUser = isAdmin || isPlanStaff || isFinanceStaff || isExecutive;
+        const currentUserName = auth?.user?.name || '';
+        const currentUserId = auth?.user?.id;
+        const currentUserCitizenId = auth?.user?.citizen_id;
 
-        const rawAdvancePayments = (planHeadData && planHeadData.advancePayments) || (financeData && financeData.advancePayments) || advancePayments || [];
-        const pendingAdvancePayments = rawAdvancePayments.filter(b => !b.advance_cleared_at);
+        // 1. Pending Loans List (allTravelLoans + advancePayments not yet cleared)
+        const rawTravelLoans = (isPowerClearingUser && ((planHeadData && planHeadData.externalTravelLoans) || (financeData && financeData.externalTravelLoans))) || allTravelLoans || [];
+        const pendingTravelLoans = rawTravelLoans.filter(l => {
+            if (l.loan_status === 'cleared' || l.cleared_at) return false;
+            if (isPowerClearingUser) return true;
+            return (currentUserCitizenId && l.borrower_citizen_id === currentUserCitizenId)
+                || (l.borrower_user_id && l.borrower_user_id === currentUserId)
+                || (l.borrower_name && l.borrower_name.includes(currentUserName));
+        });
+
+        const rawAdvancePayments = (isPowerClearingUser && ((planHeadData && planHeadData.advancePayments) || (financeData && financeData.advancePayments))) || advancePayments || [];
+        const pendingAdvancePayments = rawAdvancePayments.filter(b => {
+            if (b.advance_cleared_at) return false;
+            if (isPowerClearingUser) return true;
+            return b.project?.user_id === currentUserId;
+        });
 
         const combinedPendingLoans = [
             ...pendingTravelLoans.map(tl => {
@@ -10780,7 +10795,8 @@ ${itemsListText}
         ];
 
         // 2. Clearings List from props
-        const clearingsList = expenseClearings || [];
+        const rawClearingsList = expenseClearings || [];
+        const clearingsList = isPowerClearingUser ? rawClearingsList : rawClearingsList.filter(c => c.user_id === currentUserId || (c.claimant_name && c.claimant_name.includes(currentUserName)));
         const directReimburseList = clearingsList.filter(c => c.clearing_type === 'direct_reimburse');
 
         // Stats counts
@@ -10831,17 +10847,19 @@ ${itemsListText}
                         <div className="space-y-1.5">
                             <div className="flex items-center gap-2 flex-wrap">
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/30 text-purple-200 text-xs font-bold border border-purple-400/30">
-                                    <span>🧾</span> ระบบการเงินและงบประมาณ (Financial & Budget Control)
+                                    <span>🧾</span> {isPowerClearingUser ? 'ระบบการเงินและงบประมาณ (Financial & Budget Control)' : 'สัญญายืมเงิน & ล้างหนี้ส่วนบุคคล (Personal Loan Control)'}
                                 </span>
                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold border border-amber-400/30">
                                     <span>⚖️</span> เคลียร์เงินยืม & เบิกจ่ายตรง
                                 </span>
                             </div>
                             <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                                ศูนย์ควบคุมการเคลียร์เงินยืมทดรองราชการ & ขอเบิกจ่ายตรง
+                                {isPowerClearingUser ? 'ศูนย์ควบคุมการเคลียร์เงินยืมทดรองราชการ & ขอเบิกจ่ายตรง' : 'สัญญายืมเงิน กค.101 & ประวัติการเคลียร์เงินยืมของฉัน'}
                             </h2>
                             <p className="text-xs text-purple-200 max-w-3xl leading-relaxed">
-                                บันทึกและตรวจสอบการล้างหนี้สัญญายืมเงิน (เงินเหลือส่งคืนคลัง / ขอเบิกชดเชยเพิ่ม) และบันทึกขอเบิกจ่ายตรงกรณีไม่มีสัญญายืมเงินล่วงหน้า (สำรองจ่ายส่วนตัว) เพื่อส่งเรื่องให้งานแผนงานตัดยอดงบประมาณและงานการเงินเบิกจ่าย/รับเงินคืนอย่างถูกต้อง
+                                {isPowerClearingUser
+                                    ? 'บันทึกและตรวจสอบการล้างหนี้สัญญายืมเงิน (เงินเหลือส่งคืนคลัง / ขอเบิกชดเชยเพิ่ม) และบันทึกขอเบิกจ่ายตรงกรณีไม่มีสัญญายืมเงินล่วงหน้า (สำรองจ่ายส่วนตัว) เพื่อส่งเรื่องให้งานแผนงานตัดยอดงบประมาณและงานการเงินเบิกจ่าย/รับเงินคืนอย่างถูกต้อง'
+                                    : 'ตรวจสอบรายการสัญญายืมเงินทดรองราชการของตนเอง (กค.101 ไปราชการ / โครงการ) แนบหลักฐานใบเสร็จเพื่อส่งเคลียร์ล้างหนี้ต่อฝ่ายแผนงานและการเงิน หรือบันทึกขอเบิกจ่ายตรง'}
                             </p>
                         </div>
 
@@ -10864,7 +10882,7 @@ ${itemsListText}
                         className={`rounded-2xl p-5 border cursor-pointer transition-all ${clearingSubTab === 'pending_loans' ? 'bg-amber-50 border-amber-300 shadow-md scale-102 ring-2 ring-amber-400/30' : 'bg-white border-slate-200 hover:border-amber-200 hover:bg-slate-50'}`}
                     >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-amber-800">1. สัญญายืมรอเคลียร์</span>
+                            <span className="text-xs font-bold text-amber-800">{isPowerClearingUser ? '1. สัญญายืมรอเคลียร์' : '1. สัญญายืมของฉันรอเคลียร์'}</span>
                             <span className="text-xl">📋</span>
                         </div>
                         <div className="mt-2 flex items-baseline gap-2">
@@ -10872,7 +10890,7 @@ ${itemsListText}
                             <span className="text-xs text-amber-700">สัญญา</span>
                         </div>
                         <p className="mt-1 text-[11px] text-slate-500">
-                            สัญญายืมเงินที่ยังไม่ได้ส่งหลักฐานใบเสร็จล้างหนี้
+                            {isPowerClearingUser ? 'สัญญายืมเงินที่ยังไม่ได้ส่งหลักฐานใบเสร็จล้างหนี้' : 'สัญญายืมเงินของคุณที่ยังไม่ได้ส่งหลักฐานใบเสร็จล้างหนี้'}
                         </p>
                     </div>
 
@@ -10881,7 +10899,7 @@ ${itemsListText}
                         className={`rounded-2xl p-5 border cursor-pointer transition-all ${clearingSubTab === 'direct_reimburse' ? 'bg-teal-50 border-teal-300 shadow-md scale-102 ring-2 ring-teal-400/30' : 'bg-white border-slate-200 hover:border-teal-200 hover:bg-slate-50'}`}
                     >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-teal-800">2. ขอเบิกจ่ายตรง (ไม่มีสัญญายืม)</span>
+                            <span className="text-xs font-bold text-teal-800">{isPowerClearingUser ? '2. ขอเบิกจ่ายตรง (ไม่มีสัญญายืม)' : '2. รายการขอเบิกจ่ายตรงของฉัน'}</span>
                             <span className="text-xl">⚡</span>
                         </div>
                         <div className="mt-2 flex items-baseline gap-2">
@@ -10898,7 +10916,7 @@ ${itemsListText}
                         className={`rounded-2xl p-5 border cursor-pointer transition-all ${clearingSubTab === 'all_clearings' ? 'bg-indigo-50 border-indigo-300 shadow-md scale-102 ring-2 ring-indigo-400/30' : 'bg-white border-slate-200 hover:border-indigo-200 hover:bg-slate-50'}`}
                     >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-indigo-800">3. รอแผนงานตัดยอด / รอการเงิน</span>
+                            <span className="text-xs font-bold text-indigo-800">{isPowerClearingUser ? '3. รอแผนงานตัดยอด / รอการเงิน' : '3. อยู่ระหว่างตรวจสอบตัดยอด'}</span>
                             <span className="text-xl">📊</span>
                         </div>
                         <div className="mt-2 flex items-baseline gap-2">
@@ -10915,7 +10933,7 @@ ${itemsListText}
                         className="rounded-2xl p-5 border bg-white border-slate-200 hover:border-emerald-200 hover:bg-slate-50 cursor-pointer transition-all"
                     >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-emerald-800">4. ปิดยอดเคลียร์สมบูรณ์แล้ว</span>
+                            <span className="text-xs font-bold text-emerald-800">{isPowerClearingUser ? '4. ปิดยอดเคลียร์สมบูรณ์แล้ว' : '4. เคลียร์ล้างหนี้เสร็จสิ้นแล้ว'}</span>
                             <span className="text-xl">✅</span>
                         </div>
                         <div className="mt-2 flex items-baseline gap-2">
@@ -10940,7 +10958,7 @@ ${itemsListText}
                                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                             }`}
                         >
-                            <span>📋</span> สัญญายืมเงินรอเคลียร์ ({countPendingLoans})
+                            <span>📋</span> {isPowerClearingUser ? 'สัญญายืมเงินรอเคลียร์' : 'สัญญายืมเงินของฉัน'} ({countPendingLoans})
                         </button>
                         <button
                             type="button"
@@ -10951,7 +10969,7 @@ ${itemsListText}
                                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                             }`}
                         >
-                            <span>⚡</span> ขอเบิกจ่ายตรง (ไม่มีสัญญายืม) ({directReimburseList.length})
+                            <span>⚡</span> {isPowerClearingUser ? 'ขอเบิกจ่ายตรง (ไม่มีสัญญายืม)' : 'ขอเบิกจ่ายตรง'} ({directReimburseList.length})
                         </button>
                         <button
                             type="button"
@@ -10962,7 +10980,7 @@ ${itemsListText}
                                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                             }`}
                         >
-                            <span>📑</span> ทะเบียนการเคลียร์และตัดยอดทั้งหมด ({clearingsList.length})
+                            <span>📑</span> {isPowerClearingUser ? 'ทะเบียนการเคลียร์และตัดยอดทั้งหมด' : 'ประวัติการเคลียร์ของฉัน'} ({clearingsList.length})
                         </button>
                     </div>
 
@@ -10998,7 +11016,7 @@ ${itemsListText}
                         <div className="border-b border-slate-100 bg-amber-50/50 px-6 py-4 flex items-center justify-between">
                             <div>
                                 <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                                    <span>📋</span> รายการสัญญายืมเงินทดรองราชการที่ยังไม่ได้เคลียร์ล้างหนี้
+                                    <span>📋</span> {isPowerClearingUser ? 'รายการสัญญายืมเงินทดรองราชการที่ยังไม่ได้เคลียร์ล้างหนี้' : 'รายการสัญญายืมเงินทดรองราชการของฉัน (กค.101) ที่ยังไม่ได้เคลียร์ล้างหนี้'}
                                 </h3>
                                 <p className="text-xs text-slate-500 mt-0.5">
                                     คลิก "🧾 บันทึกเคลียร์เงินยืม" เพื่อนำหลักฐานใบเสร็จค่าใช้จ่ายจริงมาคำนวณเงินเหลือคืนคลัง หรือขอเบิกชดเชยเพิ่ม
@@ -11024,8 +11042,8 @@ ${itemsListText}
                                         <tr>
                                             <td colSpan="5" className="px-6 py-12 text-center text-sm text-slate-400">
                                                 <div className="text-4xl mb-2">🎉</div>
-                                                <p className="font-bold text-slate-600">ไม่มีรายการสัญญายืมเงินค้างเคลียร์ในระบบ</p>
-                                                <p className="text-xs text-slate-400 mt-1">สัญญายืมเงินทั้งหมดได้รับการเคลียร์ล้างหนี้เรียบร้อยแล้ว</p>
+                                                <p className="font-bold text-slate-600">{isPowerClearingUser ? 'ไม่มีรายการสัญญายืมเงินค้างเคลียร์ในระบบ' : 'ไม่มีรายการสัญญายืมเงินค้างเคลียร์ของคุณ'}</p>
+                                                <p className="text-xs text-slate-400 mt-1">{isPowerClearingUser ? 'สัญญายืมเงินทั้งหมดได้รับการเคลียร์ล้างหนี้เรียบร้อยแล้ว' : 'คุณไม่มีสัญญายืมเงินค้างชำระ/ค้างเคลียร์ในระบบ'}</p>
                                             </td>
                                         </tr>
                                     ) : (

@@ -674,11 +674,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'clearings' })}
                                     className={getSubLinkClass(url.includes('tab=clearings') && !url.includes('action='))}
-                                    title="สัญญายืมเงิน กค.101 / ยืมเงินไปราชการ"
+                                    title="สัญญายืมเงิน กค.101 / ยืมเงินไปราชการของฉัน"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=clearings') && !url.includes('action='))}>└─</span>
                                     <span className="text-sm">📝</span>
-                                    {isSidebarOpen && <span>สัญญายืมเงิน กค.101 / ไปราชการ</span>}
+                                    {isSidebarOpen && <span>สัญญายืมเงิน กค.101 (ของฉัน)</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'clearings', action: 'new' })}
@@ -688,15 +688,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className={getPrefixClass(url.includes('action=new'))}>└─</span>
                                     <span className="text-sm">🧾</span>
                                     {isSidebarOpen && <span>ส่งใบเสร็จเคลียร์เงินยืม / เบิกจ่าย</span>}
-                                </Link>
-                                <Link
-                                    href={route('admin.routine_budgets.index')}
-                                    className={getSubLinkClass(url.includes('routine-budgets') && !isPlanStaff && !isFinanceStaff)}
-                                    title="งบดำเนินงานประจำปี & จัดซื้อจัดจ้างตรง"
-                                >
-                                    <span className={getPrefixClass(url.includes('routine-budgets') && !isPlanStaff && !isFinanceStaff)}>└─</span>
-                                    <span className="text-sm">🗓️</span>
-                                    {isSidebarOpen && <span>งบดำเนินงานประจำปี & จัดซื้อตรง</span>}
                                 </Link>
                             </div>
                             )}
@@ -1247,13 +1238,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                             <span>📋</span> จัดซื้อ & สัญญายืม (Kanban)
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'clearings' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📝</span> สัญญายืมเงิน กค.101
+                                            <span>📝</span> สัญญายืมเงิน กค.101 (ของฉัน)
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'clearings', action: 'new' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>🧾</span> ส่งใบเสร็จเคลียร์เงินยืม
-                                        </Link>
-                                        <Link href={route('admin.routine_budgets.index')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>🗓️</span> งบดำเนินงานประจำปี
+                                            <span>🧾</span> ส่งใบเสร็จเคลียร์เงินยืม / เบิกจ่าย
                                         </Link>
                                     </div>
                                 )}
