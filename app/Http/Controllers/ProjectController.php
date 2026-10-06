@@ -4358,9 +4358,6 @@ class ProjectController extends Controller
             },
             'procurement.items',
             'approvals.user',
-            'indicators',
-            'activities',
-            'expenses',
         ]);
         $survey = \App\Models\Survey::where('project_id', $project->id)->first();
         $surveyStats = (new SurveyController())->calculateDetailedStats($survey);
