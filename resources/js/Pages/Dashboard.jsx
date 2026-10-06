@@ -774,10 +774,9 @@ export default function Dashboard({
             if (ch === 'appendix') return 'appendix';
             if (ch === 'preliminary') return 'preliminary';
             if (ch) return `chapter_${ch}`;
-            if (tb) return tb === 'proposals' ? 'document_tracking' : tb;
+            if (tb) return tb;
         }
         if (currentTab) {
-            if (currentTab === 'proposals') return 'document_tracking';
             return currentTab;
         }
         if (role === 'admin') return 'admin_users';
@@ -841,7 +840,7 @@ export default function Dashboard({
                 } else if (tb === 'full_report') {
                     setActiveTab('full_report');
                 } else {
-                    setActiveTab(tb === 'proposals' ? 'document_tracking' : tb);
+                    setActiveTab(tb);
                 }
                 return;
             }
@@ -866,7 +865,7 @@ export default function Dashboard({
             } else if (currentTab === 'full_report') {
                 setActiveTab('full_report');
             } else {
-                setActiveTab(currentTab === 'proposals' ? 'document_tracking' : currentTab);
+                setActiveTab(currentTab);
             }
         }
     }, [currentTab, currentChapter]);
@@ -19850,7 +19849,8 @@ return (
                         {activeTab === 'admin_ai' && renderAdminAiHubTab()}
                         {activeTab === 'all_projects' && renderAllProjectsTab()}
                         {activeTab === 'central_budgets' && renderCentralBudgetsTab()}
-                        {(activeTab === 'document_tracking' || activeTab === 'proposals') && renderDocumentTrackingTab()}
+                        {activeTab === 'document_tracking' && renderDocumentTrackingTab()}
+                        {activeTab === 'proposals' && renderProposalsTab()}
                         {activeTab === 'annual_budget_requests' && renderAnnualBudgetRequestsTab()}
                         {activeTab === 'budgets' && renderBudgetsTab()}
                         {activeTab === 'action_plan_report' && renderActionPlanReportTab()}

@@ -69,25 +69,24 @@ export default function AuthenticatedLayout({ header, children }) {
             case 'proposal':
                 return currentUrl.includes('tab=proposals') ||
                        (currentUrl.includes('tab=reviews') && !isPlanStaff && !isExecutive && !isAdmin) ||
-                       (currentUrl.includes('tab=document_tracking') && !isPlanStaff && !isAdmin) ||
                        (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')));
             case 'five_chapters':
                 return currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix') || currentUrl.includes('tab=preliminary') || currentUrl.includes('tab=full_report');
             case 'procurement_loan':
-                return (currentUrl.includes('routine-budgets') && !isPlanStaff && !isAdmin) ||
+                return (currentUrl.includes('tab=document_tracking') && !isPlanStaff && !isProcurementStaff && !isFinanceStaff && !isAdmin) ||
+                       (currentUrl.includes('routine-budgets') && !isPlanStaff && !isAdmin) ||
                        (currentUrl.includes('tab=clearings') && !isFinanceStaff && !isAdmin);
             case 'procurement_hub':
-                return currentUrl.includes('tab=procurement') || currentUrl.includes('vendors');
+                return currentUrl.includes('tab=procurement') || currentUrl.includes('vendors') || (currentUrl.includes('tab=document_tracking') && isProcurementStaff);
             case 'finance_hub':
-                return currentUrl.includes('tab=central_budgets') || (currentUrl.includes('tab=clearings') && (isFinanceStaff || isAdmin));
+                return currentUrl.includes('tab=central_budgets') || (currentUrl.includes('tab=clearings') && (isFinanceStaff || isAdmin)) || (currentUrl.includes('tab=document_tracking') && isFinanceStaff);
             case 'plan_hub':
                 return currentUrl.includes('tab=annual_budget_requests') ||
                        currentUrl.includes('tab=budgets') ||
-                       currentUrl.includes('tab=reviews') ||
-                       currentUrl.includes('routine-budgets') ||
-                       currentUrl.includes('tab=document_tracking') ||
+                       (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) ||
+                       ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets')) ||
+                       (currentUrl.includes('tab=document_tracking') && isPlanStaff) ||
                        currentUrl.includes('tab=action_plan_report') ||
-                       currentUrl.includes('tab=all_projects') ||
                        currentUrl.includes('tab=admin_strategies') ||
                        currentUrl.includes('strategies/dashboard') ||
                        (typeof route !== 'undefined' && route().current('strategies.dashboard'));
@@ -125,22 +124,22 @@ export default function AuthenticatedLayout({ header, children }) {
         if (isPureExecutive && (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || currentUrl.includes('tab=action_plan_report') || currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
             return 'executive_hub';
         }
-        if (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) || ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets')) || currentUrl.includes('tab=action_plan_report') || (currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
+        if (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) || ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets')) || (currentUrl.includes('tab=document_tracking') && isPlanStaff) || currentUrl.includes('tab=action_plan_report') || (currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
             return 'plan_hub';
         }
         if (currentUrl.includes('tab=admin_') || (currentUrl.includes('tab=all_projects') && isAdmin)) {
             return 'admin_console';
         }
-        if (currentUrl.includes('tab=procurement') || (currentUrl.includes('vendors') && isProcurementStaff)) {
+        if (currentUrl.includes('tab=procurement') || (currentUrl.includes('vendors') && isProcurementStaff) || (currentUrl.includes('tab=document_tracking') && isProcurementStaff)) {
             return 'procurement_hub';
         }
-        if (currentUrl.includes('tab=central_budgets') || (currentUrl.includes('tab=clearings') && isFinanceStaff)) {
+        if (currentUrl.includes('tab=central_budgets') || (currentUrl.includes('tab=clearings') && isFinanceStaff) || (currentUrl.includes('tab=document_tracking') && isFinanceStaff)) {
             return 'finance_hub';
         }
-        if (currentUrl.includes('routine-budgets') || (currentUrl.includes('tab=clearings') && !isFinanceStaff)) {
+        if (currentUrl.includes('routine-budgets') || (currentUrl.includes('tab=clearings') && !isFinanceStaff) || (currentUrl.includes('tab=document_tracking') && !isPlanStaff && !isProcurementStaff && !isFinanceStaff && !isAdmin)) {
             return 'procurement_loan';
         }
-        if (currentUrl.includes('tab=proposals') || currentUrl.includes('tab=document_tracking') || currentUrl.includes('tab=reviews') || (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')))) {
+        if (currentUrl.includes('tab=proposals') || (currentUrl.includes('tab=reviews') && !isPlanStaff && !isExecutive && !isAdmin) || (typeof route !== 'undefined' && (route().current('projects.quick_create') || route().current('projects.create')))) {
             return 'proposal';
         }
         return null;
@@ -518,13 +517,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>คิวลงนามอนุมัติ (ผู้เกี่ยวข้อง)</span>}
                                 </Link>
                                 <Link
-                                    href={route('dashboard', { tab: 'document_tracking' })}
-                                    className={getSubLinkClass(url.includes('tab=document_tracking'))}
-                                    title="กระดานติดตามสถานะเอกสารและโครงการ (Kanban Board)"
+                                    href={route('dashboard', { tab: 'proposals' })}
+                                    className={getSubLinkClass(url.includes('tab=proposals'))}
+                                    title="ติดตามสถานะโครงการ และขั้นตอนการอนุมัติ (Proposals)"
                                 >
-                                    <span className={getPrefixClass(url.includes('tab=document_tracking'))}>●</span>
+                                    <span className={getPrefixClass(url.includes('tab=proposals'))}>●</span>
                                     <span className="text-sm">📋</span>
-                                    {isSidebarOpen && <span>ติดตามงาน & เอกสาร (Kanban)</span>}
+                                    {isSidebarOpen && <span>ติดตามสถานะโครงการ (Proposals)</span>}
                                 </Link>
                             </div>
                             )}
@@ -1209,8 +1208,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>✍️</span> คิวลงนามอนุมัติ
                                         </Link>
-                                        <Link href={route('dashboard', { tab: 'document_tracking' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📍</span> ติดตามเอกสารและโครงการ
+                                        <Link href={route('dashboard', { tab: 'proposals' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📋</span> ติดตามสถานะโครงการ (Proposals)
                                         </Link>
                                     </div>
                                 )}
@@ -1244,6 +1243,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
                                         <div className="text-[10px] font-bold text-sky-300 uppercase px-2">3. จัดซื้อจัดจ้าง & สัญญายืมเงิน</div>
+                                        <Link href={route('dashboard', { tab: 'document_tracking' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📋</span> จัดซื้อ & สัญญายืม (Kanban)
+                                        </Link>
                                         <Link href={route('dashboard', { tab: 'clearings' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📝</span> สัญญายืมเงิน กค.101
                                         </Link>
