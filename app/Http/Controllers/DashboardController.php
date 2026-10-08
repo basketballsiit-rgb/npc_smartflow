@@ -43,7 +43,7 @@ class DashboardController extends Controller
             else if ($user->isExecutive()) $activeTab = 'executive_overview';
             else $activeTab = 'document_tracking';
         } else {
-            $activeTab = ($requestedTab === 'proposals') ? 'document_tracking' : $requestedTab;
+            $activeTab = $requestedTab;
         }
 
         $data = [
