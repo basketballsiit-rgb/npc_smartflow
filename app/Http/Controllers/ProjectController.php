@@ -777,12 +777,14 @@ class ProjectController extends Controller
         $user = auth()->user();
         $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff();
 
-        if ($project->status === 'budget_rejected' && !$isPlanOrAdmin) {
-            abort(403, 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถจัดทำรายละเอียดต่อได้');
-        }
+        $canEdit = ($project->user_id === $user->id || $isPlanOrAdmin);
+        $cannotEditReason = null;
 
-        if ($project->user_id !== $user->id && !$isPlanOrAdmin) {
-            abort(403, 'Unauthorized.');
+        if ($project->status === 'budget_rejected' && !$isPlanOrAdmin) {
+            $canEdit = false;
+            $cannotEditReason = 'โครงการนี้ไม่ได้รับการจัดสรรงบประมาณ จึงไม่สามารถแก้ไขรายละเอียดได้ หากต้องการแก้ไขกรุณาติดต่อผู้ดูแลระบบ';
+        } elseif (!$canEdit) {
+            $cannotEditReason = 'คุณไม่มีสิทธิ์แก้ไขโครงการนี้ (อนุญาตเฉพาะเจ้าของโครงการ หรือผู้ดูแลระบบ/งานแผนงาน) หากต้องการแก้ไขกรุณาติดต่อผู้ดูแลระบบ';
         }
 
         $project->load(['fundingSource', 'budget.fundingSource', 'procurement.items']);
@@ -802,6 +804,8 @@ class ProjectController extends Controller
             'departments' => Department::all(),
             'fundingSources' => \App\Models\FundingSource::orderBy('id', 'asc')->get(),
             'isApprovedLocked' => false,
+            'canEdit' => $canEdit,
+            'cannotEditReason' => $cannotEditReason,
         ]);
     }
 
@@ -1688,8 +1692,12 @@ class ProjectController extends Controller
      */
     public function updateStatus(Request $request, Project $project)
     {
-        if (auth()->id() !== $project->user_id && !auth()->user()->isAdmin() && !auth()->user()->isProcurementHead()) {
-            abort(403, 'เฉพาะผู้เสนอโครงการ เจ้าหน้าที่พัสดุ หรือผู้ดูแลระบบเท่านั้นที่สามารถอัปเดตสถานะการดำเนินงานได้');
+        $user = auth()->user();
+        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isProcurementHead();
+        $isOwner = ($project->user_id === $user->id);
+
+        if (!$isOwner && !$isPlanOrAdmin) {
+            abort(403, 'คุณไม่มีสิทธิ์เปลี่ยนสถานะโครงการนี้ (อนุญาตเฉพาะเจ้าของโครงการ หรือผู้ดูแลระบบ/งานแผน/งานพัสดุ)');
         }
 
         $validated = $request->validate([
@@ -1775,10 +1783,7 @@ class ProjectController extends Controller
             return Storage::disk('public')->download($filePath);
         }
 
-        // Dispatch stitching job to generate the report file asynchronously
-        StitchProjectDocumentsJob::dispatch($project);
-
-        return redirect()->back()->with('message', 'Stitching job initiated. The document is being compiled and will be available for download in a few seconds. Please refresh the page.');
+        return redirect()->route('projects.full_report.print', $project->id);
     }
 
     /**

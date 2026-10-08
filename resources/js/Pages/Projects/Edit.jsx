@@ -6,7 +6,7 @@ import axios from 'axios';
 import ConsistencyAuditModal from '@/Components/ConsistencyAuditModal';
 import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
 
-export default function Edit({ project, strategyCategories = [], iqaStrategies = [], ovecStrategies = [], nationalStrategies = [], provincialStrategies = [], departments = [] }) {
+export default function Edit({ project, strategyCategories = [], iqaStrategies = [], ovecStrategies = [], nationalStrategies = [], provincialStrategies = [], departments = [], canEdit = true, cannotEditReason = null }) {
     const { auth } = usePage().props;
     const user = auth?.user;
     const isPlanOrAdmin = user?.is_admin || 
@@ -1016,8 +1016,26 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                             </div>
                         </div>
 
+                        {cannotEditReason && (
+                            <div className="mb-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-amber-950">
+                                <div className="flex items-start sm:items-center gap-3.5">
+                                    <span className="text-3xl shrink-0">🔒</span>
+                                    <div>
+                                        <h4 className="text-sm font-extrabold text-amber-950">โหมดดูรายละเอียดโครงการ (Read-Only Mode)</h4>
+                                        <p className="text-xs font-semibold text-amber-800 mt-0.5">{cannotEditReason}</p>
+                                    </div>
+                                </div>
+                                <Link
+                                    href={route('projects.show', project.id)}
+                                    className="px-4 py-2 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 text-xs font-bold transition shrink-0 whitespace-nowrap shadow-xs"
+                                >
+                                    ← กลับหน้ารายละเอียดโครงการ
+                                </Link>
+                            </div>
+                        )}
+
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <fieldset className="space-y-6 border-0 p-0 m-0">
+                            <fieldset disabled={!canEdit} className="space-y-6 border-0 p-0 m-0 disabled:opacity-90">
 
                             {/* Accordion Group 1: ข้อมูลทั่วไป ยุทธศาสตร์ และหลักการ (หัวข้อ 1 - 3) */}
                             <div id="group-g1" className="rounded-3xl border-2 border-purple-200/80 bg-white overflow-hidden shadow-xs transition-all">
@@ -3084,7 +3102,13 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                 >
                                     ← กลับหน้ารายละเอียดโครงการ
                                 </Link>
-                                {isApprovedOrCompleted ? (
+                                {!canEdit ? (
+                                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+                                        <span className="px-5 py-2.5 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 font-bold text-xs flex items-center gap-1.5 shadow-2xs">
+                                            <span>🔒</span> โหมดดูรายละเอียด (ไม่สามารถแก้ไขข้อมูลได้)
+                                        </span>
+                                    </div>
+                                ) : isApprovedOrCompleted ? (
                                     <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
                                         <button
                                             type="button"
@@ -3296,23 +3320,31 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
 
                     {/* Quick Actions */}
                     <div className="flex items-center gap-2 w-full md:w-auto justify-center md:justify-end">
-                        <button
-                            type="button"
-                            onClick={handleRunConsistencyAudit}
-                            disabled={isAuditing}
-                            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-purple-600/20 flex items-center gap-1.5 transition-all hover:scale-102 active:scale-95 disabled:opacity-50 cursor-pointer"
-                        >
-                            <span className={isAuditing ? 'animate-spin' : ''}>✨</span>
-                            <span>AI ตรวจสอบความสอดคล้อง</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSaveDraft}
-                            disabled={processing || isSubmitting}
-                            className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-300 font-bold text-xs shadow-2xs transition-all hover:scale-102 active:scale-95 disabled:opacity-50 cursor-pointer"
-                        >
-                            💾 บันทึกแบบร่าง
-                        </button>
+                        {!canEdit ? (
+                            <span className="px-4 py-2 rounded-xl bg-amber-100 text-amber-950 border border-amber-300 font-bold text-xs flex items-center gap-1.5 shadow-2xs">
+                                <span>🔒</span> โหมดดูรายละเอียด (Read-Only)
+                            </span>
+                        ) : (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={handleRunConsistencyAudit}
+                                    disabled={isAuditing}
+                                    className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-700 hover:to-indigo-800 text-white font-bold text-xs shadow-md shadow-purple-600/20 flex items-center gap-1.5 transition-all hover:scale-102 active:scale-95 disabled:opacity-50 cursor-pointer"
+                                >
+                                    <span className={isAuditing ? 'animate-spin' : ''}>✨</span>
+                                    <span>AI ตรวจสอบความสอดคล้อง</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveDraft}
+                                    disabled={processing || isSubmitting}
+                                    className="px-4 py-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-300 font-bold text-xs shadow-2xs transition-all hover:scale-102 active:scale-95 disabled:opacity-50 cursor-pointer"
+                                >
+                                    💾 บันทึกแบบร่าง
+                                </button>
+                            </>
+                        )}
                         {project.status === 'pending_approval' || (project.current_approval_step && project.current_approval_step > 1) ? (
                             <span className="px-3.5 py-2 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-xs flex items-center gap-1.5 shadow-2xs">
                                 <span>✅</span> ยื่นขออนุมัติแล้ว (ขั้นที่ {project.current_approval_step || 2})

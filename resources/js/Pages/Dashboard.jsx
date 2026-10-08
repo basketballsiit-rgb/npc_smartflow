@@ -39,7 +39,8 @@ export default function Dashboard({
     divisionBudgetRequests = [],
     institutionalExpenditureProjections = null,
     currentTab,
-    currentChapter
+    currentChapter,
+    selectedProjectId
 }) {
     const { auth, flash, departments_data } = usePage().props;
     const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
@@ -933,7 +934,13 @@ export default function Dashboard({
         return Array.from(map.values());
     }, [allProjectsMaster, teacherData]);
 
-    const [selectedChapter1ProjectId, setSelectedChapter1ProjectId] = useState('');
+    const [selectedChapter1ProjectId, setSelectedChapter1ProjectId] = useState(selectedProjectId ? String(selectedProjectId) : '');
+
+    React.useEffect(() => {
+        if (selectedProjectId) {
+            setSelectedChapter1ProjectId(String(selectedProjectId));
+        }
+    }, [selectedProjectId]);
     const [chapter1Sections, setChapter1Sections] = useState({
         background: '',
         objectives: '',

@@ -31,6 +31,7 @@ class DashboardController extends Controller
 
         $requestedTab = $request->query('tab');
         $requestedChapter = $request->query('chapter');
+        $requestedProjectId = $request->query('project_id');
 
         if ($requestedChapter) {
             $activeTab = 'chapter_' . $requestedChapter;
@@ -49,6 +50,7 @@ class DashboardController extends Controller
             'role' => $role,
             'currentTab' => $activeTab,
             'currentChapter' => $requestedChapter ? (int)$requestedChapter : null,
+            'selectedProjectId' => $requestedProjectId ? (int)$requestedProjectId : null,
         ];
 
         // Auto-cleanup any residual duplicate/imported test departments
@@ -767,13 +769,18 @@ class DashboardController extends Controller
             || $user->isProcurementHead() || $user->isProcurementStaff() 
             || $user->isFinanceStaff() || $user->isExecutive();
 
-        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix'])) {
+        if ($isPowerUser || in_array($activeTab, ['document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
             $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices', 'photos', 'survey'])
                 ->latest();
 
-            // Non-power users (e.g. general teachers/proposers) only track their own projects
+            // Non-power users (e.g. general teachers/proposers) only track their own projects, or specifically selected project
             if (!$isPowerUser) {
-                $masterQuery->where('user_id', $user->id);
+                $masterQuery->where(function($q) use ($user, $requestedProjectId) {
+                    $q->where('user_id', $user->id);
+                    if ($requestedProjectId) {
+                        $q->orWhere('id', (int)$requestedProjectId);
+                    }
+                });
             }
 
             $data['allProjectsMaster'] = $masterQuery

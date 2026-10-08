@@ -646,7 +646,20 @@ ${itemsListText}
                     status: newStatus
                 }, {
                     onSuccess: () => {
-                        Swal.fire('อัปเดตเรียบร้อย', `สถานะโครงการเปลี่ยนเป็น ${statusLabel} แล้ว`, 'success');
+                        Swal.fire({
+                            title: 'อัปเดตเรียบร้อย!',
+                            text: `สถานะโครงการเปลี่ยนเป็น "${statusLabel}" แล้ว`,
+                            icon: 'success',
+                            confirmButtonColor: '#7c3aed'
+                        }).then(() => {
+                            if (newStatus === 'completed') {
+                                router.visit(route('dashboard'));
+                            }
+                        });
+                    },
+                    onError: (err) => {
+                        const errMsg = err?.message || (typeof err === 'object' ? Object.values(err)[0] : 'กรุณาลองใหม่อีกครั้ง');
+                        Swal.fire('ข้อผิดพลาด', `ไม่สามารถเปลี่ยนสถานะได้: ${errMsg}`, 'error');
                     }
                 });
             }
@@ -991,25 +1004,21 @@ ${itemsListText}
                         )}
                         {/* Edit Button */}
                         {(project.status === 'approved' || project.status === 'completed') ? (
-                            (auth.user?.is_admin || auth.user?.is_plan_head || auth.user?.is_plan_staff || project.user_id === auth.user?.id) && (
-                                <Link
-                                    href={route('projects.edit', project.id)}
-                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/20 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                    title="แก้ไข/อัปเดตรายละเอียดโครงการที่อนุมัติแล้ว"
-                                >
-                                    ✏️ แก้ไข/อัปเดตโครงการ
-                                </Link>
-                            )
+                            <Link
+                                href={route('projects.edit', project.id)}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/20 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                title="แก้ไข/อัปเดตรายละเอียดโครงการ"
+                            >
+                                ✏️ แก้ไข/อัปเดตโครงการ
+                            </Link>
                         ) : (
-                            (auth.user?.is_admin || auth.user?.is_plan_head || auth.user?.is_plan_staff || project.user_id === auth.user?.id || project.status === 'draft' || project.status === 'budget_approved' || project.status === 'rejected') && (
-                                <Link
-                                    href={route('projects.edit', project.id)}
-                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
-                                    title="จัดทำ/แก้ไขรายละเอียดโครงการ"
-                                >
-                                    ✏️ จัดทำ/แก้ไขโครงการ
-                                </Link>
-                            )
+                            <Link
+                                href={route('projects.edit', project.id)}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                title="จัดทำ/แก้ไขรายละเอียดโครงการ"
+                            >
+                                ✏️ จัดทำ/แก้ไขโครงการ
+                            </Link>
                         )}
 
                         {/* Quick Admin Actions in Top Header */}
@@ -1063,12 +1072,6 @@ ${itemsListText}
                         >
                             🖨️ พิมพ์เอกสารโครงการ (Print PDF)
                         </a>
-                        <Link
-                            href={route('dashboard')}
-                            className="inline-flex items-center rounded-xl border border-purple-200 bg-white px-4 py-2 text-xs font-bold text-purple-800 shadow-xs hover:bg-purple-50 transition-all whitespace-nowrap shrink-0"
-                        >
-                            ← ย้อนกลับหน้าศูนย์ควบคุม
-                        </Link>
                     </div>
                 </div>
             }
@@ -1745,16 +1748,7 @@ ${itemsListText}
                                         </button>
                                     )}
 
-                                    {/* Proposer Edit Link */}
-                                    {isProposer && (
-                                        <Link
-                                            href={route('projects.edit', project.id)}
-                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-black shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                                        >
-                                            <span>✏️</span>
-                                            <span>แก้ไขโครงการ / รายการ</span>
-                                        </Link>
-                                    )}
+
 
                                     {/* AI-Assisted TOR Studio Button */}
                                     {disbType !== 'loan' && (
@@ -2325,11 +2319,13 @@ ${itemsListText}
                                             <p className="text-xs text-slate-500">ดำเนินโครงการเสร็จสิ้นแล้ว สามารถจัดทำเอกสารรายงาน 5 บท และสำรวจแบบประเมินความพึงพอใจได้สะดวกผ่านเมนูหลัก</p>
                                         </div>
                                     </div>
-                                    {project.status === 'approved' && (
+                                    {['approved', 'in_progress', 'evaluating', 'reporting', 'completed'].includes(project.status) && (
                                         <a
-                                            href={route('projects.download_report', project.id)}
+                                            href={route('projects.full_report.print', project.id)}
                                             target="_blank"
-                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white font-bold text-xs rounded-xl shadow-xs hover:scale-105 active:scale-95 transition"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white font-bold text-xs rounded-xl shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                            title="เปิดเล่มรายงานโครงการ 5 บทฉบับสมบูรณ์ (พิมพ์ / บันทึก PDF)"
                                         >
                                             <span>📥</span>
                                             <span>ดาวน์โหลดเล่มรายงาน (.pdf)</span>
@@ -2339,8 +2335,9 @@ ${itemsListText}
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Link
-                                        href={route('dashboard', { tab: 'proposals', chapter: 1 })}
+                                        href={route('dashboard', { tab: 'chapter_1', chapter: 1, project_id: project.id })}
                                         className="group p-4 bg-white rounded-xl border border-purple-100 hover:border-purple-300 hover:shadow-md transition-all flex items-center justify-between"
+                                        title="เขียนและจัดการเนื้อหาบทที่ 1 - 5 สำหรับโครงการนี้"
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
@@ -2357,6 +2354,7 @@ ${itemsListText}
                                     <Link
                                         href={route('surveys.stats', project.id)}
                                         className="group p-4 bg-white rounded-xl border border-indigo-100 hover:border-indigo-300 hover:shadow-md transition-all flex items-center justify-between"
+                                        title="เปิดดู QR Code แบบประเมิน และรายงานสถิติ"
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
@@ -2371,7 +2369,7 @@ ${itemsListText}
                                     </Link>
                                 </div>
 
-                                {(project.user_id === auth?.user?.id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'completed' && (
+                                {(project.user_id === auth?.user?.id || isPlanStaffOrAdmin || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin') && project.status !== 'completed' && (
                                     <div className="mt-2 pt-3 border-t border-purple-100/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                         <div>
                                             <h5 className="text-xs font-black text-slate-800">🏆 สรุปและปิดโครงการ (Project Lifecycle)</h5>
@@ -2379,7 +2377,7 @@ ${itemsListText}
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => handleUpdateStatus('completed', 'เสร็จสิ้นโครงการสมบูรณ์ (ขั้นตอนที่ 6)')}
+                                            onClick={() => handleUpdateStatus('completed', 'เสร็จสิ้นโครงการสมบูรณ์')}
                                             className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-xs hover:scale-105 active:scale-95 transition whitespace-nowrap cursor-pointer"
                                         >
                                             ✅ ยืนยันปิดโครงการสมบูรณ์

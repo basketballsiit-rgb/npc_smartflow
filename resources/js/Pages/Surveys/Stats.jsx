@@ -3,7 +3,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import React, { useState } from 'react';
 import axios from 'axios';
 
-export default function Stats({ project, totalResponses, detailedStats, comments, actRecommendation, evaluationUrl }) {
+export default function Stats({ project, totalResponses, detailedStats, comments, actRecommendation, qrCodeUrl, evaluationUrl }) {
     const [generating, setGenerating] = useState(false);
     const [analyzingSentiment, setAnalyzingSentiment] = useState(false);
     const [sentimentData, setSentimentData] = useState(null);
@@ -123,6 +123,62 @@ export default function Stats({ project, totalResponses, detailedStats, comments
 
             <div className="py-8 font-sans">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
+
+                    {/* QR Code & Online Evaluation Access */}
+                    <div className="rounded-3xl border border-indigo-200 bg-gradient-to-r from-purple-50 via-indigo-50/60 to-white p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+                            <div className="p-3 bg-white rounded-2xl shadow-sm border border-purple-100 shrink-0 text-center">
+                                <img 
+                                    src={qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(evaluationUrl || route('surveys.evaluate', project.id))}`} 
+                                    alt="QR Code" 
+                                    className="w-28 h-28 object-contain rounded-lg mx-auto"
+                                />
+                                <span className="text-[10px] text-slate-500 font-bold block mt-1">สแกนทำแบบประเมิน</span>
+                            </div>
+                            <div className="space-y-1.5">
+                                <span className="text-[11px] font-bold text-indigo-700 uppercase tracking-wide px-2.5 py-0.5 bg-indigo-100 rounded-full inline-block">
+                                    📱 ช่องทางประเมินผลออนไลน์ (Online Survey)
+                                </span>
+                                <h3 className="text-base font-black text-slate-900">
+                                    แบบประเมินความพึงพอใจสำหรับผู้เข้าร่วมโครงการ
+                                </h3>
+                                <p className="text-xs text-slate-600 max-w-xl">
+                                    ให้นักเรียน นักศึกษา หรือผู้เข้าร่วมกิจกรรมสแกน QR Code นี้ เพื่อประเมินผลโครงการ ระบบจะคำนวณค่า x̄ และ S.D. พร้อมสรุปผล 4 ด้านให้อัตโนมัติทันที
+                                </p>
+                                <div className="text-xs text-purple-700 font-semibold truncate max-w-md pt-1">
+                                    🔗 ลิงก์ทำแบบประเมิน: <a href={evaluationUrl || route('surveys.evaluate', project.id)} target="_blank" rel="noopener noreferrer" className="underline hover:text-purple-900">{evaluationUrl || route('surveys.evaluate', project.id)}</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap sm:flex-col gap-2 shrink-0 w-full sm:w-auto">
+                            <a
+                                href={qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(evaluationUrl || route('surveys.evaluate', project.id))}`}
+                                download={`QR_Survey_Project_${project.id}.png`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition text-center"
+                            >
+                                <span>📥</span>
+                                <span>ดาวน์โหลด QR Code</span>
+                            </a>
+                            <a
+                                href={evaluationUrl || route('surveys.evaluate', project.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-4 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-bold text-xs flex items-center justify-center gap-1.5 transition text-center"
+                            >
+                                <span>🔗</span>
+                                <span>เปิดหน้าแบบประเมิน</span>
+                            </a>
+                            <Link
+                                href={route('dashboard', { tab: 'chapter_4', chapter: 4, project_id: project.id })}
+                                className="px-4 py-2.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition text-center"
+                            >
+                                <span>⚙️</span>
+                                <span>จัดการคำถาม (บทที่ 4)</span>
+                            </Link>
+                        </div>
+                    </div>
 
                     {/* 1. ภาพรวมตัวชี้วัดสำคัญ (Key Statistical Indicators) */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

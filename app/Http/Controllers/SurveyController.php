@@ -262,6 +262,12 @@ class SurveyController extends Controller
     public function stats(Request $request, Project $project)
     {
         $survey = Survey::where('project_id', $project->id)->first();
+        if (!$survey) {
+            $survey = Survey::create([
+                'project_id' => $project->id,
+                'questions' => (new GeminiService())->getFallbackSurveyQuestions($project),
+            ]);
+        }
         $detailedStats = $this->calculateDetailedStats($survey);
 
         $totalResponses = $detailedStats['totalResponses'];
