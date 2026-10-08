@@ -3,7 +3,6 @@ import { Head, useForm, Link, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Swal from 'sweetalert2';
 import axios from 'axios';
-import ProjectWorkflowStepper from '@/Components/ProjectWorkflowStepper';
 import ConsistencyAuditModal from '@/Components/ConsistencyAuditModal';
 import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
 
@@ -829,10 +828,6 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
             <Head title={`จัดทำโครงการฉบับเต็ม: ${project?.title}`} />
 
             <div className="w-full max-w-[100rem] space-y-6 font-sans pb-32">
-
-                    {/* Stepper Bar */}
-                    <ProjectWorkflowStepper currentStep={project.current_approval_step || 1} status={project.status} />
-
                     <div className="rounded-3xl border border-purple-100 bg-white p-6 md:p-8 shadow-sm">
                         {isApprovedOrCompleted && (
                             <div className="mb-6 p-5 rounded-3xl bg-emerald-50/95 border-2 border-emerald-400 text-xs text-emerald-950 font-bold flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">

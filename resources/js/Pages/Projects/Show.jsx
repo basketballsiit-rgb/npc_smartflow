@@ -2,7 +2,6 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Swal from 'sweetalert2';
-import ProjectWorkflowStepper from '@/Components/ProjectWorkflowStepper';
 import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
 import AuditTrailSection from '@/Components/AuditTrailSection';
 import TorStudioModal from '@/Components/TorStudioModal';
@@ -1158,45 +1157,37 @@ ${itemsListText}
                                     {project.status === 'approved' && (
                                         <button
                                             type="button"
-                                            onClick={() => handleUpdateStatus('in_progress', 'ขั้นตอนที่ 4: ดำเนินกิจกรรม & ประเมินผลโครงการ')}
+                                            onClick={() => handleUpdateStatus('in_progress', 'ดำเนินกิจกรรม & ประเมินผลโครงการ')}
                                             className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-indigo-600/25 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
-                                            title="คลิกเพื่อส่งต่อโครงการไปยังขั้นตอนที่ 4: ดำเนินโครงการและประเมินผล"
+                                            title="คลิกเพื่อปรับสถานะเป็น: กำลังดำเนินกิจกรรมโครงการ"
                                         >
-                                            <span>▶️</span> ส่งต่อขั้นที่ 4 (ประเมินผล)
+                                            <span>▶️</span> ดำเนินกิจกรรมโครงการ
                                         </button>
                                     )}
                                     {(project.status === 'in_progress' || project.status === 'evaluating') && (
                                         <button
                                             type="button"
-                                            onClick={() => handleUpdateStatus('reporting', 'ขั้นตอนที่ 5: สรุปเล่มรายงานผลโครงการ 5 บท')}
+                                            onClick={() => handleUpdateStatus('reporting', 'สรุปเล่มรายงานผลโครงการ 5 บท')}
                                             className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-blue-600/25 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
-                                            title="คลิกเพื่อส่งต่อโครงการไปยังขั้นตอนที่ 5: สรุปเล่มรายงานผลโครงการ 5 บท"
+                                            title="คลิกเพื่อปรับสถานะเป็น: สรุปเล่มรายงานผลโครงการ 5 บท"
                                         >
-                                            <span>▶️</span> ส่งต่อขั้นที่ 5 (รายงาน 5 บท)
+                                            <span>▶️</span> สรุปเล่มรายงาน 5 บท
                                         </button>
                                     )}
                                     {project.status === 'reporting' && (
                                         <button
                                             type="button"
-                                            onClick={() => handleUpdateStatus('completed', 'ขั้นตอนที่ 6: เคลียร์เงินยืมและปิดโครงการสมบูรณ์')}
+                                            onClick={() => handleUpdateStatus('completed', 'เคลียร์เงินยืมและปิดโครงการสมบูรณ์')}
                                             className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-emerald-600/25 hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
-                                            title="คลิกเพื่อปิดโครงการสมบูรณ์ (ขั้นที่ 6)"
+                                            title="คลิกเพื่อปิดโครงการสมบูรณ์"
                                         >
-                                            <span>✅</span> ปิดโครงการสมบูรณ์ (ขั้นที่ 6)
+                                            <span>✅</span> ปิดโครงการสมบูรณ์
                                         </button>
                                     )}
                                 </>
                             )}
                         </div>
                     </div>
-
-                    {/* Visual Workflow Stepper Bar (Interactive) */}
-                    <ProjectWorkflowStepper 
-                        currentStep={project.current_approval_step || 1} 
-                        status={project.status} 
-                        onStepClick={handleUpdateStatus}
-                        canChangeStatus={isPlanApproved && Boolean(auth?.user?.id === project.user_id || auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin' || auth?.user?.is_procurement_head)}
-                    />
 
                     {/* Current Approval Officer Info Banner */}
                     <div className={`mb-6 p-4 rounded-2xl border ${currentOfficerInfo.color} flex items-center gap-3 font-sans shadow-2xs`}>
