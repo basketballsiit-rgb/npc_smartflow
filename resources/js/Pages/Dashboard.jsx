@@ -9281,152 +9281,292 @@ ${itemsListText}
             { id: 'bkso', name: 'บกศ.' },
         ];
 
-        const reportRows = [
+        const getColumnIdBySource = (name, sourceId) => {
+            if (sourceId) {
+                const idNum = Number(sourceId);
+                if (idNum === 1) return 'pvc';
+                if (idNum === 2) return 'pvs';
+                if (idNum === 3) return 'short_remun';
+                if (idNum === 4) return 'dual';
+                if (idNum === 5) return 'manage';
+                if (idNum === 6) return 'develop';
+                if (idNum === 7) return 'bkso';
+            }
+            if (!name) return null;
+            const n = String(name).toLowerCase();
+            if (n.includes('หนังสือ')) return 'free15_book';
+            if (n.includes('อุปกรณ์')) return 'free15_equip';
+            if (n.includes('เครื่องแบบ')) return 'free15_uniform';
+            if (n.includes('เรียนฟรี') || n.includes('15 ปี') || n.includes('15ปี')) return 'free15_book';
+            if (n.includes('สาธารณูปโภค')) return 'short_util';
+            if (n.includes('ระยะสั้น') || n.includes('short_course')) return 'short_remun';
+            if (n.includes('ปวช') || n.includes('ป.ว.ช') || n.includes('vec_cert')) return 'pvc';
+            if (n.includes('ปวส') || n.includes('ป.ว.ส') || n.includes('vec_dip')) return 'pvs';
+            if (n.includes('ทวิศึกษา') || n.includes('dual_edu') || n.includes('ทวิ')) return 'dual';
+            if (n.includes('จัดการ') || n.includes('management')) return 'manage';
+            if ((n.includes('พัฒนา') && !n.includes('แผนพัฒนา')) || n.includes('development')) return 'develop';
+            if (
+                n.includes('บกศ') || 
+                n.includes('บ.ก.ศ') || 
+                n.includes('บำรุงการศึกษา') || 
+                n.includes('สถานศึกษา') || 
+                n.includes('รายได้') || 
+                n.includes('revenue') || 
+                n.includes('local_income')
+            ) return 'bkso';
+            return null;
+        };
+
+        const reportStructure = [
             // 1. งบบุคลากร
-            { id: '1', title: '1 งบบุคลากร 3,190,226บาท', isMain: true, plan: '', cols: {}, total: '' },
-            { id: '1.1', title: '1.1 ครูอัตราจ้าง 11 อัตรา', level: 1, plan: '1,429,200', cols: { manage: '952,800', bkso: '476,400' }, total: '1,429,200' },
-            { id: '1.2', title: '1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง 11 อัตรา', level: 1, plan: '71,460', cols: { manage: '35,730', bkso: '35,730' }, total: '71,460' },
-            { id: '1.3', title: '1.3 จ้างเหมาบริการเจ้าหน้าที่ 15 ราย', level: 1, plan: '1,612,920', cols: { manage: '1,075,280', bkso: '537,640' }, total: '1,612,920' },
-            { id: '1.4', title: '1.4 สมทบประกันสังคมเจ้าหน้าที่ 15 ราย', level: 1, plan: '80,646', cols: { manage: '40,323', bkso: '40,323' }, total: '80,646' },
+            { id: '1', title: '1. งบบุคลากร', isMain: true },
+            { id: '1.1', title: '1.1 ครูอัตราจ้าง', level: 1, parentId: '1' },
+            { id: '1.2', title: '1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง', level: 1, parentId: '1' },
+            { id: '1.3', title: '1.3 จ้างเหมาบริการเจ้าหน้าที่', level: 1, parentId: '1' },
+            { id: '1.4', title: '1.4 สมทบประกันสังคมเจ้าหน้าที่', level: 1, parentId: '1' },
 
             // 2. งบดำเนินงาน
-            { id: '2', title: '2 งบดำเนินงาน 3,200,760 บาท', isMain: true, plan: '', cols: {}, total: '' },
-            { id: '2.1', title: '2.1 ค่าตอบแทน 2,665,760 บาท', isSub: true, plan: '', cols: {}, total: '' },
-            { id: '2.1.1', title: '2.1.1 จ้างเหมาบริการเจ้าหน้าที่ 8 ราย', level: 2, plan: '818,400', cols: { short_remun: '682,000', bkso: '136,400' }, total: '818,400' },
-            { id: '2.1.2', title: '2.1.2 ค่าตอบแทนสอนเกินภาระงานครู', level: 2, plan: '300,000', cols: { pvs: '100,000', dual: '100,000', manage: '50,000', bkso: '50,000' }, total: '300,000' },
-            { id: '2.1.3', title: '2.1.3 ค่าตอบแทนครูสอนระยะสั้น 7 ราย', level: 2, plan: '927,360', cols: { short_remun: '927,360' }, total: '927,360' },
-            { id: '2.1.4', title: '2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ', level: 2, plan: '500,000', cols: { short_remun: '250,000', bkso: '250,000' }, total: '500,000' },
-            { id: '2.1.5', title: '2.1.5 ค่าตอบแทนธุรการนอกเวลา', level: 2, plan: '120,000', cols: { short_remun: '120,000' }, total: '120,000' },
-            { id: '2.2', title: '2.2 ค่าใช้สอย 535,000 บาท', isSub: true, plan: '', cols: {}, total: '' },
-            { id: '2.2.1', title: '2.2.1 ค่าเดินทางไปราชการ', level: 2, plan: '400,000', cols: { pvs: '150,000', short_remun: '100,000', develop: '50,000', bkso: '100,000' }, total: '400,000' },
-            { id: '2.2.2', title: '2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง', level: 2, plan: '100,000', cols: { pvs: '50,000', dual: '50,000' }, total: '100,000' },
-            { id: '2.2.3', title: '2.2.3 ค่าซ่อมแซมครุภัณฑ์', level: 2, plan: '25,000', cols: { dual: '25,000' }, total: '25,000' },
-            { id: '2.2.4', title: '2.2.4 ค่าโฆษณาและเผยแพร่', level: 2, plan: '10,000', cols: { dual: '10,000' }, total: '10,000' },
+            { id: '2', title: '2. งบดำเนินงาน', isMain: true },
+            { id: '2.1', title: '2.1 ค่าตอบแทน', isSub: true, parentId: '2' },
+            { id: '2.1.1', title: '2.1.1 จ้างเหมาบริการเจ้าหน้าที่', level: 2, parentId: '2.1' },
+            { id: '2.1.2', title: '2.1.2 ค่าตอบแทนสอนเกินภาระงานครู', level: 2, parentId: '2.1' },
+            { id: '2.1.3', title: '2.1.3 ค่าตอบแทนครูสอนระยะสั้น', level: 2, parentId: '2.1' },
+            { id: '2.1.4', title: '2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ', level: 2, parentId: '2.1' },
+            { id: '2.1.5', title: '2.1.5 ค่าตอบแทนธุรการนอกเวลา', level: 2, parentId: '2.1' },
+            { id: '2.2', title: '2.2 ค่าใช้สอย', isSub: true, parentId: '2' },
+            { id: '2.2.1', title: '2.2.1 ค่าเดินทางไปราชการ', level: 2, parentId: '2.2' },
+            { id: '2.2.2', title: '2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง', level: 2, parentId: '2.2' },
+            { id: '2.2.3', title: '2.2.3 ค่าซ่อมแซมครุภัณฑ์', level: 2, parentId: '2.2' },
+            { id: '2.2.4', title: '2.2.4 ค่าโฆษณาและเผยแพร่', level: 2, parentId: '2.2' },
 
             // 3. ค่าวัสดุ
-            { id: '3', title: '3 ค่าวัสดุ 1,020,000 บาท', isMain: true, plan: '', cols: {}, total: '' },
-            { id: '3.1', title: '3.1 วัสดุงานอาคาร', level: 1, plan: '750,000', cols: { pvs: '50,000', dual: '150,000', manage: '550,000' }, total: '750,000' },
-            { id: '3.2', title: '3.2 วัสดุสำนักงาน 270,000 บาท', isSub: true, plan: '', cols: {}, total: '' },
-            { id: '3.2.1', title: 'ฝ่ายวิชาการ', level: 2, plan: '20,000', cols: { dual: '20,000' }, total: '20,000' },
-            { id: '3.2.2', title: 'ฝ่ายกิจการนักเรียนนักศึกษา', level: 2, plan: '10,000', cols: { pvc: '5,000', pvs: '5,000' }, total: '10,000' },
-            { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', level: 2, plan: '30,000', cols: { pvc: '10,000', pvs: '20,000' }, total: '30,000' },
-            { id: '3.2.4', title: 'ฝ่ายยุทธศาสตร์ฯ', level: 2, plan: '10,000', cols: { pvc: '5,000', pvs: '5,000' }, total: '10,000' },
-            { id: '3.4', title: '3.4 วัสดุเชื้อเพลิงและหล่อลื่น', level: 1, plan: '200,000', cols: { pvs: '50,000', dual: '107,000', bkso: '43,000' }, total: '200,000' },
+            { id: '3', title: '3. ค่าวัสดุ', isMain: true },
+            { id: '3.1', title: '3.1 วัสดุงานอาคาร', level: 1, parentId: '3' },
+            { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSub: true, parentId: '3' },
+            { id: '3.2.1', title: 'ฝ่ายวิชาการ', level: 2, parentId: '3.2' },
+            { id: '3.2.2', title: 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', level: 2, parentId: '3.2' },
+            { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', level: 2, parentId: '3.2' },
+            { id: '3.2.4', title: 'ฝ่ายยุทธศาสตร์และแผนงาน', level: 2, parentId: '3.2' },
+            { id: '3.4', title: '3.4 วัสดุเชื้อเพลิงและหล่อลื่น', level: 1, parentId: '3' },
 
             // 4. วัสดุการศึกษา
-            { id: '4', title: '4. วัสดุการศึกษา 341,840 บาท', isMain: true, plan: '', cols: {}, total: '' },
-            { id: '4.1', title: '4.1 หลักสูตรวิชาชีพระยะสั้น', level: 1, plan: '215,240', cols: { short_remun: '215,240' }, total: '215,240' },
-            { id: '4.2', title: '4.2 สาขาวิชาช่างยนต์', level: 1, plan: '32,800', cols: { pvc: '7,000', pvs: '15,800', dual: '10,000' }, total: '32,800' },
-            { id: '4.3', title: '4.3 สาขาวิชาไฟฟ้ากำลัง', level: 1, plan: '17,800', cols: { pvc: '2,000', pvs: '7,800', dual: '8,000' }, total: '17,800' },
-            { id: '4.4', title: '4.4 สาขาวิชาเทคนิคพื้นฐาน', level: 1, plan: '19,700', cols: { pvc: '9,000', pvs: '3,200', dual: '7,500' }, total: '19,700' },
-            { id: '4.5', title: '4.5 สาขาวิชาอิเล็กทรอนิกส์', level: 1, plan: '10,500', cols: { pvc: '1,500', pvs: '7,500', dual: '1,500' }, total: '10,500' },
-            { id: '4.6', title: '4.6 สาขาวิชาการบัญชี', level: 1, plan: '8,500', cols: { pvc: '1,500', pvs: '4,000', dual: '3,000' }, total: '8,500' },
-            { id: '4.7', title: '4.7 สาขาวิชาการตลาด', level: 1, plan: '7,800', cols: { pvc: '1,500', pvs: '3,300', dual: '3,000' }, total: '7,800' },
-            { id: '4.8', title: '4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ', level: 1, plan: '15,000', cols: { pvc: '2,000', pvs: '8,000', dual: '5,000' }, total: '15,000' },
-            { id: '4.9', title: '4.9 แผนกสามัญสัมพันธ์', level: 1, plan: '14,500', cols: { pvc: '4,500', pvs: '10,000' }, total: '14,500' },
+            { id: '4', title: '4. วัสดุการศึกษา', isMain: true },
+            { id: '4.1', title: '4.1 หลักสูตรวิชาชีพระยะสั้น', level: 1, parentId: '4' },
+            { id: '4.2', title: '4.2 สาขาวิชาช่างยนต์', level: 1, parentId: '4' },
+            { id: '4.3', title: '4.3 สาขาวิชาไฟฟ้ากำลัง', level: 1, parentId: '4' },
+            { id: '4.4', title: '4.4 สาขาวิชาเทคนิคพื้นฐาน', level: 1, parentId: '4' },
+            { id: '4.5', title: '4.5 สาขาวิชาอิเล็กทรอนิกส์', level: 1, parentId: '4' },
+            { id: '4.6', title: '4.6 สาขาวิชาการบัญชี', level: 1, parentId: '4' },
+            { id: '4.7', title: '4.7 สาขาวิชาการตลาด', level: 1, parentId: '4' },
+            { id: '4.8', title: '4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ', level: 1, parentId: '4' },
+            { id: '4.9', title: '4.9 แผนกสามัญสัมพันธ์', level: 1, parentId: '4' },
 
             // 5. ค่าสาธารณูปโภค
-            { id: '5', title: '5. ค่าสาธารณูปโภค 930,700 บาท', isMain: true, plan: '', cols: {}, total: '' },
-            { id: '5.1', title: '5.1 ค่าไฟฟ้า', level: 1, plan: '744,600', cols: { short_util: '744,600' }, total: '744,600' },
-            { id: '5.2', title: '5.2 ค่าน้ำประปา', level: 1, plan: '73,400', cols: { short_util: '73,400' }, total: '73,400' },
-            { id: '5.3', title: '5.3 ค่าโทรศัพท์', level: 1, plan: '6,500', cols: { short_util: '6,500' }, total: '6,500' },
-            { id: '5.4', title: '5.4 ค่าไปรษณีย์', level: 1, plan: '12,000', cols: { short_util: '12,000' }, total: '12,000' },
-            { id: '5.5', title: '5.5 ค่าบริการด้านสื่อสารโทรคมนาคม', level: 1, plan: '88,800', cols: { short_util: '88,800' }, total: '88,800' },
-            { id: '5.6', title: '5.6 ค่าขยะและสิ่งปฏิกูล', level: 1, plan: '5,400', cols: { short_util: '5,400' }, total: '5,400' },
+            { id: '5', title: '5. ค่าสาธารณูปโภค', isMain: true },
+            { id: '5.1', title: '5.1 ค่าไฟฟ้า', level: 1, parentId: '5' },
+            { id: '5.2', title: '5.2 ค่าน้ำประปา', level: 1, parentId: '5' },
+            { id: '5.3', title: '5.3 ค่าโทรศัพท์', level: 1, parentId: '5' },
+            { id: '5.4', title: '5.4 ค่าไปรษณีย์', level: 1, parentId: '5' },
+            { id: '5.5', title: '5.5 ค่าบริการด้านสื่อสารโทรคมนาคม', level: 1, parentId: '5' },
+            { id: '5.6', title: '5.6 ค่าขยะและสิ่งปฏิกูล', level: 1, parentId: '5' },
 
             // 6. โครงการ
-            { id: '6', title: '6. โครงการ .................. บาท', isMain: true, plan: '', cols: {}, total: '' },
-            { id: '6.1', title: '6.1 โครงการฝ่ายวิชาการ', level: 1, plan: '', cols: {}, total: '' },
-            { id: '6.2', title: '6.2 โครงการฝ่ายกิจการฯ', level: 1, plan: '', cols: {}, total: '' },
-            { id: '6.3', title: '6.3 โครงการฝ่ายบริหารทรัพยากร', level: 1, plan: '', cols: {}, total: '' },
-            { id: '6.4', title: '6.4 โครงการฝ่ายยุทธศาสตร์ฯ', level: 1, plan: '', cols: {}, total: '' },
+            { id: '6', title: '6. โครงการ', isMain: true },
+            { id: '6.1', title: '6.1 โครงการฝ่ายวิชาการ', level: 1, parentId: '6' },
+            { id: '6.2', title: '6.2 โครงการฝ่ายพัฒนากิจการนักเรียนนักศึกษา', level: 1, parentId: '6' },
+            { id: '6.3', title: '6.3 โครงการฝ่ายบริหารทรัพยากร', level: 1, parentId: '6' },
+            { id: '6.4', title: '6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน', level: 1, parentId: '6' },
 
             // 7. อื่นๆ
-            { id: '7', title: '7. อื่นๆ 579,631 บาท', isMain: true, plan: '', cols: {}, total: '' },
-            { id: '7.1', title: '7.1 ค่าหนังสือ', level: 1, plan: '363,971', cols: { free15_book: '363,971' }, total: '363,971' },
-            { id: '7.2', title: '7.2 อุปกรณ์การเรียน', level: 1, plan: '76,960', cols: { free15_equip: '76,960' }, total: '76,960' },
-            { id: '7.3', title: '7.3 เครื่องแบบนักเรียน', level: 1, plan: '138,700', cols: { free15_uniform: '138,700' }, total: '138,700' },
+            { id: '7', title: '7. อื่นๆ', isMain: true },
+            { id: '7.1', title: '7.1 ค่าหนังสือ', level: 1, parentId: '7' },
+            { id: '7.2', title: '7.2 อุปกรณ์การเรียน', level: 1, parentId: '7' },
+            { id: '7.3', title: '7.3 เครื่องแบบนักเรียน', level: 1, parentId: '7' },
 
             // 8. สำรองจ่าย
-            { id: '8', title: '7 สำรองจ่าย', isMain: true, plan: '', cols: {}, total: '' },
+            { id: '8', title: '7. สำรองจ่าย', isMain: true },
         ];
 
-        // Summary Data Rows matching Image 1
-        const incomeEstimate = {
-            title: 'ประมาณการรับ',
-            plan: '10,435,265',
-            cols: {
-                pvc: '52,000',
-                pvs: '495,000',
-                short_remun: '2,294,600',
-                short_util: '930,000',
-                dual: '500,000',
-                manage: '2,704,133',
-                develop: '266,571',
-                free15_book: '363,971',
-                free15_equip: '76,960',
-                free15_uniform: '138,700',
-                bkso: '2,613,330',
-            },
-            total: '',
+        const formatCell = (val) => {
+            if (val === undefined || val === null || val === '') return '';
+            const num = Number(val);
+            if (isNaN(num) || num === 0) return '';
+            return num.toLocaleString('th-TH');
         };
 
-        const totalExpense = {
-            title: 'รวมค่าใช้จ่าย',
-            plan: '9,267,157',
-            cols: {
-                pvc: '49,000',
-                pvs: '489,600',
-                short_remun: '2,294,600',
-                short_util: '930,700',
-                dual: '500,000',
-                manage: '2,704,133',
-                develop: '50,000',
-                free15_book: '363,971',
-                free15_equip: '76,960',
-                free15_uniform: '138,700',
-                bkso: '1,669,493',
-            },
-            total: '9,267,157',
+        // Initialize rowData mapping
+        const rowData = {};
+        reportStructure.forEach(item => {
+            rowData[item.id] = {
+                ...item,
+                planBudget: 0,
+                cols: {},
+                spentAmount: 0,
+                items: [],
+            };
+            budgetColumns.forEach(c => {
+                rowData[item.id].cols[c.id] = 0;
+            });
+        });
+
+        // 1. Populate Routine Budget Plans
+        (routinePlans || []).forEach(plan => {
+            let cat = plan.report_category;
+            if (cat === '3.3') cat = '3.4';
+            if (cat === '7.1' && (plan.title?.includes('สำรอง') || plan.title?.includes('สำรองจ่าย'))) cat = '8';
+            if (!cat || !rowData[cat]) return;
+
+            const alloc = parseFloat(plan.allocated_amount || 0);
+            const spent = parseFloat(plan.spent_amount || 0);
+
+            rowData[cat].planBudget += alloc;
+            rowData[cat].spentAmount += spent;
+
+            const sourceName = plan.funding_source?.name || plan.fundingSource?.name || '';
+            const sourceId = plan.funding_source_id || plan.funding_source?.id || plan.fundingSource?.id;
+            const colId = getColumnIdBySource(sourceName, sourceId);
+            if (colId && rowData[cat].cols[colId] !== undefined) {
+                rowData[cat].cols[colId] += alloc;
+            }
+
+            rowData[cat].items.push({
+                type: 'routine',
+                title: plan.title || 'งบประมาณประจำ',
+                amount: alloc,
+                sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
+                colId: colId,
+            });
+        });
+
+        const isProjectApprovedForReport = (p) => {
+            if (!p) return false;
+            const approvedStatuses = ['approved', 'budget_approved', 'completed'];
+            if (approvedStatuses.includes(p.status)) return true;
+            if (parseFloat(p.allocated_amount || p.allocated_budget || 0) > 0) return true;
+            return false;
         };
 
-        const grandTotal = {
-            title: 'รายจ่ายรวม',
-            plan: '10,435,965',
-            cols: {
-                pvc: '52,000',
-                pvs: '495,000',
-                short_remun: '2,294,600',
-                short_util: '930,700',
-                dual: '500,000',
-                manage: '2,704,133',
-                develop: '266,571',
-                free15_book: '363,971',
-                free15_equip: '76,960',
-                free15_uniform: '138,700',
-                bkso: '2,613,330',
-            },
-            total: '10,432,762',
+        // 2. Populate Projects (Row 6.1 - 6.4)
+        (allProjectsMaster || []).forEach(p => {
+            if (!isProjectApprovedForReport(p)) return;
+
+            let cat = p.report_category;
+            if (!cat) {
+                const deptName = p.department_name || p.department?.name || '';
+                if (deptName.includes('วิชาการ')) cat = '6.1';
+                else if (deptName.includes('กิจการ') || deptName.includes('พัฒนากิจการ') || deptName.includes('นักเรียน')) cat = '6.2';
+                else if (deptName.includes('บริหาร') || deptName.includes('พัสดุ') || deptName.includes('บริหารทรัพยากร')) cat = '6.3';
+                else if (deptName.includes('วางแผน') || deptName.includes('แผน') || deptName.includes('ยุทธศาสตร์')) cat = '6.4';
+                else cat = '6.1';
+            }
+
+            const alloc = parseFloat(p.allocated_amount || p.allocated_budget || p.estimated_budget || p.proposed_budget || 0);
+            const spent = parseFloat(p.spent_amount || 0);
+
+            if (rowData[cat]) {
+                rowData[cat].planBudget += alloc;
+                rowData[cat].spentAmount += spent;
+
+                const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+                const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
+                const colId = getColumnIdBySource(sourceName, sourceId);
+                if (colId && rowData[cat].cols[colId] !== undefined) {
+                    rowData[cat].cols[colId] += alloc;
+                }
+
+                rowData[cat].items.push({
+                    type: 'project',
+                    title: p.title || p.name || 'โครงการ',
+                    amount: alloc,
+                    sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
+                    colId: colId,
+                });
+            }
+        });
+
+        // 3. Aggregate Parent Rows
+        const aggregate = (parentKey, childKeys) => {
+            if (!rowData[parentKey]) return;
+            childKeys.forEach(k => {
+                if (rowData[k]) {
+                    rowData[parentKey].planBudget += rowData[k].planBudget;
+                    rowData[parentKey].spentAmount += rowData[k].spentAmount;
+                    budgetColumns.forEach(c => {
+                        rowData[parentKey].cols[c.id] += (rowData[k].cols[c.id] || 0);
+                    });
+                    if (rowData[k].items) {
+                        rowData[parentKey].items.push(...rowData[k].items);
+                    }
+                }
+            });
         };
 
-        const remainingBalance = {
-            title: 'คงเหลือ',
-            plan: '1,168,808',
-            cols: {
-                pvc: '3,000',
-                pvs: '5,400',
-                short_remun: '-',
-                short_util: '-',
-                dual: '-',
-                manage: '-',
-                develop: '216,571',
-                free15_book: '-',
-                free15_equip: '-',
-                free15_uniform: '-',
-                bkso: '943,837',
-            },
-            total: '1,165,605',
-        };
+        // Subparents first
+        aggregate('2.1', ['2.1.1', '2.1.2', '2.1.3', '2.1.4', '2.1.5']);
+        aggregate('2.2', ['2.2.1', '2.2.2', '2.2.3', '2.2.4']);
+        aggregate('3.2', ['3.2.1', '3.2.2', '3.2.3', '3.2.4']);
+
+        // Main parents
+        aggregate('1', ['1.1', '1.2', '1.3', '1.4']);
+        aggregate('2', ['2.1', '2.2']);
+        aggregate('3', ['3.1', '3.2', '3.4']);
+        aggregate('4', ['4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8', '4.9']);
+        aggregate('5', ['5.1', '5.2', '5.3', '5.4', '5.5', '5.6']);
+        aggregate('6', ['6.1', '6.2', '6.3', '6.4']);
+        aggregate('7', ['7.1', '7.2', '7.3']);
+
+        // 4. Calculate Top Summary Rows
+        // 4.1 ประมาณการรายรับ
+        const estimateIncomeByCol = {};
+        budgetColumns.forEach(c => { estimateIncomeByCol[c.id] = 0; });
+        (routinePlans || []).forEach(plan => {
+            const colId = getColumnIdBySource(plan.funding_source?.name || plan.fundingSource?.name, plan.funding_source_id || plan.funding_source?.id);
+            if (colId && estimateIncomeByCol[colId] !== undefined) {
+                estimateIncomeByCol[colId] += parseFloat(plan.allocated_amount || 0);
+            }
+        });
+        (allProjectsMaster || []).forEach(p => {
+            if (!isProjectApprovedForReport(p)) return;
+            const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+            const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
+            const colId = getColumnIdBySource(sourceName, sourceId);
+            if (colId && estimateIncomeByCol[colId] !== undefined) {
+                estimateIncomeByCol[colId] += parseFloat(p.allocated_amount || p.allocated_budget || p.estimated_budget || p.proposed_budget || 0);
+            }
+        });
+        const estimateIncomeTotal = Object.values(estimateIncomeByCol).reduce((sum, v) => sum + v, 0);
+
+        // 4.2 รับงบประมาณจัดสรรจริง (ใต้ประมาณการรายรับ)
+        const actualAllocByCol = {};
+        budgetColumns.forEach(c => { actualAllocByCol[c.id] = 0; });
+        (centralAllocations || []).forEach(a => {
+            const sourceName = a.funding_source?.name || a.fundingSource?.name || '';
+            const sourceId = a.funding_source_id || a.funding_source?.id || a.fundingSource?.id;
+            const colId = getColumnIdBySource(sourceName, sourceId);
+            if (colId && actualAllocByCol[colId] !== undefined) {
+                actualAllocByCol[colId] += parseFloat(a.amount || 0);
+            }
+        });
+        const actualAllocTotal = Object.values(actualAllocByCol).reduce((sum, v) => sum + v, 0);
+
+        // 5. Calculate Grand Totals
+        const mainParentKeys = ['1', '2', '3', '4', '5', '6', '7', '8'];
+        const grandPlanBudget = mainParentKeys.reduce((sum, k) => sum + (rowData[k]?.planBudget || 0), 0);
+        const grandBudgetByCol = {};
+        budgetColumns.forEach(c => {
+            grandBudgetByCol[c.id] = mainParentKeys.reduce((sum, k) => sum + (rowData[k]?.cols[c.id] || 0), 0);
+        });
+
+        // 6. Calculate Bottom Balances (คงเหลือ)
+        const baseIncomeTotal = estimateIncomeTotal > 0 ? estimateIncomeTotal : actualAllocTotal;
+        const remainingTotal = baseIncomeTotal > 0 || grandPlanBudget > 0 ? baseIncomeTotal - grandPlanBudget : 0;
+        const remainingByCol = {};
+        budgetColumns.forEach(c => {
+            const colIncome = estimateIncomeByCol[c.id] > 0 ? estimateIncomeByCol[c.id] : actualAllocByCol[c.id];
+            remainingByCol[c.id] = (colIncome || 0) > 0 || (grandBudgetByCol[c.id] || 0) > 0
+                ? (colIncome || 0) - (grandBudgetByCol[c.id] || 0)
+                : 0;
+        });
 
         return (
             <div className="space-y-6">
@@ -9578,26 +9718,47 @@ ${itemsListText}
                             </thead>
 
                             <tbody className="divide-y divide-slate-300">
-                                {/* Row: ประมาณการรับ */}
-                                <tr className="bg-amber-50/40 border-b border-slate-400 font-bold text-[10.5px] text-slate-900">
-                                    <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold">
-                                        {incomeEstimate.title}
+                                {/* แถว 1: ประมาณการรายรับ */}
+                                <tr className="bg-amber-50/50 border-b border-slate-400 font-bold text-[10.5px] text-slate-900">
+                                    <td className="py-2 px-2.5 text-center border-r border-slate-400 font-bold">
+                                        ประมาณการรายรับ
                                     </td>
-                                    <td className="py-1.5 px-1.5 text-right border-r border-slate-400 font-bold font-mono">
-                                        {incomeEstimate.plan}
+                                    <td className="py-2 px-1.5 text-right border-r border-slate-400 font-bold font-mono">
+                                        {formatCell(estimateIncomeTotal)}
                                     </td>
                                     {budgetColumns.map(col => (
-                                        <td key={col.id} className="py-1.5 px-1 text-right border-r border-slate-400 font-mono text-[10px]">
-                                            {incomeEstimate.cols[col.id] || ''}
+                                        <td key={col.id} className="py-2 px-1 text-right border-r border-slate-400 font-mono text-[10px]">
+                                            {formatCell(estimateIncomeByCol[col.id])}
                                         </td>
                                     ))}
-                                    <td className="py-1.5 px-1.5 text-right font-mono text-[10px]">
-                                        {incomeEstimate.total || ''}
+                                    <td className="py-2 px-1.5 text-right font-mono text-[10px] font-bold">
+                                        {formatCell(estimateIncomeTotal)}
+                                    </td>
+                                </tr>
+
+                                {/* แถว 2: รับงบประมาณจัดสรรจริง (ใต้ประมาณการรายรับ) */}
+                                <tr className="bg-emerald-50/40 border-b border-slate-400 font-bold text-[10.5px] text-emerald-950">
+                                    <td className="py-2 px-2.5 text-center border-r border-slate-400 font-bold text-emerald-900">
+                                        รับงบประมาณจัดสรรจริง
+                                    </td>
+                                    <td className="py-2 px-1.5 text-right border-r border-slate-400 font-bold font-mono text-emerald-900">
+                                        {formatCell(actualAllocTotal)}
+                                    </td>
+                                    {budgetColumns.map(col => (
+                                        <td key={col.id} className="py-2 px-1 text-right border-r border-slate-400 font-mono text-[10px] text-emerald-900">
+                                            {formatCell(actualAllocByCol[col.id])}
+                                        </td>
+                                    ))}
+                                    <td className="py-2 px-1.5 text-right font-mono text-[10px] font-bold text-emerald-900">
+                                        {formatCell(actualAllocTotal)}
                                     </td>
                                 </tr>
 
                                 {/* Content Rows */}
-                                {reportRows.map(row => {
+                                {reportStructure.map(item => {
+                                    const row = rowData[item.id];
+                                    if (!row) return null;
+
                                     let rowBg = 'hover:bg-purple-50/30';
                                     let titleClass = 'py-1 px-2.5 text-left border-r border-slate-400';
                                     let isBold = false;
@@ -9616,21 +9777,32 @@ ${itemsListText}
                                         titleClass = 'py-1 px-2.5 text-left border-r border-slate-400 pl-4 text-slate-750';
                                     }
 
+                                    const totalItemsCount = row.items?.length || 0;
+                                    const planTooltip = totalItemsCount > 0
+                                        ? `รายการในระบบ (${totalItemsCount} รายการ):\n` +
+                                          row.items.map(it => `• [${it.type === 'project' ? 'โครงการ' : 'งบประจำ'}] ${it.title}: ฿${Number(it.amount).toLocaleString()} (${it.sourceName})`).join('\n')
+                                        : undefined;
+
+                                    const totalRowExpense = budgetColumns.reduce((sum, c) => sum + (row.cols[c.id] || 0), 0) || row.planBudget;
+
                                     return (
                                         <tr key={row.id} className={`${rowBg} border-b border-slate-300 text-[10.5px]`}>
-                                            <td className={titleClass}>
+                                            <td className={titleClass} title={planTooltip}>
                                                 <span>{row.title}</span>
+                                                {totalItemsCount > 0 && !row.isMain && (
+                                                    <span className="ml-1 text-[9px] font-normal text-purple-600">({totalItemsCount})</span>
+                                                )}
                                             </td>
-                                            <td className={`py-1 px-1.5 text-right border-r border-slate-400 font-mono ${isBold ? 'font-bold' : ''}`}>
-                                                {row.plan || ''}
+                                            <td className={`py-1 px-1.5 text-right border-r border-slate-400 font-mono ${isBold ? 'font-bold' : ''}`} title={planTooltip}>
+                                                {formatCell(row.planBudget)}
                                             </td>
                                             {budgetColumns.map(col => (
                                                 <td key={col.id} className={`py-1 px-1 text-right border-r border-slate-400 font-mono text-[10px] ${isBold ? 'font-bold' : ''}`}>
-                                                    {row.cols?.[col.id] || ''}
+                                                    {formatCell(row.cols[col.id])}
                                                 </td>
                                             ))}
                                             <td className={`py-1 px-1.5 text-right font-mono ${isBold ? 'font-bold' : ''}`}>
-                                                {row.total || ''}
+                                                {formatCell(totalRowExpense)}
                                             </td>
                                         </tr>
                                     );
@@ -9639,54 +9811,54 @@ ${itemsListText}
                                 {/* Bottom Summary: รวมค่าใช้จ่าย */}
                                 <tr className="bg-slate-100 border-t-2 border-b border-slate-400 font-bold text-[10.5px] text-slate-950">
                                     <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold">
-                                        {totalExpense.title}
+                                        รวมค่าใช้จ่าย
                                     </td>
                                     <td className="py-1.5 px-1.5 text-right border-r border-slate-400 font-bold font-mono">
-                                        {totalExpense.plan}
+                                        {formatCell(grandPlanBudget)}
                                     </td>
                                     {budgetColumns.map(col => (
                                         <td key={col.id} className="py-1.5 px-1 text-right border-r border-slate-400 font-mono font-bold text-[10px]">
-                                            {totalExpense.cols[col.id] || ''}
+                                            {formatCell(grandBudgetByCol[col.id])}
                                         </td>
                                     ))}
                                     <td className="py-1.5 px-1.5 text-right font-mono font-bold">
-                                        {totalExpense.total}
+                                        {formatCell(grandPlanBudget)}
                                     </td>
                                 </tr>
 
-                                {/* Bottom Summary: รายจ่ายรวม (Cyan/Blue Shaded) */}
+                                {/* Bottom Summary: รายจ่ายรวม (Sky/Blue Shaded) */}
                                 <tr className="bg-sky-50 border-b border-slate-400 font-bold text-[10.5px] text-sky-950">
                                     <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold">
-                                        {grandTotal.title}
+                                        รายจ่ายรวม
                                     </td>
                                     <td className="py-1.5 px-1.5 text-right border-r border-slate-400 font-bold font-mono">
-                                        {grandTotal.plan}
+                                        {formatCell(grandPlanBudget)}
                                     </td>
                                     {budgetColumns.map(col => (
                                         <td key={col.id} className="py-1.5 px-1 text-right border-r border-slate-400 font-mono font-bold text-[10px]">
-                                            {grandTotal.cols[col.id] || ''}
+                                            {formatCell(grandBudgetByCol[col.id])}
                                         </td>
                                     ))}
                                     <td className="py-1.5 px-1.5 text-right font-mono font-bold">
-                                        {grandTotal.total}
+                                        {formatCell(grandPlanBudget)}
                                     </td>
                                 </tr>
 
-                                {/* Bottom Summary: คงเหลือ (Peach/Amber Shaded) */}
+                                {/* Bottom Summary: คงเหลือ (Amber/Peach Shaded) */}
                                 <tr className="bg-amber-50/70 border-b border-slate-400 font-bold text-[10.5px] text-amber-950">
                                     <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold">
-                                        {remainingBalance.title}
+                                        คงเหลือ
                                     </td>
-                                    <td className="py-1.5 px-1.5 text-right border-r border-slate-400 font-bold font-mono">
-                                        {remainingBalance.plan}
+                                    <td className={`py-1.5 px-1.5 text-right border-r border-slate-400 font-bold font-mono ${remainingTotal < 0 ? 'text-red-600' : ''}`}>
+                                        {formatCell(remainingTotal)}
                                     </td>
                                     {budgetColumns.map(col => (
-                                        <td key={col.id} className="py-1.5 px-1 text-right border-r border-slate-400 font-mono font-bold text-[10px]">
-                                            {remainingBalance.cols[col.id] || ''}
+                                        <td key={col.id} className={`py-1.5 px-1 text-right border-r border-slate-400 font-mono font-bold text-[10px] ${remainingByCol[col.id] < 0 ? 'text-red-600' : ''}`}>
+                                            {formatCell(remainingByCol[col.id])}
                                         </td>
                                     ))}
-                                    <td className="py-1.5 px-1.5 text-right font-mono font-bold">
-                                        {remainingBalance.total}
+                                    <td className={`py-1.5 px-1.5 text-right font-mono font-bold ${remainingTotal < 0 ? 'text-red-600' : ''}`}>
+                                        {formatCell(remainingTotal)}
                                     </td>
                                 </tr>
                             </tbody>
