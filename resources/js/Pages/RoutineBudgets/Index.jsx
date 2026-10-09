@@ -870,19 +870,8 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                     </span>
                                 </div>
                                 <p className="text-xs text-gray-500 mt-1">
-                                    แสดงรายละเอียดแผนงบดำเนินงาน วันเวลาที่บันทึก ยอดรวมจัดสรร พร้อมปุ่มจัดการข้อมูล (เพิ่ม / ลบ / แก้ไข)
+                                    แสดงรายละเอียดแผนงบดำเนินงาน วันเวลาที่บันทึก ยอดรวมจัดสรร พร้อมปุ่มจัดการข้อมูล (แก้ไข / ลบ)
                                 </p>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <button
-                                    type="button"
-                                    onClick={startNewPlan}
-                                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition shadow-xs flex items-center gap-1.5"
-                                >
-                                    <span>➕</span>
-                                    <span>เพิ่มแผนงบใหม่</span>
-                                </button>
                             </div>
                         </div>
 
