@@ -701,24 +701,27 @@ class DashboardController extends Controller
             }
 
             // Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา 4 มิติ)
-            $routineCeiling = 2000000.00;
-            $projectsCeiling = 5000000.00;
-            $utilitiesCeiling = 2000000.00;
-            $contingencyCeiling = 1000000.00;
+            $routineCeiling = 0.00;
+            $projectsCeiling = 0.00;
+            $utilitiesCeiling = 0.00;
+            $contingencyCeiling = 0.00;
 
-            $routineSpent = (float)\App\Models\RoutineBudgetPlan::sum('total_amount');
+            $routineAllocated = (float)\App\Models\RoutineBudgetPlan::sum('allocated_amount');
+            $routineSpent = (float)\App\Models\RoutineBudgetPlan::sum('spent_amount');
             $centralSpent = (float)\App\Models\CentralAllocation::sum('amount');
 
+            $totalCeilings = $routineCeiling + $projectsCeiling + $utilitiesCeiling + $contingencyCeiling;
+
             $institutionalExpenditureProjections = [
-                'total_projected_pool' => $totalProjectedRevenue,
+                'total_projected_pool' => $totalCeilings,
                 'categories' => [
                     [
                         'id' => 'routine_divisions',
                         'name' => '1. งบดำเนินงานและภารกิจประจำ 4 ฝ่าย',
                         'description' => 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
                         'projected_ceiling' => $routineCeiling,
-                        'requested_amount' => (float)\App\Models\RoutineBudgetPlan::sum('total_amount'),
-                        'allocated_amount' => (float)\App\Models\RoutineBudgetPlan::sum('total_amount'),
+                        'requested_amount' => $routineAllocated,
+                        'allocated_amount' => $routineAllocated,
                         'spent_amount' => $routineSpent,
                     ],
                     [
@@ -735,8 +738,8 @@ class DashboardController extends Controller
                         'name' => '3. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
                         'description' => 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
                         'projected_ceiling' => $utilitiesCeiling,
-                        'requested_amount' => $centralSpent > 0 ? $centralSpent : 1500000.00,
-                        'allocated_amount' => $centralSpent > 0 ? $centralSpent : 1500000.00,
+                        'requested_amount' => $centralSpent,
+                        'allocated_amount' => $centralSpent,
                         'spent_amount' => $centralSpent,
                     ],
                     [
@@ -745,14 +748,14 @@ class DashboardController extends Controller
                         'description' => 'เงินสำรองกรณีเร่งด่วน ภัยพิบัติ หรือโครงการนโยบายเร่งด่วนพิเศษ',
                         'projected_ceiling' => $contingencyCeiling,
                         'requested_amount' => 0.00,
-                        'allocated_amount' => $contingencyCeiling,
+                        'allocated_amount' => 0.00,
                         'spent_amount' => 0.00,
                     ],
                 ],
                 'summary' => [
-                    'total_projected_ceiling' => $routineCeiling + $projectsCeiling + $utilitiesCeiling + $contingencyCeiling,
-                    'total_requested' => $totalRequestedAll + (float)\App\Models\RoutineBudgetPlan::sum('total_amount') + $centralSpent,
-                    'total_allocated' => $totalAllocatedAll + (float)\App\Models\RoutineBudgetPlan::sum('total_amount') + $centralSpent + $contingencyCeiling,
+                    'total_projected_ceiling' => $totalCeilings,
+                    'total_requested' => $totalRequestedAll + $routineAllocated + $centralSpent,
+                    'total_allocated' => $totalAllocatedAll + $routineAllocated + $centralSpent,
                     'total_spent' => $totalSpentAll + $routineSpent + $centralSpent,
                 ],
             ];

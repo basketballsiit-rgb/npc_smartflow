@@ -8187,13 +8187,13 @@ ${itemsListText}
                 {/* 1.5 Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา 4 มิติ) */}
                 {(() => {
                     const expProjections = institutionalExpenditureProjections || {
-                        total_projected_pool: 10000000.00,
+                        total_projected_pool: 0.00,
                         categories: [
                             {
                                 id: 'routine_divisions',
                                 name: '1. งบดำเนินงานและภารกิจประจำ 4 ฝ่าย',
                                 description: 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
-                                projected_ceiling: 2000000.00,
+                                projected_ceiling: 0.00,
                                 requested_amount: routineAllocated,
                                 allocated_amount: routineAllocated,
                                 spent_amount: routineSpent,
@@ -8202,7 +8202,7 @@ ${itemsListText}
                                 id: 'strategic_projects',
                                 name: '2. งบโครงการตามแผนปฏิบัติราชการประจำปี',
                                 description: 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
-                                projected_ceiling: 5000000.00,
+                                projected_ceiling: 0.00,
                                 requested_amount: parseFloat(pHead.globalAllocated || 0),
                                 allocated_amount: parseFloat(pHead.globalAllocated || 0),
                                 spent_amount: parseFloat(pHead.globalSpent || 0),
@@ -8211,25 +8211,25 @@ ${itemsListText}
                                 id: 'utilities_overhead',
                                 name: '3. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
                                 description: 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
-                                projected_ceiling: 2000000.00,
-                                requested_amount: totalCentralReceived > 0 ? totalCentralReceived : 1500000.00,
-                                allocated_amount: totalCentralReceived > 0 ? totalCentralReceived : 1500000.00,
+                                projected_ceiling: 0.00,
+                                requested_amount: totalCentralReceived,
+                                allocated_amount: totalCentralReceived,
                                 spent_amount: totalCentralReceived,
                             },
                             {
                                 id: 'contingency_reserve',
                                 name: '4. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
                                 description: 'เงินสำรองกรณีเร่งด่วน ภัยพิบัติ หรือโครงการนโยบายเร่งด่วนพิเศษ',
-                                projected_ceiling: 1000000.00,
+                                projected_ceiling: 0.00,
                                 requested_amount: 0.00,
-                                allocated_amount: 1000000.00,
+                                allocated_amount: 0.00,
                                 spent_amount: 0.00,
                             },
                         ],
                         summary: {
-                            total_projected_ceiling: 10000000.00,
+                            total_projected_ceiling: 0.00,
                             total_requested: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived),
-                            total_allocated: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived + 1000000.00),
+                            total_allocated: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived),
                             total_spent: totalSpentAll,
                         }
                     };
@@ -8259,7 +8259,7 @@ ${itemsListText}
                                 <div className="text-right shrink-0">
                                     <span className="text-[11px] text-slate-500 block">กรอบวงเงินประมาณการรวมทั้งสิ้น</span>
                                     <span className="text-lg md:text-xl font-black font-mono text-purple-950">
-                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(expProjections.summary?.total_projected_ceiling || 10000000)}
+                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(expProjections.summary?.total_projected_ceiling || 0)}
                                     </span>
                                 </div>
                             </div>
@@ -8269,7 +8269,7 @@ ${itemsListText}
                                     const ceiling = cat.projected_ceiling || 0;
                                     const alloc = cat.allocated_amount || 0;
                                     const spent = cat.spent_amount || 0;
-                                    const remaining = ceiling - spent;
+                                    const remaining = ceiling > 0 ? (ceiling - spent) : 0;
                                     const spentRate = ceiling > 0 ? Math.min(Math.round((spent / ceiling) * 100), 100) : 0;
 
                                     return (
