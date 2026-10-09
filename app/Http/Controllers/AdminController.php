@@ -1032,7 +1032,7 @@ class AdminController extends Controller
     public function storeFundingSource(Request $request)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff()) {
             abort(403, 'คุณไม่มีสิทธิ์จัดการแหล่งงบประมาณ');
         }
 
@@ -1044,7 +1044,15 @@ class AdminController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        \App\Models\FundingSource::create($validated);
+        $created = \App\Models\FundingSource::create($validated);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'เพิ่มแหล่งเงินงบประมาณ ' . $validated['name'] . ' สำเร็จเรียบร้อยแล้ว',
+                'funding_source' => $created,
+            ]);
+        }
 
         return redirect()->back()->with('success', 'เพิ่มแหล่งเงินงบประมาณ ' . $validated['name'] . ' สำเร็จเรียบร้อยแล้ว');
     }
@@ -1055,7 +1063,7 @@ class AdminController extends Controller
     public function updateFundingSource(Request $request, \App\Models\FundingSource $fundingSource)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff()) {
             abort(403, 'คุณไม่มีสิทธิ์จัดการแหล่งงบประมาณ');
         }
 
@@ -1069,25 +1077,43 @@ class AdminController extends Controller
 
         $fundingSource->update($validated);
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'อัปเดตแหล่งเงินงบประมาณสำเร็จเรียบร้อยแล้ว',
+                'funding_source' => $fundingSource,
+            ]);
+        }
+
         return redirect()->back()->with('success', 'อัปเดตแหล่งเงินงบประมาณสำเร็จเรียบร้อยแล้ว');
     }
 
     /**
      * Delete funding source.
      */
-    public function deleteFundingSource(\App\Models\FundingSource $fundingSource)
+    public function deleteFundingSource(Request $request, \App\Models\FundingSource $fundingSource)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff()) {
             abort(403, 'คุณไม่มีสิทธิ์จัดการแหล่งงบประมาณ');
         }
 
         if (\App\Models\Budget::where('funding_source_id', $fundingSource->id)->exists() || 
             Project::where('funding_source_id', $fundingSource->id)->exists()) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'ไม่สามารถลบแหล่งงบประมาณนี้ได้ เนื่องจากมีโครงการ/งบประมาณผูกอยู่'], 422);
+            }
             return redirect()->back()->with('error', 'ไม่สามารถลบแหล่งงบประมาณนี้ได้ เนื่องจากมีโครงการ/งบประมาณผูกอยู่');
         }
 
         $fundingSource->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'ลบแหล่งเงินงบประมาณเรียบร้อยแล้ว',
+            ]);
+        }
 
         return redirect()->back()->with('success', 'ลบแหล่งเงินงบประมาณเรียบร้อยแล้ว');
     }

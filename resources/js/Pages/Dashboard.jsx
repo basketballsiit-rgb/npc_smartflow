@@ -355,6 +355,18 @@ export default function Dashboard({
         description: '',
     });
 
+    // Funding Sources Management Modal
+    const [isFundingSourceModalOpen, setIsFundingSourceModalOpen] = useState(false);
+    const [editingFundingSource, setEditingFundingSource] = useState(null);
+    const [isSavingFundingSource, setIsSavingFundingSource] = useState(false);
+    const [fundingSourceForm, setFundingSourceForm] = useState({
+        name: '',
+        code: '',
+        fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+        budget_number: '',
+        description: '',
+    });
+
     // Direct Project Add & Allocate Modal (Admin & Planning Staff only)
     const [isDirectAllocateModalOpen, setIsDirectAllocateModalOpen] = useState(false);
     const { 
@@ -3216,6 +3228,103 @@ export default function Dashboard({
                     text: 'บันทึกโครงการและส่งยอดเข้างบประมาณและรายงานแผนปฏิบัติราชการเรียบร้อยแล้ว',
                     icon: 'success',
                     confirmButtonColor: '#7c3aed',
+                });
+            }
+        });
+    };
+
+    const handleOpenCreateFundingSource = () => {
+        setEditingFundingSource(null);
+        setFundingSourceForm({
+            name: '',
+            code: '',
+            fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+            budget_number: '',
+            description: '',
+        });
+        setIsFundingSourceModalOpen(true);
+    };
+
+    const handleOpenEditFundingSource = (src) => {
+        setEditingFundingSource(src);
+        setFundingSourceForm({
+            name: src.name || '',
+            code: src.code || '',
+            fiscal_year: src.fiscal_year || systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+            budget_number: src.budget_number || '',
+            description: src.description || '',
+        });
+        setIsFundingSourceModalOpen(true);
+    };
+
+    const handleSaveFundingSource = (e) => {
+        e.preventDefault();
+        if (!fundingSourceForm.name?.trim()) {
+            Swal.fire('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุชื่อหมวดงบประมาณ/แหล่งเงินทุน', 'warning');
+            return;
+        }
+        setIsSavingFundingSource(true);
+        if (editingFundingSource) {
+            router.put(route('admin.funding_sources.update', editingFundingSource.id), fundingSourceForm, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsSavingFundingSource(false);
+                    setEditingFundingSource(null);
+                    setFundingSourceForm({
+                        name: '',
+                        code: '',
+                        fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+                        budget_number: '',
+                        description: '',
+                    });
+                    Swal.fire('บันทึกสำเร็จ', 'แก้ไขข้อมูลหมวดงบประมาณเรียบร้อยแล้ว', 'success');
+                },
+                onError: (err) => {
+                    setIsSavingFundingSource(false);
+                    Swal.fire('เกิดข้อผิดพลาด', Object.values(err)[0] || 'ไม่สามารถบันทึกได้', 'error');
+                }
+            });
+        } else {
+            router.post(route('admin.funding_sources.store'), fundingSourceForm, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsSavingFundingSource(false);
+                    setFundingSourceForm({
+                        name: '',
+                        code: '',
+                        fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+                        budget_number: '',
+                        description: '',
+                    });
+                    Swal.fire('บันทึกสำเร็จ', 'เพิ่มหมวดงบประมาณ/แหล่งเงินทุนใหม่เรียบร้อยแล้ว', 'success');
+                },
+                onError: (err) => {
+                    setIsSavingFundingSource(false);
+                    Swal.fire('เกิดข้อผิดพลาด', Object.values(err)[0] || 'ไม่สามารถบันทึกได้', 'error');
+                }
+            });
+        }
+    };
+
+    const handleDeleteFundingSource = (src) => {
+        Swal.fire({
+            title: 'ยืนยันการลบหมวดงบประมาณ?',
+            text: `ต้องการลบหมวดงบ "${src.name}" ใช่หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'ใช่, ลบออก',
+            cancelButtonText: 'ยกเลิก',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.delete(route('admin.funding_sources.delete', src.id), {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        Swal.fire('ลบสำเร็จ', 'ลบหมวดงบประมาณเรียบร้อยแล้ว', 'success');
+                    },
+                    onError: (err) => {
+                        Swal.fire('ไม่สามารถลบได้', Object.values(err)[0] || 'เกิดข้อผิดพลาดในการลบ', 'error');
+                    }
                 });
             }
         });
@@ -8490,17 +8599,29 @@ ${itemsListText}
                                     </div>
 
                                     <div>
-                                        <label className="block text-[11px] font-bold text-gray-600 mb-1">
-                                            หมวดงบเงินทุนส่วนกลาง <span className="text-rose-500">*</span>
-                                        </label>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="block text-[11px] font-bold text-gray-600">
+                                                หมวดงบเงินทุนส่วนกลาง <span className="text-rose-500">*</span>
+                                            </label>
+                                            {isPlanStaff && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleOpenCreateFundingSource}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer shadow-2xs"
+                                                    title="เพิ่มหรือจัดการหมวดงบเฉพาะ เช่น โครงการ Upskill / Reskill"
+                                                >
+                                                    <span>➕ เพิ่ม/จัดการหมวดงบ</span>
+                                                </button>
+                                            )}
+                                        </div>
                                         <select
                                             value={centralAllocationData.funding_source_id}
                                             onChange={e => setCentralAllocationData('funding_source_id', e.target.value)}
                                             className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
                                         >
                                             <option value="">เลือกแหล่งเงินทุน...</option>
-                                            {(pHead?.fundingSources || allFundingSources || []).map(src => (
-                                                <option key={src.id} value={src.id}>{src.name}</option>
+                                            {(allFundingSources?.length ? allFundingSources : (pHead?.fundingSources || [])).map(src => (
+                                                <option key={src.id} value={src.id}>{src.name} {src.fiscal_year ? `(ปี ${src.fiscal_year})` : ''}</option>
                                             ))}
                                         </select>
                                         {centralAllocationErrors.funding_source_id && (
@@ -8795,7 +8916,21 @@ ${itemsListText}
 
                 {/* 5. Funding sources breakdown cards */}
                 <div className="rounded-3xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
-                    <h3 className="font-extrabold text-gray-800 text-base">💵 งบจำแนกตามช่องทางเงินทุน (โครงการ)</h3>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <h3 className="font-extrabold text-gray-800 text-base">💵 งบจำแนกตามช่องทางเงินทุน (โครงการ)</h3>
+                            <p className="text-xs text-gray-400 mt-0.5">ภาพรวมการจัดสรรและเบิกจ่ายแยกตามหมวดงบประมาณ/แหล่งเงินทุน</p>
+                        </div>
+                        {isPlanStaff && (
+                            <button
+                                type="button"
+                                onClick={handleOpenCreateFundingSource}
+                                className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3 py-1.5 rounded-xl transition-all shadow-2xs cursor-pointer self-start sm:self-auto"
+                            >
+                                <span>➕ จัดการหมวดงบประมาณ</span>
+                            </button>
+                        )}
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {(pHead.fundingChannelProgress || fundingChannelProgress || [])?.map((source) => (
                             <div key={source.id} className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100/50 space-y-2">
@@ -9227,7 +9362,9 @@ ${itemsListText}
                 n.includes('revenue') || 
                 n.includes('local_income')
             ) return 'bkso';
-            return null;
+
+            // Fallback for custom or central project funds (e.g. Upskill / Reskill, โครงการเฉพาะกิจ) -> จัดอยู่ในคอลัมน์อุดหนุนพัฒนา
+            return 'develop';
         };
 
         const reportStructure = [
@@ -21059,6 +21196,260 @@ return (
                                         </button>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Funding Sources Management Modal */}
+                    {isFundingSourceModalOpen && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                            <div className="w-full max-w-4xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8 max-h-[90vh] flex flex-col">
+                                <div className="flex justify-between items-center border-b border-purple-100 pb-4 mb-5 shrink-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-lg">
+                                            🏷️
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
+                                                เพิ่มและจัดการหมวดงบประมาณ / แหล่งเงินทุนส่วนกลาง
+                                            </h3>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                กำหนดหมวดงบเฉพาะกิจจากส่วนกลาง เช่น โครงการ Upskill / Reskill หรือโครงการพิเศษ เพื่อนำไปจัดสรรในระบบ
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsFundingSourceModalOpen(false);
+                                            setEditingFundingSource(null);
+                                        }}
+                                        className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                <div className="overflow-y-auto space-y-6 pr-1 flex-1">
+                                    {/* Form for adding/editing */}
+                                    <div className="bg-purple-50/50 rounded-2xl p-5 border border-purple-100">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h4 className="text-xs font-black text-purple-900 flex items-center gap-1.5">
+                                                <span>{editingFundingSource ? '✏️ แก้ไขข้อมูลหมวดงบประมาณ' : '➕ เพิ่มหมวดงบประมาณใหม่'}</span>
+                                            </h4>
+                                            {editingFundingSource && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setEditingFundingSource(null);
+                                                        setFundingSourceForm({
+                                                            name: '',
+                                                            code: '',
+                                                            fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+                                                            budget_number: '',
+                                                            description: '',
+                                                        });
+                                                    }}
+                                                    className="text-[11px] text-purple-600 hover:text-purple-800 underline font-semibold cursor-pointer"
+                                                >
+                                                    + เปลี่ยนเป็นสร้างรายการใหม่
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <form onSubmit={handleSaveFundingSource} className="space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                        ชื่อหมวดงบประมาณ / โครงการส่วนกลาง <span className="text-rose-500">*</span>
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        required
+                                                        value={fundingSourceForm.name}
+                                                        onChange={(e) => setFundingSourceForm({ ...fundingSourceForm, name: e.target.value })}
+                                                        placeholder="เช่น โครงการ Upskill / Reskill หรือ งบจัดตั้งศูนย์เรียนรู้"
+                                                        className="w-full text-xs rounded-xl border-purple-200 focus:ring-purple-500 focus:border-purple-500 p-2.5 font-semibold"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                        รหัสหมวดงบ / แหล่งเงิน (ถ้ามี)
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={fundingSourceForm.code}
+                                                        onChange={(e) => setFundingSourceForm({ ...fundingSourceForm, code: e.target.value })}
+                                                        placeholder="เช่น UP-RESKILL-2570 หรือ ทว-01"
+                                                        className="w-full text-xs rounded-xl border-purple-200 focus:ring-purple-500 focus:border-purple-500 p-2.5 font-mono"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                        ปีงบประมาณ พ.ศ.
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={fundingSourceForm.fiscal_year}
+                                                        onChange={(e) => setFundingSourceForm({ ...fundingSourceForm, fiscal_year: e.target.value })}
+                                                        placeholder="เช่น 2569 หรือ 2570"
+                                                        className="w-full text-xs rounded-xl border-purple-200 focus:ring-purple-500 focus:border-purple-500 p-2.5 font-mono"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                        เลขที่รหัสงบประมาณ / หนังสือสั่งการ (ถ้ามี)
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={fundingSourceForm.budget_number}
+                                                        onChange={(e) => setFundingSourceForm({ ...fundingSourceForm, budget_number: e.target.value })}
+                                                        placeholder="เช่น งบจัดสรร สอศ. หรือ เลขที่อ้างอิง"
+                                                        className="w-full text-xs rounded-xl border-purple-200 focus:ring-purple-500 focus:border-purple-500 p-2.5 font-mono"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                    คำอธิบาย / รายละเอียดเพิ่มเติม
+                                                </label>
+                                                <textarea
+                                                    rows={2}
+                                                    value={fundingSourceForm.description}
+                                                    onChange={(e) => setFundingSourceForm({ ...fundingSourceForm, description: e.target.value })}
+                                                    placeholder="ระบุวัตถุประสงค์ หรือเงื่อนไขการใช้จ่ายงบ..."
+                                                    className="w-full text-xs rounded-xl border-purple-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                                />
+                                            </div>
+
+                                            <div className="flex justify-end gap-2 pt-2">
+                                                {editingFundingSource && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setEditingFundingSource(null);
+                                                            setFundingSourceForm({
+                                                                name: '',
+                                                                code: '',
+                                                                fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+                                                                budget_number: '',
+                                                                description: '',
+                                                            });
+                                                        }}
+                                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                                    >
+                                                        ยกเลิกแก้ไข
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="submit"
+                                                    disabled={isSavingFundingSource}
+                                                    className="rounded-xl bg-purple-700 hover:bg-purple-800 text-white px-5 py-2 text-xs font-bold shadow-sm transition disabled:opacity-50 cursor-pointer"
+                                                >
+                                                    {isSavingFundingSource ? '⏳ กำลังบันทึก...' : (editingFundingSource ? '💾 บันทึกการแก้ไข' : '➕ บันทึกหมวดงบประมาณใหม่')}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    {/* Table of current funding sources */}
+                                    <div>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="text-xs font-black text-slate-800">
+                                                📋 รายการหมวดงบประมาณและแหล่งเงินทุนในระบบ ({(allFundingSources?.length || planHeadData?.fundingSources?.length || 0)} รายการ)
+                                            </h4>
+                                            <span className="text-[10px] text-slate-400">
+                                                หมวด 1-11 คือหมวดมาตรฐานตามแผนปฏิบัติราชการ
+                                            </span>
+                                        </div>
+
+                                        <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
+                                            <div className="overflow-x-auto max-h-64">
+                                                <table className="w-full text-left border-collapse text-xs">
+                                                    <thead className="bg-slate-50 text-slate-500 text-[11px] sticky top-0 border-b border-slate-200">
+                                                        <tr>
+                                                            <th className="py-2.5 px-3 font-bold w-12 text-center">#</th>
+                                                            <th className="py-2.5 px-3 font-bold">ชื่อหมวดงบประมาณ / แหล่งเงิน</th>
+                                                            <th className="py-2.5 px-3 font-bold">รหัส / อ้างอิง</th>
+                                                            <th className="py-2.5 px-3 font-bold text-center">ปีงบฯ</th>
+                                                            <th className="py-2.5 px-3 font-bold text-center w-24">จัดการ</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {(allFundingSources?.length ? allFundingSources : (planHeadData?.fundingSources || [])).map((src, idx) => {
+                                                            const isStandard = src.id <= 11;
+                                                            return (
+                                                                <tr key={src.id} className="hover:bg-slate-50/80 transition">
+                                                                    <td className="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">
+                                                                        {idx + 1}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3">
+                                                                        <div className="font-bold text-slate-800 flex items-center gap-1.5">
+                                                                            <span>{src.name}</span>
+                                                                            {isStandard && (
+                                                                                <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-medium">
+                                                                                    มาตรฐาน
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {src.description && (
+                                                                            <p className="text-[10px] text-slate-400 line-clamp-1">{src.description}</p>
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3 text-slate-600 font-mono text-[11px]">
+                                                                        {src.code || src.budget_number || '-'}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3 text-center font-mono text-slate-600">
+                                                                        {src.fiscal_year || '-'}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3 text-center whitespace-nowrap space-x-1">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleOpenEditFundingSource(src)}
+                                                                            className="p-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 transition cursor-pointer"
+                                                                            title="แก้ไข"
+                                                                        >
+                                                                            ✏️
+                                                                        </button>
+                                                                        {!isStandard && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDeleteFundingSource(src)}
+                                                                                className="p-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 transition cursor-pointer"
+                                                                                title="ลบ"
+                                                                            >
+                                                                                🗑️
+                                                                            </button>
+                                                                        )}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 border-t border-purple-100 flex justify-end shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsFundingSourceModalOpen(false);
+                                            setEditingFundingSource(null);
+                                        }}
+                                        className="rounded-xl border border-slate-200 bg-white px-5 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                    >
+                                        ปิดหน้าต่าง
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
