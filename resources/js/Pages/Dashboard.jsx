@@ -14779,15 +14779,17 @@ ${itemsListText}
                                                     <span className="text-[10px] font-black uppercase text-purple-800">รหัสงบประมาณ GFMIS (Budget Key)</span>
                                                     <div className="flex items-center justify-between">
                                                         <span className="font-mono text-sm font-black text-purple-950">
-                                                            {p.budget?.fundingSource?.code || `20006-2569-${String(p.budget?.funding_source_id || 1).padStart(2, '0')}00`}
+                                                            {p.budget?.fundingSource?.budget_number || '-'}
                                                         </span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => copyToClipboard(p.budget?.fundingSource?.code || `20006-2569-${String(p.budget?.funding_source_id || 1).padStart(2, '0')}00`, 'รหัสงบประมาณ GFMIS')}
-                                                            className="px-2 py-1 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition"
-                                                        >
-                                                            📋 คัดลอก
-                                                        </button>
+                                                        {p.budget?.fundingSource?.budget_number && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => copyToClipboard(p.budget?.fundingSource?.budget_number, 'รหัสงบประมาณ GFMIS')}
+                                                                className="px-2 py-1 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition"
+                                                            >
+                                                                📋 คัดลอก
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     <p className="text-[10px] text-slate-500 line-clamp-1">{p.budget?.fundingSource?.name || 'งบอุดหนุนเพื่อการจัดการศึกษาขั้นพื้นฐาน'}</p>
                                                 </div>

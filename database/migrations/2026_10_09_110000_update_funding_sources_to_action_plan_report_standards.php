@@ -40,77 +40,77 @@ return new class extends Migration
                 'code' => 'VEC_CERT',
                 'description' => 'งบดำเนินงาน ปวช.',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-001'
+                'budget_number' => null
             ],
             2 => [
                 'name' => 'ปวส.',
                 'code' => 'VEC_DIP',
                 'description' => 'งบดำเนินงาน ปวส.',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-101'
+                'budget_number' => null
             ],
             3 => [
                 'name' => 'ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)',
                 'code' => 'SHORT_COURSE_REMUN',
                 'description' => 'งบดำเนินงาน ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-201'
+                'budget_number' => null
             ],
             4 => [
                 'name' => 'ระยะสั้น (ค่าสาธารณูปโภค)',
                 'code' => 'SHORT_COURSE_UTIL',
                 'description' => 'งบดำเนินงาน ระยะสั้น (ค่าสาธารณูปโภค)',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-202'
+                'budget_number' => null
             ],
             5 => [
                 'name' => 'ทวิศึกษา',
                 'code' => 'DUAL_EDU',
                 'description' => 'งบทวิศึกษา',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-301'
+                'budget_number' => null
             ],
             6 => [
                 'name' => 'อุดหนุนเพื่อการจัดการ',
                 'code' => 'MANAGEMENT_SUBSIDY',
                 'description' => 'เงินอุดหนุนเพื่อการจัดการศึกษา',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-401'
+                'budget_number' => null
             ],
             7 => [
                 'name' => 'อุดหนุนพัฒนา',
                 'code' => 'DEVELOPMENT_SUBSIDY',
                 'description' => 'เงินอุดหนุนพัฒนาสถานศึกษา/นักเรียนนักศึกษา',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-501'
+                'budget_number' => null
             ],
             8 => [
                 'name' => 'อุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือ)',
                 'code' => 'FREE15_BOOK',
                 'description' => 'เงินอุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือเรียน)',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-701'
+                'budget_number' => null
             ],
             9 => [
                 'name' => 'อุดหนุนเรียนฟรี 15 ปี (อุปกรณ์การเรียน)',
                 'code' => 'FREE15_EQUIP',
                 'description' => 'เงินอุดหนุนเรียนฟรี 15 ปี (ค่าอุปกรณ์การเรียน)',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-702'
+                'budget_number' => null
             ],
             10 => [
                 'name' => 'อุดหนุนเรียนฟรี 15 ปี (เครื่องแบบนักเรียน)',
                 'code' => 'FREE15_UNIFORM',
                 'description' => 'เงินอุดหนุนเรียนฟรี 15 ปี (ค่าเครื่องแบบนักเรียน)',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-703'
+                'budget_number' => null
             ],
             11 => [
                 'name' => 'บกศ.',
                 'code' => 'LOCAL_INCOME',
                 'description' => 'เงินบำรุงการศึกษา (บกศ.)',
                 'fiscal_year' => '2570',
-                'budget_number' => '20006-2570-601'
+                'budget_number' => null
             ],
         ];
 
