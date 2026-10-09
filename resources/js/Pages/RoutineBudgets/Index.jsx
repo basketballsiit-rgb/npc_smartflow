@@ -16,6 +16,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
     const [editingPlan, setEditingPlan] = useState(null);
     const [selectedPlanForProcurement, setSelectedPlanForProcurement] = useState(null);
     const [viewingHistoryPlan, setViewingHistoryPlan] = useState(null);
+    const [isTableModalOpen, setIsTableModalOpen] = useState(false);
 
     const formCardRef = useRef(null);
     const [tableSearch, setTableSearch] = useState('');
@@ -104,40 +105,40 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         }, 50);
     };
 
-    // Standard report categories matching the Action Plan Expenditure Report
+    // Standard report categories matching the Action Plan Expenditure Report (ฉบับ พ.ศ. 2570)
     const REPORT_CATEGORIES = [
         {
             group: 'หมวด 1: งบบุคลากร',
             items: [
-                { code: '1.1', name: '1.1 ครูอัตราจ้าง 6 อัตรา' },
-                { code: '1.2', name: '1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง 9 อัตรา' },
-                { code: '1.3', name: '1.3 เจ้าหน้าที่ 15 อัตรา' },
-                { code: '1.4', name: '1.4 ค่าสมทบประกันสังคมของเจ้าหน้าที่ 16 อัตรา' },
+                { code: '1.1', name: '1.1 ครูอัตราจ้าง 11 อัตรา' },
+                { code: '1.2', name: '1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง 11 อัตรา' },
+                { code: '1.3', name: '1.3 จ้างเหมาบริการเจ้าหน้าที่ 15 ราย' },
+                { code: '1.4', name: '1.4 สมทบประกันสังคมเจ้าหน้าที่ 15 ราย' },
             ]
         },
         {
             group: 'หมวด 2: งบดำเนินงาน',
             items: [
-                { code: '2.1.1', name: '2.1.1 จ้างเหมาบริการเจ้าหน้าที่' },
+                { code: '2.1.1', name: '2.1.1 จ้างเหมาบริการเจ้าหน้าที่ 8 ราย' },
                 { code: '2.1.2', name: '2.1.2 ค่าตอบแทนสอนเกินภาระงานครู' },
-                { code: '2.1.3', name: '2.1.3 ค่าตอบแทนครูสอนระยะสั้นรายชั่วโมง 7 ราย' },
+                { code: '2.1.3', name: '2.1.3 ค่าตอบแทนครูสอนระยะสั้น 7 ราย' },
                 { code: '2.1.4', name: '2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ' },
+                { code: '2.1.5', name: '2.1.5 ค่าตอบแทนธุรการนอกเวลา' },
                 { code: '2.2.1', name: '2.2.1 ค่าเดินทางไปราชการ' },
                 { code: '2.2.2', name: '2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง' },
                 { code: '2.2.3', name: '2.2.3 ค่าซ่อมแซมครุภัณฑ์' },
-                { code: '2.2.4', name: '2.2.4 ค่าขยะและสิ่งปฏิกูล' },
-                { code: '2.2.5', name: '2.2.5 ค่าโฆษณาและเผยแพร่' },
+                { code: '2.2.4', name: '2.2.4 ค่าโฆษณาและเผยแพร่' },
             ]
         },
         {
             group: 'หมวด 3: ค่าวัสดุ',
             items: [
                 { code: '3.1', name: '3.1 วัสดุงานอาคาร' },
-                { code: '3.2.1', name: '3.2.1 วัสดุสำนักงาน - ฝ่ายวิชาการ' },
-                { code: '3.2.2', name: '3.2.2 วัสดุสำนักงาน - ฝ่ายกิจการนักเรียน นักศึกษา' },
-                { code: '3.2.3', name: '3.2.3 วัสดุสำนักงาน - ฝ่ายบริหารทรัพยากร' },
-                { code: '3.2.4', name: '3.2.4 วัสดุสำนักงาน - ฝ่ายยุทธศาสตร์และแผนงาน' },
-                { code: '3.3', name: '3.3 วัสดุเชื้อเพลิงและหล่อลื่น' },
+                { code: '3.2.1', name: '3.2.1 ฝ่ายวิชาการ' },
+                { code: '3.2.2', name: '3.2.2 ฝ่ายพัฒนากิจการนักเรียน นักศึกษา' },
+                { code: '3.2.3', name: '3.2.3 ฝ่ายบริหารทรัพยากร' },
+                { code: '3.2.4', name: '3.2.4 ฝ่ายยุทธศาสตร์และแผนงาน' },
+                { code: '3.4', name: '3.4 วัสดุเชื้อเพลิงและหล่อลื่น' },
             ]
         },
         {
@@ -160,23 +161,32 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                 { code: '5.1', name: '5.1 ค่าไฟฟ้า' },
                 { code: '5.2', name: '5.2 ค่าน้ำประปา' },
                 { code: '5.3', name: '5.3 ค่าโทรศัพท์' },
-                { code: '5.4', name: '5.4 ค่าไปรษณีย์โทรเลข' },
+                { code: '5.4', name: '5.4 ค่าไปรษณีย์' },
                 { code: '5.5', name: '5.5 ค่าบริการด้านสื่อสารโทรคมนาคม' },
+                { code: '5.6', name: '5.6 ค่าขยะและสิ่งปฏิกูล' },
             ]
         },
         {
             group: 'หมวด 6: โครงการ (ประมาณการหน้างบ)',
             items: [
                 { code: '6.1', name: '6.1 โครงการฝ่ายวิชาการ' },
-                { code: '6.2', name: '6.2 โครงการฝ่ายกิจการนักเรียน นักศึกษา' },
+                { code: '6.2', name: '6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา' },
                 { code: '6.3', name: '6.3 โครงการฝ่ายบริหารทรัพยากร' },
                 { code: '6.4', name: '6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน' },
             ]
         },
         {
-            group: 'หมวด 7: สำรองจ่าย',
+            group: 'หมวด 7: อื่นๆ',
             items: [
-                { code: '7.1', name: '7.1 สำรองจ่าย' },
+                { code: '7.1', name: '7.1 ค่าหนังสือ' },
+                { code: '7.2', name: '7.2 อุปกรณ์การเรียน' },
+                { code: '7.3', name: '7.3 เครื่องแบบนักเรียน' },
+            ]
+        },
+        {
+            group: 'หมวด 8: สำรองจ่าย',
+            items: [
+                { code: '8', name: '7. สำรองจ่าย' },
             ]
         }
     ];
@@ -208,30 +218,77 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         items: []
     });
 
-    // Headcount / Rates for categories that specify rates (1.1, 1.2, 1.3, 1.4, 2.1.3)
+    // Headcount / Rates for categories that specify rates
     const [rateCount, setRateCount] = useState('');
 
     const isRateCategory = (catCode) => {
-        return ['1.1', '1.2', '1.3', '1.4', '2.1.3'].includes(catCode);
+        return ['1.1', '1.2', '1.3', '1.4', '2.1.1', '2.1.3'].includes(catCode);
     };
 
     const getBaseTemplateName = (catCode) => {
         switch(catCode) {
             case '1.1': return 'ครูอัตราจ้าง';
             case '1.2': return 'ค่าสมทบประกันสังคมของครูอัตราจ้าง';
-            case '1.3': return 'เจ้าหน้าที่';
-            case '1.4': return 'ค่าสมทบประกันสังคมของเจ้าหน้าที่';
-            case '2.1.3': return 'ค่าตอบแทนครูสอนระยะสั้นรายชั่วโมง';
+            case '1.3': return 'จ้างเหมาบริการเจ้าหน้าที่';
+            case '1.4': return 'สมทบประกันสังคมเจ้าหน้าที่';
+            case '2.1.1': return 'จ้างเหมาบริการเจ้าหน้าที่';
+            case '2.1.3': return 'ค่าตอบแทนครูสอนระยะสั้น';
             default: return '';
         }
     };
 
     const getUnitName = (catCode) => {
-        if (catCode === '2.1.3') return 'ราย';
+        if (['1.3', '1.4', '2.1.1', '2.1.3'].includes(catCode)) return 'ราย';
         return 'อัตรา';
     };
 
-    // Helper to extract headcount from title string (e.g. "1.1 ครูอัตราจ้าง 8 อัตรา" -> 8)
+    const getDefaultRateCount = (catCode) => {
+        switch(catCode) {
+            case '1.1': return '11';
+            case '1.2': return '11';
+            case '1.3': return '15';
+            case '1.4': return '15';
+            case '2.1.1': return '8';
+            case '2.1.3': return '7';
+            default: return '';
+        }
+    };
+
+    const handleSelectCategory = (catCode, customName = null) => {
+        const base = getBaseTemplateName(catCode);
+        const unit = getUnitName(catCode);
+        const defaultNum = getDefaultRateCount(catCode);
+        const currentRate = defaultNum || rateCount;
+
+        if (isRateCategory(catCode)) {
+            setRateCount(currentRate);
+        } else {
+            setRateCount('');
+        }
+
+        let autoTitle = '';
+        if (customName) {
+            autoTitle = customName;
+        } else if (isRateCategory(catCode)) {
+            autoTitle = `${catCode} ${base} ${currentRate} ${unit}`;
+        } else {
+            for (const group of REPORT_CATEGORIES) {
+                const found = group.items.find(it => it.code === catCode);
+                if (found) {
+                    autoTitle = found.name;
+                    break;
+                }
+            }
+        }
+
+        setPlanData(prev => ({
+            ...prev,
+            report_category: catCode,
+            title: autoTitle || prev.title,
+        }));
+    };
+
+    // Helper to extract headcount from title string (e.g. "1.1 ครูอัตราจ้าง 11 อัตรา" -> 11)
     const extractRateFromTitle = (title) => {
         if (!title) return '';
         const match = title.match(/(\d+)\s*(อัตรา|ราย)/);
@@ -672,42 +729,22 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-700 mb-1">
-                                        หมวดรายงานงบรายจ่าย (แถวในรายงาน) <span className="text-purple-600 font-bold">✨ เชื่อมตารางรายงาน</span>
-                                    </label>
+                                    <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                                        <label className="block text-xs font-bold text-gray-700">
+                                            หมวดรายงานงบรายจ่าย (แถวในรายงาน)
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsTableModalOpen(true)}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-800 font-extrabold text-xs transition shadow-2xs hover:scale-105 active:scale-95 cursor-pointer border border-purple-200"
+                                            title="คลิกเพื่อเปิดตารางงบรายจ่ายและเลือกเชื่อมหมวดได้โดยตรง"
+                                        >
+                                            <span>📊</span> เชื่อมตารางรายงาน (เปิดดูตาราง/คลิกเลือก)
+                                        </button>
+                                    </div>
                                     <select
                                         value={planData.report_category}
-                                        onChange={e => {
-                                            const catCode = e.target.value;
-                                            const base = getBaseTemplateName(catCode);
-                                            const unit = getUnitName(catCode);
-                                            const defaultNum = catCode === '1.1' ? '6' : catCode === '1.2' ? '9' : catCode === '1.3' ? '15' : catCode === '1.4' ? '16' : catCode === '2.1.3' ? '7' : '';
-                                            const currentRate = rateCount || defaultNum;
-                                            if (isRateCategory(catCode)) {
-                                                setRateCount(currentRate);
-                                            }
-
-                                            setPlanData(prev => {
-                                                let autoTitle = prev.title;
-                                                if (catCode) {
-                                                    if (isRateCategory(catCode)) {
-                                                        autoTitle = `${catCode} ${base} ${currentRate} ${unit}`;
-                                                    } else {
-                                                        for (const group of REPORT_CATEGORIES) {
-                                                            const found = group.items.find(it => it.code === catCode);
-                                                            if (found) {
-                                                                autoTitle = found.name;
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                return {
-                                                    ...prev,
-                                                    report_category: catCode,
-                                                    title: autoTitle
-                                                };
-                                            });
-                                        }}
+                                        onChange={e => handleSelectCategory(e.target.value)}
                                         className="w-full text-xs rounded-xl border-purple-200 bg-purple-50/40 focus:ring-purple-500 focus:border-purple-500 p-3"
                                     >
                                         <option value="">-- เลือกหมวดในตารางรายงาน หรือระบุเอง --</option>
@@ -1609,6 +1646,98 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                 </div>
                             </form>
 
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal: ตารางงบรายจ่ายตามแผนปฏิบัติราชการ (เลือกหมวดเชื่อมโยง) */}
+                {isTableModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                        <div className="w-full max-w-4xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8 max-h-[90vh] flex flex-col">
+                            <div className="flex justify-between items-start border-b border-gray-100 pb-4 mb-4">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-900 text-xs font-bold border border-purple-200 mb-2">
+                                        <span>📊</span> ตารางงบรายจ่ายตามแผนปฏิบัติราชการ พ.ศ. 2570
+                                    </div>
+                                    <h3 className="text-lg sm:text-xl font-extrabold text-gray-900">
+                                        เลือกหมวดรายจ่ายเพื่อเชื่อมโยงลงในฟอร์ม
+                                    </h3>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        คลิกปุ่ม "เลือกเชื่อมหมวดนี้" เพื่อนำรหัสและชื่อหมวดไปกรอกในฟอร์มโดยอัตโนมัติ
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <a
+                                        href="/dashboard?tab=action_plan_report"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-xs font-bold px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition border border-purple-200 flex items-center gap-1"
+                                    >
+                                        <span>🔗</span> เปิดตารางฉบับเต็ม
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsTableModalOpen(false)}
+                                        className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="overflow-y-auto flex-1 pr-1 space-y-4">
+                                {REPORT_CATEGORIES.map((group) => (
+                                    <div key={group.group} className="border border-purple-100 rounded-2xl overflow-hidden shadow-2xs">
+                                        <div className="bg-purple-50/80 px-4 py-2 font-bold text-xs text-purple-900 border-b border-purple-100">
+                                            {group.group}
+                                        </div>
+                                        <div className="divide-y divide-gray-100 bg-white">
+                                            {group.items.map((item) => (
+                                                <div
+                                                    key={item.code}
+                                                    className={`px-4 py-2.5 flex items-center justify-between text-xs hover:bg-purple-50/40 transition ${
+                                                        planData.report_category === item.code ? 'bg-purple-100/40 font-bold' : ''
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-mono text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 font-bold">
+                                                            {item.code}
+                                                        </span>
+                                                        <span className="text-gray-800">{item.name}</span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            handleSelectCategory(item.code, item.name);
+                                                            setIsTableModalOpen(false);
+                                                            Swal.fire({
+                                                                icon: 'success',
+                                                                title: 'เชื่อมโยงสำเร็จ!',
+                                                                text: `เลือกหมวด: ${item.name}`,
+                                                                timer: 1500,
+                                                                showConfirmButton: false,
+                                                            });
+                                                        }}
+                                                        className="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                                                    >
+                                                        ✓ เลือกเชื่อมหมวดนี้
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="border-t border-gray-100 pt-3 mt-4 flex justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTableModalOpen(false)}
+                                    className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold transition cursor-pointer"
+                                >
+                                    ปิดหน้าต่าง
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

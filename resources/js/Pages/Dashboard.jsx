@@ -8668,29 +8668,29 @@ ${itemsListText}
                                     >
                                         <option value="">เลือกหมวดรายจ่ายในรายงาน...</option>
                                         <optgroup label="1. งบบุคลากร">
-                                            <option value="1.1">1.1 ครูอัตราจ้าง 6 อัตรา</option>
-                                            <option value="1.2">1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง 9 อัตรา</option>
-                                            <option value="1.3">1.3 เจ้าหน้าที่ 15 อัตรา</option>
-                                            <option value="1.4">1.4 ค่าสมทบประกันสังคมของเจ้าหน้าที่ 16 อัตรา</option>
+                                            <option value="1.1">1.1 ครูอัตราจ้าง 11 อัตรา</option>
+                                            <option value="1.2">1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง 11 อัตรา</option>
+                                            <option value="1.3">1.3 จ้างเหมาบริการเจ้าหน้าที่ 15 ราย</option>
+                                            <option value="1.4">1.4 สมทบประกันสังคมเจ้าหน้าที่ 15 ราย</option>
                                         </optgroup>
                                         <optgroup label="2. งบดำเนินงาน">
-                                            <option value="2.1.1">2.1.1 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                            <option value="2.1.1">2.1.1 จ้างเหมาบริการเจ้าหน้าที่ 8 ราย</option>
                                             <option value="2.1.2">2.1.2 ค่าตอบแทนสอนเกินภาระงานครู</option>
-                                            <option value="2.1.3">2.1.3 ค่าตอบแทนครูสอนระยะสั้นรายชั่วโมง 7 ราย</option>
+                                            <option value="2.1.3">2.1.3 ค่าตอบแทนครูสอนระยะสั้น 7 ราย</option>
                                             <option value="2.1.4">2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ</option>
+                                            <option value="2.1.5">2.1.5 ค่าตอบแทนธุรการนอกเวลา</option>
                                             <option value="2.2.1">2.2.1 ค่าเดินทางไปราชการ</option>
                                             <option value="2.2.2">2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง</option>
                                             <option value="2.2.3">2.2.3 ค่าซ่อมแซมครุภัณฑ์</option>
-                                            <option value="2.2.4">2.2.4 ค่าขยะและสิ่งปฏิกูล</option>
-                                            <option value="2.2.5">2.2.5 ค่าโฆษณาและเผยแพร่</option>
+                                            <option value="2.2.4">2.2.4 ค่าโฆษณาและเผยแพร่</option>
                                         </optgroup>
                                         <optgroup label="3. ค่าวัสดุ">
                                             <option value="3.1">3.1 วัสดุงานอาคาร</option>
-                                            <option value="3.2.1">3.2.1 วัสดุสำนักงาน - ฝ่ายวิชาการ</option>
-                                            <option value="3.2.2">3.2.2 วัสดุสำนักงาน - ฝ่ายกิจการนักเรียน นักศึกษา</option>
-                                            <option value="3.2.3">3.2.3 วัสดุสำนักงาน - ฝ่ายบริหารทรัพยากร</option>
-                                            <option value="3.2.4">3.2.4 วัสดุสำนักงาน - ฝ่ายยุทธศาสตร์และแผนงาน</option>
-                                            <option value="3.3">3.3 วัสดุเชื้อเพลิงและหล่อลื่น</option>
+                                            <option value="3.2.1">3.2.1 ฝ่ายวิชาการ</option>
+                                            <option value="3.2.2">3.2.2 ฝ่ายพัฒนากิจการนักเรียน นักศึกษา</option>
+                                            <option value="3.2.3">3.2.3 ฝ่ายบริหารทรัพยากร</option>
+                                            <option value="3.2.4">3.2.4 ฝ่ายยุทธศาสตร์และแผนงาน</option>
+                                            <option value="3.4">3.4 วัสดุเชื้อเพลิงและหล่อลื่น</option>
                                         </optgroup>
                                         <optgroup label="4. วัสดุการศึกษา">
                                             <option value="4.1">4.1 หลักสูตรวิชาชีพระยะสั้น</option>
@@ -8707,11 +8707,23 @@ ${itemsListText}
                                             <option value="5.1">5.1 ค่าไฟฟ้า</option>
                                             <option value="5.2">5.2 ค่าน้ำประปา</option>
                                             <option value="5.3">5.3 ค่าโทรศัพท์</option>
-                                            <option value="5.4">5.4 ค่าไปรษณีย์โทรเลข</option>
+                                            <option value="5.4">5.4 ค่าไปรษณีย์</option>
                                             <option value="5.5">5.5 ค่าบริการด้านสื่อสารโทรคมนาคม</option>
+                                            <option value="5.6">5.6 ค่าขยะและสิ่งปฏิกูล</option>
                                         </optgroup>
-                                        <optgroup label="7. สำรองจ่าย">
-                                            <option value="7.1">7.1 สำรองจ่าย</option>
+                                        <optgroup label="6. โครงการ">
+                                            <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
+                                            <option value="6.2">6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา</option>
+                                            <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
+                                            <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
+                                        </optgroup>
+                                        <optgroup label="7. อื่นๆ">
+                                            <option value="7.1">7.1 ค่าหนังสือ</option>
+                                            <option value="7.2">7.2 อุปกรณ์การเรียน</option>
+                                            <option value="7.3">7.3 เครื่องแบบนักเรียน</option>
+                                        </optgroup>
+                                        <optgroup label="8. สำรองจ่าย">
+                                            <option value="8">7. สำรองจ่าย</option>
                                         </optgroup>
                                     </select>
                                 </div>
