@@ -8609,19 +8609,9 @@ ${itemsListText}
 
                 {/* 3. Interactive Section: Routine Budgets Management */}
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                        <div>
-                            <h3 className="font-extrabold text-gray-800 text-sm">📋 รายการแผนงบประมาณประจำปีทั้งหมดในระบบ</h3>
-                            <p className="text-xs text-gray-400 mt-0.5">แผนงบดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา</p>
-                        </div>
-                        {isPlanHeadOrAdmin && (
-                            <Link
-                                href={route('admin.routine_budgets.index')}
-                                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-purple-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                            >
-                                <span>➕</span> ลงแผนงบดำเนินงานประจำปีใหม่
-                            </Link>
-                        )}
+                    <div>
+                        <h3 className="font-extrabold text-gray-800 text-sm">📋 รายการแผนงบประมาณประจำปีทั้งหมดในระบบ</h3>
+                        <p className="text-xs text-gray-400 mt-0.5">แผนงบดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
