@@ -621,7 +621,6 @@ class DashboardController extends Controller
         if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || in_array($request->query('tab'), ['annual_budget_requests', 'budgets', 'action_plan_report', 'executive_overview'])) {
             $mainDivisions = Department::whereNull('parent_id')->with('children')->get();
             $divisionBudgetRequests = [];
-            $totalProjectedRevenue = (float)FundingSource::sum('total_amount') ?: 10000000.00;
 
             $totalRequestedAll = 0;
             $totalAllocatedAll = 0;
@@ -701,14 +700,15 @@ class DashboardController extends Controller
             }
 
             // Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา 4 มิติ)
-            $routineCeiling = 0.00;
-            $projectsCeiling = 0.00;
-            $utilitiesCeiling = 0.00;
-            $contingencyCeiling = 0.00;
-
+            // เชื่อมโยงกรอบเพดานอัตโนมัติจากยอดประมาณการรายรับ/งบตั้งของระบบ (แนวทางที่ 1)
             $routineAllocated = (float)\App\Models\RoutineBudgetPlan::sum('allocated_amount');
             $routineSpent = (float)\App\Models\RoutineBudgetPlan::sum('spent_amount');
             $centralSpent = (float)\App\Models\CentralAllocation::sum('amount');
+
+            $routineCeiling = $routineAllocated;
+            $projectsCeiling = $totalRequestedAll > 0 ? $totalRequestedAll : $totalAllocatedAll;
+            $utilitiesCeiling = $centralSpent;
+            $contingencyCeiling = 0.00;
 
             $totalCeilings = $routineCeiling + $projectsCeiling + $utilitiesCeiling + $contingencyCeiling;
 

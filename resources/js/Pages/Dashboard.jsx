@@ -8186,14 +8186,19 @@ ${itemsListText}
 
                 {/* 1.5 Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา 4 มิติ) */}
                 {(() => {
+                    const fallbackRoutineCeiling = routineAllocated;
+                    const fallbackProjectsCeiling = parseFloat(pHead.globalAllocated || 0);
+                    const fallbackUtilitiesCeiling = totalCentralReceived;
+                    const fallbackTotalCeiling = fallbackRoutineCeiling + fallbackProjectsCeiling + fallbackUtilitiesCeiling;
+
                     const expProjections = institutionalExpenditureProjections || {
-                        total_projected_pool: 0.00,
+                        total_projected_pool: fallbackTotalCeiling,
                         categories: [
                             {
                                 id: 'routine_divisions',
                                 name: '1. งบดำเนินงานและภารกิจประจำ 4 ฝ่าย',
                                 description: 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
-                                projected_ceiling: 0.00,
+                                projected_ceiling: fallbackRoutineCeiling,
                                 requested_amount: routineAllocated,
                                 allocated_amount: routineAllocated,
                                 spent_amount: routineSpent,
@@ -8202,7 +8207,7 @@ ${itemsListText}
                                 id: 'strategic_projects',
                                 name: '2. งบโครงการตามแผนปฏิบัติราชการประจำปี',
                                 description: 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
-                                projected_ceiling: 0.00,
+                                projected_ceiling: fallbackProjectsCeiling,
                                 requested_amount: parseFloat(pHead.globalAllocated || 0),
                                 allocated_amount: parseFloat(pHead.globalAllocated || 0),
                                 spent_amount: parseFloat(pHead.globalSpent || 0),
@@ -8211,7 +8216,7 @@ ${itemsListText}
                                 id: 'utilities_overhead',
                                 name: '3. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
                                 description: 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
-                                projected_ceiling: 0.00,
+                                projected_ceiling: fallbackUtilitiesCeiling,
                                 requested_amount: totalCentralReceived,
                                 allocated_amount: totalCentralReceived,
                                 spent_amount: totalCentralReceived,
@@ -8227,7 +8232,7 @@ ${itemsListText}
                             },
                         ],
                         summary: {
-                            total_projected_ceiling: 0.00,
+                            total_projected_ceiling: fallbackTotalCeiling,
                             total_requested: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived),
                             total_allocated: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived),
                             total_spent: totalSpentAll,
@@ -8269,8 +8274,8 @@ ${itemsListText}
                                     const ceiling = cat.projected_ceiling || 0;
                                     const alloc = cat.allocated_amount || 0;
                                     const spent = cat.spent_amount || 0;
-                                    const remaining = ceiling > 0 ? (ceiling - spent) : 0;
-                                    const spentRate = ceiling > 0 ? Math.min(Math.round((spent / ceiling) * 100), 100) : 0;
+                                    const remaining = ceiling > 0 ? (ceiling - spent) : (alloc > 0 ? (alloc - spent) : 0);
+                                    const spentRate = ceiling > 0 ? Math.min(Math.round((spent / ceiling) * 100), 100) : (alloc > 0 ? Math.min(Math.round((spent / alloc) * 100), 100) : 0);
 
                                     return (
                                         <div key={cat.id || idx} className="bg-white rounded-2xl p-4 border border-purple-100/80 shadow-xs flex flex-col justify-between space-y-3">
