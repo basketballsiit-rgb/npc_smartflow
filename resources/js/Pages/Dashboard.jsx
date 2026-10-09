@@ -15795,7 +15795,7 @@ ${itemsListText}
         }
 
         // Filter projects that have been approved or in proposal stage
-        const trackingList = sourceProjects.map(p => {
+        const sourceTrackingProjects = sourceProjects.map(p => {
             const proc = p.procurement;
             const procStatus = p.procurement_status || proc?.status || 'pending';
             const loanStatus = p.loan_status || proc?.loan_status || 'pending';
@@ -16077,7 +16077,107 @@ ${itemsListText}
                 planLoanDoc: p.plan_loan_doc_number || proc?.plan_loan_doc_number || null,
                 unifiedDoc: p.plan_procurement_doc_number || proc?.plan_procurement_doc_number || p.plan_loan_doc_number || proc?.plan_loan_doc_number || p.procurement_number || proc?.procurement_number || null,
             };
-        }).filter(p => {
+        });
+
+        // External Travel Loans (กค. 101 ไปราชการ)
+        let sourceTravelLoans = Array.isArray(travelLoansList) ? travelLoansList : [];
+        if (!isPowerTrackingUser) {
+            const currentUserName = auth?.user?.name || '';
+            const currentUserCitizenId = auth?.user?.citizen_id;
+            const currentUserId = auth?.user?.id;
+            sourceTravelLoans = sourceTravelLoans.filter(tl => 
+                (currentUserCitizenId && tl.borrower_citizen_id === currentUserCitizenId) ||
+                (tl.borrower_user_id && tl.borrower_user_id === currentUserId) ||
+                (tl.borrower_name && tl.borrower_name.includes(currentUserName))
+            );
+        }
+
+        const travelLoanTrackingItems = sourceTravelLoans.map(tl => {
+            const loanAmt = parseFloat(tl.total_loan_amount) || 0;
+            const isLoanCleared = Boolean(tl.loan_status === 'cleared' || tl.cleared_at);
+            const isLoanFinReceived = Boolean(tl.loan_status === 'finance_received' || tl.finance_disbursed_at);
+            const isLoanPlanCut = Boolean(tl.loan_status === 'plan_cut' || tl.plan_cut_at);
+
+            let loanLocation = 'อยู่ที่งานแผนงาน (รอตัดยอดงบ)';
+            let loanHolder = 'เจ้าหน้าที่งานแผนงาน';
+            let loanStatusText = '🏢 รอแผนงานตัดยอดสัญญายืมเงิน (กค.101)';
+            let loanBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+            let loanCategory = 'at_plan';
+
+            if (isLoanCleared) {
+                loanLocation = 'งานการเงิน / ปิดสัญญาแล้ว';
+                loanHolder = tl.finance_payment_ref ? `เลขอ้างอิง: ${tl.finance_payment_ref}` : 'ปิดเคลียร์เงินยืมสมบูรณ์';
+                loanStatusText = `🎉 เคลียร์ปิดยอดสัญญายืมเงินแล้ว (฿${new Intl.NumberFormat('th-TH').format(loanAmt)})`;
+                loanBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
+                loanCategory = 'completed';
+            } else if (isLoanFinReceived) {
+                loanLocation = 'อยู่ที่ผู้ยืมเงิน (รับเงินยืมแล้ว)';
+                loanHolder = tl.borrower_name;
+                loanStatusText = '💵 การเงินโอนเงินยืมแล้ว (รอส่งใช้เงินยืม)';
+                loanBadgeClass = 'bg-purple-100 text-purple-900 border-purple-300 font-bold';
+                loanCategory = 'with_borrower';
+            } else if (isLoanPlanCut) {
+                loanLocation = 'อยู่ที่งานการเงิน (รอลงรับ/โอนเงินยืม)';
+                loanHolder = tl.plan_doc_number ? `เลขตัดยอดแผน: ${tl.plan_doc_number}` : 'เจ้าหน้าที่งานการเงิน';
+                loanStatusText = '⏳ แผนงานตัดยอดแล้ว (รอการเงินลงรับ)';
+                loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                loanCategory = 'at_finance';
+            }
+
+            const hasLoanAtFinance = Boolean(isLoanPlanCut || isLoanFinReceived || isLoanCleared);
+
+            return {
+                id: `travel_loan_${tl.id}`,
+                travel_loan_id: tl.id,
+                isTravelLoan: true,
+                rawLoan: tl,
+                title: tl.subject || `ขออนุมัติเดินทางไปราชการ (${tl.destination || ''})`,
+                destination: tl.destination,
+                user: { name: tl.borrower_name, position: tl.borrower_position },
+                department: { name: tl.borrower_department || 'วิทยาลัยสารพัดช่างพิษณุโลก' },
+                proposer_name: tl.borrower_name,
+                allocated_budget: loanAmt,
+                estimated_budget: loanAmt,
+                loanAmount: loanAmt,
+                totalProcAmount: 0,
+                procSets: [],
+                status: isLoanCleared ? 'completed' : 'approved',
+                hasLoanComponent: true,
+                hasProcComponent: false,
+                isLoanPlanCut,
+                isLoanFinReceived,
+                isLoanCleared,
+                hasLoanAtFinance,
+                hasProcAtFinance: false,
+                isAllFinCompleted: isLoanCleared,
+                loanLocation,
+                loanHolder,
+                loanStatusText,
+                loanBadgeClass,
+                loanCategory,
+                procLocation: null,
+                procHolder: null,
+                procStatusText: null,
+                procBadgeClass: '',
+                procCategory: null,
+                isProcPlanCut: false,
+                isProcReceived: false,
+                isProcForwardedToFin: false,
+                isProcDisbursed: false,
+                plan_loan_doc_number: tl.plan_doc_number || null,
+                finance_doc_number: tl.finance_doc_number || null,
+                finance_disbursed_amount: tl.finance_disbursed_amount || null,
+                finance_payment_ref: tl.finance_payment_ref || null,
+                prNumber: null,
+                planProcDoc: null,
+                planLoanDoc: tl.plan_doc_number || null,
+                unifiedDoc: tl.plan_doc_number || tl.contract_no || null,
+                created_at: tl.created_at,
+                updated_at: tl.updated_at,
+            };
+        });
+
+        const trackingList = [...sourceTrackingProjects, ...travelLoanTrackingItems].filter(p => {
             if (isStrictFinanceUser) {
                 return p.hasLoanAtFinance || p.hasProcAtFinance;
             }
@@ -16091,6 +16191,7 @@ ${itemsListText}
         const countFinCompleted = trackingList.filter(p => p.isAllFinCompleted).length;
 
         // General Metrics count
+        const countPlan = trackingList.filter(p => p.hasLoanComponent && p.loanCategory === 'at_plan').length;
         const countPreliminary = trackingList.filter(p => p.status === 'preliminary').length;
         const countBudgetApproved = trackingList.filter(p => p.status === 'budget_approved').length;
 
@@ -16121,6 +16222,9 @@ ${itemsListText}
                 if (docTrackingFilter === 'fin_proc_pay' && !(p.hasProcAtFinance && !p.isProcDisbursed)) return false;
                 if (docTrackingFilter === 'fin_completed' && !p.isAllFinCompleted) return false;
             } else {
+                if (docTrackingFilter === 'at_plan' && !(
+                    p.hasLoanComponent && p.loanCategory === 'at_plan'
+                )) return false;
                 if (docTrackingFilter === 'preliminary' && p.status !== 'preliminary') return false;
                 if (docTrackingFilter === 'budget_approved' && p.status !== 'budget_approved') return false;
                 if (docTrackingFilter === 'at_procurement' && !(
@@ -16150,7 +16254,8 @@ ${itemsListText}
                 const planLoan = (p.planLoanDoc || '').toLowerCase();
                 const uniDoc = (p.unifiedDoc || '').toLowerCase();
                 const finDoc = (p.finance_doc_number || '').toLowerCase();
-                return title.includes(q) || proposer.includes(q) || dept.includes(q) || pr.includes(q) || planProc.includes(q) || planLoan.includes(q) || uniDoc.includes(q) || finDoc.includes(q);
+                const dest = (p.destination || '').toLowerCase();
+                return title.includes(q) || proposer.includes(q) || dept.includes(q) || pr.includes(q) || planProc.includes(q) || planLoan.includes(q) || uniDoc.includes(q) || finDoc.includes(q) || dest.includes(q);
             }
             return true;
         });
@@ -16349,21 +16454,31 @@ return (
                     </div>
                 </div>
 
-                {/* Proposer KPI Cards (Merged from proposals tab) */}
-                {!isStrictFinanceUser && teacherData && (
+                {/* Proposer / Tracking KPI Cards */}
+                {!isStrictFinanceUser && (
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
-                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">จำนวนโครงการที่เสนอ</span>
-                            <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">{teacherData.proposalsCount || 0} โครงการ</p>
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">{isPowerTrackingUser ? 'จำนวนรายการทั้งหมด' : 'จำนวนโครงการที่เสนอ'}</span>
+                            <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
+                                {isPowerTrackingUser ? trackingList.length : (teacherData?.proposalsCount || 0)} รายการ
+                            </p>
                         </div>
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
-                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">โครงการที่ผ่านอนุมัติงบ</span>
-                            <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">{teacherData.approvedCount || 0} โครงการ</p>
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">{isPowerTrackingUser ? 'รายการที่ผ่านการอนุมัติ/มีงบ' : 'โครงการที่ผ่านอนุมัติงบ'}</span>
+                            <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
+                                {isPowerTrackingUser 
+                                    ? trackingList.filter(p => (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || parseFloat(p.loanAmount) || parseFloat(p.totalProcAmount) || 0) > 0).length
+                                    : (teacherData?.approvedCount || 0)} รายการ
+                            </p>
                         </div>
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
                             <span className="text-xs font-bold uppercase tracking-wider text-purple-700">วงเงินงบประมาณรวม</span>
                             <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
-                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(teacherData.totalBudget || 0)}
+                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(
+                                    isPowerTrackingUser 
+                                        ? trackingList.reduce((sum, p) => sum + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || parseFloat(p.loanAmount) || parseFloat(p.totalProcAmount) || 0), 0)
+                                        : (teacherData?.totalBudget || 0)
+                                )}
                             </p>
                         </div>
                     </div>
@@ -16410,6 +16525,7 @@ return (
                         ) : (
                             [
                                 { id: 'all', label: `ทั้งหมด (${trackingList.length})` },
+                                ...(countPlan > 0 ? [{ id: 'at_plan', label: `✂️ อยู่ที่งานแผนงาน (รอตัดงบ) (${countPlan})` }] : []),
                                 ...(countPreliminary > 0 ? [{ id: 'preliminary', label: `💡 รอจัดสรรงบ (${countPreliminary})` }] : []),
                                 ...(countBudgetApproved > 0 ? [{ id: 'budget_approved', label: `📝 รอทำฉบับเต็ม (${countBudgetApproved})` }] : []),
                                 { id: 'at_procurement', label: `📦 อยู่ที่งานพัสดุ (${countProcurement})` },
@@ -16478,7 +16594,11 @@ return (
 
                 {/* Tracking View: Kanban Board vs Table */}
                 {trackingViewMode === 'kanban' ? (
-                    <WorkflowKanbanBoard items={filtered} onOpenDocDetails={setSelectedFinanceDocDetails} />
+                    <WorkflowKanbanBoard 
+                        items={filtered} 
+                        onOpenDocDetails={setSelectedFinanceDocDetails} 
+                        onOpenPlanCut={handleOpenPlanCutModal}
+                    />
                 ) : (
                     <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
                         <div className="overflow-x-auto">
@@ -16516,7 +16636,7 @@ return (
                                                 <div className="space-y-0.5">
                                                     <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-950 font-mono font-bold text-xs shadow-2xs">
                                                         <span className="text-indigo-700 underline">
-                                                            {item.plan_loan_doc_number || item.plan_procurement_doc_number || item.unifiedDoc || 'รอตัดยอดจากแผน'}
+                                                            {item.plan_loan_doc_number || item.plan_procurement_doc_number || item.unifiedDoc || (item.isTravelLoan ? 'รอตัดยอดสัญญายืม' : 'รอตัดยอดจากแผน')}
                                                         </span>
                                                     </div>
                                                     <div className="text-[10px] text-slate-400 font-medium">
@@ -16528,16 +16648,32 @@ return (
                                             {/* คอลัมน์ที่ 2: ชื่อโครงการ (แสดงเต็มไม่เกิน 3 บรรทัด ขยายคอลัมน์ออกไป) & ผู้รับผิดชอบ */}
                                             <td className="px-3 py-2.5 align-top">
                                                 <div className="space-y-1">
-                                                    <Link
-                                                        href={getSecureProjectShowUrl(item.id)}
-                                                        className="text-xs sm:text-sm font-bold text-purple-950 hover:text-purple-700 transition line-clamp-3 leading-snug break-words"
-                                                        title={item.title}
-                                                    >
-                                                        {item.title}
-                                                    </Link>
+                                                    {item.isTravelLoan ? (
+                                                        <div className="space-y-0.5">
+                                                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 text-[11px] font-black border border-sky-300">
+                                                                <span>✈️</span> สัญญายืมเงิน กค.101 ไปราชการ
+                                                            </div>
+                                                            <div className="text-xs sm:text-sm font-bold text-slate-900 leading-snug break-words">
+                                                                {item.title}
+                                                            </div>
+                                                            {item.destination && (
+                                                                <div className="text-[11px] text-slate-600">
+                                                                    📍 สถานที่: <span className="font-semibold text-slate-800">{item.destination}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <Link
+                                                            href={getSecureProjectShowUrl(item.id)}
+                                                            className="text-xs sm:text-sm font-bold text-purple-950 hover:text-purple-700 transition line-clamp-3 leading-snug break-words"
+                                                            title={item.title}
+                                                        >
+                                                            {item.title}
+                                                        </Link>
+                                                    )}
 
                                                     <div className="flex flex-wrap items-center gap-x-1.5 text-[11px] text-slate-600 font-normal">
-                                                        <span className="text-slate-700">👤 ผู้รับผิดชอบ: <b className="font-semibold">{item.user?.name || item.proposer_name || 'ไม่ระบุ'}</b></span>
+                                                        <span className="text-slate-700">👤 ผู้รับผิดชอบ/ผู้ยืม: <b className="font-semibold">{item.user?.name || item.proposer_name || 'ไม่ระบุ'}</b></span>
                                                         {item.department?.name && (
                                                             <>
                                                                 <span className="text-slate-300">•</span>
@@ -16564,19 +16700,35 @@ return (
                                             {/* คอลัมน์ที่ 3: สัญญายืม (โชว์แค่ตัวเลข ขนาดเล็กลง พออ่านได้ กดเพื่อเปิดดูเอกสาร) */}
                                             <td className="px-3 py-2.5 align-top text-right whitespace-nowrap">
                                                 {item.hasLoanComponent && item.loanAmount > 0 ? (
-                                                    <a
-                                                        href={route('procurements.download_document', [item.id, 'loan_contract'])}
-                                                        target="_blank"
-                                                        className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-amber-50/90 hover:bg-amber-100 border border-amber-300 text-amber-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
-                                                        title="คลิกที่ตัวเลขเพื่อเปิดดูสัญญายืมเงิน แบบ กค. 101"
-                                                    >
-                                                        <span className="text-xs sm:text-sm font-bold text-amber-950 font-mono underline decoration-amber-400 group-hover:text-amber-700">
-                                                            ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.loanAmount)}
-                                                        </span>
-                                                        <span className="text-[10px] text-amber-700 font-medium group-hover:underline">
-                                                            📄 สัญญายืม ➔
-                                                        </span>
-                                                    </a>
+                                                    item.isTravelLoan ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenPlanCutModal(item.rawLoan)}
+                                                            className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-sky-50/90 hover:bg-sky-100 border border-sky-300 text-sky-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
+                                                            title="คลิกเพื่อจัดการตัดยอดงบสัญญายืมเงิน กค. 101"
+                                                        >
+                                                            <span className="text-xs sm:text-sm font-bold text-sky-950 font-mono underline decoration-sky-400 group-hover:text-sky-700">
+                                                                ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.loanAmount)}
+                                                            </span>
+                                                            <span className="text-[10px] text-sky-700 font-medium group-hover:underline">
+                                                                ✈️ ยืมไปราชการ ➔
+                                                            </span>
+                                                        </button>
+                                                    ) : (
+                                                        <a
+                                                            href={route('procurements.download_document', [item.id, 'loan_contract'])}
+                                                            target="_blank"
+                                                            className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-amber-50/90 hover:bg-amber-100 border border-amber-300 text-amber-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
+                                                            title="คลิกที่ตัวเลขเพื่อเปิดดูสัญญายืมเงิน แบบ กค. 101"
+                                                        >
+                                                            <span className="text-xs sm:text-sm font-bold text-amber-950 font-mono underline decoration-amber-400 group-hover:text-amber-700">
+                                                                ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.loanAmount)}
+                                                            </span>
+                                                            <span className="text-[10px] text-amber-700 font-medium group-hover:underline">
+                                                                📄 สัญญายืม ➔
+                                                            </span>
+                                                        </a>
+                                                    )
                                                 ) : (
                                                     <span className="text-slate-400 font-mono text-xs">
                                                         -
@@ -16649,8 +16801,32 @@ return (
                                             {/* Action */}
                                             <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
                                                 <div className="flex flex-col items-center gap-1.5">
-                                                    {/* 1. Planning Staff Actions: Cut budget for procurement and/or loan */}
-                                                    {isPlanStaff && (
+                                                    {item.isTravelLoan ? (
+                                                        isPlanStaff && (
+                                                            item.plan_loan_cut_at ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenPlanCutModal(item.rawLoan)}
+                                                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-black text-xs hover:bg-emerald-100 transition cursor-pointer"
+                                                                    title="ดูรายละเอียดการตัดยอดงบ"
+                                                                >
+                                                                    <span>✓</span> ดูตัดยอดแล้ว
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenPlanCutModal(item.rawLoan)}
+                                                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-xs hover:scale-105 active:scale-95 transition cursor-pointer"
+                                                                    title="เปิดฟอร์มแผนงานตัดยอดงบประมาณสัญญายืมเงิน"
+                                                                >
+                                                                    <span>✂️</span> ตัดยอดงบ ➔
+                                                                </button>
+                                                            )
+                                                        )
+                                                    ) : (
+                                                        <>
+                                                            {/* 1. Planning Staff Actions: Cut budget for procurement and/or loan */}
+                                                            {isPlanStaff && (
                                                         <>
                                                             {(!item.plan_procurement_cut_at || !item.plan_loan_cut_at) && (
                                                                 <button
@@ -16959,6 +17135,8 @@ return (
                                                                     </Link>
                                                                 </>
                                                             )}
+                                                        </>
+                                                    )}
                                                         </>
                                                     )}
                                                 </div>

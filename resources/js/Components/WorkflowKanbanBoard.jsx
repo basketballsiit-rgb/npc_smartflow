@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Link, router } from '@inertiajs/react';
 
-export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
+export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails, onOpenPlanCut }) {
     // Navigation & View States
     const [activeStage, setActiveStage] = useState('all'); // 'all' or stage id
     const [viewLayout, setViewLayout] = useState('kanban'); // 'kanban' or 'grid'
@@ -147,6 +147,15 @@ export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
             const status = item.status;
             const step = parseInt(item.current_approval_step || 1, 10);
 
+            if (item.isTravelLoan) {
+                if (item.isLoanCleared) {
+                    cols[5].items.push(item);
+                } else {
+                    cols[4].items.push(item);
+                }
+                return;
+            }
+
             if (status === 'preliminary') {
                 cols[0].items.push(item);
             } else if (status === 'draft' || status === 'budget_approved') {
@@ -205,7 +214,21 @@ export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
         let currentHolderText = 'ผู้เสนอโครงการ';
         let holderBg = 'bg-slate-100 text-slate-700 border-slate-200';
 
-        if (colId === 'preliminary') {
+        if (item.isTravelLoan) {
+            if (!item.isLoanPlanCut) {
+                currentHolderText = 'งานแผนงาน (รอตัดยอดสัญญายืมเงิน)';
+                holderBg = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+            } else if (item.isLoanCleared) {
+                currentHolderText = 'เคลียร์ปิดยอดแล้ว (กค.101)';
+                holderBg = 'bg-teal-100 text-teal-900 border-teal-300 font-bold';
+            } else if (item.isLoanFinReceived) {
+                currentHolderText = `${item.user?.name || 'ผู้ยืมเงิน'} (รับเงินยืมแล้ว)`;
+                holderBg = 'bg-purple-100 text-purple-900 border-purple-300 font-bold';
+            } else {
+                currentHolderText = 'งานการเงิน (รอโอนเงินยืม กค.101)';
+                holderBg = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+            }
+        } else if (colId === 'preliminary') {
             currentHolderText = 'งานแผนงาน (พิจารณาคำขอ)';
             holderBg = 'bg-amber-100 text-amber-900 border-amber-300';
         } else if (colId === 'draft') {
@@ -266,14 +289,35 @@ export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
 
                 {/* Card Title */}
                 <div>
-                    <a
-                        href={getSecureProjectShowUrl(item.id)}
-                        onClick={(e) => navigateToProject(e, item.id)}
-                        className="font-black text-slate-900 hover:text-purple-700 text-xs sm:text-sm line-clamp-2 leading-snug transition-colors cursor-pointer block"
-                        title={item.title}
-                    >
-                        {item.title}
-                    </a>
+                    {item.isTravelLoan ? (
+                        <div>
+                            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                                <span className="px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-900 border border-purple-200 text-[9px] font-bold">
+                                    ✈️ กค.101 ไปราชการ
+                                </span>
+                                {item.destination && (
+                                    <span className="text-[10px] text-slate-500 truncate max-w-[140px]">
+                                        {item.destination}
+                                    </span>
+                                )}
+                            </div>
+                            <span
+                                className="font-black text-slate-900 text-xs sm:text-sm line-clamp-2 leading-snug block"
+                                title={item.title}
+                            >
+                                {item.title}
+                            </span>
+                        </div>
+                    ) : (
+                        <a
+                            href={getSecureProjectShowUrl(item.id)}
+                            onClick={(e) => navigateToProject(e, item.id)}
+                            className="font-black text-slate-900 hover:text-purple-700 text-xs sm:text-sm line-clamp-2 leading-snug transition-colors cursor-pointer block"
+                            title={item.title}
+                        >
+                            {item.title}
+                        </a>
+                    )}
                     <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5 flex-wrap">
                         <span>👤 {item.user?.name || item.responsible_person || 'ผู้เสนอ'}</span>
                         {item.department?.name && (
@@ -306,25 +350,52 @@ export default function WorkflowKanbanBoard({ items = [], onOpenDocDetails }) {
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                        {item.hasLoanComponent && item.loanAmount > 0 && (
-                            <a
-                                href={getSecureUrl(route('procurements.download_document', [item.id, 'loan_contract']))}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] transition"
-                                title="เปิดสัญญายืม กค. 101"
-                            >
-                                กค.101
-                            </a>
-                        )}
+                        {item.isTravelLoan ? (
+                            <>
+                                {!item.isLoanPlanCut && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpenPlanCut && onOpenPlanCut(item.rawLoan)}
+                                        className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-[11px] shadow-2xs transition inline-flex items-center gap-1 cursor-pointer"
+                                        title="แผนงานตัดยอดสัญญายืมเงิน กค.101"
+                                    >
+                                        <span>✂️ ตัดยอดงบ ➔</span>
+                                    </button>
+                                )}
+                                {item.isLoanPlanCut && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpenPlanCut && onOpenPlanCut(item.rawLoan)}
+                                        className="px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 font-bold text-[10px] transition cursor-pointer"
+                                        title="ดู/แก้ไขข้อมูลตัดยอด"
+                                    >
+                                        ดูตัดยอด
+                                    </button>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                {item.hasLoanComponent && item.loanAmount > 0 && (
+                                    <a
+                                        href={getSecureUrl(route('procurements.download_document', [item.id, 'loan_contract']))}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-[10px] transition"
+                                        title="เปิดสัญญายืม กค. 101"
+                                    >
+                                        กค.101
+                                    </a>
+                                )}
 
-                        <a
-                            href={getSecureProjectShowUrl(item.id)}
-                            onClick={(e) => navigateToProject(e, item.id)}
-                            className="px-2.5 py-1 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-bold text-[11px] shadow-2xs transition inline-block cursor-pointer"
-                        >
-                            ดูงาน ➔
-                        </a>
+                                <a
+                                    href={getSecureProjectShowUrl(item.id)}
+                                    onClick={(e) => navigateToProject(e, item.id)}
+                                    className="px-2.5 py-1 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-bold text-[11px] shadow-2xs transition inline-block cursor-pointer"
+                                >
+                                    ดูงาน ➔
+                                </a>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
