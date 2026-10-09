@@ -866,11 +866,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'budgets' })}
                                     className={getSubLinkClass(url.includes('tab=budgets'))}
-                                    title="งบ บกศ. & ประมาณการใช้จ่าย"
+                                    title="สรุปงบจัดสรรจากต้นสังกัด เทียบแผนโครงการ & ประมาณการรายจ่ายสถานศึกษา 4 มิติ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=budgets'), 'text-amber-300')}>└─</span>
                                     <span className="text-sm">💰</span>
-                                    {isSidebarOpen && <span>งบ บกศ. & ประมาณการใช้จ่าย</span>}
+                                    {isSidebarOpen && <span>งบจัดสรรต้นสังกัด & กรอบรายจ่าย 4 มิติ</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'reviews' })}
@@ -993,11 +993,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'budgets' })}
                                     className={getSubLinkClass(url.includes('tab=budgets'))}
-                                    title="ประมาณการรายจ่ายสถานศึกษา 4 มิติ"
+                                    title="สรุปงบจัดสรรจากต้นสังกัด เทียบแผนโครงการ & ประมาณการรายจ่ายสถานศึกษา 4 มิติ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=budgets'), 'text-violet-300')}>└─</span>
                                     <span className="text-sm">💰</span>
-                                    {isSidebarOpen && <span>ประมาณการรายจ่าย 4 มิติ</span>}
+                                    {isSidebarOpen && <span>งบจัดสรรต้นสังกัด & กรอบรายจ่าย 4 มิติ</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'action_plan_report' })}
@@ -1274,7 +1274,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                             <span>📊</span> ภาพรวมคำของบแยก 4 ฝ่าย
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>💰</span> งบ บกศ. & ประมาณการ
+                                            <span>💰</span> งบจัดสรรต้นสังกัด & กรอบรายจ่าย 4 มิติ
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🔍</span> ตรวจสอบแผน & อนุมัติ
