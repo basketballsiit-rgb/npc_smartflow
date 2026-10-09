@@ -721,7 +721,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                         <option value="">-- เลือกแหล่งเงิน --</option>
                                         {fundingSources.map(source => (
                                             <option key={source.id} value={source.id}>
-                                                {source.name} {source.budget_number ? `(${source.budget_number})` : ''}
+                                                {source.name}
                                             </option>
                                         ))}
                                     </select>
