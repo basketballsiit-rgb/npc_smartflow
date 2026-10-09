@@ -16214,6 +16214,29 @@ ${itemsListText}
             (p.hasLoanComponent || p.hasProcComponent)
         ).length;
 
+        // Action Required Items (Pending immediate action by current staff role)
+        const actionRequiredTrackingItems = trackingList.filter(p => {
+            if (isPlanStaff || isAdmin) {
+                if (p.isTravelLoan) {
+                    return !p.plan_loan_cut_at || p.loanCategory === 'at_plan';
+                }
+                if ((p.status === 'approved' || p.procurement_status === 'approved') && (!p.plan_procurement_cut_at || !p.plan_loan_cut_at)) {
+                    return true;
+                }
+            }
+            if (isProcurementStaff && !isPlanStaff) {
+                if (p.hasProcComponent && p.procCategory === 'at_procurement') {
+                    return true;
+                }
+            }
+            if (isFinanceStaff && !isPlanStaff) {
+                if ((p.hasLoanAtFinance && !p.isLoanFinReceived) || (p.isLoanFinReceived && !p.isLoanCleared) || (p.hasProcAtFinance && !p.isProcDisbursed)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
         // Filtered list
         const filtered = trackingList.filter(p => {
             if (isStrictFinanceUser) {
@@ -16498,6 +16521,147 @@ return (
                     completedLabel: "เสร็จ",
                     spentSublabel: "รวมยอดชุดจัดซื้อจัดจ้าง & สัญญายืมเงินที่ปิดยอดแล้ว"
                 })}
+
+                {/* Urgent Action Banner (Priority Highlighting / Action Required) */}
+                {actionRequiredTrackingItems.length > 0 && (
+                    <div className="rounded-3xl border-2 border-amber-300 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-purple-500/10 p-5 sm:p-6 shadow-md space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-200/80 pb-3">
+                            <div className="flex items-center gap-2.5">
+                                <span className="text-2xl animate-bounce">⚡</span>
+                                <div>
+                                    <h3 className="text-base sm:text-lg font-black text-amber-950 flex items-center gap-2">
+                                        <span>รายการรอคุณดำเนินการเร่งด่วน (Action Required)</span>
+                                        <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-xs font-black shadow-xs">
+                                            {actionRequiredTrackingItems.length} รายการเร่งด่วน
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs text-amber-800 mt-0.5">
+                                        สัญญายืมเงิน กค.101 และเอกสารจัดซื้อจัดจ้างที่ส่งเข้ามาถึงงานแผนงาน พร้อมให้ท่านบันทึกตัดยอดงบประมาณได้ทันที
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setDocTrackingFilter(docTrackingFilter === 'at_plan' ? 'all' : 'at_plan')}
+                                className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-xs transition cursor-pointer"
+                            >
+                                {docTrackingFilter === 'at_plan' ? 'แสดงทั้งหมด ➔' : 'กรองเฉพาะรายการรอตัดงบ ➔'}
+                            </button>
+                        </div>
+
+                        {/* Urgent Cards Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                            {actionRequiredTrackingItems.map(item => (
+                                <div
+                                    key={`urgent-${item.id}`}
+                                    className="rounded-2xl border-2 border-amber-300/80 bg-white p-4 shadow-xs hover:shadow-md hover:border-amber-400 transition flex flex-col justify-between gap-3 relative overflow-hidden group"
+                                >
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-amber-400/10 rounded-bl-full pointer-events-none" />
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                                item.isTravelLoan
+                                                    ? 'bg-sky-100 text-sky-900 border border-sky-300'
+                                                    : 'bg-indigo-100 text-indigo-900 border border-indigo-300'
+                                            }`}>
+                                                {item.isTravelLoan ? '✈️ สัญญายืมเงิน กค.101 ไปราชการ' : '📦 ชุดจัดซื้อจัดจ้าง / สัญญายืม'}
+                                            </span>
+                                            <span className="font-mono text-xs sm:text-sm font-black text-amber-950">
+                                                ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
+                                                    item.loanAmount || item.totalProcAmount || item.allocated_budget || item.estimated_budget || 0
+                                                )}
+                                            </span>
+                                        </div>
+
+                                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 line-clamp-2 leading-snug" title={item.title}>
+                                            {item.title}
+                                        </h4>
+
+                                        <div className="text-[11px] text-slate-600 space-y-0.5">
+                                            <div className="flex items-center gap-1">
+                                                <span>👤 ผู้ยืม/ผู้เสนอ:</span>
+                                                <b className="text-slate-800">{item.user?.name || item.proposer_name || 'ไม่ระบุ'}</b>
+                                            </div>
+                                            {item.destination && (
+                                                <div className="flex items-center gap-1 text-slate-500">
+                                                    <span>📍 สถานที่:</span>
+                                                    <span className="font-semibold text-slate-700 truncate">{item.destination}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                                        {item.isTravelLoan ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOpenPlanCutModal(item.rawLoan)}
+                                                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black shadow-xs hover:scale-102 active:scale-98 transition cursor-pointer"
+                                                title="คลิกเพื่อบันทึกตัดยอดงบประมาณสัญญายืมเงินทันที"
+                                            >
+                                                <span>✂️</span> แผนงานตัดยอดงบประมาณ ➔
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const today = new Date().toISOString().split('T')[0];
+                                                    const defaultDoc = item.plan_procurement_doc_number || item.plan_loan_doc_number || nextUnifiedDocNumber || ('ผง. ' + item.id + '/' + (new Date().getFullYear() + 543));
+                                                    Swal.fire({
+                                                        title: '📊 แผนงานตัดยอดงบประมาณ',
+                                                        html: `
+                                                            <div class="text-left text-xs text-slate-700 space-y-3 font-sans">
+                                                                <p class="text-slate-600 leading-relaxed">
+                                                                    บันทึกการตัดยอดงบประมาณโครงการ <strong>"${item.title}"</strong> 
+                                                                    (วงเงิน ฿${new Intl.NumberFormat('th-TH').format(item.allocated_budget || item.estimated_budget || 0)})
+                                                                </p>
+                                                                <div>
+                                                                    <label class="block font-bold mb-1 text-slate-800">เลือกรายการที่ต้องการตัดยอด:</label>
+                                                                    <select id="swal-plan-target-urgent" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold">
+                                                                        <option value="all" selected>ตัดยอดทั้ง 2 ส่วน (ส่งพัสดุ + ส่งการเงิน)</option>
+                                                                        <option value="procurement">เฉพาะชุดจัดซื้อจัดจ้าง (4 ฉบับ) ➔ ส่งต่อพัสดุ</option>
+                                                                        <option value="loan">เฉพาะสัญญายืมเงิน (กค. 101) ➔ ส่งต่อการเงิน</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div>
+                                                                    <label class="block font-bold mb-1 text-slate-800">เลขที่หนังสือตัดยอดแผนงาน:</label>
+                                                                    <input id="swal-plan-doc-urgent" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${defaultDoc}" />
+                                                                </div>
+                                                                <div>
+                                                                    <label class="block font-bold mb-1 text-slate-800">วันที่ตัดยอดงบประมาณ:</label>
+                                                                    <input id="swal-plan-date-urgent" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${today}" />
+                                                                </div>
+                                                            </div>
+                                                        `,
+                                                        showCancelButton: true,
+                                                        confirmButtonText: '✓ ยืนยันตัดยอดงบประมาณ',
+                                                        cancelButtonText: 'ยกเลิก',
+                                                        confirmButtonColor: '#4f46e5',
+                                                        preConfirm: () => ({
+                                                            target: document.getElementById('swal-plan-target-urgent').value,
+                                                            plan_doc_number: document.getElementById('swal-plan-doc-urgent').value,
+                                                            cut_date: document.getElementById('swal-plan-date-urgent').value
+                                                        })
+                                                    }).then((res) => {
+                                                        if (res.isConfirmed) {
+                                                            router.post(route('procurements.plan_cut_budget', item.id), res.value, {
+                                                                onSuccess: () => Swal.fire('สำเร็จ!', 'งานแผนงานตัดยอดงบประมาณเรียบร้อยแล้ว', 'success')
+                                                            });
+                                                        }
+                                                    });
+                                                }}
+                                                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-black shadow-xs hover:scale-102 active:scale-98 transition cursor-pointer"
+                                                title="แผนงานตัดยอดและส่งต่อให้พัสดุ/การเงิน"
+                                            >
+                                                <span>📊</span> แผนตัดยอดงบ ➔
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {/* Filter and Search Bar */}
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
