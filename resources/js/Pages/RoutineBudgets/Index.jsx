@@ -4,7 +4,9 @@ import { Head, useForm, router } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 
 export default function Index({ auth, routinePlans, departments, fundingSources = [], currentFiscalYear, allUsers, initialTab = 'dashboard' }) {
-    const isPlanHead = auth.user.role?.name === 'admin' || auth.user.role?.name === 'plan_head' || auth.user.is_plan_head;
+    const userRoleName = auth.user?.role?.name || (typeof auth.user?.role === 'string' ? auth.user.role : '');
+    const isAdmin = Boolean(auth.user?.is_admin || userRoleName === 'admin');
+    const isPlanHead = Boolean(isAdmin || auth.user?.is_plan_head || userRoleName === 'plan_head' || auth.user?.is_plan_staff || userRoleName === 'plan_staff');
     
     // Check url search params as well
     const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;

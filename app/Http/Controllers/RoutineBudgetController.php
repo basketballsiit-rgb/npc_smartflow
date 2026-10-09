@@ -18,7 +18,7 @@ class RoutineBudgetController extends Controller
         $user = auth()->user();
         $fiscalYear = SystemSetting::where('key', 'current_fiscal_year')->value('value') ?? date('Y') + 543;
 
-        if ($user->isAdmin() || $user->isPlanHead()) {
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff()) {
             $routinePlans = RoutineBudgetPlan::with(['department', 'procurements.items', 'procurements.committees', 'fundingSource'])->latest()->get();
         } else {
             $deptIds = $user->getResponsibleDepartmentIds();
@@ -44,7 +44,7 @@ class RoutineBudgetController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
@@ -72,7 +72,7 @@ class RoutineBudgetController extends Controller
     public function update(Request $request, RoutineBudgetPlan $routineBudget)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
@@ -97,7 +97,7 @@ class RoutineBudgetController extends Controller
     public function destroy(RoutineBudgetPlan $routineBudget)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
