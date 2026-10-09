@@ -7948,11 +7948,15 @@ ${itemsListText}
                                         {(planHeadData?.fundingSources || [
                                             { id: 1, name: 'ปวช.' },
                                             { id: 2, name: 'ปวส.' },
-                                            { id: 3, name: 'ระยะสั้น' },
-                                            { id: 4, name: 'งบทวิศึกษา' },
-                                            { id: 5, name: 'อุดหนุนเพื่อการจัดการฯ' },
-                                            { id: 6, name: 'อุดหนุนพัฒนาฯ' },
-                                            { id: 7, name: 'บกศ.' },
+                                            { id: 3, name: 'ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)' },
+                                            { id: 4, name: 'ระยะสั้น (ค่าสาธารณูปโภค)' },
+                                            { id: 5, name: 'ทวิศึกษา' },
+                                            { id: 6, name: 'อุดหนุนเพื่อการจัดการ' },
+                                            { id: 7, name: 'อุดหนุนพัฒนา' },
+                                            { id: 8, name: 'อุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือ)' },
+                                            { id: 9, name: 'อุดหนุนเรียนฟรี 15 ปี (อุปกรณ์การเรียน)' },
+                                            { id: 10, name: 'อุดหนุนเรียนฟรี 15 ปี (เครื่องแบบนักเรียน)' },
+                                            { id: 11, name: 'บกศ.' },
                                         ]).map(s => {
                                             const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
                                             return <option key={s.id} value={s.id} className="text-slate-900 bg-white">{displayName}</option>;
@@ -9299,19 +9303,23 @@ ${itemsListText}
                 if (idNum === 1) return 'pvc';
                 if (idNum === 2) return 'pvs';
                 if (idNum === 3) return 'short_remun';
-                if (idNum === 4) return 'dual';
-                if (idNum === 5) return 'manage';
-                if (idNum === 6) return 'develop';
-                if (idNum === 7) return 'bkso';
+                if (idNum === 4) return 'short_util';
+                if (idNum === 5) return 'dual';
+                if (idNum === 6) return 'manage';
+                if (idNum === 7) return 'develop';
+                if (idNum === 8) return 'free15_book';
+                if (idNum === 9) return 'free15_equip';
+                if (idNum === 10) return 'free15_uniform';
+                if (idNum === 11) return 'bkso';
             }
             if (!name) return null;
             const n = String(name).toLowerCase();
             if (n.includes('หนังสือ')) return 'free15_book';
             if (n.includes('อุปกรณ์')) return 'free15_equip';
             if (n.includes('เครื่องแบบ')) return 'free15_uniform';
-            if (n.includes('เรียนฟรี') || n.includes('15 ปี') || n.includes('15ปี')) return 'free15_book';
             if (n.includes('สาธารณูปโภค')) return 'short_util';
             if (n.includes('ระยะสั้น') || n.includes('short_course')) return 'short_remun';
+            if (n.includes('เรียนฟรี') || n.includes('15 ปี') || n.includes('15ปี')) return 'free15_book';
             if (n.includes('ปวช') || n.includes('ป.ว.ช') || n.includes('vec_cert')) return 'pvc';
             if (n.includes('ปวส') || n.includes('ป.ว.ส') || n.includes('vec_dip')) return 'pvs';
             if (n.includes('ทวิศึกษา') || n.includes('dual_edu') || n.includes('ทวิ')) return 'dual';
@@ -21077,7 +21085,7 @@ return (
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block mb-1 text-purple-900 font-bold">แหล่งเงินทุน 7 หมวด *</label>
+                                            <label className="block mb-1 text-purple-900 font-bold">แหล่งเงินงบประมาณ (11 หมวดตามแผนปฏิบัติราชการ) *</label>
                                             <select
                                                 value={directAllocateForm.funding_source_id}
                                                 onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, funding_source_id: Number(e.target.value) })}
@@ -21086,11 +21094,15 @@ return (
                                                 {(planHeadData?.fundingSources || [
                                                     { id: 1, name: 'ปวช.' },
                                                     { id: 2, name: 'ปวส.' },
-                                                    { id: 3, name: 'ระยะสั้น' },
-                                                    { id: 4, name: 'งบทวิศึกษา' },
-                                                    { id: 5, name: 'อุดหนุนเพื่อการจัดการฯ' },
-                                                    { id: 6, name: 'อุดหนุนพัฒนาฯ' },
-                                                    { id: 7, name: 'บกศ.' },
+                                                    { id: 3, name: 'ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)' },
+                                                    { id: 4, name: 'ระยะสั้น (ค่าสาธารณูปโภค)' },
+                                                    { id: 5, name: 'ทวิศึกษา' },
+                                                    { id: 6, name: 'อุดหนุนเพื่อการจัดการ' },
+                                                    { id: 7, name: 'อุดหนุนพัฒนา' },
+                                                    { id: 8, name: 'อุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือ)' },
+                                                    { id: 9, name: 'อุดหนุนเรียนฟรี 15 ปี (อุปกรณ์การเรียน)' },
+                                                    { id: 10, name: 'อุดหนุนเรียนฟรี 15 ปี (เครื่องแบบนักเรียน)' },
+                                                    { id: 11, name: 'บกศ.' },
                                                 ]).map(s => {
                                                     const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
                                                     return <option key={s.id} value={s.id}>{displayName}</option>;
@@ -21323,7 +21335,7 @@ return (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                                                 <div>
                                                     <label className="block mb-1 text-purple-900 font-bold">
-                                                        แหล่งเงินทุน 7 หมวด *
+                                                        แหล่งเงินงบประมาณ (11 หมวดตามแผนปฏิบัติราชการ) *
                                                     </label>
                                                     <select
                                                         value={committeeForm.funding_source_id}
@@ -21333,11 +21345,15 @@ return (
                                                         {(planHeadData?.fundingSources || [
                                                             { id: 1, name: 'ปวช.' },
                                                             { id: 2, name: 'ปวส.' },
-                                                            { id: 3, name: 'ระยะสั้น' },
-                                                            { id: 4, name: 'งบทวิศึกษา' },
-                                                            { id: 5, name: 'อุดหนุนเพื่อการจัดการฯ' },
-                                                            { id: 6, name: 'อุดหนุนพัฒนาฯ' },
-                                                            { id: 7, name: 'บกศ.' },
+                                                            { id: 3, name: 'ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)' },
+                                                            { id: 4, name: 'ระยะสั้น (ค่าสาธารณูปโภค)' },
+                                                            { id: 5, name: 'ทวิศึกษา' },
+                                                            { id: 6, name: 'อุดหนุนเพื่อการจัดการ' },
+                                                            { id: 7, name: 'อุดหนุนพัฒนา' },
+                                                            { id: 8, name: 'อุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือ)' },
+                                                            { id: 9, name: 'อุดหนุนเรียนฟรี 15 ปี (อุปกรณ์การเรียน)' },
+                                                            { id: 10, name: 'อุดหนุนเรียนฟรี 15 ปี (เครื่องแบบนักเรียน)' },
+                                                            { id: 11, name: 'บกศ.' },
                                                         ]).map(s => {
                                                             const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
                                                             return <option key={s.id} value={s.id}>{displayName}</option>;
