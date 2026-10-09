@@ -882,22 +882,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>ตรวจสอบแผน & อนุมัติ</span>}
                                 </Link>
                                 <Link
-                                    href={`${route('admin.routine_budgets.index')}?tab=create_plan`}
-                                    className={getSubLinkClass(url.includes('routine-budgets') && url.includes('tab=create_plan'))}
-                                    title="จัดทำและลงแผนงบดำเนินงานประจำปี (สร้าง/แก้ไข)"
-                                >
-                                    <span className={getPrefixClass(url.includes('routine-budgets') && url.includes('tab=create_plan'), 'text-amber-300')}>└─</span>
-                                    <span className="text-sm">📝</span>
-                                    {isSidebarOpen && <span>ลงแผนงบดำเนินงานประจำปี</span>}
-                                </Link>
-                                <Link
                                     href={route('admin.routine_budgets.index')}
-                                    className={getSubLinkClass(url.includes('routine-budgets') && !url.includes('tab=create_plan'))}
-                                    title="ตารางแสดงการจัดสรรงบดำเนินงานประจำปีและแดชบอร์ด"
+                                    className={getSubLinkClass(url.includes('routine-budgets'))}
+                                    title="จัดสรรงบดำเนินงานประจำปี (ลงแผนงบ/ตารางจัดสรร/แดชบอร์ด)"
                                 >
-                                    <span className={getPrefixClass(url.includes('routine-budgets') && !url.includes('tab=create_plan'), 'text-amber-300')}>└─</span>
+                                    <span className={getPrefixClass(url.includes('routine-budgets'), 'text-amber-300')}>└─</span>
                                     <span className="text-sm">📋</span>
-                                    {isSidebarOpen && <span>ตารางจัดสรรงบประจำปี</span>}
+                                    {isSidebarOpen && <span>จัดสรรงบดำเนินงานประจำปี</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking' })}
