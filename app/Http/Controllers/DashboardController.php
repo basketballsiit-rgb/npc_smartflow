@@ -102,6 +102,11 @@ class DashboardController extends Controller
             $encumbered = (float)Budget::where('funding_source_id', $source->id)->sum('encumbered_amount');
             $spent = (float)Budget::where('funding_source_id', $source->id)->sum('spent_amount');
 
+            // Also account for routine budget plans
+            $routineAllocated = (float)\App\Models\RoutineBudgetPlan::where('funding_source_id', $source->id)->sum('allocated_amount');
+            $routineEncumbered = (float)\App\Models\RoutineBudgetPlan::where('funding_source_id', $source->id)->sum('encumbered_amount');
+            $routineSpent = (float)\App\Models\RoutineBudgetPlan::where('funding_source_id', $source->id)->sum('spent_amount');
+
             // Also account for travel loan amounts cut or spent from this funding source
             $tlEncumbered = (float)TravelLoan::where('funding_source_id', $source->id)
                 ->whereIn('loan_status', ['plan_cut', 'finance_received'])
@@ -110,8 +115,12 @@ class DashboardController extends Controller
                 ->whereIn('loan_status', ['disbursed', 'cleared'])
                 ->sum('finance_disbursed_amount');
 
-            $encumbered += $tlEncumbered;
-            $spent += $tlSpent;
+            $totalEncumbered = $encumbered + $routineEncumbered + $tlEncumbered;
+            $totalSpent = $spent + $routineSpent + $tlSpent;
+            $totalPool = max($centralSum, $allocated + $routineAllocated);
+            $effectiveAllocated = $totalPool > 0 ? $totalPool : max($allocated, $routineAllocated, $centralSum);
+            $remaining = max(0, $effectiveAllocated - $totalSpent - $totalEncumbered);
+            $centralRemaining = max(0, $centralSum - $totalSpent - $totalEncumbered);
 
             $projectsCount = Project::where('funding_source_id', $source->id)
                 ->orWhereHas('budget', function($q) use ($source) { $q->where('funding_source_id', $source->id); })
@@ -124,16 +133,17 @@ class DashboardController extends Controller
                 'fiscal_year' => $source->fiscal_year,
                 'description' => $source->description,
                 'central_allocated' => $centralSum,
-                'allocated' => $allocated,
-                'encumbered' => $encumbered,
-                'spent' => $spent,
-                'remaining' => $allocated - $spent,
-                'central_remaining' => $centralSum - $spent,
+                'allocated' => $effectiveAllocated,
+                'encumbered' => $totalEncumbered,
+                'spent' => $totalSpent,
+                'remaining' => $remaining,
+                'central_remaining' => $centralRemaining,
                 'projects_count' => $projectsCount,
             ];
         }
         $data['fundingChannelProgress'] = $fundingChannelProgress;
         $data['fundingSources'] = $fundingSources;
+        $data['allFundingSources'] = $fundingSources;
 
         $isPowerFinanceUser = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || $user->isFinanceStaff();
 

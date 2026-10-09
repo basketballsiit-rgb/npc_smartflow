@@ -230,6 +230,7 @@ class TravelLoanWebController extends Controller
             
             'loan_status' => 'required|in:pending_plan,pending,plan_cut,finance_received,disbursed,cleared',
             'funding_source_id' => 'nullable|exists:funding_sources,id',
+            'expense_type' => 'nullable|string|max:150',
             'plan_doc_number' => 'nullable|string|max:100',
             'plan_notes' => 'nullable|string|max:500',
             'finance_doc_number' => 'nullable|string|max:100',

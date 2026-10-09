@@ -803,13 +803,7 @@ export default function Dashboard({
 
     const cleanThaiFundingName = (name) => {
         if (!name) return '';
-        const parenMatch = name.match(/\(([^)]*[\u0E00-\u0E7F]+[^)]*)\)/);
-        if (parenMatch && parenMatch[1]) return parenMatch[1].trim();
-        if (/[\u0E00-\u0E7F]/.test(name) && /[a-zA-Z]/.test(name)) {
-            const cleaned = name.replace(/[a-zA-Z\/\(\)\-_]+/g, ' ').replace(/\s+/g, ' ').trim();
-            if (cleaned) return cleaned;
-        }
-        return name.trim();
+        return String(name).trim();
     };
 
     const getFundingRemaining = (srcId) => {
@@ -2448,7 +2442,7 @@ export default function Dashboard({
     const { data: planCutData, setData: setPlanCutData, post: postPlanCut, processing: isCuttingPlanBudget, reset: resetPlanCut } = useForm({
         funding_source_id: '',
         project_id: '',
-        expense_type: 'งบดำเนินงาน (ค่าใช้จ่ายเดินทางไปราชการ)',
+        expense_type: '2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)',
         plan_doc_number: '',
         plan_notes: '',
     });
@@ -2467,7 +2461,7 @@ export default function Dashboard({
         setPlanCutData({
             funding_source_id: String(defaultSourceId),
             project_id: loan.project_id ? String(loan.project_id) : '',
-            expense_type: loan.expense_type || 'งบดำเนินงาน (ค่าใช้จ่ายเดินทางไปราชการ)',
+            expense_type: loan.expense_type || '2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)',
             plan_doc_number: loan.plan_doc_number || nextDocNo,
             plan_notes: loan.plan_notes || '',
         });
@@ -2653,6 +2647,7 @@ export default function Dashboard({
         total_loan_amount: 0,
         loan_status: 'pending_plan',
         funding_source_id: '',
+        expense_type: '2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)',
         plan_doc_number: '',
         plan_notes: '',
         finance_doc_number: '',
@@ -2681,6 +2676,7 @@ export default function Dashboard({
             total_loan_amount: loan.total_loan_amount !== undefined && loan.total_loan_amount !== null ? loan.total_loan_amount : 0,
             loan_status: loan.loan_status || 'pending_plan',
             funding_source_id: loan.funding_source_id ? String(loan.funding_source_id) : '',
+            expense_type: loan.expense_type || '2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)',
             plan_doc_number: loan.plan_doc_number || '',
             plan_notes: loan.plan_notes || '',
             finance_doc_number: loan.finance_doc_number || '',
@@ -20648,12 +20644,30 @@ return (
                                                     onChange={(e) => setPlanCutData('expense_type', e.target.value)}
                                                     className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs font-bold text-purple-950 focus:border-purple-500 focus:ring-purple-500 bg-white"
                                                 >
-                                                    <option value="งบดำเนินงาน (ค่าใช้จ่ายเดินทางไปราชการ - เบี้ยเลี้ยง ที่พัก พาหนะ)">งบดำเนินงาน (ค่าใช้จ่ายเดินทางไปราชการ - เบี้ยเลี้ยง ที่พัก พาหนะ)</option>
-                                                    <option value="งบดำเนินงาน (ค่าตอบแทน ใช้สอยและวัสดุ)">งบดำเนินงาน (ค่าตอบแทน ใช้สอยและวัสดุ)</option>
-                                                    <option value="งบดำเนินงาน (ค่าใช้สอยในการฝึกอบรม/สัมมนา)">งบดำเนินงาน (ค่าใช้สอยในการฝึกอบรม/สัมมนา)</option>
-                                                    <option value="งบเงินอุดหนุน (โครงการพัฒนาทักษะวิชาชีพ/กิจกรรมนักเรียน)">งบเงินอุดหนุน (โครงการพัฒนาทักษะวิชาชีพ/กิจกรรมนักเรียน)</option>
-                                                    <option value="งบรายจ่ายอื่น (งบสนับสนุนพิเศษ/เงินบริจาค)">งบรายจ่ายอื่น (งบสนับสนุนพิเศษ/เงินบริจาค)</option>
+                                                    <optgroup label="หมวด 2: งบดำเนินงาน (Operating Expense)">
+                                                        <option value="2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)">2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)</option>
+                                                        <option value="2.1 ค่าตอบแทน (วิทยากร / ค่าปฏิบัติงาน)">2.1 ค่าตอบแทน (วิทยากร / ค่าปฏิบัติงาน)</option>
+                                                        <option value="2.2 ค่าใช้สอย (ฝึกอบรม / สัมมนา / ลงทะเบียน)">2.2 ค่าใช้สอย (ฝึกอบรม / สัมมนา / ลงทะเบียน)</option>
+                                                        <option value="2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง">2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง</option>
+                                                        <option value="2.2.3 ค่าซ่อมแซมครุภัณฑ์">2.2.3 ค่าซ่อมแซมครุภัณฑ์</option>
+                                                        <option value="2.2.4 ค่าโฆษณาและเผยแพร่">2.2.4 ค่าโฆษณาและเผยแพร่</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 3: ค่าวัสดุ">
+                                                        <option value="3. ค่าวัสดุทั่วไป / เชื้อเพลิงและหล่อลื่น">3. ค่าวัสดุทั่วไป / เชื้อเพลิงและหล่อลื่น</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 4: ค่าวัสดุการศึกษา">
+                                                        <option value="4. ค่าวัสดุการศึกษา / ฝึกอบรมวิชาชีพ">4. ค่าวัสดุการศึกษา / ฝึกอบรมวิชาชีพ</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 6: โครงการตามแผนปฏิบัติการ">
+                                                        <option value="6. ค่าใช้จ่ายดำเนินโครงการตามแผนปฏิบัติการ">6. ค่าใช้จ่ายดำเนินโครงการตามแผนปฏิบัติการ</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 7: รายจ่ายอื่น">
+                                                        <option value="7. งบรายจ่ายอื่น / งบสนับสนุนพิเศษ">7. งบรายจ่ายอื่น / งบสนับสนุนพิเศษ</option>
+                                                    </optgroup>
                                                 </select>
+                                                <p className="text-[11px] text-slate-500 mt-1">
+                                                    สอดคล้องกับหมวดรายงานงบรายจ่ายตามแผนปฏิบัติราชการ (ฉบับ พ.ศ. 2570)
+                                                </p>
                                             </div>
 
                                             <div>
@@ -20666,13 +20680,16 @@ return (
                                                     onChange={(e) => setPlanCutData('funding_source_id', e.target.value)}
                                                     className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-sm font-bold text-purple-950 focus:border-purple-500 focus:ring-purple-500 bg-white"
                                                 >
-                                                    <option value="">-- เลือกหมวดหมู่งบประมาณ --</option>
+                                                    <option value="">-- เลือกหมวดหมู่งบประมาณ / แหล่งเงิน --</option>
                                                     {(planHeadData?.fundingSources || allFundingSources || []).map((src) => (
                                                         <option key={src.id} value={src.id}>
                                                             {cleanThaiFundingName(src.name)} (คงเหลือ ฿{getFundingRemaining(src.id)})
                                                         </option>
                                                     ))}
                                                 </select>
+                                                <p className="text-[11px] text-slate-500 mt-1">
+                                                    แหล่งงบประมาณ 11 แหล่งเงินและงบจัดสรรกลางตามตารางจัดสรรงบดำเนินงาน
+                                                </p>
                                             </div>
 
                                             <div>
@@ -21257,7 +21274,7 @@ return (
                                         <h4 className="text-xs font-black text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
                                             <span>⚙️</span> 4. สถานะสัญญาและการคุมงบประมาณ
                                         </h4>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                             <div>
                                                 <label className="block text-xs font-bold text-slate-700 mb-1">สถานะสัญญา *</label>
                                                 <select
@@ -21273,7 +21290,36 @@ return (
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold text-slate-700 mb-1">หมวดหมู่งบประมาณที่ตัดยอด</label>
+                                                <label className="block text-xs font-bold text-slate-700 mb-1">หมวดเงิน / ประเภทรายจ่าย</label>
+                                                <select
+                                                    value={editTravelLoanData.expense_type || ''}
+                                                    onChange={(e) => setEditTravelLoanData('expense_type', e.target.value)}
+                                                    className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-bold text-purple-950 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                                                >
+                                                    <optgroup label="หมวด 2: งบดำเนินงาน">
+                                                        <option value="2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)">2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)</option>
+                                                        <option value="2.1 ค่าตอบแทน (วิทยากร / ค่าปฏิบัติงาน)">2.1 ค่าตอบแทน (วิทยากร / ค่าปฏิบัติงาน)</option>
+                                                        <option value="2.2 ค่าใช้สอย (ฝึกอบรม / สัมมนา / ลงทะเบียน)">2.2 ค่าใช้สอย (ฝึกอบรม / สัมมนา / ลงทะเบียน)</option>
+                                                        <option value="2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง">2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง</option>
+                                                        <option value="2.2.3 ค่าซ่อมแซมครุภัณฑ์">2.2.3 ค่าซ่อมแซมครุภัณฑ์</option>
+                                                        <option value="2.2.4 ค่าโฆษณาและเผยแพร่">2.2.4 ค่าโฆษณาและเผยแพร่</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 3: ค่าวัสดุ">
+                                                        <option value="3. ค่าวัสดุทั่วไป / เชื้อเพลิงและหล่อลื่น">3. ค่าวัสดุทั่วไป / เชื้อเพลิงและหล่อลื่น</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 4: ค่าวัสดุการศึกษา">
+                                                        <option value="4. ค่าวัสดุการศึกษา / ฝึกอบรมวิชาชีพ">4. ค่าวัสดุการศึกษา / ฝึกอบรมวิชาชีพ</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 6: โครงการตามแผน">
+                                                        <option value="6. ค่าใช้จ่ายดำเนินโครงการตามแผนปฏิบัติการ">6. ค่าใช้จ่ายดำเนินโครงการตามแผนปฏิบัติการ</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 7: รายจ่ายอื่น">
+                                                        <option value="7. งบรายจ่ายอื่น / งบสนับสนุนพิเศษ">7. งบรายจ่ายอื่น / งบสนับสนุนพิเศษ</option>
+                                                    </optgroup>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-700 mb-1">หมวดหมู่งบประมาณ / แหล่งเงิน</label>
                                                 <select
                                                     value={editTravelLoanData.funding_source_id}
                                                     onChange={(e) => setEditTravelLoanData('funding_source_id', e.target.value)}
