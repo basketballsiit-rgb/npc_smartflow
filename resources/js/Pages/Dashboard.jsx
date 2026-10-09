@@ -8608,252 +8608,90 @@ ${itemsListText}
                 </div>
 
                 {/* 3. Interactive Section: Routine Budgets Management */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Creation / Edit Form (For plan_head and admin) */}
-                    {isPlanHeadOrAdmin && (
-                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-purple-100/50 space-y-4 self-start">
-                            <h3 className="font-extrabold text-gray-800 text-sm">
-                                {editingRoutinePlan ? '✏️ แก้ไขแผนงบประมาณประจำปี' : '📅 สร้างแผนงบดำเนินงาน/ประจำปี'}
-                            </h3>
-                            <form onSubmit={handleRoutinePlanSubmit} className="space-y-4 text-xs">
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ปีงบประมาณ</label>
-                                    <input
-                                        type="text"
-                                        value={routinePlanData.fiscal_year}
-                                        onChange={e => setRoutinePlanData('fiscal_year', e.target.value)}
-                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
-                                        placeholder="ตัวอย่าง 2569"
-                                        disabled={editingRoutinePlan}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ฝ่ายงาน / แผนกวิชาที่จัดสรร</label>
-                                    <select
-                                        value={routinePlanData.department_id}
-                                        onChange={e => setRoutinePlanData('department_id', e.target.value)}
-                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
-                                        disabled={editingRoutinePlan}
-                                    >
-                                        {allDepartments.map(dept => (
-                                            <option key={dept.id} value={dept.id}>{dept.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">ชื่อหมวดงบดำเนินงาน / งบประจำ</label>
-                                    <input
-                                        type="text"
-                                        value={routinePlanData.title}
-                                        onChange={e => setRoutinePlanData('title', e.target.value)}
-                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
-                                        placeholder="เช่น ค่าจัดซื้อวัสดุสำนักงาน, ค่าซ่อมแซมครุภัณฑ์"
-                                    />
-                                    {routinePlanErrors.title && <span className="text-red-500 text-[10px]">{routinePlanErrors.title}</span>}
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">แหล่งเงินทุน</label>
-                                    <select
-                                        value={routinePlanData.funding_source_id}
-                                        onChange={e => setRoutinePlanData('funding_source_id', e.target.value)}
-                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
-                                    >
-                                        <option value="">เลือกแหล่งเงินทุน...</option>
-                                        {(pHead?.fundingSources || allFundingSources || []).map(src => (
-                                            <option key={src.id} value={src.id}>{src.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">หมวดรายจ่ายตามแผนปฏิบัติราชการ</label>
-                                    <select
-                                        value={routinePlanData.report_category}
-                                        onChange={e => setRoutinePlanData('report_category', e.target.value)}
-                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
-                                    >
-                                        <option value="">เลือกหมวดรายจ่ายในรายงาน...</option>
-                                        <optgroup label="1. งบบุคลากร">
-                                            <option value="1.1">1.1 ครูอัตราจ้าง 11 อัตรา</option>
-                                            <option value="1.2">1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง 11 อัตรา</option>
-                                            <option value="1.3">1.3 จ้างเหมาบริการเจ้าหน้าที่ 15 ราย</option>
-                                            <option value="1.4">1.4 สมทบประกันสังคมเจ้าหน้าที่ 15 ราย</option>
-                                        </optgroup>
-                                        <optgroup label="2. งบดำเนินงาน">
-                                            <option value="2.1.1">2.1.1 จ้างเหมาบริการเจ้าหน้าที่ 8 ราย</option>
-                                            <option value="2.1.2">2.1.2 ค่าตอบแทนสอนเกินภาระงานครู</option>
-                                            <option value="2.1.3">2.1.3 ค่าตอบแทนครูสอนระยะสั้น 7 ราย</option>
-                                            <option value="2.1.4">2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ</option>
-                                            <option value="2.1.5">2.1.5 ค่าตอบแทนธุรการนอกเวลา</option>
-                                            <option value="2.2.1">2.2.1 ค่าเดินทางไปราชการ</option>
-                                            <option value="2.2.2">2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง</option>
-                                            <option value="2.2.3">2.2.3 ค่าซ่อมแซมครุภัณฑ์</option>
-                                            <option value="2.2.4">2.2.4 ค่าโฆษณาและเผยแพร่</option>
-                                        </optgroup>
-                                        <optgroup label="3. ค่าวัสดุ">
-                                            <option value="3.1">3.1 วัสดุงานอาคาร</option>
-                                            <option value="3.2.1">3.2.1 ฝ่ายวิชาการ</option>
-                                            <option value="3.2.2">3.2.2 ฝ่ายพัฒนากิจการนักเรียน นักศึกษา</option>
-                                            <option value="3.2.3">3.2.3 ฝ่ายบริหารทรัพยากร</option>
-                                            <option value="3.2.4">3.2.4 ฝ่ายยุทธศาสตร์และแผนงาน</option>
-                                            <option value="3.4">3.4 วัสดุเชื้อเพลิงและหล่อลื่น</option>
-                                        </optgroup>
-                                        <optgroup label="4. วัสดุการศึกษา">
-                                            <option value="4.1">4.1 หลักสูตรวิชาชีพระยะสั้น</option>
-                                            <option value="4.2">4.2 สาขาวิชาช่างยนต์</option>
-                                            <option value="4.3">4.3 สาขาวิชาไฟฟ้ากำลัง</option>
-                                            <option value="4.4">4.4 สาขาวิชาเทคนิคพื้นฐาน</option>
-                                            <option value="4.5">4.5 สาขาวิชาอิเล็กทรอนิกส์</option>
-                                            <option value="4.6">4.6 สาขาวิชาการบัญชี</option>
-                                            <option value="4.7">4.7 สาขาวิชาการตลาด</option>
-                                            <option value="4.8">4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ</option>
-                                            <option value="4.9">4.9 แผนกสามัญสัมพันธ์</option>
-                                        </optgroup>
-                                        <optgroup label="5. ค่าสาธารณูปโภค">
-                                            <option value="5.1">5.1 ค่าไฟฟ้า</option>
-                                            <option value="5.2">5.2 ค่าน้ำประปา</option>
-                                            <option value="5.3">5.3 ค่าโทรศัพท์</option>
-                                            <option value="5.4">5.4 ค่าไปรษณีย์</option>
-                                            <option value="5.5">5.5 ค่าบริการด้านสื่อสารโทรคมนาคม</option>
-                                            <option value="5.6">5.6 ค่าขยะและสิ่งปฏิกูล</option>
-                                        </optgroup>
-                                        <optgroup label="6. โครงการ">
-                                            <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
-                                            <option value="6.2">6.2 โครงการฝ่ายพัฒนากิจการนักเรียน นักศึกษา</option>
-                                            <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
-                                            <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
-                                        </optgroup>
-                                        <optgroup label="7. อื่นๆ">
-                                            <option value="7.1">7.1 ค่าหนังสือ</option>
-                                            <option value="7.2">7.2 อุปกรณ์การเรียน</option>
-                                            <option value="7.3">7.3 เครื่องแบบนักเรียน</option>
-                                        </optgroup>
-                                        <optgroup label="8. สำรองจ่าย">
-                                            <option value="8">7. สำรองจ่าย</option>
-                                        </optgroup>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">จำนวนงบประมาณจัดสรร (บาท)</label>
-                                    <input
-                                        type="number"
-                                        value={routinePlanData.allocated_amount}
-                                        onChange={e => setRoutinePlanData('allocated_amount', e.target.value)}
-                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
-                                        placeholder="เช่น 50000"
-                                    />
-                                    {routinePlanErrors.allocated_amount && <span className="text-red-500 text-[10px]">{routinePlanErrors.allocated_amount}</span>}
-                                </div>
-
-                                <div className="flex gap-2 pt-2">
-                                    <button
-                                        type="submit"
-                                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all"
-                                    >
-                                        {editingRoutinePlan ? '💾 บันทึกการแก้ไข' : '➕ บันทึกตั้งงบ'}
-                                    </button>
-                                    {editingRoutinePlan && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setEditingRoutinePlan(null);
-                                                resetRoutinePlan();
-                                            }}
-                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-4 rounded-xl transition-all"
-                                        >
-                                            ยกเลิก
-                                        </button>
-                                    )}
-                                </div>
-                            </form>
+                <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div>
+                            <h3 className="font-extrabold text-gray-800 text-sm">📋 รายการแผนงบประมาณประจำปีทั้งหมดในระบบ</h3>
+                            <p className="text-xs text-gray-400 mt-0.5">แผนงบดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา</p>
                         </div>
-                    )}
-
-                    {/* Routine Budgets List Table */}
-                    <div className={`${isPlanHeadOrAdmin ? 'lg:col-span-2' : 'lg:col-span-3'} bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4`}>
-                        <h3 className="font-extrabold text-gray-800 text-sm">📋 รายการแผนงบประมาณประจำปีทั้งหมดในระบบ</h3>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
-                                        <th className="py-2.5 px-2">หมวดงบประจำปี / สังกัด</th>
-                                        <th className="py-2.5 px-2 text-right">จัดสรร</th>
-                                        <th className="py-2.5 px-2 text-right">เบิกจ่าย</th>
-                                        <th className="py-2.5 px-2 text-right">คงเหลือ</th>
-                                        <th className="py-2.5 px-2 text-center">การจัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 text-[11px]">
-                                    {routinePlans.map((plan) => {
-                                        const alloc = parseFloat(plan.allocated_amount);
-                                        const spent = parseFloat(plan.spent_amount);
-                                        const rem = alloc - spent;
-                                        return (
-                                            <tr key={plan.id} className="hover:bg-gray-50/50">
-                                                <td className="py-3 px-2">
-                                                    <span className="font-bold text-gray-800 block">{plan.title}</span>
-                                                    <span className="text-[10px] text-gray-400">🏫 {plan.department?.name} (ปี {plan.fiscal_year})</span>
-                                                </td>
-                                                <td className="py-3 px-2 text-right font-semibold text-gray-800">{alloc.toLocaleString()}</td>
-                                                <td className="py-3 px-2 text-right text-red-500 font-semibold">{spent.toLocaleString()}</td>
-                                                <td className="py-3 px-2 text-right text-emerald-600 font-bold">{rem.toLocaleString()}</td>
-                                                <td className="py-3 px-2 text-center space-y-1 sm:space-y-0 sm:space-x-1 whitespace-nowrap">
+                        {isPlanHeadOrAdmin && (
+                            <Link
+                                href={route('admin.routine_budgets.index')}
+                                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-purple-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                            >
+                                <span>➕</span> ลงแผนงบดำเนินงานประจำปีใหม่
+                            </Link>
+                        )}
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
+                                    <th className="py-2.5 px-2">หมวดงบประจำปี / สังกัด</th>
+                                    <th className="py-2.5 px-2 text-right">จัดสรร</th>
+                                    <th className="py-2.5 px-2 text-right">เบิกจ่าย</th>
+                                    <th className="py-2.5 px-2 text-right">คงเหลือ</th>
+                                    <th className="py-2.5 px-2 text-center">การจัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 text-[11px]">
+                                {routinePlans.map((plan) => {
+                                    const alloc = parseFloat(plan.allocated_amount);
+                                    const spent = parseFloat(plan.spent_amount);
+                                    const rem = alloc - spent;
+                                    return (
+                                        <tr key={plan.id} className="hover:bg-gray-50/50">
+                                            <td className="py-3 px-2">
+                                                <span className="font-bold text-gray-800 block">{plan.title}</span>
+                                                <span className="text-[10px] text-gray-400">🏫 {plan.department?.name} (ปี {plan.fiscal_year})</span>
+                                            </td>
+                                            <td className="py-3 px-2 text-right font-semibold text-gray-800">{alloc.toLocaleString()}</td>
+                                            <td className="py-3 px-2 text-right text-red-500 font-semibold">{spent.toLocaleString()}</td>
+                                            <td className="py-3 px-2 text-right text-emerald-600 font-bold">{rem.toLocaleString()}</td>
+                                            <td className="py-3 px-2 text-center space-y-1 sm:space-y-0 sm:space-x-1 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => openRoutineProcurementModal(plan)}
+                                                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all"
+                                                >
+                                                    🛒 ขอซื้อตรง
+                                                </button>
+                                                {plan.procurements?.length > 0 && (
                                                     <button
-                                                        onClick={() => openRoutineProcurementModal(plan)}
-                                                        className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all"
+                                                        onClick={() => setViewingRoutineHistoryPlan(plan)}
+                                                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2 py-1.5 rounded-lg transition-all"
                                                     >
-                                                        🛒 ขอซื้อตรง
+                                                        ประวัติ ({plan.procurements.length})
                                                     </button>
-                                                    {plan.procurements?.length > 0 && (
-                                                        <button
-                                                            onClick={() => setViewingRoutineHistoryPlan(plan)}
-                                                            className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                )}
+                                                {isPlanHeadOrAdmin && (
+                                                    <>
+                                                        <Link
+                                                            href={route('admin.routine_budgets.index')}
+                                                            className="inline-block bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                            title="แก้ไขในหน้าจัดสรรงบดำเนินงานประจำปี"
                                                         >
-                                                            ประวัติ ({plan.procurements.length})
+                                                            ✏️
+                                                        </Link>
+                                                        <button
+                                                            onClick={() => handleRoutinePlanDelete(plan.id)}
+                                                            className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                            title="ลบแผนงบประมาณ"
+                                                        >
+                                                            🗑️
                                                         </button>
-                                                    )}
-                                                    {isPlanHeadOrAdmin && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingRoutinePlan(plan);
-                                                                    setRoutinePlanData({
-                                                                        fiscal_year: plan.fiscal_year,
-                                                                        department_id: plan.department_id,
-                                                                        title: plan.title,
-                                                                        allocated_amount: plan.allocated_amount,
-                                                                        funding_source_id: plan.funding_source_id || '',
-                                                                        report_category: plan.report_category || '',
-                                                                    });
-                                                                }}
-                                                                className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                            >
-                                                                ✏️
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleRoutinePlanDelete(plan.id)}
-                                                                className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                            >
-                                                                🗑️
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {routinePlans.length === 0 && (
-                                        <tr>
-                                            <td colSpan="5" className="text-center py-6 text-gray-400">ยังไม่มีงบดำเนินงานประจำปีใดๆ ในระบบ</td>
+                                                    </>
+                                                )}
+                                            </td>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    );
+                                })}
+                                {routinePlans.length === 0 && (
+                                    <tr>
+                                        <td colSpan="5" className="text-center py-6 text-gray-400">ยังไม่มีงบดำเนินงานประจำปีใดๆ ในระบบ</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
