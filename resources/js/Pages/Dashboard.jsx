@@ -20644,6 +20644,12 @@ return (
                                                     onChange={(e) => setPlanCutData('expense_type', e.target.value)}
                                                     className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs font-bold text-purple-950 focus:border-purple-500 focus:ring-purple-500 bg-white"
                                                 >
+                                                    <optgroup label="หมวด 1: งบบุคลากร (Personnel Expense)">
+                                                        <option value="1.1 ครูอัตราจ้าง">1.1 ครูอัตราจ้าง</option>
+                                                        <option value="1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง">1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง</option>
+                                                        <option value="1.3 จ้างเหมาบริการเจ้าหน้าที่">1.3 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                                        <option value="1.4 สมทบประกันสังคมเจ้าหน้าที่">1.4 สมทบประกันสังคมเจ้าหน้าที่</option>
+                                                    </optgroup>
                                                     <optgroup label="หมวด 2: งบดำเนินงาน (Operating Expense)">
                                                         <option value="2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)">2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)</option>
                                                         <option value="2.1 ค่าตอบแทน (วิทยากร / ค่าปฏิบัติงาน)">2.1 ค่าตอบแทน (วิทยากร / ค่าปฏิบัติงาน)</option>
@@ -20657,6 +20663,9 @@ return (
                                                     </optgroup>
                                                     <optgroup label="หมวด 4: ค่าวัสดุการศึกษา">
                                                         <option value="4. ค่าวัสดุการศึกษา / ฝึกอบรมวิชาชีพ">4. ค่าวัสดุการศึกษา / ฝึกอบรมวิชาชีพ</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 5: ค่าสาธารณูปโภค (Utilities)">
+                                                        <option value="5. ค่าสาธารณูปโภค (ไฟฟ้า น้ำประปา สื่อสารโทรคมนาคม)">5. ค่าสาธารณูปโภค (ไฟฟ้า น้ำประปา สื่อสารโทรคมนาคม)</option>
                                                     </optgroup>
                                                     <optgroup label="หมวด 6: โครงการตามแผนปฏิบัติการ">
                                                         <option value="6. ค่าใช้จ่ายดำเนินโครงการตามแผนปฏิบัติการ">6. ค่าใช้จ่ายดำเนินโครงการตามแผนปฏิบัติการ</option>
@@ -21296,6 +21305,12 @@ return (
                                                     onChange={(e) => setEditTravelLoanData('expense_type', e.target.value)}
                                                     className="w-full rounded-xl border border-purple-200 px-3 py-2 text-xs font-bold text-purple-950 focus:ring-purple-500 focus:border-purple-500 bg-white"
                                                 >
+                                                    <optgroup label="หมวด 1: งบบุคลากร (Personnel Expense)">
+                                                        <option value="1.1 ครูอัตราจ้าง">1.1 ครูอัตราจ้าง</option>
+                                                        <option value="1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง">1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง</option>
+                                                        <option value="1.3 จ้างเหมาบริการเจ้าหน้าที่">1.3 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                                        <option value="1.4 สมทบประกันสังคมเจ้าหน้าที่">1.4 สมทบประกันสังคมเจ้าหน้าที่</option>
+                                                    </optgroup>
                                                     <optgroup label="หมวด 2: งบดำเนินงาน">
                                                         <option value="2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)">2.2.1 ค่าเดินทางไปราชการ (เบี้ยเลี้ยง ที่พัก พาหนะ)</option>
                                                         <option value="2.1 ค่าตอบแทน (วิทยากร / ค่าปฏิบัติงาน)">2.1 ค่าตอบแทน (วิทยากร / ค่าปฏิบัติงาน)</option>
@@ -21309,6 +21324,9 @@ return (
                                                     </optgroup>
                                                     <optgroup label="หมวด 4: ค่าวัสดุการศึกษา">
                                                         <option value="4. ค่าวัสดุการศึกษา / ฝึกอบรมวิชาชีพ">4. ค่าวัสดุการศึกษา / ฝึกอบรมวิชาชีพ</option>
+                                                    </optgroup>
+                                                    <optgroup label="หมวด 5: ค่าสาธารณูปโภค (Utilities)">
+                                                        <option value="5. ค่าสาธารณูปโภค (ไฟฟ้า น้ำประปา สื่อสารโทรคมนาคม)">5. ค่าสาธารณูปโภค (ไฟฟ้า น้ำประปา สื่อสารโทรคมนาคม)</option>
                                                     </optgroup>
                                                     <optgroup label="หมวด 6: โครงการตามแผน">
                                                         <option value="6. ค่าใช้จ่ายดำเนินโครงการตามแผนปฏิบัติการ">6. ค่าใช้จ่ายดำเนินโครงการตามแผนปฏิบัติการ</option>
