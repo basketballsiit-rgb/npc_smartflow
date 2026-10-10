@@ -1178,10 +1178,10 @@ class AdminController extends Controller
         }
 
         $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
-        $aiModel = SystemSetting::get('ai_model', 'gemini-2.0-flash');
-        if ($aiModel === 'gemini-2.5-flash') {
-            $aiModel = 'gemini-2.0-flash';
-            SystemSetting::set('ai_model', 'gemini-2.0-flash', 'ai', 'รุ่นโมเดล AI Gemini', 'text');
+        $aiModel = SystemSetting::get('ai_model', 'gemini-3.8-flash');
+        if (in_array($aiModel, ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'])) {
+            $aiModel = 'gemini-3.8-flash';
+            SystemSetting::set('ai_model', 'gemini-3.8-flash', 'ai', 'รุ่นโมเดล AI Gemini', 'text');
         }
         $aiTemp = (float)SystemSetting::get('ai_temperature', 0.4);
         $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
@@ -1223,8 +1223,8 @@ class AdminController extends Controller
 
         if ($request->has('ai_model') || $request->has('model')) {
             $submittedModel = $request->input('ai_model', $request->input('model'));
-            if (empty($submittedModel) || $submittedModel === 'gemini-2.5-flash') {
-                $submittedModel = 'gemini-2.0-flash';
+            if (empty($submittedModel) || in_array($submittedModel, ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'])) {
+                $submittedModel = 'gemini-3.8-flash';
             }
             SystemSetting::set('ai_model', $submittedModel, 'ai', 'รุ่นโมเดล AI Gemini', 'text');
         }
@@ -1300,9 +1300,9 @@ class AdminController extends Controller
         }
 
         $apiKey = trim($request->input('gemini_api_key')) ?: SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
-        $model = $request->input('ai_model') ?: SystemSetting::get('ai_model', 'gemini-2.0-flash');
-        if ($model === 'gemini-2.5-flash') {
-            $model = 'gemini-2.0-flash';
+        $model = $request->input('ai_model') ?: SystemSetting::get('ai_model', 'gemini-3.8-flash');
+        if (empty($model) || in_array($model, ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'])) {
+            $model = 'gemini-3.8-flash';
         }
 
         if (empty($apiKey)) {

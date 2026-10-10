@@ -13,9 +13,9 @@ class GeminiService
      */
     public static function getActiveModel(): string
     {
-        $model = SystemSetting::get('ai_model', 'gemini-2.0-flash');
-        if (empty($model) || $model === 'gemini-2.5-flash') {
-            return 'gemini-2.0-flash';
+        $model = SystemSetting::get('ai_model', 'gemini-3.8-flash');
+        if (empty($model) || in_array($model, ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'])) {
+            return 'gemini-3.8-flash';
         }
         return $model;
     }
