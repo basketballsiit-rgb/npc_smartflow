@@ -79,7 +79,10 @@ export default function AuthenticatedLayout({ header, children }) {
                        (currentUrl.includes('tab=clearings') && (currentUrl.includes('from=loan') || currentUrl.includes('action=new') || (!currentUrl.includes('from=finance') && !isFinanceStaff))) ||
                        (currentUrl.includes('tab=document_tracking') && (currentUrl.includes('from=loan') || (!currentUrl.includes('from=finance') && !isPlanStaff && !isProcurementStaff && !isFinanceStaff && !isAdmin)));
             case 'procurement_hub':
-                return currentUrl.includes('tab=procurement') || currentUrl.includes('vendors') || (currentUrl.includes('tab=document_tracking') && isProcurementStaff);
+                return currentUrl.includes('from=procurement') ||
+                       currentUrl.includes('tab=procurement') ||
+                       currentUrl.includes('vendors') ||
+                       (currentUrl.includes('tab=document_tracking') && (currentUrl.includes('from=procurement') || (isProcurementStaff && !currentUrl.includes('from=plan') && !currentUrl.includes('from=finance'))));
             case 'finance_hub':
                 return currentUrl.includes('from=finance') ||
                        (currentUrl.includes('tab=central_budgets') && !currentUrl.includes('from=loan')) ||
@@ -92,7 +95,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        currentUrl.includes('tab=budgets') ||
                        (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) ||
                        ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets') && !currentUrl.includes('from=finance')) ||
-                       (currentUrl.includes('tab=document_tracking') && isPlanStaff) ||
+                       (currentUrl.includes('tab=document_tracking') && (currentUrl.includes('from=plan') || (!currentUrl.includes('from=procurement') && !currentUrl.includes('from=finance') && !currentUrl.includes('from=loan') && (isPlanStaff || isAdmin)))) ||
                        currentUrl.includes('tab=action_plan_report') ||
                        currentUrl.includes('tab=admin_strategies') ||
                        currentUrl.includes('strategies/dashboard') ||
@@ -124,6 +127,9 @@ export default function AuthenticatedLayout({ header, children }) {
         if (currentUrl.includes('from=plan')) {
             return 'plan_hub';
         }
+        if (currentUrl.includes('from=procurement')) {
+            return 'procurement_hub';
+        }
         if (currentUrl.includes('from=loan') || currentUrl.includes('action=new')) {
             return 'procurement_loan';
         }
@@ -144,7 +150,7 @@ export default function AuthenticatedLayout({ header, children }) {
         if (isPureExecutive && (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || currentUrl.includes('tab=action_plan_report') || currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
             return 'executive_hub';
         }
-        if (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) || ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets') && !currentUrl.includes('from=finance')) || (currentUrl.includes('tab=document_tracking') && isPlanStaff) || currentUrl.includes('tab=action_plan_report') || (currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
+        if (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) || ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets') && !currentUrl.includes('from=finance')) || (currentUrl.includes('tab=document_tracking') && (currentUrl.includes('from=plan') || (!currentUrl.includes('from=procurement') && !currentUrl.includes('from=finance') && !currentUrl.includes('from=loan') && isPlanStaff))) || currentUrl.includes('tab=action_plan_report') || (currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
             return 'plan_hub';
         }
         if (currentUrl.includes('tab=admin_')) {
@@ -747,11 +753,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>คิวลงรับจัดซื้อ & แต่งตั้งกรรมการ</span>}
                                 </Link>
                                 <Link
-                                    href={route('dashboard', { tab: 'document_tracking' })}
-                                    className={getSubLinkClass(url.includes('tab=document_tracking'))}
+                                    href={route('dashboard', { tab: 'document_tracking', from: 'procurement' })}
+                                    className={getSubLinkClass(url.includes('tab=document_tracking') && url.includes('from=procurement'))}
                                     title="ติดตามเอกสารจัดซื้อจัดจ้าง & ส่งต่อการเงิน"
                                 >
-                                    <span className={getPrefixClass(url.includes('tab=document_tracking'), 'text-blue-300')}>●</span>
+                                    <span className={getPrefixClass(url.includes('tab=document_tracking') && url.includes('from=procurement'), 'text-blue-300')}>●</span>
                                     <span className="text-sm">📍</span>
                                     {isSidebarOpen && <span>ติดตามเอกสารพัสดุ & ส่งการเงิน</span>}
                                 </Link>
@@ -911,11 +917,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>จัดสรรงบดำเนินงานประจำปี</span>}
                                 </Link>
                                 <Link
-                                    href={route('dashboard', { tab: 'document_tracking' })}
-                                    className={getSubLinkClass(url.includes('tab=document_tracking'))}
+                                    href={route('dashboard', { tab: 'document_tracking', from: 'plan' })}
+                                    className={getSubLinkClass(url.includes('tab=document_tracking') && (url.includes('from=plan') || (!url.includes('from=procurement') && !url.includes('from=finance') && !url.includes('from=loan') && (isPlanStaff || isAdmin))))}
                                     title="ทะเบียนตัดยอดงบ ผง. (จัดซื้อจัดจ้าง / สัญญายืมเงิน)"
                                 >
-                                    <span className={getPrefixClass(url.includes('tab=document_tracking'), 'text-amber-300')}>●</span>
+                                    <span className={getPrefixClass(url.includes('tab=document_tracking') && (url.includes('from=plan') || (!url.includes('from=procurement') && !url.includes('from=finance') && !url.includes('from=loan') && (isPlanStaff || isAdmin))), 'text-amber-300')}>●</span>
                                     <span className="text-sm">📑</span>
                                     {isSidebarOpen && <span>ตัดยอดงบ ผง. (จัดซื้อ/ยืมเงิน)</span>}
                                 </Link>
@@ -1264,6 +1270,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Link href={route('dashboard', { tab: 'procurement' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📋</span> คิวลงรับจัดซื้อ & กรรมการ
                                         </Link>
+                                        <Link href={route('dashboard', { tab: 'document_tracking', from: 'procurement' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📍</span> ติดตามเอกสารพัสดุ & ส่งการเงิน
+                                        </Link>
                                         <Link href={route('vendors.index')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🏪</span> ทะเบียนร้านค้า
                                         </Link>
@@ -1279,6 +1288,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">5. งานการเงิน</div>
                                         <Link href={route('dashboard', { tab: 'central_budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🏛️</span> จัดสรรงบส่วนกลาง
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'document_tracking', from: 'finance' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>💵</span> คิวตรวจจ่ายโอนเงินยืม (กค.101)
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'clearings', from: 'finance' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🧾</span> คิวตรวจรับใบเสร็จล้างหนี้
@@ -1304,6 +1316,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </Link>
                                         <Link href={route('admin.routine_budgets.index', { from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📋</span> จัดสรรงบดำเนินงานประจำปี
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'document_tracking', from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>📑</span> ตัดยอดงบ ผง. (จัดซื้อ/ยืมเงิน)
                                         </Link>
                                     </div>
                                 )}

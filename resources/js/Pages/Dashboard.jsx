@@ -15837,7 +15837,11 @@ ${itemsListText}
     };
 
     const renderDocumentTrackingTab = () => {
-        const isStrictFinanceUser = isFinanceStaff && !isAdmin;
+        const queryParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
+        const fromParam = queryParams.get('from');
+        const isProcurementView = fromParam === 'procurement' || (isProcurementStaff && !fromParam && !isAdmin);
+        const isStrictFinanceUser = fromParam === 'finance' || (isFinanceStaff && !fromParam && !isAdmin);
+        const isPlanView = fromParam === 'plan' || (isPlanStaff && !fromParam && !isAdmin);
         const isPowerTrackingUser = isAdmin || isPlanStaff || isProcurementStaff || isFinanceStaff || isExecutive;
 
         // Collect projects based on user authority (combining master and proposer projects)
@@ -16141,9 +16145,9 @@ ${itemsListText}
             };
         });
 
-        // External Travel Loans (กค. 101 ไปราชการ)
-        let sourceTravelLoans = Array.isArray(travelLoansList) ? travelLoansList : [];
-        if (!isPowerTrackingUser) {
+        // External Travel Loans (กค. 101 ไปราชการ) - งานพัสดุจะไม่เห็นเด็ดขาด เนื่องจากสัญญายืมเงินจะวิ่งตรงไปงานการเงิน
+        let sourceTravelLoans = isProcurementView ? [] : (Array.isArray(travelLoansList) ? travelLoansList : []);
+        if (!isPowerTrackingUser && !isProcurementView) {
             const currentUserName = auth?.user?.name || '';
             const currentUserCitizenId = auth?.user?.citizen_id;
             const currentUserId = auth?.user?.id;
@@ -16240,6 +16244,15 @@ ${itemsListText}
         });
 
         const trackingList = [...sourceTrackingProjects, ...travelLoanTrackingItems].filter(p => {
+            if (isProcurementView) {
+                // งานพัสดุ: แสดงเฉพาะโครงการที่มีชุดจัดซื้อจัดจ้าง (ไม่แสดงสัญญายืมเงินเพียวๆ)
+                return p.hasProcComponent && (
+                    p.totalProcAmount > 0 || 
+                    (p.procSets && p.procSets.length > 0) || 
+                    p.disbursement_type === 'procurement' || 
+                    p.disbursement_type === 'both'
+                );
+            }
             if (isStrictFinanceUser) {
                 return p.hasLoanAtFinance || p.hasProcAtFinance;
             }
@@ -16278,16 +16291,18 @@ ${itemsListText}
 
         // Action Required Items (Pending immediate action by current staff role)
         const actionRequiredTrackingItems = trackingList.filter(p => {
-            if (isPlanStaff || isAdmin) {
+            if (isProcurementView) {
+                return p.hasProcComponent && (
+                    p.procCategory === 'at_procurement' ||
+                    p.procurement_status === 'plan_cut' ||
+                    (p.procStatus === 'processing' && !p.procurement?.procurement_received_at)
+                );
+            }
+            if (isPlanStaff || (isAdmin && !isProcurementView && !isStrictFinanceUser)) {
                 if (p.isTravelLoan) {
                     return !p.plan_loan_cut_at || p.loanCategory === 'at_plan';
                 }
                 if ((p.status === 'approved' || p.procurement_status === 'approved') && (!p.plan_procurement_cut_at || !p.plan_loan_cut_at)) {
-                    return true;
-                }
-            }
-            if (isProcurementStaff && !isPlanStaff) {
-                if (p.hasProcComponent && p.procCategory === 'at_procurement') {
                     return true;
                 }
             }
@@ -16493,14 +16508,16 @@ return (
                                 <span>📍</span> Real-time Document & Loan Tracking Center
                             </div>
                             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                                <span>{isStrictFinanceUser ? '💳' : '📍'}</span> {isStrictFinanceUser ? 'ศูนย์เอกสารและการเงิน (สัญญายืมเงิน & จัดซื้อรอเบิกจ่าย)' : (isPowerTrackingUser ? 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน' : 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน (โครงการของฉัน)')}
+                                <span>{isStrictFinanceUser ? '💳' : (isProcurementView ? '📦' : '📍')}</span> {isStrictFinanceUser ? 'ศูนย์เอกสารและการเงิน (สัญญายืมเงิน & จัดซื้อรอเบิกจ่าย)' : (isProcurementView ? 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง (งานพัสดุ)' : (isPowerTrackingUser ? 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน' : 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน (โครงการของฉัน)'))}
                             </h2>
                             <p className="text-xs sm:text-sm text-purple-200 max-w-2xl leading-relaxed">
                                 {isStrictFinanceUser
                                     ? 'แสดงเฉพาะเอกสารและสัญญาที่วิ่งเข้าสู่งานการเงิน เพื่อลงรับ โอนเงินยืมทดรองราชการ หรือเบิกจ่ายตามชุดจัดซื้อจัดจ้าง 4 ฉบับ'
-                                    : (isPowerTrackingUser
-                                        ? 'ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค. 101) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน'
-                                        : 'ติดตามสถานะและตำแหน่งเอกสารของโครงการที่คุณเสนอขออนุมัติ ทราบทันทีว่าสัญญายืมเงินหรือจัดซื้อจัดจ้างอยู่ที่ขั้นตอนหรือโต๊ะงานใด ป้องกันเอกสารตกค้าง')}
+                                    : (isProcurementView
+                                        ? 'ติดตามเฉพาะชุดเอกสารจัดซื้อจัดจ้าง (PR/PO/ขออนุมัติซื้อจ้าง) ที่ต้องดำเนินการโดยงานพัสดุ เอกสารสัญญายืมเงินจะวิ่งตรงไปยังงานการเงินโดยไม่ผ่านงานพัสดุ'
+                                        : (isPowerTrackingUser
+                                            ? 'ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค. 101) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน'
+                                            : 'ติดตามสถานะและตำแหน่งเอกสารของโครงการที่คุณเสนอขออนุมัติ ทราบทันทีว่าสัญญายืมเงินหรือจัดซื้อจัดจ้างอยู่ที่ขั้นตอนหรือโต๊ะงานใด ป้องกันเอกสารตกค้าง'))}
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -16543,25 +16560,31 @@ return (
                 {!isStrictFinanceUser && (
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
-                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">{isPowerTrackingUser ? 'จำนวนรายการทั้งหมด' : 'จำนวนโครงการที่เสนอ'}</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                                {isProcurementView ? 'ชุดเอกสารจัดซื้อจัดจ้างทั้งหมด' : (isPowerTrackingUser ? 'จำนวนรายการทั้งหมด' : 'จำนวนโครงการที่เสนอ')}
+                            </span>
                             <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
                                 {isPowerTrackingUser ? trackingList.length : (teacherData?.proposalsCount || 0)} รายการ
                             </p>
                         </div>
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
-                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">{isPowerTrackingUser ? 'รายการที่ผ่านการอนุมัติ/มีงบ' : 'โครงการที่ผ่านอนุมัติงบ'}</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                                {isProcurementView ? 'รายการจัดซื้อที่ผ่านอนุมัติ/มีงบ' : (isPowerTrackingUser ? 'รายการที่ผ่านการอนุมัติ/มีงบ' : 'โครงการที่ผ่านอนุมัติงบ')}
+                            </span>
                             <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
                                 {isPowerTrackingUser 
-                                    ? trackingList.filter(p => (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || parseFloat(p.loanAmount) || parseFloat(p.totalProcAmount) || 0) > 0).length
+                                    ? trackingList.filter(p => (parseFloat(p.totalProcAmount) || parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0) > 0).length
                                     : (teacherData?.approvedCount || 0)} รายการ
                             </p>
                         </div>
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
-                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">วงเงินงบประมาณรวม</span>
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
+                                {isProcurementView ? 'วงเงินงบจัดซื้อจัดจ้างรวม' : 'วงเงินงบประมาณรวม'}
+                            </span>
                             <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(
                                     isPowerTrackingUser 
-                                        ? trackingList.reduce((sum, p) => sum + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || parseFloat(p.loanAmount) || parseFloat(p.totalProcAmount) || 0), 0)
+                                        ? trackingList.reduce((sum, p) => sum + (parseFloat(p.totalProcAmount) || (isProcurementView ? 0 : (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0))), 0)
                                         : (teacherData?.totalBudget || 0)
                                 )}
                             </p>
@@ -16592,22 +16615,30 @@ return (
                                 <span className="text-2xl animate-bounce">⚡</span>
                                 <div>
                                     <h3 className="text-base sm:text-lg font-black text-amber-950 flex items-center gap-2">
-                                        <span>รายการรอคุณดำเนินการเร่งด่วน (Action Required)</span>
+                                        <span>{isProcurementView ? 'รายการเอกสารพัสดุรอลงรับ & ดำเนินการ (Action Required)' : 'รายการรอคุณดำเนินการเร่งด่วน (Action Required)'}</span>
                                         <span className="px-2.5 py-0.5 rounded-full bg-amber-500 text-white text-xs font-black shadow-xs">
                                             {actionRequiredTrackingItems.length} รายการเร่งด่วน
                                         </span>
                                     </h3>
                                     <p className="text-xs text-amber-800 mt-0.5">
-                                        สัญญายืมเงิน กค.101 และเอกสารจัดซื้อจัดจ้างที่ส่งเข้ามาถึงงานแผนงาน พร้อมให้ท่านบันทึกตัดยอดงบประมาณได้ทันที
+                                        {isProcurementView 
+                                            ? 'ชุดเอกสารจัดซื้อจัดจ้างที่ส่งเข้ามาถึงงานพัสดุ พร้อมให้ท่านลงรับเรื่องและดำเนินการจัดซื้อจัดจ้าง'
+                                            : 'สัญญายืมเงิน กค.101 และเอกสารจัดซื้อจัดจ้างที่ส่งเข้ามาถึงงานแผนงาน พร้อมให้ท่านบันทึกตัดยอดงบประมาณได้ทันที'}
                                     </p>
                                 </div>
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setDocTrackingFilter(docTrackingFilter === 'at_plan' ? 'all' : 'at_plan')}
+                                onClick={() => setDocTrackingFilter(
+                                    isProcurementView 
+                                        ? (docTrackingFilter === 'at_procurement' ? 'all' : 'at_procurement')
+                                        : (docTrackingFilter === 'at_plan' ? 'all' : 'at_plan')
+                                )}
                                 className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-xs transition cursor-pointer"
                             >
-                                {docTrackingFilter === 'at_plan' ? 'แสดงทั้งหมด ➔' : 'กรองเฉพาะรายการรอตัดงบ ➔'}
+                                {isProcurementView 
+                                    ? (docTrackingFilter === 'at_procurement' ? 'แสดงทั้งหมด ➔' : 'กรองเฉพาะรายการรอพัสดุ ➔')
+                                    : (docTrackingFilter === 'at_plan' ? 'แสดงทั้งหมด ➔' : 'กรองเฉพาะรายการรอตัดงบ ➔')}
                             </button>
                         </div>
 
@@ -16626,11 +16657,11 @@ return (
                                                     ? 'bg-sky-100 text-sky-900 border border-sky-300'
                                                     : 'bg-indigo-100 text-indigo-900 border border-indigo-300'
                                             }`}>
-                                                {item.isTravelLoan ? '✈️ สัญญายืมเงิน กค.101 ไปราชการ' : '📦 ชุดจัดซื้อจัดจ้าง / สัญญายืม'}
+                                                {item.isTravelLoan ? '✈️ สัญญายืมเงิน กค.101 ไปราชการ' : '📦 ชุดจัดซื้อจัดจ้าง'}
                                             </span>
                                             <span className="font-mono text-xs sm:text-sm font-black text-amber-950">
                                                 ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(
-                                                    item.loanAmount || item.totalProcAmount || item.allocated_budget || item.estimated_budget || 0
+                                                    item.totalProcAmount || item.allocated_budget || item.estimated_budget || item.loanAmount || 0
                                                 )}
                                             </span>
                                         </div>
@@ -16641,20 +16672,28 @@ return (
 
                                         <div className="text-[11px] text-slate-600 space-y-0.5">
                                             <div className="flex items-center gap-1">
-                                                <span>👤 ผู้ยืม/ผู้เสนอ:</span>
+                                                <span>👤 ผู้เสนอโครงการ:</span>
                                                 <b className="text-slate-800">{item.user?.name || item.proposer_name || 'ไม่ระบุ'}</b>
                                             </div>
-                                            {item.destination && (
+                                            {item.department?.name && (
                                                 <div className="flex items-center gap-1 text-slate-500">
-                                                    <span>📍 สถานที่:</span>
-                                                    <span className="font-semibold text-slate-700 truncate">{item.destination}</span>
+                                                    <span>🏢 แผนก/ฝ่าย:</span>
+                                                    <span className="font-semibold text-slate-700 truncate">{item.department?.name}</span>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
 
                                     <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
-                                        {item.isTravelLoan ? (
+                                        {isProcurementView ? (
+                                            <Link
+                                                href={route('dashboard', { tab: 'procurement' })}
+                                                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black shadow-xs hover:scale-102 active:scale-98 transition cursor-pointer"
+                                                title="ไปยังคิวงานพัสดุเพื่อลงรับหรือดำเนินการจัดซื้อจัดจ้าง"
+                                            >
+                                                <span>📦</span> จัดการเอกสารพัสดุ ➔
+                                            </Link>
+                                        ) : item.isTravelLoan ? (
                                             <button
                                                 type="button"
                                                 onClick={() => handleOpenPlanCutModal(item.rawLoan)}
@@ -16735,6 +16774,25 @@ return (
                                 { id: 'fin_pending_loan', label: `📥 ลงรับแล้ว/รอโอนเงินยืม (${countFinPendingLoanDisburse})` },
                                 { id: 'fin_proc_pay', label: `📦 ชุดจัดซื้อรอเบิกจ่าย (${countFinProcToPay})` },
                                 { id: 'fin_completed', label: `✅ จ่าย/ปิดยอดแล้ว (${countFinCompleted})` },
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setDocTrackingFilter(tab.id)}
+                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                                        docTrackingFilter === tab.id
+                                            ? 'bg-purple-700 text-white shadow-xs scale-102 ring-2 ring-purple-400/50'
+                                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))
+                        ) : isProcurementView ? (
+                            [
+                                { id: 'all', label: `ทั้งหมด (${trackingList.length})` },
+                                { id: 'at_procurement', label: `📦 อยู่ที่งานพัสดุ (${countProcurement})` },
+                                { id: 'at_finance', label: `💰 ส่งงานการเงินเบิกจ่าย (${countFinance})` },
+                                { id: 'completed', label: `✅ เบิกจ่ายเสร็จสิ้น (${countCompleted})` },
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -17028,7 +17086,7 @@ return (
                                             <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
                                                 <div className="flex flex-col items-center gap-1.5">
                                                     {item.isTravelLoan ? (
-                                                        isPlanStaff && (
+                                                        (isPlanStaff || (isAdmin && !isProcurementView && !isStrictFinanceUser)) && (
                                                             item.plan_loan_cut_at ? (
                                                                 <button
                                                                     type="button"
@@ -17052,7 +17110,7 @@ return (
                                                     ) : (
                                                         <>
                                                             {/* 1. Planning Staff Actions: Cut budget for procurement and/or loan */}
-                                                            {isPlanStaff && (
+                                                            {(isPlanStaff || (isAdmin && !isProcurementView && !isStrictFinanceUser)) && (
                                                         <>
                                                             {(!item.plan_procurement_cut_at || !item.plan_loan_cut_at) && (
                                                                 <button
@@ -17113,7 +17171,7 @@ return (
                                                     )}
 
                                                     {/* 2. Procurement Staff Actions: Receive package after planning cuts budget */}
-                                                    {isProcurementStaff && (
+                                                    {(isProcurementStaff || (isAdmin && isProcurementView)) && (
                                                         <>
                                                             {(item.plan_procurement_cut_at || item.procurement_status === 'plan_cut' || item.status === 'approved') && 
                                                              (!item.procurement || item.procurement.status === 'pending' || item.procurement.status === 'plan_cut') && (
@@ -17189,7 +17247,7 @@ return (
                                                     )}
 
                                                     {/* 3. Finance Staff Actions: Receive loan and disburse/clear with actual spent amount */}
-                                                    {isFinanceStaff && (
+                                                    {(isFinanceStaff || (isAdmin && isStrictFinanceUser)) && (
                                                         <>
                                                             {(item.plan_loan_cut_at || item.loan_status === 'plan_cut' || item.loan_status === 'pending') && 
                                                              (!item.finance_received_at && item.loan_status !== 'finance_received' && item.loan_status !== 'cleared') && (
