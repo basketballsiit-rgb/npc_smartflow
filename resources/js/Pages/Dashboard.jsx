@@ -8402,13 +8402,13 @@ ${itemsListText}
                                     return (
                                         <div key={cat.id || idx} className="bg-white rounded-2xl p-4 border border-purple-100/80 shadow-xs flex flex-col justify-between space-y-3">
                                             <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-xl">{getExpIcon(cat.id)}</span>
-                                                    <h4 className="text-xs font-black text-slate-900 line-clamp-1">
+                                                <div className="flex items-start gap-2 mb-1.5 min-h-[38px]">
+                                                    <span className="text-xl shrink-0 mt-0.5">{getExpIcon(cat.id)}</span>
+                                                    <h4 className="text-xs font-black text-slate-900 leading-snug break-words">
                                                         {cat.name}
                                                     </h4>
                                                 </div>
-                                                <p className="text-[10px] text-slate-500 line-clamp-2 min-h-[28px]">
+                                                <p className="text-[10px] text-slate-500 leading-relaxed min-h-[30px]">
                                                     {cat.description}
                                                 </p>
                                             </div>
