@@ -2498,6 +2498,14 @@ export default function Dashboard({
     const [aiBriefData, setAiBriefData] = useState(null);
     const [isLoadingAiBrief, setIsLoadingAiBrief] = useState(false);
     const [quickSignProject, setQuickSignProject] = useState(null);
+
+    // Operation & Project Activity Calendar States (4 Divisions & College Overview)
+    const [calendarDivisionFilter, setCalendarDivisionFilter] = useState('all');
+    const [calendarYearFilter, setCalendarYearFilter] = useState('all');
+    const [calendarSearch, setCalendarSearch] = useState('');
+    const [calendarCurrentDate, setCalendarCurrentDate] = useState(new Date());
+    const [calendarViewMode, setCalendarViewMode] = useState('month'); // 'month' | 'agenda' | 'quarter'
+    const [selectedCalendarEvent, setSelectedCalendarEvent] = useState(null);
     const [quickSignComments, setQuickSignComments] = useState('ตรวจสอบแล้ว ถูกต้องตามระเบียบและวัตถุประสงค์ เห็นควรอนุมัติ');
     const [quickSignFundingSourceId, setQuickSignFundingSourceId] = useState('');
     const [quickSignAllocatedAmount, setQuickSignAllocatedAmount] = useState('');
@@ -16991,7 +16999,542 @@ ${itemsListText}
         );
     };
 
-    
+    // =========================================================================
+    // 4.1 OPERATION & ACTIVITY CALENDAR TAB (4 Divisions & College Overview)
+    // =========================================================================
+    const renderOperationCalendarTab = () => {
+        const masterList = Array.isArray(allProjectsMaster) ? allProjectsMaster : [];
+        const teacherList = Array.isArray(teacherData?.projects) ? teacherData.projects : [];
+        const projectMap = new Map();
+        [...masterList, ...teacherList].forEach(p => {
+            if (p && p.id && !projectMap.has(p.id)) {
+                projectMap.set(p.id, p);
+            }
+        });
+        const allProjects = Array.from(projectMap.values());
+
+        // Extract 4 Main Divisions
+        const divisionDefinitions = [
+            { id: 'div_resources', name: 'ฝ่ายบริหารทรัพยากร', shortName: 'บริหารทรัพยากร', icon: '🏢', color: 'from-amber-500 to-orange-600', badgeClass: 'bg-amber-100 text-amber-900 border-amber-300', dotColor: 'bg-amber-500', keywords: ['ทรัพยากร', 'บริหารทั่วไป', 'บุคลากร', 'การเงิน', 'พัสดุ', 'อาคาร'] },
+            { id: 'div_strategy', name: 'ฝ่ายแผนงานและความร่วมมือ', shortName: 'แผนงานและความร่วมมือ', icon: '📊', color: 'from-purple-600 to-indigo-700', badgeClass: 'bg-purple-100 text-purple-900 border-purple-300', dotColor: 'bg-purple-600', keywords: ['แผน', 'ยุทธศาสตร์', 'ความร่วมมือ', 'วิจัย', 'ประกันคุณภาพ'] },
+            { id: 'div_student', name: 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', shortName: 'พัฒนากิจการนักเรียนฯ', icon: '🎓', color: 'from-emerald-500 to-teal-600', badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300', dotColor: 'bg-emerald-500', keywords: ['พัฒนากิจการ', 'กิจกรรม', 'แนะแนว', 'ปกครอง', 'สวัสดิการ', 'พยาบาล'] },
+            { id: 'div_academic', name: 'ฝ่ายวิชาการ', shortName: 'ฝ่ายวิชาการ', icon: '📘', color: 'from-blue-500 to-sky-600', badgeClass: 'bg-blue-100 text-blue-900 border-blue-300', dotColor: 'bg-blue-500', keywords: ['วิชาการ', 'หลักสูตร', 'วัดผล', 'แผนก', 'ช่าง', 'คอมพิวเตอร์', 'บริหารธุรกิจ', 'สามัญ', 'พาณิชยการ'] },
+        ];
+
+        // Helper to match a project to a main division
+        const getProjectDivision = (p) => {
+            const deptName = (p.department_name || p.department?.name || p.main_division_name || '').toLowerCase();
+            const parentName = (p.department?.parent?.name || '').toLowerCase();
+            const combined = `${deptName} ${parentName}`;
+
+            if (combined.includes('วิชาการ') || combined.includes('หลักสูตร') || combined.includes('วัดผล') || combined.includes('ช่าง') || combined.includes('สาขา')) {
+                return divisionDefinitions[3]; // Academic
+            }
+            if (combined.includes('กิจการ') || combined.includes('กิจกรรม') || combined.includes('แนะแนว') || combined.includes('ปกครอง')) {
+                return divisionDefinitions[2]; // Student Affairs
+            }
+            if (combined.includes('แผน') || combined.includes('ยุทธศาสตร์') || combined.includes('ความร่วมมือ') || combined.includes('วิจัย')) {
+                return divisionDefinitions[1]; // Strategy & Planning
+            }
+            if (combined.includes('ทรัพยากร') || combined.includes('บริหาร') || combined.includes('การเงิน') || combined.includes('พัสดุ') || combined.includes('บุคลากร')) {
+                return divisionDefinitions[0]; // Resources
+            }
+            return divisionDefinitions[3]; // Default to Academic
+        };
+
+        // Extract Calendar Events from projects (including parent project timeline and activity item dates)
+        const calendarEvents = [];
+        allProjects.forEach(p => {
+            const div = getProjectDivision(p);
+            const academicYear = p.academic_year || '2569';
+
+            // Filter by division & year & search
+            if (calendarDivisionFilter !== 'all' && div.id !== calendarDivisionFilter) return;
+            if (calendarYearFilter !== 'all' && String(academicYear) !== String(calendarYearFilter)) return;
+            if (calendarSearch) {
+                const s = calendarSearch.toLowerCase();
+                const match = (p.title || '').toLowerCase().includes(s) ||
+                              (p.proposer_name || '').toLowerCase().includes(s) ||
+                              (p.department_name || '').toLowerCase().includes(s);
+                if (!match) return;
+            }
+
+            // 1. Direct Project Timeline
+            if (p.start_date || p.end_date) {
+                calendarEvents.push({
+                    id: `proj-${p.id}`,
+                    projectId: p.id,
+                    project: p,
+                    type: 'project',
+                    title: p.title,
+                    subtitle: `โครงการหลัก • ${p.proposer_name || p.user?.name || 'ไม่ระบุผู้เสนอ'}`,
+                    location: p.location || 'วิทยาลัยสารพัดช่างน่าน',
+                    startDate: p.start_date ? new Date(p.start_date) : (p.end_date ? new Date(p.end_date) : null),
+                    endDate: p.end_date ? new Date(p.end_date) : (p.start_date ? new Date(p.start_date) : null),
+                    periodText: p.operation_period_text || '',
+                    division: div,
+                    budget: parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0,
+                    status: p.status,
+                    executionStatus: p.execution_status,
+                });
+            }
+
+            // 2. Sub-Activities Timeline
+            if (Array.isArray(p.activities) && p.activities.length > 0) {
+                p.activities.forEach((act, actIdx) => {
+                    if (act.activity_date) {
+                        const actDate = new Date(act.activity_date);
+                        calendarEvents.push({
+                            id: `act-${p.id}-${actIdx}`,
+                            projectId: p.id,
+                            project: p,
+                            type: 'activity',
+                            activityIndex: actIdx + 1,
+                            title: act.name || `กิจกรรมที่ ${actIdx + 1}`,
+                            subtitle: `กิจกรรมย่อยในโครงการ: ${p.title}`,
+                            location: act.location || p.location || 'วิทยาลัยสารพัดช่างน่าน',
+                            startDate: actDate,
+                            endDate: actDate,
+                            periodText: '',
+                            division: div,
+                            budget: (act.loan_items || []).reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0) +
+                                    (act.procurement_items || []).reduce((sum, item) => sum + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0),
+                            status: p.status,
+                            executionStatus: p.execution_status,
+                        });
+                    }
+                });
+            }
+
+            // 3. Fallback for projects with period text or quarters but no exact date (For Agenda/Overview view)
+            if (!p.start_date && !p.end_date && (!p.activities || !p.activities.some(a => a.activity_date))) {
+                calendarEvents.push({
+                    id: `proj-fallback-${p.id}`,
+                    projectId: p.id,
+                    project: p,
+                    type: 'project_general',
+                    title: p.title,
+                    subtitle: `แผนงานตามไตรมาส • ${p.proposer_name || 'ไม่ระบุ'}`,
+                    location: p.location || 'วิทยาลัยสารพัดช่างน่าน',
+                    startDate: null,
+                    endDate: null,
+                    periodText: p.operation_period_text || 'ตามแผนปฏิบัติราชการประจำปี',
+                    division: div,
+                    budget: parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0,
+                    status: p.status,
+                    executionStatus: p.execution_status,
+                });
+            }
+        });
+
+        // Calendar Month Calculations
+        const currentYear = calendarCurrentDate.getFullYear();
+        const currentMonth = calendarCurrentDate.getMonth(); // 0-11
+        const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay(); // 0 = Sun
+        const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+        const monthNamesThai = [
+            'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+            'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+        ];
+        const thaiYear = currentYear + 543;
+
+        const prevMonth = () => {
+            setCalendarCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+        };
+        const nextMonth = () => {
+            setCalendarCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+        };
+        const todayMonth = () => {
+            setCalendarCurrentDate(new Date());
+        };
+
+        // Events that fall in the current month for month grid
+        const getEventsForDay = (day) => {
+            const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const targetDate = new Date(currentYear, currentMonth, day);
+            targetDate.setHours(0, 0, 0, 0);
+
+            return calendarEvents.filter(ev => {
+                if (!ev.startDate && !ev.endDate) return false;
+                const start = ev.startDate ? new Date(ev.startDate) : new Date(ev.endDate);
+                const end = ev.endDate ? new Date(ev.endDate) : new Date(ev.startDate);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+                return targetDate >= start && targetDate <= end;
+            });
+        };
+
+        return (
+            <div className="space-y-6 font-sans">
+                {/* 1. Top Header Banner */}
+                <div className="rounded-3xl border border-indigo-200 bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-bold border border-white/15">
+                                <span>📅</span> Institutional Operation & Project Activity Calendar
+                            </div>
+                            <h2 className="text-xl sm:text-3xl font-black tracking-tight">
+                                ปฏิทินการปฏิบัติงานโครงการ (4 ฝ่าย & ภาพรวมวิทยาลัย)
+                            </h2>
+                            <p className="text-xs sm:text-sm text-purple-200/90 max-w-2xl">
+                                ระบบติดตามวันเวลาการดำเนินงานตามแผนปฏิบัติราชการ สามารถเลือกดูแยกเฉพาะฝ่ายงานทั้ง 4 ฝ่าย หรือแสดงรวมทั้งวิทยาลัยสารพัดช่างน่าน
+                            </p>
+                        </div>
+
+                        {/* Top Quick Actions */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => window.print()}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs shadow-xs border border-white/20 transition cursor-pointer"
+                                title="พิมพ์ปฏิทินการปฏิบัติงาน"
+                            >
+                                <span>🖨️</span> พิมพ์ปฏิทิน
+                            </button>
+                            <Link
+                                href={route('projects.create')}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-purple-950 font-black text-xs shadow-md transition cursor-pointer"
+                            >
+                                <span>➕</span> เสนอ/ปรับปรุงโครงการ
+                            </Link>
+                        </div>
+                    </div>
+
+                    {/* 4 Divisions Filter Pill Tabs */}
+                    <div className="mt-6 pt-5 border-t border-white/15 flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setCalendarDivisionFilter('all')}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition cursor-pointer flex items-center gap-1.5 ${
+                                calendarDivisionFilter === 'all'
+                                    ? 'bg-white text-purple-950 shadow-md ring-2 ring-white/50'
+                                    : 'bg-white/10 text-white/80 hover:bg-white/20'
+                            }`}
+                        >
+                            <span>🏛️</span> ภาพรวมทั้งวิทยาลัย (4 ฝ่าย)
+                            <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-purple-950 text-white font-mono">
+                                {allProjects.length}
+                            </span>
+                        </button>
+
+                        {divisionDefinitions.map(div => {
+                            const count = allProjects.filter(p => getProjectDivision(p).id === div.id).length;
+                            const isSelected = calendarDivisionFilter === div.id;
+                            return (
+                                <button
+                                    key={div.id}
+                                    type="button"
+                                    onClick={() => setCalendarDivisionFilter(div.id)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                                        isSelected
+                                            ? 'bg-white text-slate-900 shadow-md ring-2 ring-white/50 font-black'
+                                            : 'bg-white/10 text-white/80 hover:bg-white/20'
+                                    }`}
+                                >
+                                    <span>{div.icon}</span> {div.shortName}
+                                    <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-white/20 text-white font-mono">
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* 2. Calendar Toolbar & Navigation */}
+                <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    {/* Month Navigator */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={prevMonth}
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+                            title="เดือนก่อนหน้า"
+                        >
+                            ◀ เดือนก่อนหน้า
+                        </button>
+                        <button
+                            type="button"
+                            onClick={todayMonth}
+                            className="px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 transition cursor-pointer"
+                            title="กลับมาเดือนปัจจุบัน"
+                        >
+                            วันนี้
+                        </button>
+                        <button
+                            type="button"
+                            onClick={nextMonth}
+                            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+                            title="เดือนถัดไป"
+                        >
+                            เดือนถัดไป ▶
+                        </button>
+                        <h3 className="ml-3 text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                            <span>🗓️</span> {monthNamesThai[currentMonth]} {thaiYear}
+                        </h3>
+                    </div>
+
+                    {/* View Switcher & Search */}
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                        <div className="relative flex-1 sm:flex-initial">
+                            <input
+                                type="text"
+                                value={calendarSearch}
+                                onChange={(e) => setCalendarSearch(e.target.value)}
+                                placeholder="ค้นชื่อโครงการ/กิจกรรม/ผู้จัด..."
+                                className="w-full sm:w-60 px-3 py-1.5 pl-8 rounded-xl border border-slate-200 text-xs focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <span className="absolute left-2.5 top-2 text-slate-400 text-xs">🔍</span>
+                        </div>
+
+                        {/* View Switcher Buttons */}
+                        <div className="flex items-center rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
+                            <button
+                                type="button"
+                                onClick={() => setCalendarViewMode('month')}
+                                className={`px-3 py-1 rounded-lg transition cursor-pointer ${calendarViewMode === 'month' ? 'bg-white text-purple-950 shadow-2xs font-black' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                📅 รายเดือน
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCalendarViewMode('agenda')}
+                                className={`px-3 py-1 rounded-lg transition cursor-pointer ${calendarViewMode === 'agenda' ? 'bg-white text-purple-950 shadow-2xs font-black' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                📋 รายการวาระ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. Month Grid View */}
+                {calendarViewMode === 'month' && (
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                        {/* Day of Week Header */}
+                        <div className="grid grid-cols-7 bg-slate-100 border-b border-slate-200 text-center text-xs font-bold text-slate-700 py-3">
+                            <span className="text-rose-600">อาทิตย์</span>
+                            <span>จันทร์</span>
+                            <span>อังคาร</span>
+                            <span>พุธ</span>
+                            <span>พฤหัสบดี</span>
+                            <span>ศุกร์</span>
+                            <span className="text-indigo-600">เสาร์</span>
+                        </div>
+
+                        {/* Days Grid */}
+                        <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
+                            {/* Empty cells before month start */}
+                            {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
+                                <div key={`empty-${idx}`} className="min-h-[110px] p-2 bg-slate-50/50" />
+                            ))}
+
+                            {/* Days of the month */}
+                            {Array.from({ length: daysInMonth }).map((_, dayIdx) => {
+                                const dayNum = dayIdx + 1;
+                                const dayEvents = getEventsForDay(dayNum);
+                                const isToday = new Date().getFullYear() === currentYear &&
+                                                new Date().getMonth() === currentMonth &&
+                                                new Date().getDate() === dayNum;
+
+                                return (
+                                    <div
+                                        key={`day-${dayNum}`}
+                                        className={`min-h-[110px] sm:min-h-[125px] p-2 flex flex-col justify-between transition hover:bg-purple-50/30 ${
+                                            isToday ? 'bg-amber-50/60 ring-2 ring-inset ring-amber-400' : 'bg-white'
+                                        }`}
+                                    >
+                                        <div className="flex justify-between items-start">
+                                            <span className={`text-xs font-black rounded-full w-6 h-6 flex items-center justify-center ${
+                                                isToday ? 'bg-amber-500 text-white shadow-2xs' : 'text-slate-800'
+                                            }`}>
+                                                {dayNum}
+                                            </span>
+                                            {dayEvents.length > 0 && (
+                                                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 font-bold">
+                                                    {dayEvents.length}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* Event badges inside day cell */}
+                                        <div className="space-y-1 mt-1.5 flex-1 overflow-y-auto max-h-[85px]">
+                                            {dayEvents.slice(0, 3).map(ev => (
+                                                <div
+                                                    key={ev.id}
+                                                    onClick={() => setSelectedCalendarEvent(ev)}
+                                                    className={`p-1 rounded-lg text-[10px] font-bold border transition truncate cursor-pointer hover:scale-102 ${ev.division.badgeClass}`}
+                                                    title={`${ev.title} (${ev.division.name})`}
+                                                >
+                                                    <span className="mr-1">{ev.type === 'activity' ? '🎯' : '📘'}</span>
+                                                    <span>{ev.title}</span>
+                                                </div>
+                                            ))}
+                                            {dayEvents.length > 3 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedCalendarEvent(dayEvents[0])}
+                                                    className="text-[9px] font-bold text-slate-500 hover:text-purple-700 block w-full text-center"
+                                                >
+                                                    +{dayEvents.length - 3} รายการเพิ่มเติม...
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* 4. Agenda / Timeline View */}
+                {calendarViewMode === 'agenda' && (
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <h4 className="font-black text-slate-900 text-base">
+                                📋 รายการวาระการปฏิบัติงานโครงการ ({calendarEvents.length} รายการ)
+                            </h4>
+                            <span className="text-xs text-slate-500">
+                                เรียงตามช่วงเวลาการดำเนินงานของ 4 ฝ่าย
+                            </span>
+                        </div>
+
+                        {calendarEvents.length === 0 ? (
+                            <div className="p-12 text-center text-slate-400">
+                                <span className="text-4xl block mb-2">📭</span>
+                                <p className="font-bold text-slate-600">ไม่พบวาระการปฏิบัติงานตามเงื่อนไขที่เลือก</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-100">
+                                {calendarEvents.map(ev => {
+                                    const dateText = ev.startDate 
+                                        ? `${ev.startDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}${ev.endDate && ev.endDate.getTime() !== ev.startDate.getTime() ? ' - ' + ev.endDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : ''}`
+                                        : (ev.periodText || 'ตามแผนปฏิบัติการประจำปี');
+
+                                    return (
+                                        <div
+                                            key={ev.id}
+                                            onClick={() => setSelectedCalendarEvent(ev)}
+                                            className="py-4 hover:bg-slate-50/70 p-3 rounded-2xl transition cursor-pointer flex flex-col md:flex-row justify-between items-start md:items-center gap-3"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div className={`p-2.5 rounded-2xl ${ev.division.badgeClass} shrink-0 text-lg`}>
+                                                    {ev.type === 'activity' ? '🎯' : '📘'}
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${ev.division.badgeClass}`}>
+                                                            {ev.division.name}
+                                                        </span>
+                                                        <span className="text-xs text-slate-400 font-mono">
+                                                            📅 {dateText}
+                                                        </span>
+                                                    </div>
+                                                    <h5 className="font-black text-sm text-slate-900 hover:text-indigo-600 transition">
+                                                        {ev.title}
+                                                    </h5>
+                                                    <p className="text-xs text-slate-500">
+                                                        {ev.subtitle} • 📍 {ev.location}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-3 self-end md:self-center">
+                                                <div className="text-right">
+                                                    <span className="text-[10px] text-slate-400 block">งบประมาณ</span>
+                                                    <span className="font-black text-slate-900 text-xs font-mono">
+                                                        ฿{new Intl.NumberFormat('th-TH').format(ev.budget)}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 transition"
+                                                >
+                                                    ดูรายละเอียด ➔
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 5. Modal: Event Detail Card */}
+                {selectedCalendarEvent && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                        <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-indigo-100 space-y-4 my-8 animate-in fade-in zoom-in duration-150">
+                            <div className="flex justify-between items-start border-b border-slate-100 pb-3">
+                                <div className="space-y-1">
+                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${selectedCalendarEvent.division.badgeClass}`}>
+                                        {selectedCalendarEvent.division.name}
+                                    </span>
+                                    <h4 className="text-base font-black text-slate-900 pt-1 leading-snug">
+                                        {selectedCalendarEvent.title}
+                                    </h4>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedCalendarEvent(null)}
+                                    className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <div className="space-y-2.5 text-xs text-slate-700">
+                                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">📅 กำหนดการ:</span>
+                                        <span className="font-bold text-indigo-700">
+                                            {selectedCalendarEvent.startDate 
+                                                ? `${selectedCalendarEvent.startDate.toLocaleDateString('th-TH', { dateStyle: 'long' })}${selectedCalendarEvent.endDate && selectedCalendarEvent.endDate.getTime() !== selectedCalendarEvent.startDate.getTime() ? ' ถึง ' + selectedCalendarEvent.endDate.toLocaleDateString('th-TH', { dateStyle: 'long' }) : ''}`
+                                                : (selectedCalendarEvent.periodText || 'ตามแผนปฏิบัติการ')}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">📍 สถานที่ดำเนินการ:</span>
+                                        <span className="font-bold text-slate-900">{selectedCalendarEvent.location}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">💰 วงเงินงบประมาณ:</span>
+                                        <span className="font-black text-slate-900 font-mono">
+                                            ฿{new Intl.NumberFormat('th-TH').format(selectedCalendarEvent.budget)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">👤 ผู้รับผิดชอบ:</span>
+                                        <span className="font-bold text-slate-900">
+                                            {selectedCalendarEvent.project?.proposer_name || selectedCalendarEvent.project?.user?.name || 'ไม่ระบุ'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedCalendarEvent(null)}
+                                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
+                                >
+                                    ปิด
+                                </button>
+                                <a
+                                    href={route('projects.show', selectedCalendarEvent.projectId)}
+                                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                                >
+                                    เปิดดูข้อมูลโครงการฉบับเต็ม ➔
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     // 5. Dedicated Document & Loan Tracking Center Tab
     
     const getTrackingApprovalStepInfo = (stepNumber) => {
@@ -21692,6 +22235,7 @@ return (
                         {activeTab === 'admin_ai' && renderAdminAiHubTab()}
                         {activeTab === 'all_projects' && renderAllProjectsTab()}
                         {activeTab === 'project_status' && renderProjectStatusTab()}
+                        {activeTab === 'operation_calendar' && renderOperationCalendarTab()}
                         {activeTab === 'central_budgets' && renderCentralBudgetsTab()}
                         {activeTab === 'document_tracking' && renderDocumentTrackingTab()}
                         {activeTab === 'proposals' && renderProposalsTab()}

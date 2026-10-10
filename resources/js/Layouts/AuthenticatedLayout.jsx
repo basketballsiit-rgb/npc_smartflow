@@ -903,6 +903,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span className="font-black text-amber-300">ติดตามสถานะโครงการ (5 ระดับ)</span>}
                                 </Link>
                                 <Link
+                                    href={route('dashboard', { tab: 'operation_calendar', from: 'plan' })}
+                                    className={getSubLinkClass(url.includes('tab=operation_calendar') && (url.includes('from=plan') || (!url.includes('from=executive') && !url.includes('from=admin') && (isPlanStaff || isAdmin))))}
+                                    title="ปฏิทินการปฏิบัติงานโครงการ (แยก 4 ฝ่าย และภาพรวมทั้งวิทยาลัย)"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=operation_calendar') && (url.includes('from=plan') || (!url.includes('from=executive') && !url.includes('from=admin') && (isPlanStaff || isAdmin))), 'text-amber-300')}>●</span>
+                                    <span className="text-sm">📅</span>
+                                    {isSidebarOpen && <span className="font-black text-amber-300">ปฏิทินการปฏิบัติงาน (4 ฝ่าย)</span>}
+                                </Link>
+                                <Link
                                     href={route('dashboard', { tab: 'annual_budget_requests' })}
                                     className={getSubLinkClass(url.includes('tab=annual_budget_requests'))}
                                     title="ภาพรวมคำของบประมาณประจำปี แยก 4 ฝ่าย พร้อมพิจารณาอนุมัติจัดสรร"
@@ -1019,6 +1028,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className={getPrefixClass(url.includes('tab=project_status') && url.includes('from=executive'), 'text-violet-300')}>●</span>
                                     <span className="text-sm">🎯</span>
                                     {isSidebarOpen && <span className="font-black text-violet-300">ติดตามสถานะโครงการ (5 ระดับ)</span>}
+                                </Link>
+                                <Link
+                                    href={route('dashboard', { tab: 'operation_calendar', from: 'executive' })}
+                                    className={getSubLinkClass(url.includes('tab=operation_calendar') && url.includes('from=executive'))}
+                                    title="ปฏิทินการปฏิบัติงานโครงการ (แยก 4 ฝ่าย และภาพรวมทั้งวิทยาลัย)"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=operation_calendar') && url.includes('from=executive'), 'text-violet-300')}>●</span>
+                                    <span className="text-sm">📅</span>
+                                    {isSidebarOpen && <span className="font-black text-violet-300">ปฏิทินการปฏิบัติงาน (4 ฝ่าย)</span>}
                                 </Link>
                                 <Link
                                     href={route('strategies.dashboard')}
@@ -1342,6 +1360,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Link href={route('dashboard', { tab: 'project_status', from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-amber-300 font-bold">
                                             <span>🎯</span> ติดตามสถานะโครงการ (5 ระดับ)
                                         </Link>
+                                        <Link href={route('dashboard', { tab: 'operation_calendar', from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-amber-300 font-bold">
+                                            <span>📅</span> ปฏิทินการปฏิบัติงาน (4 ฝ่าย)
+                                        </Link>
                                         <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📊</span> ภาพรวมคำของบแยก 4 ฝ่าย
                                         </Link>
@@ -1367,6 +1388,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Link href={route('dashboard', { tab: 'project_status', from: 'executive' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-violet-300 font-bold">
                                             <span>🎯</span> ติดตามสถานะโครงการ (5 ระดับ)
                                         </Link>
+                                        <Link href={route('dashboard', { tab: 'operation_calendar', from: 'executive' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-violet-300 font-bold">
+                                            <span>📅</span> ปฏิทินการปฏิบัติงาน (4 ฝ่าย)
+                                        </Link>
                                         <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📊</span> คำของบประมาณ 4 ฝ่าย
                                         </Link>
@@ -1382,6 +1406,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <div className="text-[10px] font-bold text-rose-300 uppercase px-2">8. ผู้ดูแลระบบ</div>
                                         <Link href={route('dashboard', { tab: 'project_status', from: 'admin' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-rose-300 font-bold">
                                             <span>🎯</span> ติดตามสถานะโครงการ (5 ระดับ)
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'operation_calendar', from: 'admin' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-rose-300 font-bold">
+                                            <span>📅</span> ปฏิทินการปฏิบัติงาน (4 ฝ่าย)
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'admin_users' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>👤</span> จัดการผู้ใช้ & สิทธิ์

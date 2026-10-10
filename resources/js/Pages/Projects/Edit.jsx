@@ -237,6 +237,9 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         phone: project?.phone || '',
         email: project?.email || project?.user?.email || '',
         location: project?.location || 'ณ วิทยาลัยสารพัดช่างน่าน',
+        start_date: project?.start_date ? (typeof project.start_date === 'string' ? project.start_date.split('T')[0] : '') : '',
+        end_date: project?.end_date ? (typeof project.end_date === 'string' ? project.end_date.split('T')[0] : '') : '',
+        operation_period_text: project?.operation_period_text || '',
         mission: project?.mission || 'ผลิตและพัฒนากำลังคนด้านวิชาชีพให้มีคุณภาพตามมาตรฐานการอาชีวศึกษา',
         goal: project?.goal || 'ผู้เรียนและผู้สำเร็จการศึกษามีความรู้ ทักษะ การประยุกต์ใช้และมีคุณธรรม จริยธรรม ตามมาตรฐานวิชาชีพ',
         strategy_tactic: project?.strategy_tactic || 'ส่งเสริมด้านวิชาการ คุณธรรม จริยธรรม และค่านิยมที่ดีงามในวิชาชีพ',
@@ -1830,6 +1833,48 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                     placeholder="เช่น ณ หอประชุม วิทยาลัยสารพัดช่างน่าน หรือ อาคารปฏิบัติการ..."
                                     required
                                 />
+
+                                {/* ช่วงเวลาการปฏิบัติงาน (Operation Period & Specific Dates) สำหรับแสดงบนปฏิทินปฏิบัติงาน */}
+                                <div className="pt-3 border-t border-purple-100/80 space-y-3">
+                                    <div>
+                                        <label className="block text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                                            <span>📅</span> ช่วงเวลาการปฏิบัติงาน / ดำเนินโครงการ (สำหรับแสดงบนปฏิทินปฏิบัติงานวิทยาลัย)
+                                        </label>
+                                        <p className="text-[11px] text-slate-500">
+                                            สามารถระบุเป็นช่วงวันที่ชัดเจน หรือระบุเป็นช่วงสัปดาห์/เดือน เพื่อนำไปปักหมุดบนปฏิทินการปฏิบัติงานของ 4 ฝ่าย
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <span className="block text-[11px] font-bold text-slate-700 mb-1">วันที่เริ่มต้นโครงการ</span>
+                                            <input
+                                                type="date"
+                                                value={data.start_date || ''}
+                                                onChange={(e) => setData('start_date', e.target.value)}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 font-medium"
+                                            />
+                                        </div>
+                                        <div>
+                                            <span className="block text-[11px] font-bold text-slate-700 mb-1">วันที่สิ้นสุดโครงการ</span>
+                                            <input
+                                                type="date"
+                                                value={data.end_date || ''}
+                                                onChange={(e) => setData('end_date', e.target.value)}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 font-medium"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[11px] font-bold text-slate-700 mb-1">หรือระบุเป็นช่วงสัปดาห์ / เดือน (ข้อความ)</span>
+                                        <input
+                                            type="text"
+                                            value={data.operation_period_text || ''}
+                                            onChange={(e) => setData('operation_period_text', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500"
+                                            placeholder="เช่น สัปดาห์ที่ 2 ของเดือนพฤศจิกายน 2569 หรือ ตลอดภาคเรียนที่ 1..."
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Section 9: ผลที่คาดว่าจะได้รับ (Expected Benefits) */}
@@ -2662,8 +2707,8 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                     </div>
                                                 </div>
 
-                                                {/* Activity Location & Target */}
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                                {/* Activity Location, Target, and Timeline */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                                                     <div>
                                                         <label className="block text-[11px] font-bold text-slate-600 mb-1">สถานที่จัดกิจกรรมนี้</label>
                                                         <input
@@ -2682,6 +2727,15 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                             onChange={(e) => handleActivityChange(actIdx, 'target_group', e.target.value)}
                                                             className="w-full rounded-lg border-purple-200 px-3 py-1.5 text-xs"
                                                             placeholder="เช่น นักเรียน นักศึกษา 50 คน..."
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold text-slate-600 mb-1">📅 วันที่จัดกิจกรรมนี้ (ปฏิทิน)</label>
+                                                        <input
+                                                            type="date"
+                                                            value={act.activity_date || ''}
+                                                            onChange={(e) => handleActivityChange(actIdx, 'activity_date', e.target.value)}
+                                                            className="w-full rounded-lg border-purple-200 px-3 py-1.5 text-xs font-medium"
                                                         />
                                                     </div>
                                                 </div>

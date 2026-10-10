@@ -782,7 +782,7 @@ class DashboardController extends Controller
             || $user->isProcurementHead() || $user->isProcurementStaff() 
             || $user->isFinanceStaff() || $user->isExecutive();
 
-        if ($isPowerUser || in_array($activeTab, ['project_status', 'all_projects', 'document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
+        if ($isPowerUser || in_array($activeTab, ['operation_calendar', 'project_status', 'all_projects', 'document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
             $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
                 ->latest();
 
@@ -868,6 +868,7 @@ class DashboardController extends Controller
                         'location' => $p->location,
                         'start_date' => $p->start_date ? (is_string($p->start_date) ? $p->start_date : $p->start_date->format('Y-m-d')) : null,
                         'end_date' => $p->end_date ? (is_string($p->end_date) ? $p->end_date : $p->end_date->format('Y-m-d')) : null,
+                        'operation_period_text' => $p->operation_period_text,
                         'responsible_person' => $p->responsible_person,
                         'activities' => $p->activities,
                         'action_plan' => $p->action_plan,
