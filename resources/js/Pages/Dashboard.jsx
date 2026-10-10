@@ -6356,7 +6356,7 @@ export default function Dashboard({
 
         const config = aiAgentsConfig || {
             global_directive: '',
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.0-flash',
             temperature: 0.3,
             has_api_key: false,
             agents: []
@@ -6467,7 +6467,7 @@ export default function Dashboard({
                         </div>
                         <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
                             <span className="text-[11px] text-purple-300 block">โมเดลประมวลผล</span>
-                            <span className="text-base font-bold text-white mt-0.5 block font-mono">{config.model || 'gemini-2.5-flash'}</span>
+                            <span className="text-base font-bold text-white mt-0.5 block font-mono">{config.model === 'gemini-2.5-flash' ? 'gemini-2.0-flash' : (config.model || 'gemini-2.0-flash')}</span>
                         </div>
                         <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
                             <span className="text-[11px] text-purple-300 block">ความสร้างสรรค์ (Temperature)</span>
@@ -7070,13 +7070,13 @@ export default function Dashboard({
                                         โมเดลประมวลผลหลัก (Active Model Engine)
                                     </label>
                                     <select
-                                        value={config.model || 'gemini-2.5-flash'}
+                                        value={config.model === 'gemini-2.5-flash' ? 'gemini-2.0-flash' : (config.model || 'gemini-2.0-flash')}
                                         onChange={(e) => setAiAgentsConfig({ ...aiAgentsConfig, model: e.target.value })}
                                         className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-xs font-semibold text-slate-800 focus:border-purple-500 focus:ring-purple-500"
                                     >
-                                        <option value="gemini-2.5-flash">Gemini 2.5 Flash (แนะนำสำหรับระบบราชการ - ตอบสนองเร็วและแม่นยำสูง)</option>
+                                        <option value="gemini-2.0-flash">Gemini 2.0 Flash (แนะนำล่าสุด - ตอบสนองรวดเร็ว ฉลาด และแม่นยำสูง)</option>
+                                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (รุ่นมาตรฐาน เสถียรสูง)</option>
                                         <option value="gemini-1.5-pro">Gemini 1.5 Pro (วิเคราะห์ลึกซึ้ง เหมาะกับโครงการขนาดใหญ่)</option>
-                                        <option value="gemini-1.5-flash">Gemini 1.5 Flash (โมเดลสำรองความเร็วสูง)</option>
                                     </select>
                                     <p className="text-[11px] text-slate-500 mt-1">
                                         ทุกโมเดลรองรับภาษาไทยทางการ และการอ้างอิงระเบียบกระทรวงศึกษาธิการ

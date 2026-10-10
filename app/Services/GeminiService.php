@@ -9,6 +9,18 @@ use Illuminate\Support\Facades\Log;
 class GeminiService
 {
     /**
+     * Get configured active AI model with safe fallback to officially supported model.
+     */
+    public static function getActiveModel(): string
+    {
+        $model = SystemSetting::get('ai_model', 'gemini-2.0-flash');
+        if (empty($model) || $model === 'gemini-2.5-flash') {
+            return 'gemini-2.0-flash';
+        }
+        return $model;
+    }
+
+    /**
      * Generate ACT Recommendations from survey data using Gemini API.
      */
     public function generateRecommendations(int $totalResponses, array $averages, array $suggestions): string
@@ -27,11 +39,12 @@ class GeminiService
         }
 
         $prompt = $this->buildPrompt($totalResponses, $averages, $suggestions);
+        $model = self::getActiveModel();
 
         try {
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json'
-            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+            ])->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
                 'contents' => [
                     [
                         'parts' => [
@@ -255,7 +268,7 @@ Write the report in Thai. Include sections for:
         try {
             $response = Http::withHeaders([
                 'Content-Type' => 'application/json'
-            ])->timeout(25)->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+            ])->timeout(25)->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                 'contents' => [
                     [
                         'parts' => [
@@ -497,7 +510,7 @@ Write the report in Thai. Include sections for:
             try {
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->timeout(20)
-                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                         'contents' => [['parts' => [['text' => $prompt]]]]
                     ]);
 
@@ -589,7 +602,7 @@ Write the report in Thai. Include sections for:
             try {
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->timeout(25)
-                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                         'contents' => [['parts' => [['text' => $prompt]]]]
                     ]);
 
@@ -669,7 +682,7 @@ Write the report in Thai. Include sections for:
             try {
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->timeout(25)
-                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                         'contents' => [['parts' => [['text' => $prompt]]]]
                     ]);
 
@@ -760,7 +773,7 @@ Write the report in Thai. Include sections for:
             try {
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->timeout(25)
-                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                         'contents' => [['parts' => [['text' => $prompt]]]]
                     ]);
 
@@ -866,7 +879,7 @@ Write the report in Thai. Include sections for:
 
         try {
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                     'contents' => [['parts' => [['text' => $prompt]]]]
                 ]);
 
@@ -962,7 +975,7 @@ Write the report in Thai. Include sections for:
             try {
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->timeout(15)
-                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                         'contents' => [['parts' => [['text' => $prompt]]]]
                     ]);
 
@@ -1089,7 +1102,7 @@ Write the report in Thai. Include sections for:
             try {
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->timeout(15)
-                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                         'contents' => [['parts' => [['text' => $prompt]]]]
                     ]);
 
@@ -1199,7 +1212,7 @@ Write the report in Thai. Include sections for:
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->withoutVerifying()
                     ->timeout(25)
-                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                         'contents' => [
                             ['parts' => [['text' => $prompt]]]
                         ],
@@ -1407,7 +1420,7 @@ Write the report in Thai. Include sections for:
                 $response = Http::withHeaders(['Content-Type' => 'application/json'])
                     ->withoutVerifying()
                     ->timeout(20)
-                    ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$apiKey}", [
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/" . self::getActiveModel() . ":generateContent?key={$apiKey}", [
                         'contents' => [
                             ['parts' => [['text' => $prompt]]]
                         ],
@@ -1636,7 +1649,7 @@ Write the report in Thai. Include sections for:
         if ($aiEnabled && !empty($apiKey)) {
             $agentPrompt = SystemSetting::get('ai_prompt_rationale', self::getAgentsDefinitions()['rationale']['default_prompt']);
             $context = self::buildSharedProjectContext($data);
-            $model = SystemSetting::get('ai_model', 'gemini-2.5-flash');
+            $model = self::getActiveModel();
             $temp = (float)SystemSetting::get('ai_temperature', 0.4);
 
             $fullPrompt = "{$agentPrompt}\n\n{$context}\n\nคำสั่ง: จงยกร่าง 'หลักการและเหตุผล' ของโครงการ \"{$title}\" จำนวน 3 ย่อหน้าอย่างสมบูรณ์แบบ ตอบเฉพาะเนื้อหาหลักการและเหตุผลภาษาไทย ไม่ต้องมีเกริ่นนำหรือหัวข้อข้อความ";
@@ -1678,7 +1691,7 @@ Write the report in Thai. Include sections for:
         if ($aiEnabled && !empty($apiKey)) {
             $agentPrompt = SystemSetting::get('ai_prompt_objectives', self::getAgentsDefinitions()['objectives']['default_prompt']);
             $context = self::buildSharedProjectContext($data);
-            $model = SystemSetting::get('ai_model', 'gemini-2.5-flash');
+            $model = self::getActiveModel();
             $temp = (float)SystemSetting::get('ai_temperature', 0.3);
 
             $fullPrompt = "{$agentPrompt}\n\n{$context}\n\nคำสั่ง: กำหนดวัตถุประสงค์ 3 ข้อ สำหรับโครงการ \"{$title}\" ตอบเป็น JSON array ของสตริง strictly ในรูปแบบ [\"เพื่อ...\", \"เพื่อ...\", \"เพื่อ...\"]";
@@ -1729,7 +1742,7 @@ Write the report in Thai. Include sections for:
         if ($aiEnabled && !empty($apiKey)) {
             $agentPrompt = SystemSetting::get('ai_prompt_indicators', self::getAgentsDefinitions()['indicators']['default_prompt']);
             $context = self::buildSharedProjectContext($data);
-            $model = SystemSetting::get('ai_model', 'gemini-2.5-flash');
+            $model = self::getActiveModel();
             $temp = (float)SystemSetting::get('ai_temperature', 0.3);
 
             $fullPrompt = "{$agentPrompt}\n\n{$context}\n\nคำสั่ง: ออกแบบตัวชี้วัด 4 มิติ สำหรับโครงการ \"{$title}\" ตอบกลับเป็น JSON object strictly ในรูปแบบ:\n"

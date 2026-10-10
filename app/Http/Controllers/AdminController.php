@@ -1178,7 +1178,11 @@ class AdminController extends Controller
         }
 
         $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
-        $aiModel = SystemSetting::get('ai_model', 'gemini-2.5-flash');
+        $aiModel = SystemSetting::get('ai_model', 'gemini-2.0-flash');
+        if ($aiModel === 'gemini-2.5-flash') {
+            $aiModel = 'gemini-2.0-flash';
+            SystemSetting::set('ai_model', 'gemini-2.0-flash', 'ai', 'รุ่นโมเดล AI Gemini', 'text');
+        }
         $aiTemp = (float)SystemSetting::get('ai_temperature', 0.4);
         $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
         $globalDirective = SystemSetting::get('ai_global_directive', GeminiService::getDefaultGlobalDirective());
@@ -1218,7 +1222,11 @@ class AdminController extends Controller
         }
 
         if ($request->has('ai_model') || $request->has('model')) {
-            SystemSetting::set('ai_model', $request->input('ai_model', $request->input('model')), 'ai', 'รุ่นโมเดล AI Gemini', 'text');
+            $submittedModel = $request->input('ai_model', $request->input('model'));
+            if (empty($submittedModel) || $submittedModel === 'gemini-2.5-flash') {
+                $submittedModel = 'gemini-2.0-flash';
+            }
+            SystemSetting::set('ai_model', $submittedModel, 'ai', 'รุ่นโมเดล AI Gemini', 'text');
         }
 
         if ($request->has('ai_temperature') || $request->has('temperature')) {
@@ -1292,7 +1300,10 @@ class AdminController extends Controller
         }
 
         $apiKey = trim($request->input('gemini_api_key')) ?: SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
-        $model = $request->input('ai_model') ?: SystemSetting::get('ai_model', 'gemini-2.5-flash');
+        $model = $request->input('ai_model') ?: SystemSetting::get('ai_model', 'gemini-2.0-flash');
+        if ($model === 'gemini-2.5-flash') {
+            $model = 'gemini-2.0-flash';
+        }
 
         if (empty($apiKey)) {
             return response()->json([
