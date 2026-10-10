@@ -10,9 +10,13 @@ class VendorController extends Controller
     /**
      * Display a listing of vendors.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Vendor::orderBy('name')->get());
+        if ($request->wantsJson() && !$request->header('X-Inertia')) {
+            return response()->json(Vendor::orderBy('name')->get());
+        }
+
+        return redirect()->route('dashboard', ['tab' => 'procurement', 'tool' => 'vendor_po']);
     }
 
     /**

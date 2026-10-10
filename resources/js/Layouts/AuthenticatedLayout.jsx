@@ -745,10 +745,10 @@ export default function AuthenticatedLayout({ header, children }) {
                             <div className="pl-2.5 border-l-2 border-blue-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                 <Link
                                     href={route('dashboard', { tab: 'procurement' })}
-                                    className={getSubLinkClass(url.includes('tab=procurement') && !url.includes('tool=item_catalog'))}
+                                    className={getSubLinkClass(url.includes('tab=procurement') && !url.includes('tool=item_catalog') && !url.includes('tool=vendor_po'))}
                                     title="คิวลงรับจัดซื้อจัดจ้าง & แต่งตั้งกรรมการ"
                                 >
-                                    <span className={getPrefixClass(url.includes('tab=procurement') && !url.includes('tool=item_catalog'), 'text-blue-300')}>└─</span>
+                                    <span className={getPrefixClass(url.includes('tab=procurement') && !url.includes('tool=item_catalog') && !url.includes('tool=vendor_po'), 'text-blue-300')}>└─</span>
                                     <span className="text-sm">📋</span>
                                     {isSidebarOpen && <span>คิวลงรับจัดซื้อ & แต่งตั้งกรรมการ</span>}
                                 </Link>
@@ -762,11 +762,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>ติดตามเอกสารพัสดุ & ส่งการเงิน</span>}
                                 </Link>
                                 <Link
-                                    href={route('vendors.index')}
-                                    className={getSubLinkClass(url.includes('vendors'))}
+                                    href={route('dashboard', { tab: 'procurement', tool: 'vendor_po' })}
+                                    className={getSubLinkClass(url.includes('tab=procurement') && (url.includes('tool=vendor_po') || url.includes('vendors')))}
                                     title="ทะเบียนร้านค้า / ผู้ประกอบการคู่ค้า"
                                 >
-                                    <span className={getPrefixClass(url.includes('vendors'), 'text-blue-300')}>└─</span>
+                                    <span className={getPrefixClass(url.includes('tab=procurement') && (url.includes('tool=vendor_po') || url.includes('vendors')), 'text-blue-300')}>└─</span>
                                     <span className="text-sm">🏪</span>
                                     {isSidebarOpen && <span>ทะเบียนร้านค้า / ผู้ประกอบการ</span>}
                                 </Link>
@@ -1273,7 +1273,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Link href={route('dashboard', { tab: 'document_tracking', from: 'procurement' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📍</span> ติดตามเอกสารพัสดุ & ส่งการเงิน
                                         </Link>
-                                        <Link href={route('vendors.index')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <Link href={route('dashboard', { tab: 'procurement', tool: 'vendor_po' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🏪</span> ทะเบียนร้านค้า
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'procurement', tool: 'item_catalog' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">

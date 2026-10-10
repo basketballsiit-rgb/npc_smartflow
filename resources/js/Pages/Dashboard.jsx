@@ -43,6 +43,7 @@ export default function Dashboard({
     selectedProjectId
 }) {
     const { auth, flash, departments_data } = usePage().props;
+    const { url } = usePage();
     const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
     const fiscalYear = systemSettings?.find(s => s.key === 'current_fiscal_year')?.value || '2569';
     const getSecureProjectShowUrl = (id) => {
@@ -118,6 +119,7 @@ export default function Dashboard({
     const [procTeacherSearch, setProcTeacherSearch] = useState('');
     const [isAddVendorOpen, setIsAddVendorOpen] = useState(false);
     const [isSavingVendor, setIsSavingVendor] = useState(false);
+    const [editingVendorId, setEditingVendorId] = useState(null);
     const [newVendorForm, setNewVendorForm] = useState({
         name: '',
         tax_id: '',
@@ -305,39 +307,93 @@ export default function Dashboard({
         }
 
         setIsSavingVendor(true);
-        router.post(route('vendors.store'), newVendorForm, {
-            onSuccess: () => {
-                setIsSavingVendor(false);
-                setIsAddVendorOpen(false);
-                setProcPoData({
-                    ...procPoData,
-                    vendor_name: newVendorForm.name,
-                    vendor_tax_id: newVendorForm.tax_id,
-                    vendor_address: newVendorForm.address,
-                    vendor_phone: newVendorForm.phone,
+        if (editingVendorId) {
+            router.put(route('vendors.update', editingVendorId), newVendorForm, {
+                onSuccess: () => {
+                    setIsSavingVendor(false);
+                    setIsAddVendorOpen(false);
+                    setEditingVendorId(null);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกการแก้ไขร้านค้าสำเร็จ',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                },
+                onError: () => {
+                    setIsSavingVendor(false);
+                    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาดในการแก้ไขร้านค้า' });
+                }
+            });
+        } else {
+            router.post(route('vendors.store'), newVendorForm, {
+                onSuccess: () => {
+                    setIsSavingVendor(false);
+                    setIsAddVendorOpen(false);
+                    setProcPoData({
+                        ...procPoData,
+                        vendor_name: newVendorForm.name,
+                        vendor_tax_id: newVendorForm.tax_id,
+                        vendor_address: newVendorForm.address,
+                        vendor_phone: newVendorForm.phone,
+                    });
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'บันทึกข้อมูลร้านค้าสำเร็จ',
+                        text: `บันทึก "${newVendorForm.name}" และเลือกใช้ในใบสั่งซื้อทันที`,
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                    setNewVendorForm({
+                        name: '',
+                        tax_id: '',
+                        bank_name: 'ธนาคารกรุงไทย',
+                        bank_account_number: '',
+                        bank_account_name: '',
+                        address: '',
+                        phone: '',
+                        contact_person: '',
+                        category: 'วัสดุและอุปกรณ์ทั่วไป',
+                    });
+                },
+                onError: () => {
+                    setIsSavingVendor(false);
+                    Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาดในการบันทึกร้านค้า' });
+                }
+            });
+        }
+    };
+
+    const handleEditVendor = (v) => {
+        setEditingVendorId(v.id);
+        setNewVendorForm({
+            name: v.name || '',
+            tax_id: v.tax_id || '',
+            bank_name: v.bank_name || 'ธนาคารกรุงไทย',
+            bank_account_number: v.bank_account_number || '',
+            bank_account_name: v.bank_account_name || '',
+            address: v.address || '',
+            phone: v.phone || '',
+            contact_person: v.contact_person || '',
+            category: v.category || 'วัสดุและอุปกรณ์ทั่วไป',
+        });
+        setIsAddVendorOpen(true);
+    };
+
+    const handleDeleteVendor = (v) => {
+        Swal.fire({
+            title: `ลบร้านค้า "${v.name}"?`,
+            text: 'ต้องการลบข้อมูลร้านค้านี้ออกจากระบบใช่หรือไม่?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'ใช่, ลบข้อมูล',
+            cancelButtonText: 'ยกเลิก',
+            confirmButtonColor: '#e11d48'
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.delete(route('vendors.destroy', v.id), {
+                    onSuccess: () => Swal.fire('สำเร็จ', `ลบข้อมูลร้านค้า "${v.name}" เรียบร้อยแล้ว`, 'success')
                 });
-                Swal.fire({
-                    icon: 'success',
-                    title: 'บันทึกข้อมูลร้านค้าสำเร็จ',
-                    text: `บันทึก "${newVendorForm.name}" และเลือกใช้ในใบสั่งซื้อทันที`,
-                    timer: 2500,
-                    showConfirmButton: false
-                });
-                setNewVendorForm({
-                    name: '',
-                    tax_id: '',
-                    bank_name: 'ธนาคารกรุงไทย',
-                    bank_account_number: '',
-                    bank_account_name: '',
-                    address: '',
-                    phone: '',
-                    contact_person: '',
-                    category: 'วัสดุและอุปกรณ์ทั่วไป',
-                });
-            },
-            onError: () => {
-                setIsSavingVendor(false);
-                Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาดในการบันทึกร้านค้า' });
             }
         });
     };
@@ -825,6 +881,14 @@ export default function Dashboard({
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
+            const tl = urlParams.get('tool');
+            if (tl) {
+                if (tl === 'vendors' || tl === 'vendor_po') {
+                    setProcActiveTool('vendor_po');
+                } else {
+                    setProcActiveTool(tl);
+                }
+            }
             const ch = urlParams.get('chapter');
             if (ch) {
                 if (ch === 'appendix') {
@@ -875,7 +939,7 @@ export default function Dashboard({
                 setActiveTab(currentTab);
             }
         }
-    }, [currentTab, currentChapter]);
+    }, [url, currentTab, currentChapter]);
 
     // ==========================================
     // 5-Chapter Project Report State & Handlers
@@ -13761,8 +13825,22 @@ ${itemsListText}
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setIsAddVendorOpen(true)}
-                                className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition"
+                                onClick={() => {
+                                    setEditingVendorId(null);
+                                    setNewVendorForm({
+                                        name: '',
+                                        tax_id: '',
+                                        bank_name: 'ธนาคารกรุงไทย',
+                                        bank_account_number: '',
+                                        bank_account_name: '',
+                                        address: '',
+                                        phone: '',
+                                        contact_person: '',
+                                        category: 'วัสดุและอุปกรณ์ทั่วไป',
+                                    });
+                                    setIsAddVendorOpen(true);
+                                }}
+                                className="px-4 py-2 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition cursor-pointer"
                             >
                                 <span>➕</span> เพิ่มร้านค้าใหม่
                             </button>
@@ -13784,12 +13862,48 @@ ${itemsListText}
                                     (v.bank_account_number && v.bank_account_number.includes(procVendorSearch))
                                 )
                                 .map((v) => (
-                                    <div key={v.id || v.name} className="p-4 rounded-2xl bg-purple-50/40 border border-purple-100 space-y-2">
-                                        <div className="font-bold text-purple-950 text-sm">{v.name}</div>
-                                        <div className="text-[11px] text-slate-600"><b>หมวด:</b> {v.category}</div>
-                                        <div className="text-[11px] text-slate-600"><b>เลข 13 หลัก:</b> <span className="font-mono">{v.tax_id || '-'}</span></div>
-                                        <div className="text-[11px] text-slate-600"><b>ธนาคาร:</b> {v.bank_name} {v.bank_account_number}</div>
-                                        <div className="text-[11px] text-slate-500 line-clamp-1"><b>ที่อยู่:</b> {v.address || '-'}</div>
+                                    <div key={v.id || v.name} className="p-4 rounded-2xl bg-purple-50/40 border border-purple-100 space-y-2 flex flex-col justify-between hover:shadow-xs transition">
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="font-bold text-purple-950 text-sm leading-snug">{v.name}</div>
+                                                {(isAdmin || isProcurementStaff) && v.id && (
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleEditVendor(v)}
+                                                            className="px-2 py-0.5 rounded-md bg-purple-100 hover:bg-purple-200 text-purple-800 text-[10px] font-bold transition cursor-pointer"
+                                                            title="แก้ไขข้อมูลร้านค้า"
+                                                        >
+                                                            ✏️ แก้ไข
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteVendor(v)}
+                                                            className="px-2 py-0.5 rounded-md bg-rose-100 hover:bg-rose-200 text-rose-800 text-[10px] font-bold transition cursor-pointer"
+                                                            title="ลบร้านค้า"
+                                                        >
+                                                            🗑️ ลบ
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="text-[11px] text-slate-600"><b>หมวด:</b> {v.category || '-'}</div>
+                                            <div className="text-[11px] text-slate-600"><b>เลข 13 หลัก:</b> <span className="font-mono">{v.tax_id || '-'}</span></div>
+                                            <div className="text-[11px] text-slate-600"><b>ธนาคาร:</b> {v.bank_name || '-'} {v.bank_account_number || ''}</div>
+                                            <div className="text-[11px] text-slate-500 line-clamp-2"><b>ที่อยู่:</b> {v.address || '-'}</div>
+                                        </div>
+                                        {v.tax_id && (
+                                            <div className="pt-2 border-t border-purple-100/60 flex items-center justify-between text-[10px]">
+                                                <span className="text-slate-400">ผู้ติดต่อ: {v.contact_person || v.phone || '-'}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => copyToClipboard(v.tax_id, `เลข 13 หลักของ ${v.name}`)}
+                                                    className="text-purple-700 hover:underline font-bold cursor-pointer"
+                                                >
+                                                    📋 คัดลอกเลข 13 หลัก
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                         </div>
@@ -22316,15 +22430,18 @@ return (
                                 <div className="flex justify-between items-center border-b border-purple-100 pb-4 mb-5">
                                     <div>
                                         <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
-                                            <span>🏪</span> เพิ่มข้อมูลร้านค้า / ผู้ประกอบการใหม่
+                                            <span>{editingVendorId ? '✏️' : '🏪'}</span> {editingVendorId ? 'แก้ไขข้อมูลร้านค้า / ผู้ประกอบการ' : 'เพิ่มข้อมูลร้านค้า / ผู้ประกอบการใหม่'}
                                         </h3>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            บันทึกฐานข้อมูลร้านค้า เลขผู้เสียภาษี และเลขบัญชีธนาคารสำหรับงานพัสดุ
+                                            {editingVendorId ? 'ปรับปรุงข้อมูลร้านค้า เลขผู้เสียภาษี และเลขบัญชีธนาคาร' : 'บันทึกฐานข้อมูลร้านค้า เลขผู้เสียภาษี และเลขบัญชีธนาคารสำหรับงานพัสดุ'}
                                         </p>
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => setIsAddVendorOpen(false)}
+                                        onClick={() => {
+                                            setIsAddVendorOpen(false);
+                                            setEditingVendorId(null);
+                                        }}
                                         className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
                                     >
                                         ✕
@@ -22467,7 +22584,10 @@ return (
                                     <div className="flex justify-end gap-x-3 pt-4 border-t border-purple-100">
                                         <button
                                             type="button"
-                                            onClick={() => setIsAddVendorOpen(false)}
+                                            onClick={() => {
+                                                setIsAddVendorOpen(false);
+                                                setEditingVendorId(null);
+                                            }}
                                             className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
                                         >
                                             ยกเลิก
@@ -22477,7 +22597,7 @@ return (
                                             disabled={isSavingVendor}
                                             className="rounded-xl px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 hover:from-purple-800 hover:to-indigo-700 shadow-md transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                                         >
-                                            {isSavingVendor ? '⏳ กำลังบันทึก...' : '💾 บันทึกข้อมูลร้านค้า'}
+                                            {isSavingVendor ? '⏳ กำลังบันทึก...' : (editingVendorId ? '💾 บันทึกการแก้ไข' : '💾 บันทึกข้อมูลร้านค้า')}
                                         </button>
                                     </div>
                                 </form>
