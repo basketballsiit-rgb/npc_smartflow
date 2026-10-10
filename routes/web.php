@@ -88,7 +88,7 @@ Route::get('/', function () {
                     $divIcon = '🏢';
                 } elseif (str_contains($combined, 'แผน') || str_contains($combined, 'ยุทธศาสตร์') || str_contains($combined, 'ความร่วมมือ') || str_contains($combined, 'วิจัย')) {
                     $divKey = 'strategy';
-                    $divName = 'ฝ่ายแผนงานและความร่วมมือ';
+                    $divName = 'ฝ่ายยุทธศาสตร์และแผนงาน';
                     $divBadge = 'bg-purple-50 text-purple-950 border-purple-200 border-l-4 border-l-purple-600 shadow-2xs';
                     $divBorder = 'border-l-purple-600';
                     $divBg = 'bg-purple-50/90 text-purple-950 hover:bg-purple-100/90 border border-purple-200';

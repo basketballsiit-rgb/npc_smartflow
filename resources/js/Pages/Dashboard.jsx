@@ -17016,7 +17016,7 @@ ${itemsListText}
         // Extract 4 Main Divisions
         const divisionDefinitions = [
             { id: 'div_resources', name: 'ฝ่ายบริหารทรัพยากร', shortName: 'บริหารทรัพยากร', icon: '🏢', color: 'from-amber-500 to-orange-600', badgeClass: 'bg-amber-50/95 text-amber-950 border-amber-200/90 border-l-4 border-l-amber-500 shadow-2xs', dotColor: 'bg-amber-500', keywords: ['ทรัพยากร', 'บริหารทั่วไป', 'บุคลากร', 'การเงิน', 'พัสดุ', 'อาคาร'] },
-            { id: 'div_strategy', name: 'ฝ่ายแผนงานและความร่วมมือ', shortName: 'แผนงานและความร่วมมือ', icon: '📊', color: 'from-purple-600 to-indigo-700', badgeClass: 'bg-purple-50/95 text-purple-950 border-purple-200/90 border-l-4 border-l-purple-600 shadow-2xs', dotColor: 'bg-purple-600', keywords: ['แผน', 'ยุทธศาสตร์', 'ความร่วมมือ', 'วิจัย', 'ประกันคุณภาพ'] },
+            { id: 'div_strategy', name: 'ฝ่ายยุทธศาสตร์และแผนงาน', shortName: 'ยุทธศาสตร์และแผนงาน', icon: '📊', color: 'from-purple-600 to-indigo-700', badgeClass: 'bg-purple-50/95 text-purple-950 border-purple-200/90 border-l-4 border-l-purple-600 shadow-2xs', dotColor: 'bg-purple-600', keywords: ['แผน', 'ยุทธศาสตร์', 'ความร่วมมือ', 'วิจัย', 'ประกันคุณภาพ'] },
             { id: 'div_student', name: 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', shortName: 'พัฒนากิจการนักเรียนฯ', icon: '🎓', color: 'from-emerald-500 to-teal-600', badgeClass: 'bg-emerald-50/95 text-emerald-950 border-emerald-200/90 border-l-4 border-l-emerald-600 shadow-2xs', dotColor: 'bg-emerald-500', keywords: ['พัฒนากิจการ', 'กิจกรรม', 'แนะแนว', 'ปกครอง', 'สวัสดิการ', 'พยาบาล'] },
             { id: 'div_academic', name: 'ฝ่ายวิชาการ', shortName: 'ฝ่ายวิชาการ', icon: '📘', color: 'from-blue-500 to-sky-600', badgeClass: 'bg-blue-50/95 text-blue-950 border-blue-200/90 border-l-4 border-l-blue-600 shadow-2xs', dotColor: 'bg-blue-500', keywords: ['วิชาการ', 'หลักสูตร', 'วัดผล', 'แผนก', 'ช่าง', 'คอมพิวเตอร์', 'บริหารธุรกิจ', 'สามัญ', 'พาณิชยการ'] },
         ];
@@ -17319,7 +17319,7 @@ ${itemsListText}
                             <span>🏢</span> ฝ่ายบริหารทรัพยากร
                         </div>
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200 text-purple-950 border-l-4 border-l-purple-600">
-                            <span>📊</span> ฝ่ายแผนงานและความร่วมมือ
+                            <span>📊</span> ฝ่ายยุทธศาสตร์และแผนงาน
                         </div>
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 border-l-4 border-l-emerald-600">
                             <span>🎓</span> ฝ่ายพัฒนากิจการนักเรียนฯ

@@ -19,7 +19,7 @@ export default function AdminDataVisualization({ adminData, allProjectsMaster = 
         { id: 1, name: 'ฝ่ายบริหารทรัพยากร', color: 'from-blue-500 to-indigo-600', textColor: 'text-blue-700', bgBadge: 'bg-blue-50' },
         { id: 2, name: 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', color: 'from-amber-500 to-orange-600', textColor: 'text-amber-700', bgBadge: 'bg-amber-50' },
         { id: 3, name: 'ฝ่ายวิชาการ', color: 'from-emerald-500 to-teal-600', textColor: 'text-emerald-700', bgBadge: 'bg-emerald-50' },
-        { id: 4, name: 'ฝ่ายแผนงานและความร่วมมือ', color: 'from-purple-500 to-violet-600', textColor: 'text-purple-700', bgBadge: 'bg-purple-50' },
+        { id: 4, name: 'ฝ่ายยุทธศาสตร์และแผนงาน', color: 'from-purple-500 to-violet-600', textColor: 'text-purple-700', bgBadge: 'bg-purple-50' },
     ];
 
     const projectsList = Array.isArray(allProjectsMaster) ? allProjectsMaster : [];
