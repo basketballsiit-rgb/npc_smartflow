@@ -67,26 +67,42 @@ Route::get('/', function () {
                 $parentName = $p->department?->parent?->name ?? '';
                 $combined = mb_strtolower("{$deptName} {$parentName}");
 
-                // Determine Division
+                // Determine Division with High-Contrast Colors & Left Accent Borders
                 $divKey = 'academic';
                 $divName = 'ฝ่ายวิชาการ';
-                $divBadge = 'bg-blue-100 text-blue-900 border-blue-300';
+                $divBadge = 'bg-blue-50 text-blue-950 border-blue-200 border-l-4 border-l-blue-600 shadow-2xs';
+                $divBorder = 'border-l-blue-600';
+                $divBg = 'bg-blue-50/90 text-blue-950 hover:bg-blue-100/90 border border-blue-200';
+                $divDot = 'bg-blue-600';
+                $divGradient = 'from-blue-600 to-indigo-600';
                 $divIcon = '📘';
 
                 if (str_contains($combined, 'ทรัพยากร') || str_contains($combined, 'บริหาร') || str_contains($combined, 'การเงิน') || str_contains($combined, 'พัสดุ') || str_contains($combined, 'บุคลากร')) {
                     $divKey = 'resources';
                     $divName = 'ฝ่ายบริหารทรัพยากร';
-                    $divBadge = 'bg-amber-100 text-amber-900 border-amber-300';
+                    $divBadge = 'bg-amber-50 text-amber-950 border-amber-200 border-l-4 border-l-amber-500 shadow-2xs';
+                    $divBorder = 'border-l-amber-500';
+                    $divBg = 'bg-amber-50/90 text-amber-950 hover:bg-amber-100/90 border border-amber-200';
+                    $divDot = 'bg-amber-500';
+                    $divGradient = 'from-amber-500 to-orange-500';
                     $divIcon = '🏢';
                 } elseif (str_contains($combined, 'แผน') || str_contains($combined, 'ยุทธศาสตร์') || str_contains($combined, 'ความร่วมมือ') || str_contains($combined, 'วิจัย')) {
                     $divKey = 'strategy';
                     $divName = 'ฝ่ายแผนงานและความร่วมมือ';
-                    $divBadge = 'bg-purple-100 text-purple-900 border-purple-300';
+                    $divBadge = 'bg-purple-50 text-purple-950 border-purple-200 border-l-4 border-l-purple-600 shadow-2xs';
+                    $divBorder = 'border-l-purple-600';
+                    $divBg = 'bg-purple-50/90 text-purple-950 hover:bg-purple-100/90 border border-purple-200';
+                    $divDot = 'bg-purple-600';
+                    $divGradient = 'from-purple-600 to-indigo-600';
                     $divIcon = '📊';
                 } elseif (str_contains($combined, 'กิจการ') || str_contains($combined, 'กิจกรรม') || str_contains($combined, 'แนะแนว') || str_contains($combined, 'ปกครอง')) {
                     $divKey = 'student';
                     $divName = 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา';
-                    $divBadge = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+                    $divBadge = 'bg-emerald-50 text-emerald-950 border-emerald-200 border-l-4 border-l-emerald-600 shadow-2xs';
+                    $divBorder = 'border-l-emerald-600';
+                    $divBg = 'bg-emerald-50/90 text-emerald-950 hover:bg-emerald-100/90 border border-emerald-200';
+                    $divDot = 'bg-emerald-600';
+                    $divGradient = 'from-emerald-500 to-teal-600';
                     $divIcon = '🎓';
                 }
 
@@ -115,6 +131,10 @@ Route::get('/', function () {
                     'division_key' => $divKey,
                     'division_name' => $divName,
                     'division_badge' => $divBadge,
+                    'division_border' => $divBorder,
+                    'division_bg' => $divBg,
+                    'division_dot' => $divDot,
+                    'division_gradient' => $divGradient,
                     'division_icon' => $divIcon,
                     'budget' => (float)($p->allocated_budget ?: $p->estimated_budget ?: 0),
                     'sub_activities' => $subEvents,

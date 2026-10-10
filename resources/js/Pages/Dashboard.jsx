@@ -17015,10 +17015,10 @@ ${itemsListText}
 
         // Extract 4 Main Divisions
         const divisionDefinitions = [
-            { id: 'div_resources', name: 'ฝ่ายบริหารทรัพยากร', shortName: 'บริหารทรัพยากร', icon: '🏢', color: 'from-amber-500 to-orange-600', badgeClass: 'bg-amber-100 text-amber-900 border-amber-300', dotColor: 'bg-amber-500', keywords: ['ทรัพยากร', 'บริหารทั่วไป', 'บุคลากร', 'การเงิน', 'พัสดุ', 'อาคาร'] },
-            { id: 'div_strategy', name: 'ฝ่ายแผนงานและความร่วมมือ', shortName: 'แผนงานและความร่วมมือ', icon: '📊', color: 'from-purple-600 to-indigo-700', badgeClass: 'bg-purple-100 text-purple-900 border-purple-300', dotColor: 'bg-purple-600', keywords: ['แผน', 'ยุทธศาสตร์', 'ความร่วมมือ', 'วิจัย', 'ประกันคุณภาพ'] },
-            { id: 'div_student', name: 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', shortName: 'พัฒนากิจการนักเรียนฯ', icon: '🎓', color: 'from-emerald-500 to-teal-600', badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-300', dotColor: 'bg-emerald-500', keywords: ['พัฒนากิจการ', 'กิจกรรม', 'แนะแนว', 'ปกครอง', 'สวัสดิการ', 'พยาบาล'] },
-            { id: 'div_academic', name: 'ฝ่ายวิชาการ', shortName: 'ฝ่ายวิชาการ', icon: '📘', color: 'from-blue-500 to-sky-600', badgeClass: 'bg-blue-100 text-blue-900 border-blue-300', dotColor: 'bg-blue-500', keywords: ['วิชาการ', 'หลักสูตร', 'วัดผล', 'แผนก', 'ช่าง', 'คอมพิวเตอร์', 'บริหารธุรกิจ', 'สามัญ', 'พาณิชยการ'] },
+            { id: 'div_resources', name: 'ฝ่ายบริหารทรัพยากร', shortName: 'บริหารทรัพยากร', icon: '🏢', color: 'from-amber-500 to-orange-600', badgeClass: 'bg-amber-50/95 text-amber-950 border-amber-200/90 border-l-4 border-l-amber-500 shadow-2xs', dotColor: 'bg-amber-500', keywords: ['ทรัพยากร', 'บริหารทั่วไป', 'บุคลากร', 'การเงิน', 'พัสดุ', 'อาคาร'] },
+            { id: 'div_strategy', name: 'ฝ่ายแผนงานและความร่วมมือ', shortName: 'แผนงานและความร่วมมือ', icon: '📊', color: 'from-purple-600 to-indigo-700', badgeClass: 'bg-purple-50/95 text-purple-950 border-purple-200/90 border-l-4 border-l-purple-600 shadow-2xs', dotColor: 'bg-purple-600', keywords: ['แผน', 'ยุทธศาสตร์', 'ความร่วมมือ', 'วิจัย', 'ประกันคุณภาพ'] },
+            { id: 'div_student', name: 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', shortName: 'พัฒนากิจการนักเรียนฯ', icon: '🎓', color: 'from-emerald-500 to-teal-600', badgeClass: 'bg-emerald-50/95 text-emerald-950 border-emerald-200/90 border-l-4 border-l-emerald-600 shadow-2xs', dotColor: 'bg-emerald-500', keywords: ['พัฒนากิจการ', 'กิจกรรม', 'แนะแนว', 'ปกครอง', 'สวัสดิการ', 'พยาบาล'] },
+            { id: 'div_academic', name: 'ฝ่ายวิชาการ', shortName: 'ฝ่ายวิชาการ', icon: '📘', color: 'from-blue-500 to-sky-600', badgeClass: 'bg-blue-50/95 text-blue-950 border-blue-200/90 border-l-4 border-l-blue-600 shadow-2xs', dotColor: 'bg-blue-500', keywords: ['วิชาการ', 'หลักสูตร', 'วัดผล', 'แผนก', 'ช่าง', 'คอมพิวเตอร์', 'บริหารธุรกิจ', 'สามัญ', 'พาณิชยการ'] },
         ];
 
         // Helper to match a project to a main division
@@ -17309,25 +17309,46 @@ ${itemsListText}
                     </div>
                 </div>
 
+                {/* Division Color Legend Bar */}
+                <div className="bg-white/90 backdrop-blur-sm rounded-2xl border border-slate-200 p-3 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <span className="font-extrabold text-slate-600 flex items-center gap-1.5">
+                        <span>🎨</span> รหัสสีแยก 4 ฝ่าย:
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 font-bold">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-950 border-l-4 border-l-amber-500">
+                            <span>🏢</span> ฝ่ายบริหารทรัพยากร
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200 text-purple-950 border-l-4 border-l-purple-600">
+                            <span>📊</span> ฝ่ายแผนงานและความร่วมมือ
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 border-l-4 border-l-emerald-600">
+                            <span>🎓</span> ฝ่ายพัฒนากิจการนักเรียนฯ
+                        </div>
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-950 border-l-4 border-l-blue-600">
+                            <span>📘</span> ฝ่ายวิชาการ
+                        </div>
+                    </div>
+                </div>
+
                 {/* 3. Month Grid View */}
                 {calendarViewMode === 'month' && (
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                         {/* Day of Week Header */}
-                        <div className="grid grid-cols-7 bg-slate-100 border-b border-slate-200 text-center text-xs font-bold text-slate-700 py-3">
-                            <span className="text-rose-600">อาทิตย์</span>
-                            <span>จันทร์</span>
-                            <span>อังคาร</span>
-                            <span>พุธ</span>
-                            <span>พฤหัสบดี</span>
-                            <span>ศุกร์</span>
-                            <span className="text-indigo-600">เสาร์</span>
+                        <div className="grid grid-cols-7 border-b border-slate-200 text-center text-xs font-black divide-x divide-slate-200">
+                            <div className="py-2.5 bg-rose-50/80 text-rose-700">อาทิตย์</div>
+                            <div className="py-2.5 bg-slate-100/90 text-slate-700">จันทร์</div>
+                            <div className="py-2.5 bg-slate-100/90 text-slate-700">อังคาร</div>
+                            <div className="py-2.5 bg-slate-100/90 text-slate-700">พุธ</div>
+                            <div className="py-2.5 bg-slate-100/90 text-slate-700">พฤหัสบดี</div>
+                            <div className="py-2.5 bg-slate-100/90 text-slate-700">ศุกร์</div>
+                            <div className="py-2.5 bg-indigo-50/80 text-indigo-700">เสาร์</div>
                         </div>
 
                         {/* Days Grid */}
-                        <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-100">
+                        <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-slate-200 bg-white">
                             {/* Empty cells before month start */}
                             {Array.from({ length: firstDayOfMonth }).map((_, idx) => (
-                                <div key={`empty-${idx}`} className="min-h-[110px] p-2 bg-slate-50/50" />
+                                <div key={`empty-${idx}`} className="min-h-[130px] sm:min-h-[145px] p-2 bg-slate-50/60" />
                             ))}
 
                             {/* Days of the month */}
@@ -17341,43 +17362,54 @@ ${itemsListText}
                                 return (
                                     <div
                                         key={`day-${dayNum}`}
-                                        className={`min-h-[110px] sm:min-h-[125px] p-2 flex flex-col justify-between transition hover:bg-purple-50/30 ${
-                                            isToday ? 'bg-amber-50/60 ring-2 ring-inset ring-amber-400' : 'bg-white'
+                                        className={`min-h-[130px] sm:min-h-[145px] p-2 sm:p-2.5 flex flex-col justify-between transition-all duration-150 hover:bg-purple-50/30 ${
+                                            isToday 
+                                                ? 'bg-gradient-to-b from-amber-50/70 via-white to-amber-50/30 ring-2 ring-inset ring-amber-400 shadow-xs' 
+                                                : 'bg-white'
                                         }`}
                                     >
-                                        <div className="flex justify-between items-start">
-                                            <span className={`text-xs font-black rounded-full w-6 h-6 flex items-center justify-center ${
-                                                isToday ? 'bg-amber-500 text-white shadow-2xs' : 'text-slate-800'
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className={`text-xs font-black rounded-full w-6 h-6 flex items-center justify-center transition ${
+                                                isToday 
+                                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs scale-105' 
+                                                    : 'text-slate-800 hover:bg-slate-100'
                                             }`}>
                                                 {dayNum}
                                             </span>
                                             {dayEvents.length > 0 && (
-                                                <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 font-bold">
+                                                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-600 text-white font-extrabold shadow-2xs">
                                                     {dayEvents.length}
                                                 </span>
                                             )}
                                         </div>
 
                                         {/* Event badges inside day cell */}
-                                        <div className="space-y-1 mt-1.5 flex-1 overflow-y-auto max-h-[85px]">
-                                            {dayEvents.slice(0, 3).map(ev => (
+                                        <div className="space-y-1.5 flex-1 overflow-y-auto max-h-[100px] scrollbar-thin">
+                                            {dayEvents.slice(0, 2).map(ev => (
                                                 <div
                                                     key={ev.id}
                                                     onClick={() => setSelectedCalendarEvent(ev)}
-                                                    className={`p-1 rounded-lg text-[10px] font-bold border transition truncate cursor-pointer hover:scale-102 ${ev.division.badgeClass}`}
+                                                    className={`p-1.5 rounded-lg text-[11px] font-bold border transition cursor-pointer hover:scale-[1.01] hover:shadow-md shadow-2xs leading-snug ${ev.division.badgeClass}`}
                                                     title={`${ev.title} (${ev.division.name})`}
                                                 >
-                                                    <span className="mr-1">{ev.type === 'activity' ? '🎯' : '📘'}</span>
-                                                    <span>{ev.title}</span>
+                                                    <div className="flex items-center gap-1 mb-0.5">
+                                                        <span className="text-[10px] shrink-0">{ev.type === 'activity' ? '🎯' : ev.division.icon}</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-wider px-1 py-0.2 rounded bg-white/70 shadow-2xs">
+                                                            {ev.division.shortName}
+                                                        </span>
+                                                    </div>
+                                                    <div className="line-clamp-2 text-slate-900 font-extrabold text-[11px] leading-tight">
+                                                        {ev.title}
+                                                    </div>
                                                 </div>
                                             ))}
-                                            {dayEvents.length > 3 && (
+                                            {dayEvents.length > 2 && (
                                                 <button
                                                     type="button"
                                                     onClick={() => setSelectedCalendarEvent(dayEvents[0])}
-                                                    className="text-[9px] font-bold text-slate-500 hover:text-purple-700 block w-full text-center"
+                                                    className="text-[10px] font-black text-purple-800 bg-purple-100 hover:bg-purple-200 py-1 px-1.5 rounded-md block w-full text-center transition cursor-pointer shadow-2xs hover:scale-101"
                                                 >
-                                                    +{dayEvents.length - 3} รายการเพิ่มเติม...
+                                                    +{dayEvents.length - 2} เพิ่มเติม...
                                                 </button>
                                             )}
                                         </div>
