@@ -58,6 +58,68 @@ Route::get('/', function () {
                     'academic_year' => $p->academic_year,
                 ];
             }),
+        'publicCalendarEvents' => (clone $approvedQuery)
+            ->with(['department.parent', 'user'])
+            ->latest()
+            ->get()
+            ->map(function ($p) {
+                $deptName = $p->department?->name ?? '';
+                $parentName = $p->department?->parent?->name ?? '';
+                $combined = mb_strtolower("{$deptName} {$parentName}");
+
+                // Determine Division
+                $divKey = 'academic';
+                $divName = 'ฝ่ายวิชาการ';
+                $divBadge = 'bg-blue-100 text-blue-900 border-blue-300';
+                $divIcon = '📘';
+
+                if (str_contains($combined, 'ทรัพยากร') || str_contains($combined, 'บริหาร') || str_contains($combined, 'การเงิน') || str_contains($combined, 'พัสดุ') || str_contains($combined, 'บุคลากร')) {
+                    $divKey = 'resources';
+                    $divName = 'ฝ่ายบริหารทรัพยากร';
+                    $divBadge = 'bg-amber-100 text-amber-900 border-amber-300';
+                    $divIcon = '🏢';
+                } elseif (str_contains($combined, 'แผน') || str_contains($combined, 'ยุทธศาสตร์') || str_contains($combined, 'ความร่วมมือ') || str_contains($combined, 'วิจัย')) {
+                    $divKey = 'strategy';
+                    $divName = 'ฝ่ายแผนงานและความร่วมมือ';
+                    $divBadge = 'bg-purple-100 text-purple-900 border-purple-300';
+                    $divIcon = '📊';
+                } elseif (str_contains($combined, 'กิจการ') || str_contains($combined, 'กิจกรรม') || str_contains($combined, 'แนะแนว') || str_contains($combined, 'ปกครอง')) {
+                    $divKey = 'student';
+                    $divName = 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา';
+                    $divBadge = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+                    $divIcon = '🎓';
+                }
+
+                $subEvents = [];
+                if (is_array($p->activities)) {
+                    foreach ($p->activities as $actIdx => $act) {
+                        if (!empty($act['activity_date'])) {
+                            $subEvents[] = [
+                                'name' => $act['name'] ?? ('กิจกรรมที่ ' . ($actIdx + 1)),
+                                'date' => $act['activity_date'],
+                                'location' => $act['location'] ?? $p->location,
+                            ];
+                        }
+                    }
+                }
+
+                return [
+                    'id' => $p->id,
+                    'title' => $p->title,
+                    'department' => $deptName ?: 'วิทยาลัยสารพัดช่างน่าน',
+                    'proposer' => $p->user?->name ?? 'ไม่ระบุผู้เสนอ',
+                    'location' => $p->location ?: 'วิทยาลัยสารพัดช่างน่าน',
+                    'start_date' => $p->start_date ? (is_string($p->start_date) ? $p->start_date : $p->start_date->format('Y-m-d')) : null,
+                    'end_date' => $p->end_date ? (is_string($p->end_date) ? $p->end_date : $p->end_date->format('Y-m-d')) : null,
+                    'period_text' => $p->operation_period_text ?: '',
+                    'division_key' => $divKey,
+                    'division_name' => $divName,
+                    'division_badge' => $divBadge,
+                    'division_icon' => $divIcon,
+                    'budget' => (float)($p->allocated_budget ?: $p->estimated_budget ?: 0),
+                    'sub_activities' => $subEvents,
+                ];
+            }),
     ]);
 });
 
