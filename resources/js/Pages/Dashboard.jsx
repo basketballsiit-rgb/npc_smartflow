@@ -15273,22 +15273,39 @@ ${itemsListText}
     const renderAllProjectsTab = () => {
         if (!allProjectsMaster || allProjectsMaster.length === 0) {
             return (
-                <div className="rounded-3xl border border-purple-100 bg-white p-12 text-center text-slate-500 shadow-sm font-sans space-y-4">
-                    <span className="text-5xl block animate-bounce">📁</span>
-                    <div>
-                        <p className="mt-2 font-black text-base sm:text-lg text-slate-800">ไม่พบรายการโครงการในระบบ</p>
-                        <p className="text-xs text-slate-500 mt-1">
-                            ยังไม่มีการบันทึกโครงการในปีงบประมาณนี้ หรือยังไม่มีผู้เสนอโครงการเข้ามา
-                        </p>
+                <div className="space-y-6 font-sans">
+                    {/* Header Title Banner */}
+                    <div className="rounded-3xl border border-purple-200 bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="space-y-1.5">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-bold border border-white/15">
+                                <span>🏛️</span> รายงานภาพรวมและสรุปโครงการทั้งสถานศึกษา
+                            </div>
+                            <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2 font-sans">
+                                <span>📁</span> สรุปโครงการทั้งหมดของวิทยาลัย (College Projects Overview)
+                            </h3>
+                            <p className="text-xs sm:text-sm text-purple-200 max-w-2xl leading-relaxed">
+                                ศูนย์สรุปภาพรวมโครงการทั้งวิทยาลัย แสดงยอดงบประมาณรวม ยอดงบแยกตามฝ่าย/งาน และตารางติดตามสถานะการอนุมัติ 6 ขั้นตอนของทุกหน่วยงาน
+                            </p>
+                        </div>
                     </div>
-                    <div className="pt-2">
-                        <a
-                            href={route('projects.quick_create')}
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md transition hover:scale-105 active:scale-95 cursor-pointer"
-                        >
-                            <span>➕</span>
-                            <span>สร้าง / เสนอโครงการใหม่ทันที</span>
-                        </a>
+
+                    <div className="rounded-3xl border border-purple-100 bg-white p-12 text-center text-slate-500 shadow-sm font-sans space-y-4">
+                        <span className="text-5xl block animate-bounce">📁</span>
+                        <div>
+                            <p className="mt-2 font-black text-base sm:text-lg text-slate-800">ไม่พบรายการโครงการในระบบ</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                ยังไม่มีการบันทึกโครงการในปีงบประมาณนี้ หรือยังไม่มีผู้เสนอโครงการเข้ามา
+                            </p>
+                        </div>
+                        <div className="pt-2">
+                            <a
+                                href={route('projects.quick_create')}
+                                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md transition hover:scale-105 active:scale-95 cursor-pointer"
+                            >
+                                <span>➕</span>
+                                <span>สร้าง / เสนอโครงการใหม่ทันที</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             );
@@ -20411,18 +20428,18 @@ return (
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-2xl font-bold leading-tight text-purple-950 font-sans">
-                    NPC SMART FLOW - ศูนย์ควบคุมระบบบริหารจัดการ
-                </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <h2 className="text-xl sm:text-2xl font-black leading-tight text-purple-950 font-sans flex items-center gap-2">
+                        <span>🏛️</span> NPC SMART FLOW - ศูนย์ควบคุมระบบบริหารจัดการ
+                    </h2>
+                </div>
             }
         >
             <Head title="หน้าหลัก - ศูนย์ควบคุม" />
 
-            <div className="py-8 font-sans">
-                <div className="w-full max-w-[100rem] px-4 sm:px-6 lg:px-8">
-                    
-                    {/* Content Workspace Area (Full Width Clean Layout) */}
-                    <div className="w-full">
+            <div className="w-full max-w-[100rem] font-sans">
+                {/* Content Workspace Area (Full Width Clean Layout) */}
+                <div className="w-full">
                         {(activeTab === 'preliminary' || activeTab === 'chapter_preliminary') && renderPreliminaryTab()}
                         {activeTab === 'chapter_1' && renderChapter1Tab()}
                         {activeTab === 'chapter_2' && renderChapter2Tab()}
@@ -22777,7 +22794,6 @@ return (
                     )}
 
                 </div>
-            </div>
         </AuthenticatedLayout>
     );
 }
