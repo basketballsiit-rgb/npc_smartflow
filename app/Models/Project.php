@@ -111,6 +111,7 @@ class Project extends Model
 
     protected $appends = [
         'funding_source_name',
+        'execution_status',
     ];
 
     /**
@@ -266,5 +267,129 @@ class Project extends Model
     public function photos()
     {
         return $this->hasMany(ProjectPhoto::class, 'project_id');
+    }
+
+    /**
+     * Get all travel loans for this project.
+     */
+    public function travelLoans()
+    {
+        return $this->hasMany(TravelLoan::class);
+    }
+
+    /**
+     * Get all expense clearings for this project.
+     */
+    public function expenseClearings()
+    {
+        return $this->hasMany(ExpenseClearing::class);
+    }
+
+    /**
+     * Get the 5-level execution lifecycle status.
+     * 1. 🔴 สีแดง - ยังไม่ได้เริ่มดำเนินการ
+     * 2. 🟡 สีเหลือง - มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ
+     * 3. 🟠 สีส้ม - มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง
+     * 4. 🟧 สีส้มแดง - ดำเนินการโครงการเรียบร้อย แต่ยังไม่ได้สรุปรูปเล่ม
+     * 5. 🟢 สีเขียว - ดำเนินการสรุปโครงการรูปเล่ม และมีการเคลียร์เงินต่าง ๆ เรียบร้อย
+     */
+    public function getExecutionStatusAttribute(): array
+    {
+        // 1. Check Green: ดำเนินการสรุปโครงการรูปเล่ม และมีการเคลียร์เงินต่าง ๆ เรียบร้อย
+        $hasCompletedBook = !empty($this->full_report_completed_at) || (!empty($this->chapter_5_content) && is_array($this->chapter_5_content) && count($this->chapter_5_content) > 0);
+        
+        $hasLoans = $this->relationLoaded('travelLoans') 
+            ? $this->travelLoans->isNotEmpty() 
+            : $this->travelLoans()->exists();
+
+        $proc = $this->relationLoaded('procurement') ? $this->procurement : $this->procurement()->first();
+        $hasProcurements = !empty($proc) && (!empty($proc->procurement_number) || !empty($proc->plan_procurement_cut_at) || ($proc->items && $proc->items->isNotEmpty()));
+
+        $allLoansCleared = true;
+        if ($hasLoans) {
+            $loans = $this->relationLoaded('travelLoans') ? $this->travelLoans : $this->travelLoans()->get();
+            $uncleared = $loans->filter(function($l) {
+                return empty($l->cleared_at) && $l->loan_status !== 'cleared';
+            });
+            $allLoansCleared = $uncleared->isEmpty();
+        }
+
+        $allClearingsDone = true;
+        if ($this->relationLoaded('expenseClearings') ? $this->expenseClearings->isNotEmpty() : $this->expenseClearings()->exists()) {
+            $clearings = $this->relationLoaded('expenseClearings') ? $this->expenseClearings : $this->expenseClearings()->get();
+            $pending = $clearings->filter(function($c) {
+                return $c->status !== 'finance_completed';
+            });
+            $allClearingsDone = $pending->isEmpty();
+        }
+
+        $isFinanciallyCleared = ($hasLoans ? $allLoansCleared : true) && $allClearingsDone;
+
+        if ($hasCompletedBook && $isFinanciallyCleared && ($this->status === 'completed' || $hasLoans || $hasProcurements || (float)$this->allocated_budget > 0)) {
+            return [
+                'key' => 'green',
+                'label' => 'ดำเนินการสรุปโครงการรูปเล่ม และมีการเคลียร์เงินต่าง ๆ เรียบร้อย',
+                'short_label' => 'สรุปรูปเล่ม & เคลียร์เงินเรียบร้อย',
+                'color' => 'emerald',
+                'dot' => '🟢',
+                'bg_class' => 'bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold',
+            ];
+        }
+
+        // 2. Check Orange-Red: ดำเนินการโครงการเรียบร้อย แต่ยังไม่ได้สรุปรูปเล่ม
+        $isExecutionDone = ($this->status === 'completed' || $this->status === 'evaluating')
+            || ($hasLoans && ($this->relationLoaded('travelLoans') ? $this->travelLoans : $this->travelLoans()->get())->whereNotNull('finance_disbursed_at')->isNotEmpty())
+            || ($proc && (!empty($proc->finance_disbursed_at) || $proc->status === 'completed'));
+
+        if ($isExecutionDone && !$hasCompletedBook) {
+            return [
+                'key' => 'orange_red',
+                'label' => 'ดำเนินการโครงการเรียบร้อย แต่ยังไม่ได้สรุปรูปเล่ม',
+                'short_label' => 'ดำเนินโครงการแล้ว รอสรุปรูปเล่ม',
+                'color' => 'orange_red',
+                'dot' => '🟧',
+                'bg_class' => 'bg-red-50 text-orange-950 border-orange-400 font-extrabold',
+            ];
+        }
+
+        // 3. Check Orange: มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง
+        $isFullyApproved = ($this->status === 'approved' || $this->status === 'in_progress' || (int)$this->current_approval_step >= 6);
+        $hasStartedContract = $hasLoans || $hasProcurements;
+
+        if ($isFullyApproved && $hasStartedContract) {
+            return [
+                'key' => 'orange',
+                'label' => 'มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง',
+                'short_label' => 'อนุมัติครบ & ดำเนินโครงการ (ยืมเงิน/จัดซื้อ)',
+                'color' => 'orange',
+                'dot' => '🟠',
+                'bg_class' => 'bg-orange-50 text-orange-800 border-orange-300 font-bold',
+            ];
+        }
+
+        // 4. Check Yellow: มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ
+        $hasFullContent = !empty($this->chapter_1_content) || !empty($this->activities) || in_array($this->status, ['submitted', 'pending_approval', 'approved', 'budget_approved']);
+        $isPreliminaryOnly = ($this->status === 'preliminary') && empty($this->chapter_1_content);
+
+        if (!$isPreliminaryOnly && ($hasFullContent || in_array($this->status, ['draft', 'submitted', 'pending_approval', 'approved']))) {
+            return [
+                'key' => 'yellow',
+                'label' => 'มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ',
+                'short_label' => 'เริ่มจัดทำโครงการแบบเต็มรูปแบบ',
+                'color' => 'amber',
+                'dot' => '🟡',
+                'bg_class' => 'bg-amber-50 text-amber-800 border-amber-300 font-semibold',
+            ];
+        }
+
+        // 5. Red: ยังไม่ได้เริ่มดำเนินการ
+        return [
+            'key' => 'red',
+            'label' => 'ยังไม่ได้เริ่มดำเนินการ',
+            'short_label' => 'ยังไม่ได้เริ่มดำเนินการ',
+            'color' => 'red',
+            'dot' => '🔴',
+            'bg_class' => 'bg-rose-50 text-rose-800 border-rose-300 font-semibold',
+        ];
     }
 }

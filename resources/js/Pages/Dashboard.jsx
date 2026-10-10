@@ -2826,6 +2826,10 @@ export default function Dashboard({
     const [projectStatusFilter, setProjectStatusFilter] = useState('all');
     const [projectYearFilter, setProjectYearFilter] = useState('all');
     const [projectDeptFilter, setProjectDeptFilter] = useState('all');
+    const [lifecycleStatusFilter, setLifecycleStatusFilter] = useState('all');
+    const [lifecycleDeptFilter, setLifecycleDeptFilter] = useState('all');
+    const [lifecycleYearFilter, setLifecycleYearFilter] = useState('all');
+    const [lifecycleSearch, setLifecycleSearch] = useState('');
     const [expandedDepts, setExpandedDepts] = useState({}); // { [deptId]: boolean }
     const toggleDeptExpand = (deptId) => {
         setExpandedDepts(prev => ({ ...prev, [deptId]: !prev[deptId] }));
@@ -3827,6 +3831,132 @@ export default function Dashboard({
     };
 
     const getStatusBadge = (status, step, project = null) => renderProjectProgressBar(status, step, project);
+
+    // 5-Level Execution Status helper for Executive, Planning and Admin tracking
+    const getExecutionStatus = (p) => {
+        if (!p) {
+            return {
+                key: 'red',
+                label: 'ยังไม่ได้เริ่มดำเนินการ',
+                short_label: 'ยังไม่ได้เริ่มดำเนินการ',
+                dot: '🔴',
+                color: 'red',
+                bg_class: 'bg-rose-50 text-rose-800 border-rose-300 font-bold',
+            };
+        }
+
+        // Backend attribute if present
+        if (p.execution_status && p.execution_status.key) {
+            return p.execution_status;
+        }
+
+        const hasCompletedBook = Boolean(p.full_report_completed_at) || Boolean(p.has_completed_book) || (Boolean(p.chapter_5_content) && Boolean(p.chapter_4_content));
+        const travelLoans = p.travel_loans || p.travelLoans || [];
+        const hasLoans = travelLoans.length > 0;
+        const allLoansCleared = !hasLoans || travelLoans.every(l => Boolean(l.cleared_at) || l.loan_status === 'cleared');
+        const clearingsCount = p.expense_clearings_count ?? 0;
+        const clearingsDone = p.expense_clearings_completed ?? 0;
+        const allClearingsDone = clearingsCount === 0 || clearingsCount === clearingsDone;
+
+        // 1. Green: ดำเนินการสรุปโครงการรูปเล่ม และมีการเคลียร์เงินต่าง ๆ เรียบร้อย
+        if (hasCompletedBook && allLoansCleared && allClearingsDone) {
+            return {
+                key: 'green',
+                label: 'ดำเนินการสรุปโครงการรูปเล่ม และมีการเคลียร์เงินต่าง ๆ เรียบร้อย',
+                short_label: 'สรุปรูปเล่ม & เคลียร์เงินเรียบร้อย',
+                dot: '🟢',
+                color: 'emerald',
+                bg_class: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold',
+            };
+        }
+
+        // 2. Orange-Red: ดำเนินการโครงการเรียบร้อย แต่ยังไม่ได้สรุปรูปเล่ม
+        const isExecutionDone = p.status === 'completed' || p.status === 'evaluating'
+            || (hasLoans && travelLoans.some(l => Boolean(l.finance_disbursed_at)))
+            || Boolean(p.finance_disbursed_at)
+            || Boolean(p.procurement?.finance_disbursed_at);
+
+        if (isExecutionDone && !hasCompletedBook) {
+            return {
+                key: 'orange_red',
+                label: 'ดำเนินการโครงการเรียบร้อย แต่ยังไม่ได้สรุปรูปเล่ม',
+                short_label: 'ดำเนินโครงการแล้ว รอสรุปรูปเล่ม',
+                dot: '🟧',
+                color: 'orange_red',
+                bg_class: 'bg-red-50 text-orange-950 border-orange-400 font-extrabold',
+            };
+        }
+
+        // 3. Orange: มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง
+        const isFullyApproved = p.status === 'approved' || p.status === 'in_progress' || (parseInt(p.current_approval_step, 10) >= 6);
+        const hasStartedContract = hasLoans
+            || Boolean(p.procurement_number)
+            || Boolean(p.procurement?.procurement_number)
+            || (Array.isArray(p.procurement_items) && p.procurement_items.length > 0)
+            || Boolean(p.plan_procurement_cut_at)
+            || Boolean(p.plan_loan_cut_at);
+
+        if (isFullyApproved && hasStartedContract) {
+            return {
+                key: 'orange',
+                label: 'มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง',
+                short_label: 'อนุมัติครบ & ดำเนินโครงการ (ยืมเงิน/จัดซื้อ)',
+                dot: '🟠',
+                color: 'orange',
+                bg_class: 'bg-orange-50 text-orange-800 border-orange-300 font-bold',
+            };
+        }
+
+        // 4. Yellow: มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ
+        const hasFullContent = Boolean(p.chapter_1_content) || (Array.isArray(p.activities) && p.activities.length > 0) || ['submitted', 'pending_approval', 'approved', 'budget_approved'].includes(p.status);
+        const isPreliminaryOnly = (p.status === 'preliminary') && !p.chapter_1_content;
+
+        if (!isPreliminaryOnly && (hasFullContent || ['draft', 'submitted', 'pending_approval', 'approved'].includes(p.status))) {
+            return {
+                key: 'yellow',
+                label: 'มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ',
+                short_label: 'เริ่มจัดทำโครงการแบบเต็มรูปแบบ',
+                dot: '🟡',
+                color: 'amber',
+                bg_class: 'bg-amber-50 text-amber-800 border-amber-300 font-semibold',
+            };
+        }
+
+        // 5. Red: ยังไม่ได้เริ่มดำเนินการ
+        return {
+            key: 'red',
+            label: 'ยังไม่ได้เริ่มดำเนินการ',
+            short_label: 'ยังไม่ได้เริ่มดำเนินการ',
+            dot: '🔴',
+            color: 'red',
+            bg_class: 'bg-rose-50 text-rose-800 border-rose-300 font-semibold',
+        };
+    };
+
+    const renderExecutionStatusBadge = (project, isCompact = false) => {
+        const st = getExecutionStatus(project);
+        if (isCompact) {
+            return (
+                <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border shadow-2xs shrink-0 whitespace-nowrap transition-all ${st.bg_class}`}
+                    title={`สถานะโครงการ: ${st.label}`}
+                >
+                    <span className="text-xs leading-none">{st.dot}</span>
+                    <span>{st.short_label}</span>
+                </span>
+            );
+        }
+
+        return (
+            <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs border shadow-2xs whitespace-nowrap transition-all ${st.bg_class}`}
+                title={`สถานะโครงการ: ${st.label}`}
+            >
+                <span className="text-sm leading-none">{st.dot}</span>
+                <span>{st.label}</span>
+            </span>
+        );
+    };
 
     // The official 4 Main Divisions of the College
     const getFourMainDivisions = () => {
@@ -8231,8 +8361,9 @@ ${itemsListText}
                                                 {idx + 1}
                                             </td>
                                             <td className="p-3.5">
-                                                <div className="font-bold text-slate-900 line-clamp-2">
-                                                    {p.title}
+                                                <div className="flex flex-wrap items-center gap-1.5 font-bold text-slate-900">
+                                                    <span>{p.title}</span>
+                                                    {renderExecutionStatusBadge(p, true)}
                                                 </div>
                                                 <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
                                                     <span>ปี พ.ศ. {p.academic_year || fiscalYear}</span>
@@ -15786,13 +15917,16 @@ ${itemsListText}
                                                         <td className="px-5 py-3.5 pl-10 align-top">
                                                             <div className="flex items-start gap-2">
                                                                 <span className="text-slate-400 font-mono text-xs mt-0.5 shrink-0">└─ #{pIdx + 1}</span>
-                                                                <div>
-                                                                    <a
-                                                                        href={route('projects.show', p.id)}
-                                                                        className="font-black text-xs sm:text-sm text-purple-950 hover:text-purple-700 transition leading-snug block hover:underline cursor-pointer"
-                                                                    >
-                                                                        {p.title}
-                                                                    </a>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="flex flex-wrap items-center gap-2">
+                                                                        <a
+                                                                            href={route('projects.show', p.id)}
+                                                                            className="font-black text-xs sm:text-sm text-purple-950 hover:text-purple-700 transition leading-snug hover:underline cursor-pointer"
+                                                                        >
+                                                                            {p.title}
+                                                                        </a>
+                                                                        {renderExecutionStatusBadge(p, true)}
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -15922,6 +16056,665 @@ ${itemsListText}
                                 </tr>
                             </tfoot>
                         </table>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // 4.5 Dedicated 5-Level Project Execution Status Tracking Tab
+    const renderProjectStatusTab = () => {
+        const projectsList = (allProjectsMaster && allProjectsMaster.length > 0)
+            ? allProjectsMaster
+            : (teacherData?.projects || []);
+
+        // Compute 5-level status for every project
+        const projectsWithStatus = projectsList.map(p => {
+            const st = getExecutionStatus(p);
+            return {
+                ...p,
+                _execStatus: st,
+            };
+        });
+
+        // Compute counts and sums for all 5 colors
+        const stats = {
+            total: projectsWithStatus.length,
+            totalBudget: projectsWithStatus.reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
+            red: {
+                count: projectsWithStatus.filter(p => p._execStatus.key === 'red').length,
+                budget: projectsWithStatus.filter(p => p._execStatus.key === 'red').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
+            },
+            yellow: {
+                count: projectsWithStatus.filter(p => p._execStatus.key === 'yellow').length,
+                budget: projectsWithStatus.filter(p => p._execStatus.key === 'yellow').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
+            },
+            orange: {
+                count: projectsWithStatus.filter(p => p._execStatus.key === 'orange').length,
+                budget: projectsWithStatus.filter(p => p._execStatus.key === 'orange').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
+            },
+            orange_red: {
+                count: projectsWithStatus.filter(p => p._execStatus.key === 'orange_red').length,
+                budget: projectsWithStatus.filter(p => p._execStatus.key === 'orange_red').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
+            },
+            green: {
+                count: projectsWithStatus.filter(p => p._execStatus.key === 'green').length,
+                budget: projectsWithStatus.filter(p => p._execStatus.key === 'green').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
+            },
+        };
+
+        // Filter projects
+        const filtered = projectsWithStatus.filter(p => {
+            // Status filter
+            if (lifecycleStatusFilter !== 'all' && p._execStatus.key !== lifecycleStatusFilter) {
+                return false;
+            }
+            // Year filter
+            if (lifecycleYearFilter !== 'all' && String(p.academic_year) !== String(lifecycleYearFilter)) {
+                return false;
+            }
+            // Department filter
+            if (lifecycleDeptFilter !== 'all') {
+                const fourMain = getFourMainDivisions();
+                const isMainFilter = fourMain.some(m => String(m.id) === String(lifecycleDeptFilter));
+                if (isMainFilter) {
+                    const div = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+                    if (String(div.id) !== String(lifecycleDeptFilter)) return false;
+                } else if (String(p.department_id) !== String(lifecycleDeptFilter)) {
+                    return false;
+                }
+            }
+            // Search text
+            if (lifecycleSearch && lifecycleSearch.trim() !== '') {
+                const q = lifecycleSearch.toLowerCase().trim();
+                const titleMatch = (p.title || '').toLowerCase().includes(q);
+                const proposerMatch = (p.proposer_name || p.user?.name || '').toLowerCase().includes(q);
+                const deptMatch = (p.department_name || p.department?.name || '').toLowerCase().includes(q);
+                const loanMatch = (p.travel_loans || []).some(l => (l.contract_no || '').toLowerCase().includes(q));
+                const procMatch = (p.procurement_number || p.procurement?.procurement_number || '').toLowerCase().includes(q);
+                if (!titleMatch && !proposerMatch && !deptMatch && !loanMatch && !procMatch) {
+                    return false;
+                }
+            }
+            return true;
+        });
+
+        const availableYears = Array.from(new Set(projectsWithStatus.map(p => p.academic_year).filter(Boolean))).sort().reverse();
+        const mainDivisions = getFourMainDivisions();
+
+        return (
+            <div className="space-y-6 font-sans">
+                {/* Header Banner */}
+                <div className="rounded-3xl border border-indigo-200 bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 p-6 sm:p-8 text-white shadow-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                    <div className="space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-amber-300 text-xs font-bold border border-white/15">
+                            <span>🎯</span> ระบบติดตามความคืบหน้าโครงการแบบจำแนก 5 ระดับ (Project Execution Lifecycle)
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+                            <span>📊</span> ติดตามสถานะการดำเนินงานโครงการ (5 ระดับ)
+                        </h3>
+                        <p className="text-xs sm:text-sm text-indigo-200 max-w-3xl leading-relaxed">
+                            ศูนย์ตรวจสอบและติดตามสถานะความคืบหน้าโครงการสำหรับ <span className="text-amber-300 font-bold">ผู้บริหาร</span>, <span className="text-amber-300 font-bold">งานแผนและงบประมาณ</span> และ <span className="text-amber-300 font-bold">ผู้ดูแลระบบ</span> ตั้งแต่ขั้นตอนขอตั้งงบ จัดทำเล่มฉบับเต็ม การทำสัญญายืมเงิน/จัดซื้อจัดจ้าง การจัดทำเล่มรายงาน 5 บท จนถึงการเคลียร์เงินเสร็จสมบูรณ์
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/15 text-right">
+                            <span className="text-[11px] text-indigo-200 block font-medium">โครงการทั้งหมด</span>
+                            <span className="text-xl sm:text-2xl font-black text-white font-mono">{stats.total} โครงการ</span>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/15 text-right">
+                            <span className="text-[11px] text-amber-200 block font-medium">งบประมาณรวม</span>
+                            <span className="text-xl sm:text-2xl font-black text-amber-300 font-mono">
+                                ฿{new Intl.NumberFormat('th-TH').format(stats.totalBudget)}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 5 Status KPI Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+                    {/* Card 1: Red */}
+                    <button
+                        type="button"
+                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'red' ? 'all' : 'red')}
+                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
+                            lifecycleStatusFilter === 'red'
+                                ? 'bg-rose-50 border-rose-400 ring-2 ring-rose-400 shadow-md scale-[1.02]'
+                                : 'bg-white border-rose-100 hover:border-rose-300 hover:shadow-sm'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">🔴</span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                                ระดับที่ 1
+                            </span>
+                        </div>
+                        <div className="mt-3">
+                            <h4 className="text-xs font-black text-slate-800">ยังไม่ได้เริ่มดำเนินการ</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">ข้อเสนอเบื้องต้น/ยังไม่ทำฉบับเต็ม</p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-rose-100 flex items-baseline justify-between">
+                            <span className="text-lg font-black text-rose-700 font-mono">{stats.red.count} โครงการ</span>
+                            <span className="text-[11px] font-bold text-slate-500 font-mono">
+                                ฿{new Intl.NumberFormat('th-TH').format(stats.red.budget)}
+                            </span>
+                        </div>
+                    </button>
+
+                    {/* Card 2: Yellow */}
+                    <button
+                        type="button"
+                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'yellow' ? 'all' : 'yellow')}
+                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
+                            lifecycleStatusFilter === 'yellow'
+                                ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400 shadow-md scale-[1.02]'
+                                : 'bg-white border-amber-100 hover:border-amber-300 hover:shadow-sm'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">🟡</span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                                ระดับที่ 2
+                            </span>
+                        </div>
+                        <div className="mt-3">
+                            <h4 className="text-xs font-black text-slate-800">เริ่มจัดทำโครงการเต็มรูปแบบ</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เขียนบทที่ 1 / รอการอนุมัติ 6 ขั้น</p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-amber-100 flex items-baseline justify-between">
+                            <span className="text-lg font-black text-amber-700 font-mono">{stats.yellow.count} โครงการ</span>
+                            <span className="text-[11px] font-bold text-slate-500 font-mono">
+                                ฿{new Intl.NumberFormat('th-TH').format(stats.yellow.budget)}
+                            </span>
+                        </div>
+                    </button>
+
+                    {/* Card 3: Orange */}
+                    <button
+                        type="button"
+                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'orange' ? 'all' : 'orange')}
+                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
+                            lifecycleStatusFilter === 'orange'
+                                ? 'bg-orange-50 border-orange-400 ring-2 ring-orange-400 shadow-md scale-[1.02]'
+                                : 'bg-white border-orange-100 hover:border-orange-300 hover:shadow-sm'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">🟠</span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
+                                ระดับที่ 3
+                            </span>
+                        </div>
+                        <div className="mt-3">
+                            <h4 className="text-xs font-black text-slate-800">อนุมัติครบ & ดำเนินโครงการ</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เขียนสัญญายืมเงิน / จัดซื้อจัดจ้าง</p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-orange-100 flex items-baseline justify-between">
+                            <span className="text-lg font-black text-orange-700 font-mono">{stats.orange.count} โครงการ</span>
+                            <span className="text-[11px] font-bold text-slate-500 font-mono">
+                                ฿{new Intl.NumberFormat('th-TH').format(stats.orange.budget)}
+                            </span>
+                        </div>
+                    </button>
+
+                    {/* Card 4: Orange-Red */}
+                    <button
+                        type="button"
+                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'orange_red' ? 'all' : 'orange_red')}
+                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
+                            lifecycleStatusFilter === 'orange_red'
+                                ? 'bg-red-50 border-orange-500 ring-2 ring-orange-500 shadow-md scale-[1.02]'
+                                : 'bg-white border-orange-200 hover:border-orange-400 hover:shadow-sm'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">🟧</span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-red-100 text-orange-950">
+                                ระดับที่ 4
+                            </span>
+                        </div>
+                        <div className="mt-3">
+                            <h4 className="text-xs font-black text-slate-800">ดำเนินโครงการแล้ว รอสรุปเล่ม</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เบิกจ่าย/จัดโครงการแล้ว ยังไม่สรุป 5 บท</p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-orange-200 flex items-baseline justify-between">
+                            <span className="text-lg font-black text-orange-900 font-mono">{stats.orange_red.count} โครงการ</span>
+                            <span className="text-[11px] font-bold text-slate-500 font-mono">
+                                ฿{new Intl.NumberFormat('th-TH').format(stats.orange_red.budget)}
+                            </span>
+                        </div>
+                    </button>
+
+                    {/* Card 5: Green */}
+                    <button
+                        type="button"
+                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'green' ? 'all' : 'green')}
+                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
+                            lifecycleStatusFilter === 'green'
+                                ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-400 shadow-md scale-[1.02]'
+                                : 'bg-white border-emerald-100 hover:border-emerald-300 hover:shadow-sm'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">🟢</span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                ระดับที่ 5
+                            </span>
+                        </div>
+                        <div className="mt-3">
+                            <h4 className="text-xs font-black text-slate-800">สรุปเล่ม & เคลียร์เงินเรียบร้อย</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">สรุปรูปเล่มครบถ้วนและเคลียร์เงินครบ</p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-emerald-100 flex items-baseline justify-between">
+                            <span className="text-lg font-black text-emerald-700 font-mono">{stats.green.count} โครงการ</span>
+                            <span className="text-[11px] font-bold text-slate-500 font-mono">
+                                ฿{new Intl.NumberFormat('th-TH').format(stats.green.budget)}
+                            </span>
+                        </div>
+                    </button>
+                </div>
+
+                {/* Filter and Control Bar */}
+                <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                        {/* Quick Status Buttons */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-bold text-slate-500 mr-1">กรองสถานะ:</span>
+                            <button
+                                type="button"
+                                onClick={() => setLifecycleStatusFilter('all')}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                                    lifecycleStatusFilter === 'all'
+                                        ? 'bg-slate-900 text-white shadow-2xs'
+                                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                }`}
+                            >
+                                ทั้งหมด ({stats.total})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLifecycleStatusFilter('red')}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                    lifecycleStatusFilter === 'red'
+                                        ? 'bg-rose-600 text-white shadow-2xs'
+                                        : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+                                }`}
+                            >
+                                <span>🔴</span> ยังไม่เริ่ม ({stats.red.count})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLifecycleStatusFilter('yellow')}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                    lifecycleStatusFilter === 'yellow'
+                                        ? 'bg-amber-600 text-white shadow-2xs'
+                                        : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                                }`}
+                            >
+                                <span>🟡</span> เริ่มทำฉบับเต็ม ({stats.yellow.count})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLifecycleStatusFilter('orange')}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                    lifecycleStatusFilter === 'orange'
+                                        ? 'bg-orange-600 text-white shadow-2xs'
+                                        : 'bg-orange-50 text-orange-800 hover:bg-orange-100 border border-orange-200'
+                                }`}
+                            >
+                                <span>🟠</span> อนุมัติ&ยืมเงิน/จัดซื้อ ({stats.orange.count})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLifecycleStatusFilter('orange_red')}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                    lifecycleStatusFilter === 'orange_red'
+                                        ? 'bg-red-700 text-white shadow-2xs'
+                                        : 'bg-red-50 text-orange-950 hover:bg-red-100 border border-orange-300'
+                                }`}
+                            >
+                                <span>🟧</span> ทำแล้วรอสรุปเล่ม ({stats.orange_red.count})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLifecycleStatusFilter('green')}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                    lifecycleStatusFilter === 'green'
+                                        ? 'bg-emerald-600 text-white shadow-2xs'
+                                        : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
+                                }`}
+                            >
+                                <span>🟢</span> สรุปเล่ม&เคลียร์เงิน ({stats.green.count})
+                            </button>
+                        </div>
+
+                        {/* Reset button if filtered */}
+                        {(lifecycleStatusFilter !== 'all' || lifecycleDeptFilter !== 'all' || lifecycleYearFilter !== 'all' || lifecycleSearch) && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLifecycleStatusFilter('all');
+                                    setLifecycleDeptFilter('all');
+                                    setLifecycleYearFilter('all');
+                                    setLifecycleSearch('');
+                                }}
+                                className="text-xs text-rose-600 hover:text-rose-800 font-bold underline cursor-pointer"
+                            >
+                                ✕ ล้างตัวกรองทั้งหมด
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 pt-2 border-t border-slate-100">
+                        {/* Search input */}
+                        <div className="sm:col-span-6 relative">
+                            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                🔍
+                            </span>
+                            <input
+                                type="text"
+                                value={lifecycleSearch}
+                                onChange={(e) => setLifecycleSearch(e.target.value)}
+                                placeholder="ค้นหาชื่อโครงการ, ผู้เสนอ, แผนก, เลขที่สัญญายืมเงิน, เลขจัดซื้อ..."
+                                className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                        </div>
+
+                        {/* Department filter */}
+                        <div className="sm:col-span-3">
+                            <select
+                                value={lifecycleDeptFilter}
+                                onChange={(e) => setLifecycleDeptFilter(e.target.value)}
+                                className="w-full py-2 px-3 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            >
+                                <option value="all">🏢 ทุกฝ่าย/แผนก</option>
+                                <optgroup label="4 ฝ่ายหลักสถานศึกษา">
+                                    {mainDivisions.map(d => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </optgroup>
+                                <optgroup label="แผนก/งานทั้งหมด">
+                                    {allDepartments.map(d => (
+                                        <option key={`dept-${d.id}`} value={d.id}>{d.name}</option>
+                                    ))}
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        {/* Year filter */}
+                        <div className="sm:col-span-3">
+                            <select
+                                value={lifecycleYearFilter}
+                                onChange={(e) => setLifecycleYearFilter(e.target.value)}
+                                className="w-full py-2 px-3 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            >
+                                <option value="all">📅 ทุกปีการศึกษา/งบประมาณ</option>
+                                {availableYears.map(yr => (
+                                    <option key={yr} value={yr}>ปีการศึกษา {yr}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Projects Table */}
+                <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <span className="text-lg">📋</span>
+                            <h4 className="font-black text-slate-900 text-sm sm:text-base">
+                                รายการโครงการตามสถานะการดำเนินงาน ({filtered.length} รายการ)
+                            </h4>
+                        </div>
+                        <span className="text-xs text-slate-500">
+                            คลิกที่ชื่อโครงการเพื่อดูรายละเอียดและเอกสารฉบับเต็ม
+                        </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-200 bg-slate-100/75 text-[11px] font-black text-slate-700 uppercase tracking-wider">
+                                    <th className="px-4 py-3 text-center w-12">#</th>
+                                    <th className="px-4 py-3 min-w-[280px]">ชื่อโครงการ & สถานะ 5 ระดับ</th>
+                                    <th className="px-4 py-3 min-w-[140px]">ผู้รับผิดชอบ/แผนก</th>
+                                    <th className="px-4 py-3 text-right min-w-[120px]">งบประมาณ</th>
+                                    <th className="px-4 py-3 text-center min-w-[130px]">สายอนุมัติ 6 ขั้น</th>
+                                    <th className="px-4 py-3 min-w-[160px]">สัญญายืมเงิน / จัดซื้อ</th>
+                                    <th className="px-4 py-3 text-center min-w-[130px]">สรุปรูปเล่ม (5 บท)</th>
+                                    <th className="px-4 py-3 text-center min-w-[120px]">การเคลียร์เงิน</th>
+                                    <th className="px-4 py-3 text-right min-w-[100px]">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-xs">
+                                {filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
+                                            <div className="space-y-2">
+                                                <span className="text-4xl block">🔍</span>
+                                                <p className="font-bold text-slate-600">ไม่พบโครงการตรงตามเงื่อนไขที่เลือก</p>
+                                                <p className="text-xs text-slate-400">ลองเปลี่ยนตัวกรองสถานะหรือค้นหาด้วยคำอื่น</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filtered.map((p, idx) => {
+                                        const loans = p.travel_loans || p.travelLoans || [];
+                                        const hasLoans = loans.length > 0;
+                                        const procNum = p.procurement_number || p.procurement?.procurement_number;
+                                        const hasCompletedBook = Boolean(p.full_report_completed_at) || Boolean(p.has_completed_book) || (Boolean(p.chapter_5_content) && Boolean(p.chapter_4_content));
+                                        const allLoansCleared = hasLoans && loans.every(l => Boolean(l.cleared_at) || l.loan_status === 'cleared');
+                                        const hasUnclearedLoans = hasLoans && loans.some(l => !l.cleared_at && l.loan_status !== 'cleared');
+
+                                        return (
+                                            <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                                                {/* Index */}
+                                                <td className="px-4 py-3.5 text-center font-mono text-slate-400 align-top">
+                                                    {idx + 1}
+                                                </td>
+
+                                                {/* Project Title with Status Badge directly behind */}
+                                                <td className="px-4 py-3.5 align-top">
+                                                    <div className="space-y-1.5">
+                                                        <div className="flex flex-wrap items-center gap-1.5">
+                                                            <a
+                                                                href={route('projects.show', p.id)}
+                                                                className="font-black text-xs sm:text-sm text-slate-900 hover:text-indigo-600 transition hover:underline cursor-pointer leading-snug"
+                                                            >
+                                                                {p.title}
+                                                            </a>
+                                                            {/* 5-Level Status Badge directly behind title */}
+                                                            {renderExecutionStatusBadge(p, true)}
+                                                        </div>
+
+                                                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">
+                                                                ปี {p.academic_year || '2569'}
+                                                            </span>
+                                                            <span className="text-slate-400">•</span>
+                                                            <span className="text-slate-600">
+                                                                แหล่งงบ: {p.funding_source_name || 'ยังไม่ระบุ'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* Proposer & Department */}
+                                                <td className="px-4 py-3.5 align-top">
+                                                    <div className="space-y-0.5">
+                                                        <div className="font-extrabold text-slate-900">
+                                                            👤 {(p.proposer_name || p.user?.name || 'ไม่ระบุ').trim().split(/\s+/)[0]}
+                                                        </div>
+                                                        <div className="text-[11px] text-indigo-700 font-semibold">
+                                                            {p.department_name || p.department?.name || '-'}
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* Budget */}
+                                                <td className="px-4 py-3.5 text-right font-mono align-top whitespace-nowrap">
+                                                    <div className="font-black text-slate-900 text-xs sm:text-sm">
+                                                        ฿{new Intl.NumberFormat('th-TH').format(parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0)}
+                                                    </div>
+                                                    {parseFloat(p.allocated_budget) > 0 && parseFloat(p.allocated_budget) !== parseFloat(p.estimated_budget) && (
+                                                        <div className="text-[10px] text-slate-400">
+                                                            ขอ ฿{new Intl.NumberFormat('th-TH').format(parseFloat(p.estimated_budget) || 0)}
+                                                        </div>
+                                                    )}
+                                                </td>
+
+                                                {/* Approval 6 Steps */}
+                                                <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
+                                                    {getStatusBadge(p.status, p.current_approval_step, p)}
+                                                </td>
+
+                                                {/* Loan Contract / Procurement */}
+                                                <td className="px-4 py-3.5 align-top">
+                                                    <div className="space-y-1 text-[11px]">
+                                                        {hasLoans && (
+                                                            <div className="space-y-0.5">
+                                                                {loans.map((l, lIdx) => (
+                                                                    <div key={l.id || lIdx} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
+                                                                        <span>📝</span>
+                                                                        <span className="font-mono font-bold">{l.contract_no || 'สัญญายืมเงิน'}</span>
+                                                                        <span className="text-[10px]">
+                                                                            (฿{new Intl.NumberFormat('th-TH').format(l.total_loan_amount || 0)})
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                        {procNum && (
+                                                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200">
+                                                                <span>📦</span>
+                                                                <span className="font-mono font-bold">{procNum}</span>
+                                                            </div>
+                                                        )}
+                                                        {!hasLoans && !procNum && (
+                                                            <span className="text-slate-400 italic">-</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Full Report Book (5 chapters) */}
+                                                <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
+                                                    {hasCompletedBook ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300">
+                                                            <span>✅</span> สรุปรูปเล่มครบถ้วน
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px]">
+                                                            <span>⏳</span> ยังไม่สรุปรูปเล่ม
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {/* Clearings status */}
+                                                <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
+                                                    {allLoansCleared ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300">
+                                                            <span>✅</span> เคลียร์เงินเรียบร้อย
+                                                        </span>
+                                                    ) : hasUnclearedLoans ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[11px] border border-amber-300">
+                                                            <span>⚠️</span> รอเคลียร์เงินยืม
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-400 text-[11px]">
+                                                            ไม่ต้องเคลียร์เงิน
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {/* Action Buttons */}
+                                                <td className="px-4 py-3.5 text-right align-top whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        <a
+                                                            href={route('projects.show', p.id)}
+                                                            className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 transition cursor-pointer"
+                                                            title="เปิดดูรายละเอียดโครงการ"
+                                                        >
+                                                            ดูรายละเอียด
+                                                        </a>
+                                                        <a
+                                                            href={route('projects.print', p.id)}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition cursor-pointer"
+                                                            title="พิมพ์โครงการ"
+                                                        >
+                                                            🖨️
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Explanation / Color Legend Card */}
+                <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 p-5 sm:p-6 rounded-3xl border border-indigo-100 shadow-2xs space-y-4">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xl">💡</span>
+                        <h4 className="font-black text-slate-900 text-sm sm:text-base">
+                            เกณฑ์การจัดระดับสถานะการดำเนินงานโครงการ (5 ระดับ)
+                        </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                        <div className="p-3.5 rounded-2xl bg-white border border-rose-200 shadow-2xs space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-black text-rose-800">
+                                <span>🔴</span> ระดับที่ 1 (สีแดง)
+                            </div>
+                            <div className="font-bold text-slate-800">ยังไม่ได้เริ่มดำเนินการ</div>
+                            <p className="text-slate-600 text-[11px] leading-relaxed">
+                                โครงการที่อยู่ในขั้นตอนเสนอขอตั้งงบประมาณเบื้องต้น หรือยังไม่ได้เริ่มจัดทำเนื้อหาโครงการแบบเต็มรูปแบบ (บทที่ 1)
+                            </p>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white border border-amber-200 shadow-2xs space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-black text-amber-800">
+                                <span>🟡</span> ระดับที่ 2 (สีเหลือง)
+                            </div>
+                            <div className="font-bold text-slate-800">เริ่มจัดทำโครงการเต็มรูปแบบ</div>
+                            <p className="text-slate-600 text-[11px] leading-relaxed">
+                                โครงการที่มีการเขียนเนื้อหาโครงการแบบเต็ม (บทที่ 1) และยื่นเข้าสู่กระบวนการพิจารณาอนุมัติตามลำดับขั้น 6 ขั้นตอน
+                            </p>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white border border-orange-200 shadow-2xs space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-black text-orange-800">
+                                <span>🟠</span> ระดับที่ 3 (สีส้ม)
+                            </div>
+                            <div className="font-bold text-slate-800">อนุมัติครบ & ดำเนินโครงการ</div>
+                            <p className="text-slate-600 text-[11px] leading-relaxed">
+                                โครงการผ่านการอนุมัติครบ 6 ขั้นตอน และมีการเริ่มเขียนสัญญายืมเงินราชการ หรือจัดทำชุดจัดซื้อจัดจ้าง
+                            </p>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white border border-orange-300 shadow-2xs space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-black text-orange-950">
+                                <span>🟧</span> ระดับที่ 4 (สีส้มแดง)
+                            </div>
+                            <div className="font-bold text-slate-800">ดำเนินโครงการแล้ว รอสรุปเล่ม</div>
+                            <p className="text-slate-600 text-[11px] leading-relaxed">
+                                มีการเบิกจ่ายเงิน/จัดกิจกรรมโครงการเรียบร้อยแล้ว แต่ยังไม่ได้จัดทำรายงานสรุปผลรูปเล่ม 5 บท
+                            </p>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white border border-emerald-200 shadow-2xs space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-black text-emerald-800">
+                                <span>🟢</span> ระดับที่ 5 (สีเขียว)
+                            </div>
+                            <div className="font-bold text-slate-800">สรุปเล่ม & เคลียร์เงินเรียบร้อย</div>
+                            <p className="text-slate-600 text-[11px] leading-relaxed">
+                                จัดทำรายงานผลรูปเล่มครบถ้วน (5 บท) และทำการเคลียร์เงินยืม/เงินทดรองเรียบร้อยสมบูรณ์ทุกรายการ
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -17061,13 +17854,16 @@ return (
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <Link
-                                                            href={getSecureProjectShowUrl(item.id)}
-                                                            className="text-xs sm:text-sm font-bold text-purple-950 hover:text-purple-700 transition line-clamp-3 leading-snug break-words"
-                                                            title={item.title}
-                                                        >
-                                                            {item.title}
-                                                        </Link>
+                                                        <div className="flex flex-wrap items-center gap-1.5">
+                                                            <Link
+                                                                href={getSecureProjectShowUrl(item.id)}
+                                                                className="text-xs sm:text-sm font-bold text-purple-950 hover:text-purple-700 transition leading-snug break-words"
+                                                                title={item.title}
+                                                            >
+                                                                {item.title}
+                                                            </Link>
+                                                            {renderExecutionStatusBadge(item, true)}
+                                                        </div>
                                                     )}
 
                                                     <div className="flex flex-wrap items-center gap-x-1.5 text-[11px] text-slate-600 font-normal">
@@ -20625,6 +21421,7 @@ return (
                         {activeTab === 'admin_settings' && renderAdminSettingsTab()}
                         {activeTab === 'admin_ai' && renderAdminAiHubTab()}
                         {activeTab === 'all_projects' && renderAllProjectsTab()}
+                        {activeTab === 'project_status' && renderProjectStatusTab()}
                         {activeTab === 'central_budgets' && renderCentralBudgetsTab()}
                         {activeTab === 'document_tracking' && renderDocumentTrackingTab()}
                         {activeTab === 'proposals' && renderProposalsTab()}

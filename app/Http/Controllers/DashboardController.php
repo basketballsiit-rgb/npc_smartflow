@@ -782,8 +782,8 @@ class DashboardController extends Controller
             || $user->isProcurementHead() || $user->isProcurementStaff() 
             || $user->isFinanceStaff() || $user->isExecutive();
 
-        if ($isPowerUser || in_array($activeTab, ['all_projects', 'document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
-            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices', 'photos', 'survey'])
+        if ($isPowerUser || in_array($activeTab, ['project_status', 'all_projects', 'document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
+            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
                 ->latest();
 
             // Non-power users (e.g. general teachers/proposers) only track their own projects, or specifically selected project (unless viewing all_projects tab)
@@ -933,6 +933,7 @@ class DashboardController extends Controller
                         'funding_source_name' => $fundingName,
                         'funding_source_id' => $fundingId,
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
+                        'execution_status' => $p->execution_status,
                         'activities' => $p->activities ?? [],
                         'appendices' => $p->appendices ? $p->appendices->map(function ($app) {
                             return [
@@ -963,6 +964,17 @@ class DashboardController extends Controller
                             'evaluate_url' => route('surveys.evaluate', $p->id),
                         ],
                         'print_url' => route('projects.print', $p->id),
+                        'has_completed_book' => !empty($p->full_report_completed_at) || (!empty($p->chapter_5_content) && !empty($p->chapter_4_content)),
+                        'travel_loans' => $p->travelLoans ? $p->travelLoans->map(function ($tl) {
+                            return [
+                                'id' => $tl->id,
+                                'contract_no' => $tl->contract_no,
+                                'total_loan_amount' => (float)$tl->total_loan_amount,
+                                'loan_status' => $tl->loan_status,
+                                'finance_disbursed_at' => $tl->finance_disbursed_at ? $tl->finance_disbursed_at->format('d/m/Y') : null,
+                                'cleared_at' => $tl->cleared_at ? $tl->cleared_at->format('d/m/Y') : null,
+                            ];
+                        }) : [],
                         'procurement_items' => $p->procurement?->items ? $p->procurement->items->map(function ($it) {
                             return [
                                 'id' => $it->id,

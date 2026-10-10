@@ -95,6 +95,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) ||
                        ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets')) ||
                        (currentUrl.includes('tab=document_tracking') && (currentUrl.includes('from=plan') || (!currentUrl.includes('from=procurement') && !currentUrl.includes('from=finance') && !currentUrl.includes('from=loan') && (isPlanStaff || isAdmin)))) ||
+                       (currentUrl.includes('tab=project_status') && (currentUrl.includes('from=plan') || (!currentUrl.includes('from=executive') && !currentUrl.includes('from=admin') && isPlanStaff))) ||
                        currentUrl.includes('tab=action_plan_report') ||
                        currentUrl.includes('tab=admin_strategies') ||
                        currentUrl.includes('strategies/dashboard') ||
@@ -106,6 +107,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        currentUrl.includes('tab=budgets') ||
                        currentUrl.includes('tab=action_plan_report') ||
                        currentUrl.includes('tab=reviews') ||
+                       (currentUrl.includes('tab=project_status') && (currentUrl.includes('from=executive') || (!currentUrl.includes('from=plan') && !currentUrl.includes('from=admin') && isExecutive))) ||
                        currentUrl.includes('strategies/dashboard') ||
                        (typeof route !== 'undefined' && route().current('strategies.dashboard'));
             case 'admin_console':
@@ -113,6 +115,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        currentUrl.includes('tab=admin_settings') ||
                        currentUrl.includes('tab=admin_strategies') ||
                        currentUrl.includes('tab=admin_ai') ||
+                       (currentUrl.includes('tab=project_status') && (currentUrl.includes('from=admin') || (!currentUrl.includes('from=plan') && !currentUrl.includes('from=executive') && isAdmin))) ||
                        (currentUrl.includes('tab=all_projects') && !currentUrl.includes('from=plan') && !currentUrl.includes('from=finance'));
             default:
                 return false;
@@ -125,6 +128,17 @@ export default function AuthenticatedLayout({ header, children }) {
         }
         if (currentUrl.includes('from=plan')) {
             return 'plan_hub';
+        }
+        if (currentUrl.includes('from=executive')) {
+            return 'executive_hub';
+        }
+        if (currentUrl.includes('from=admin')) {
+            return 'admin_console';
+        }
+        if (currentUrl.includes('tab=project_status')) {
+            if (isPlanStaff) return 'plan_hub';
+            if (isPureExecutive) return 'executive_hub';
+            return 'admin_console';
         }
         if (currentUrl.includes('from=procurement')) {
             return 'procurement_hub';
@@ -880,6 +894,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span className="font-black text-amber-300">ตัดยอดงบ ผง. (จัดซื้อ/ยืมเงิน)</span>}
                                 </Link>
                                 <Link
+                                    href={route('dashboard', { tab: 'project_status', from: 'plan' })}
+                                    className={getSubLinkClass(url.includes('tab=project_status') && (url.includes('from=plan') || (!url.includes('from=executive') && !url.includes('from=admin') && (isPlanStaff || isAdmin))))}
+                                    title="ติดตามสถานะการดำเนินงานโครงการ 5 ระดับ (ตั้งแต่เสนอขอจนถึงสรุปรูปเล่มและเคลียร์เงิน)"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=project_status') && (url.includes('from=plan') || (!url.includes('from=executive') && !url.includes('from=admin') && (isPlanStaff || isAdmin))), 'text-amber-300')}>●</span>
+                                    <span className="text-sm">🎯</span>
+                                    {isSidebarOpen && <span className="font-black text-amber-300">ติดตามสถานะโครงการ (5 ระดับ)</span>}
+                                </Link>
+                                <Link
                                     href={route('dashboard', { tab: 'annual_budget_requests' })}
                                     className={getSubLinkClass(url.includes('tab=annual_budget_requests'))}
                                     title="ภาพรวมคำของบประมาณประจำปี แยก 4 ฝ่าย พร้อมพิจารณาอนุมัติจัดสรร"
@@ -989,6 +1012,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>ภาพรวมผลงาน & งบ 4 ฝ่าย</span>}
                                 </Link>
                                 <Link
+                                    href={route('dashboard', { tab: 'project_status', from: 'executive' })}
+                                    className={getSubLinkClass(url.includes('tab=project_status') && url.includes('from=executive'))}
+                                    title="ติดตามสถานะการดำเนินงานโครงการ 5 ระดับ (ตั้งแต่เสนอขอจนถึงสรุปรูปเล่มและเคลียร์เงิน)"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=project_status') && url.includes('from=executive'), 'text-violet-300')}>●</span>
+                                    <span className="text-sm">🎯</span>
+                                    {isSidebarOpen && <span className="font-black text-violet-300">ติดตามสถานะโครงการ (5 ระดับ)</span>}
+                                </Link>
+                                <Link
                                     href={route('strategies.dashboard')}
                                     className={getSubLinkClass(route().current('strategies.dashboard'))}
                                     title="แดชบอร์ดภาพรวมการขับเคลื่อนยุทธศาสตร์สถานศึกษา"
@@ -1061,6 +1093,15 @@ export default function AuthenticatedLayout({ header, children }) {
 
                             {(!isSidebarOpen || openSections.admin_console) && (
                             <div className="pl-2.5 border-l-2 border-rose-500/30 ml-2 space-y-1 animate-in fade-in duration-150">
+                                <Link
+                                    href={route('dashboard', { tab: 'project_status', from: 'admin' })}
+                                    className={getSubLinkClass(url.includes('tab=project_status') && (url.includes('from=admin') || (!url.includes('from=plan') && !url.includes('from=executive'))))}
+                                    title="ติดตามสถานะการดำเนินงานโครงการ 5 ระดับ (ตั้งแต่เสนอขอจนถึงสรุปรูปเล่มและเคลียร์เงิน)"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=project_status') && (url.includes('from=admin') || (!url.includes('from=plan') && !url.includes('from=executive'))), 'text-rose-300')}>●</span>
+                                    <span className="text-sm">🎯</span>
+                                    {isSidebarOpen && <span className="font-black text-rose-300">ติดตามสถานะโครงการ (5 ระดับ)</span>}
+                                </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'admin_users' })}
                                     className={getSubLinkClass(url.includes('tab=admin_users') || (!url.includes('tab=') && route().current('dashboard') && isAdmin))}
@@ -1298,6 +1339,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Link href={route('dashboard', { tab: 'document_tracking', from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-amber-300 font-bold">
                                             <span>📑</span> ตัดยอดงบ ผง. (จัดซื้อ/ยืมเงิน)
                                         </Link>
+                                        <Link href={route('dashboard', { tab: 'project_status', from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-amber-300 font-bold">
+                                            <span>🎯</span> ติดตามสถานะโครงการ (5 ระดับ)
+                                        </Link>
                                         <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📊</span> ภาพรวมคำของบแยก 4 ฝ่าย
                                         </Link>
@@ -1320,6 +1364,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <Link href={route('dashboard', { tab: 'executive_overview' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📈</span> ภาพรวม 4 ฝ่าย
                                         </Link>
+                                        <Link href={route('dashboard', { tab: 'project_status', from: 'executive' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-violet-300 font-bold">
+                                            <span>🎯</span> ติดตามสถานะโครงการ (5 ระดับ)
+                                        </Link>
                                         <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📊</span> คำของบประมาณ 4 ฝ่าย
                                         </Link>
@@ -1333,6 +1380,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {isAdmin && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
                                         <div className="text-[10px] font-bold text-rose-300 uppercase px-2">8. ผู้ดูแลระบบ</div>
+                                        <Link href={route('dashboard', { tab: 'project_status', from: 'admin' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-rose-300 font-bold">
+                                            <span>🎯</span> ติดตามสถานะโครงการ (5 ระดับ)
+                                        </Link>
                                         <Link href={route('dashboard', { tab: 'admin_users' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>👤</span> จัดการผู้ใช้ & สิทธิ์
                                         </Link>
