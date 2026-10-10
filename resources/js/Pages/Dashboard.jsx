@@ -3090,7 +3090,10 @@ export default function Dashboard({
     };
 
     // Admin Settings State
-    const initialSettingsObj = {};
+    const initialSettingsObj = {
+        director_name: 'นายกเชษฐ์ กิ่งชนะ',
+        director_position: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+    };
     (systemSettings || []).forEach(s => {
         initialSettingsObj[s.key] = s.type === 'boolean' ? (s.value === 'true') : s.value;
     });
@@ -5832,7 +5835,12 @@ export default function Dashboard({
                     <form onSubmit={handleSaveSettingsSubmit} className="space-y-6">
                         {/* General Info */}
                         <div className="space-y-4">
-                            <h4 className="text-sm font-bold text-purple-900 border-l-4 border-purple-600 pl-3">ข้อมูลสถานศึกษา</h4>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                <h4 className="text-sm font-bold text-purple-900 border-l-4 border-purple-600 pl-3">ข้อมูลสถานศึกษา</h4>
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                    ข้อมูลอัตลักษณ์ของสถานศึกษาและผู้บริหารสูงสุด
+                                </span>
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-700 mb-1">ชื่อสถานศึกษา (ภาษาไทย)</label>
@@ -5841,6 +5849,7 @@ export default function Dashboard({
                                         value={settingsForm.college_name_th || ''}
                                         onChange={(e) => setSettingsForm({ ...settingsForm, college_name_th: e.target.value })}
                                         className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                        placeholder="เช่น วิทยาลัยสารพัดช่างน่าน"
                                     />
                                 </div>
                                 <div>
@@ -5850,7 +5859,62 @@ export default function Dashboard({
                                         value={settingsForm.college_name_en || ''}
                                         onChange={(e) => setSettingsForm({ ...settingsForm, college_name_en: e.target.value })}
                                         className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-sm focus:border-purple-500 focus:ring-purple-500"
+                                        placeholder="เช่น Nan Polytechnic College"
                                     />
+                                </div>
+                            </div>
+
+                            {/* College Director Configuration Card */}
+                            <div className="mt-3 p-4.5 rounded-2xl bg-gradient-to-r from-purple-50/80 via-indigo-50/40 to-slate-50 border border-purple-200/80 shadow-2xs space-y-3">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-purple-100/80 pb-2.5">
+                                    <span className="text-xs font-black text-purple-950 flex items-center gap-2">
+                                        <span className="p-1.5 rounded-lg bg-purple-600 text-white text-xs shadow-xs">👔</span>
+                                        <span>ข้อมูลท่านผู้อำนวยการวิทยาลัย (College Director)</span>
+                                    </span>
+                                    <span className="text-[10px] font-bold text-purple-700 bg-white px-2.5 py-0.5 rounded-full border border-purple-200 shadow-2xs self-start sm:self-auto">
+                                        ผู้อนุมัติโครงการสูงสุด (ขั้นตอนที่ 6) & ผู้ลงนามสัญญายืมเงิน/จัดซื้อจัดจ้าง
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
+                                            <span>ชื่อ-นามสกุล ของท่านผู้อำนวยการ</span>
+                                            <span className="text-rose-500 font-black">*</span>
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={settingsForm.director_name || ''}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, director_name: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 pl-9 pr-3.5 py-2.5 text-sm font-extrabold text-slate-900 focus:border-purple-500 focus:ring-purple-500 shadow-xs bg-white"
+                                                placeholder="เช่น นายกเชษฐ์ กิ่งชนะ"
+                                            />
+                                            <span className="absolute left-3 top-3 text-slate-400 text-xs">👤</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                                            💡 ระบุคำนำหน้าชื่อและชื่อ-นามสกุลจริง เมื่อมีการเปลี่ยนผู้อำนวยการท่านใหม่ เพียงแก้ไขที่จุดนี้ ระบบจะนำชื่อท่านผู้อำนวยการไปแสดงบนเอกสารเสนอขออนุมัติโครงการ เล่มรายงานสรุปผล และสัญญายืมเงินทั้งหมดโดยอัตโนมัติ
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-800 mb-1 flex items-center gap-1">
+                                            <span>ตำแหน่งของผู้บริหารสูงสุด</span>
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={settingsForm.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, director_position: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 pl-9 pr-3.5 py-2.5 text-sm font-bold text-slate-800 focus:border-purple-500 focus:ring-purple-500 shadow-xs bg-white"
+                                                placeholder="เช่น ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน หรือ รักษาการในตำแหน่ง..."
+                                            />
+                                            <span className="absolute left-3 top-3 text-slate-400 text-xs">🏛️</span>
+                                        </div>
+                                        <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                                            💡 ค่าเริ่มต้น: "ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน" (กรณีรักษาการ สามารถระบุเป็น "รักษาการในตำแหน่งผู้อำนวยการวิทยาลัยสารพัดช่างน่าน" ได้)
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

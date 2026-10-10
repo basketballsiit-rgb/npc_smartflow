@@ -261,10 +261,24 @@ class AdminController extends Controller
                 SystemSetting::create([
                     'key' => $key,
                     'value' => (string)$value,
-                    'group' => 'academic',
+                    'group' => 'general',
                     'label' => $key,
                     'type' => 'text',
                 ]);
+            }
+
+            // Sync with Director/Executive User account
+            if ($key === 'director_name' && !empty($value)) {
+                $directorUser = User::where('role_id', 5)->orWhere('position', 'like', '%ผู้อำนวยการ%')->first();
+                if ($directorUser) {
+                    $directorUser->update(['name' => trim((string)$value)]);
+                }
+            }
+            if ($key === 'director_position' && !empty($value)) {
+                $directorUser = User::where('role_id', 5)->orWhere('position', 'like', '%ผู้อำนวยการ%')->first();
+                if ($directorUser) {
+                    $directorUser->update(['position' => trim((string)$value)]);
+                }
             }
         }
 

@@ -224,6 +224,8 @@ class DatabaseSeeder extends Seeder
         $settings = [
             ['key' => 'college_name_th', 'value' => 'วิทยาลัยสารพัดช่างน่าน', 'group' => 'general', 'label' => 'ชื่อสถานศึกษา (ภาษาไทย)', 'type' => 'text'],
             ['key' => 'college_name_en', 'value' => 'Nan Polytechnic College', 'group' => 'general', 'label' => 'ชื่อสถานศึกษา (ภาษาอังกฤษ)', 'type' => 'text'],
+            ['key' => 'director_name', 'value' => 'นายกเชษฐ์ กิ่งชนะ', 'group' => 'general', 'label' => 'ชื่อ-นามสกุล ของท่านผู้อำนวยการ', 'type' => 'text'],
+            ['key' => 'director_position', 'value' => 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน', 'group' => 'general', 'label' => 'ตำแหน่งผู้บริหารสูงสุด', 'type' => 'text'],
             ['key' => 'current_fiscal_year', 'value' => '2569', 'group' => 'academic', 'label' => 'ปีงบประมาณปัจจุบัน', 'type' => 'text'],
             ['key' => 'current_quarter', 'value' => 'auto', 'group' => 'academic', 'label' => 'ไตรมาสงบประมาณปัจจุบัน', 'type' => 'text'],
             ['key' => 'current_academic_year', 'value' => '2569', 'group' => 'academic', 'label' => 'ปีการศึกษาปัจจุบัน', 'type' => 'text'],

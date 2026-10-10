@@ -1,7 +1,8 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Print({ project, strategyCategories = [] }) {
+    const { college_settings } = usePage().props;
     // Font size preset state: 'compact' (14px) | 'normal' (15px) | 'large' (16.5px)
     const [fontSizePreset, setFontSizePreset] = useState('normal');
 
@@ -1144,10 +1145,10 @@ export default function Print({ project, strategyCategories = [] }) {
                                     </span>
                                 </div>
                                 <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                    ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : 'นายกเชษฐ์ กิ่งชนะ'})
+                                    ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : (college_settings?.director_name || 'นายกเชษฐ์ กิ่งชนะ')})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal text-slate-800">
-                                    {sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'}
+                                    {sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : (college_settings?.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน')}
                                 </p>
                                 <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                     {includeSignatures && sig6?.signed_at 

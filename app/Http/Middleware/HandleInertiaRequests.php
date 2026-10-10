@@ -56,6 +56,12 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'asset_url' => $request->getBaseUrl() . '/',
+            'college_settings' => [
+                'name_th' => \App\Models\SystemSetting::where('key', 'college_name_th')->value('value') ?: 'วิทยาลัยสารพัดช่างน่าน',
+                'name_en' => \App\Models\SystemSetting::where('key', 'college_name_en')->value('value') ?: 'Nan Polytechnic College',
+                'director_name' => \App\Models\SystemSetting::where('key', 'director_name')->value('value') ?: 'นายกเชษฐ์ กิ่งชนะ',
+                'director_position' => \App\Models\SystemSetting::where('key', 'director_position')->value('value') ?: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+            ],
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error'   => $request->session()->get('error'),
