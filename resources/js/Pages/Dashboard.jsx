@@ -3113,6 +3113,7 @@ export default function Dashboard({
     const [aiSearchFilter, setAiSearchFilter] = useState('');
     const [expandedAgents, setExpandedAgents] = useState({});
     const [activeAiViewMode, setActiveAiViewMode] = useState('pipeline'); // 'pipeline' | 'agents' | 'global'
+    const [showApiKeyInput, setShowApiKeyInput] = useState(false);
 
     const fetchAiAgentsConfig = async () => {
         setLoadingAiConfig(true);
@@ -3151,8 +3152,12 @@ export default function Dashboard({
             });
             const payload = {
                 global_directive: aiAgentsConfig.global_directive,
+                ai_global_directive: aiAgentsConfig.global_directive,
                 model: aiAgentsConfig.model,
+                ai_model: aiAgentsConfig.model,
                 temperature: aiAgentsConfig.temperature,
+                ai_temperature: aiAgentsConfig.temperature,
+                gemini_api_key: aiAgentsConfig.gemini_api_key,
                 prompts: promptsMap
             };
             const res = await axios.post(route('admin.ai_agents.update'), payload);
@@ -3160,12 +3165,14 @@ export default function Dashboard({
                 Swal.fire({
                     icon: 'success',
                     title: 'บันทึกการตั้งค่าสำเร็จ',
-                    text: 'อัปเดตนโยบายกลางและคำสั่งเฉพาะงานของ AI Agent ทั้งหมดเรียบร้อยแล้ว',
+                    text: 'อัปเดต API Key, นโยบายกลาง และคำสั่งเฉพาะงานของ AI ทั้งหมดเรียบร้อยแล้ว',
                     timer: 2000,
                     showConfirmButton: false
                 });
                 if (res.data.config) {
                     setAiAgentsConfig(res.data.config);
+                } else {
+                    fetchAiAgentsConfig();
                 }
             }
         } catch (error) {
@@ -3200,6 +3207,8 @@ export default function Dashboard({
                     Swal.fire('รีเซ็ตสำเร็จ', 'คืนค่าคำสั่งมาตรฐานเรียบร้อยแล้ว', 'success');
                     if (res.data.config) {
                         setAiAgentsConfig(res.data.config);
+                    } else {
+                        fetchAiAgentsConfig();
                     }
                 }
             } catch (err) {
@@ -3213,26 +3222,31 @@ export default function Dashboard({
         setTestingAiConn(true);
         setAiConnResult(null);
         try {
-            const res = await axios.post(route('admin.ai_agents.test_connection'));
+            const res = await axios.post(route('admin.ai_agents.test_connection'), {
+                gemini_api_key: aiAgentsConfig?.gemini_api_key,
+                ai_model: aiAgentsConfig?.model || aiAgentsConfig?.ai_model,
+            });
             setAiConnResult(res.data);
-            if (res.data.ok) {
+            if (res.data.success || res.data.ok) {
                 Swal.fire({
                     icon: 'success',
                     title: 'เชื่อมต่อ AI สำเร็จ!',
                     html: `
-                        <div class="text-left text-xs space-y-2 p-2">
-                            <div><span class="font-bold text-slate-700">โมเดลที่ใช้งาน:</span> <code class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded">${res.data.model}</code></div>
+                        <div class="text-left text-xs space-y-2 p-2 font-sans">
+                            <div><span class="font-bold text-slate-700">โมเดลที่ใช้งาน:</span> <code class="px-2 py-0.5 bg-purple-100 text-purple-700 rounded font-bold">${res.data.model}</code></div>
                             <div><span class="font-bold text-slate-700">ความเร็วตอบสนอง (Latency):</span> <span class="text-emerald-600 font-bold font-mono">${res.data.latency_ms} ms</span></div>
-                            <div class="mt-2 text-slate-500 font-semibold">ตัวอย่างข้อความตอบกลับ:</div>
-                            <div class="p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-slate-700 italic text-[11px] leading-relaxed">"${res.data.sample_response}"</div>
+                            <div class="mt-2 text-slate-500 font-semibold">ข้อความตอบกลับจาก Gemini AI:</div>
+                            <div class="p-2.5 bg-emerald-50 rounded-lg border border-emerald-200 text-emerald-900 font-bold text-xs leading-relaxed">"${res.data.reply || res.data.sample_response || 'พร้อมทำงาน'}"</div>
                         </div>
                     `,
+                    confirmButtonColor: '#7e22ce'
                 });
             } else {
                 Swal.fire({
                     icon: 'warning',
                     title: 'ทดสอบไม่สำเร็จ',
-                    text: res.data.message || 'ไม่สามารถติดต่อ AI API ได้',
+                    text: res.data.message || 'ไม่สามารถติดต่อ Gemini API ได้ กรุณาตรวจสอบ API Key',
+                    confirmButtonColor: '#7e22ce'
                 });
             }
         } catch (error) {
@@ -6369,9 +6383,19 @@ export default function Dashboard({
                                 <span className="px-3 py-1 text-[11px] font-bold uppercase rounded-full bg-purple-500/30 text-purple-200 border border-purple-400/30">
                                     SmartFlow AI Orchestration Hub
                                 </span>
-                                <span className={`px-3 py-1 text-[11px] font-bold rounded-full border ${config.has_api_key ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}`}>
-                                    {config.has_api_key ? '🟢 พร้อมใช้งาน Gemini API' : '🟡 โหมดสำรอง Template Engine'}
+                                <span className={`px-3 py-1 text-[11px] font-bold rounded-full border ${config.has_api_key ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'}`}>
+                                    {config.has_api_key ? '🟢 พร้อมใช้งาน Gemini API' : '🔴 ยังไม่พบ Gemini API Key'}
                                 </span>
+                                {!config.has_api_key && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveAiViewMode('global')}
+                                        className="px-3 py-1 text-[11px] font-bold rounded-full bg-rose-500/30 hover:bg-rose-500/50 text-rose-200 border border-rose-400/50 transition cursor-pointer flex items-center gap-1"
+                                    >
+                                        <span>🔑 คลิกเพื่อใส่ API Key</span>
+                                        <span>→</span>
+                                    </button>
+                                )}
                             </div>
                             <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
                                 <span>🤖 ศูนย์ควบคุมคำสั่งและโครงข่ายข้อมูลเชื่อมโยง AI</span>
@@ -6495,7 +6519,12 @@ export default function Dashboard({
                                     : 'bg-white text-slate-600 hover:bg-purple-50 border border-slate-200'
                             }`}
                         >
-                            <span>🏛️ นโยบายกลาง & พารามิเตอร์โมเดล</span>
+                            <span>🏛️ นโยบายกลาง, พารามิเตอร์ & API Key</span>
+                            {!config.has_api_key && (
+                                <span className="px-1.5 py-0.5 rounded-full text-[9px] bg-rose-500 text-white font-black animate-pulse">
+                                    รอใส่ Key
+                                </span>
+                            )}
                         </button>
                     </div>
 
@@ -6922,9 +6951,79 @@ export default function Dashboard({
                     </div>
                 )}
 
-                {/* VIEW 3: GLOBAL DIRECTIVES & MODEL ENGINE */}
+                {/* VIEW 3: GLOBAL DIRECTIVES, MODEL ENGINE & API KEY */}
                 {activeAiViewMode === 'global' && (
                     <div className="space-y-6">
+                        {/* Google Gemini API Key Configuration Card */}
+                        <div className="rounded-2xl border border-purple-200 bg-white p-6 shadow-sm space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-purple-100 pb-4">
+                                <div>
+                                    <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                                        <span>🔑</span> การตั้งค่า Google Gemini API Key
+                                    </h3>
+                                    <p className="text-xs text-slate-600 mt-0.5">
+                                        กุญแจเชื่อมต่อบริการปัญญาประดิษฐ์ Google Gemini เพื่อขับเคลื่อน AI ช่วยร่าง TOR แนะนำโครงการ และวิเคราะห์งบประมาณ
+                                    </p>
+                                </div>
+                                <div>
+                                    {config.has_api_key ? (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            ติดตั้ง API Key เรียบร้อยแล้ว
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                                            <span className="h-2 w-2 rounded-full bg-rose-500"></span>
+                                            ยังไม่ได้ระบุ API Key
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                                    <span>Google Gemini API Key:</span>
+                                    <a
+                                        href="https://aistudio.google.com/app/apikey"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-[11px] text-purple-600 hover:text-purple-800 font-bold hover:underline flex items-center gap-1"
+                                    >
+                                        <span>🔗 ขอรับ API Key ฟรีที่ Google AI Studio</span>
+                                        <span>↗</span>
+                                    </a>
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type={showApiKeyInput ? "text" : "password"}
+                                        value={config.gemini_api_key || ''}
+                                        onChange={(e) => setAiAgentsConfig({ ...aiAgentsConfig, gemini_api_key: e.target.value })}
+                                        className="w-full rounded-xl border border-purple-200 pr-24 pl-4 py-2.5 text-xs font-mono text-slate-900 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-purple-50/20"
+                                        placeholder="วาง API Key ที่นี่ (ขึ้นต้นด้วย AIzaSy...)"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowApiKeyInput(!showApiKeyInput)}
+                                        className="absolute right-2.5 top-2 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 transition cursor-pointer"
+                                    >
+                                        {showApiKeyInput ? 'ซ่อน Key' : 'แสดง Key'}
+                                    </button>
+                                </div>
+                                <div className="mt-2.5 p-3 rounded-xl bg-purple-50/60 border border-purple-100 text-[11px] text-slate-600 space-y-1.5">
+                                    <p>💡 <strong>วิธีนำ API Key มาใส่:</strong></p>
+                                    <ol className="list-decimal list-inside space-y-1 pl-1 text-slate-700">
+                                        <li>เปิดเว็บไซต์ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-purple-700 underline font-bold">Google AI Studio (aistudio.google.com)</a> แล้วล็อกอินด้วยบัญชี Google ของท่าน</li>
+                                        <li>กดปุ่ม <strong>"Create API key"</strong> จากนั้นเลือกโปรเจกต์ Google Cloud แล้วกดสร้าง</li>
+                                        <li>คัดลอกรหัส API Key ทั้งหมด (ตัวอย่างเช่น <code>AIzaSyB...</code>) นำมาวางลงในช่องด้านบนนี้</li>
+                                        <li>กดปุ่ม <strong>"💾 บันทึกการเปลี่ยนแปลง"</strong> ด้านบนมุมขวา หรือทดสอบการเชื่อมต่อได้ทันที</li>
+                                    </ol>
+                                    <p className="text-[10px] text-slate-500 pt-1">
+                                        🔒 <em>ความปลอดภัย: API Key จะถูกจัดเก็บเป็นความลับในระบบ และใช้งานเฉพาะการประมวลผลคำขอใน SmartFlow เท่านั้น</em>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Global Directives Box */}
                         <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-4">
                             <div className="border-b border-purple-100 pb-4">

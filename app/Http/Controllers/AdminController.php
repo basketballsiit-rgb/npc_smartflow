@@ -1193,8 +1193,11 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'has_api_key' => !empty($apiKey),
+            'gemini_api_key' => $apiKey ?: '',
             'ai_model' => $aiModel,
+            'model' => $aiModel,
             'ai_temperature' => $aiTemp,
+            'temperature' => $aiTemp,
             'ai_enabled' => $aiEnabled,
             'global_directive' => $globalDirective,
             'agents' => $agents
@@ -1210,16 +1213,16 @@ class AdminController extends Controller
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงส่วนนี้');
         }
 
-        if ($request->has('ai_global_directive')) {
-            SystemSetting::set('ai_global_directive', $request->input('ai_global_directive'), 'ai', 'คำสั่งนโยบายกลางของวิทยาลัย', 'textarea');
+        if ($request->has('ai_global_directive') || $request->has('global_directive')) {
+            SystemSetting::set('ai_global_directive', $request->input('ai_global_directive', $request->input('global_directive')), 'ai', 'คำสั่งนโยบายกลางของวิทยาลัย', 'textarea');
         }
 
-        if ($request->has('ai_model')) {
-            SystemSetting::set('ai_model', $request->input('ai_model'), 'ai', 'รุ่นโมเดล AI Gemini', 'text');
+        if ($request->has('ai_model') || $request->has('model')) {
+            SystemSetting::set('ai_model', $request->input('ai_model', $request->input('model')), 'ai', 'รุ่นโมเดล AI Gemini', 'text');
         }
 
-        if ($request->has('ai_temperature')) {
-            SystemSetting::set('ai_temperature', (string)$request->input('ai_temperature'), 'ai', 'ระดับความสร้างสรรค์ (Temperature)', 'text');
+        if ($request->has('ai_temperature') || $request->has('temperature')) {
+            SystemSetting::set('ai_temperature', (string)$request->input('ai_temperature', $request->input('temperature')), 'ai', 'ระดับความสร้างสรรค์ (Temperature)', 'text');
         }
 
         if ($request->has('gemini_api_key')) {
