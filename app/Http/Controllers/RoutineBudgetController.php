@@ -18,6 +18,10 @@ class RoutineBudgetController extends Controller
         $user = auth()->user();
         $fiscalYear = SystemSetting::where('key', 'current_fiscal_year')->value('value') ?? date('Y') + 543;
 
+        if ($request->query('from') === 'finance') {
+            return redirect()->route('dashboard', ['tab' => 'document_tracking', 'from' => 'finance']);
+        }
+
         if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff()) {
             $routinePlans = RoutineBudgetPlan::with(['department', 'procurements.items', 'procurements.committees', 'fundingSource'])->latest()->get();
         } else {
@@ -28,7 +32,7 @@ class RoutineBudgetController extends Controller
                 ->get();
         }
 
-        $defaultTab = ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff()) ? 'create_plan' : 'plans';
+        $defaultTab = 'plans';
 
         return Inertia::render('RoutineBudgets/Index', [
             'routinePlans' => $routinePlans,
