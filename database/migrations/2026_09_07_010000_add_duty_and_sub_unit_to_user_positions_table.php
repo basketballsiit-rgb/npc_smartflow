@@ -27,7 +27,16 @@ return new class extends Migration
 
         // 3. ตรวจสอบและเพิ่ม 9 สาขาวิชามาตรฐาน ภายใต้ ฝ่ายวิชาการ (parent_id = 2)
         $academicDept = DB::table('departments')->where('name', 'like', '%ฝ่ายวิชาการ%')->orWhere('code', 'ACAD')->first();
-        $academicId = $academicDept ? $academicDept->id : 2;
+        if (!$academicDept) {
+            $academicId = DB::table('departments')->insertGetId([
+                'name' => 'ฝ่ายวิชาการ',
+                'code' => 'ACAD',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } else {
+            $academicId = $academicDept->id;
+        }
 
         $standardMajors = [
             ['name' => 'สาขาวิชาช่างยนต์', 'alias' => 'ช่างยนต์', 'code' => 'AUTO'],

@@ -138,7 +138,7 @@ class ExpenseClearingController extends Controller
                 if ($clearing->clearing_type === 'with_loan') {
                     // With Loan: Set spent_amount to actual spent, release remaining encumbrance
                     $budget->spent_amount = $actualSpent;
-                    $budget->encumbered_amount = $actualSpent;
+                    $budget->encumbered_amount = 0.00;
                     $budget->advance_cleared_at = now();
                     $budget->save();
 
@@ -153,7 +153,7 @@ class ExpenseClearingController extends Controller
                 } else {
                     // Direct Reimbursement: Deduct directly from budget
                     $budget->spent_amount = (float)($budget->spent_amount ?: 0) + $actualSpent;
-                    $budget->encumbered_amount = (float)($budget->encumbered_amount ?: 0) + $actualSpent;
+                    $budget->encumbered_amount = 0.00;
                     $budget->save();
                 }
             }
@@ -165,10 +165,10 @@ class ExpenseClearingController extends Controller
             if ($rbp) {
                 if ($clearing->clearing_type === 'with_loan') {
                     $rbp->spent_amount = $actualSpent;
-                    $rbp->encumbered_amount = $actualSpent;
+                    $rbp->encumbered_amount = 0.00;
                 } else {
                     $rbp->spent_amount = (float)($rbp->spent_amount ?: 0) + $actualSpent;
-                    $rbp->encumbered_amount = (float)($rbp->encumbered_amount ?: 0) + $actualSpent;
+                    $rbp->encumbered_amount = 0.00;
                 }
                 $rbp->save();
             }
@@ -223,7 +223,55 @@ class ExpenseClearingController extends Controller
         $clearing->finance_notes = $validated['finance_notes'] ?? null;
         $clearing->save();
 
-        return redirect()->back()->with('message', 'งานการเงินได้บันทึกรับเงินคืน/โอนเงินชดเชย และปิดยอดการเคลียร์เงินสมบูรณ์แล้ว');
+        // 1. Release encumbrance and finalize spent amount in Project Budget so refund is restored
+        if ($clearing->project_id) {
+            $project = Project::find($clearing->project_id);
+            if ($project && $project->budget) {
+                $budget = $project->budget;
+                $budget->spent_amount = (float)$clearing->actual_spent_amount;
+                $budget->encumbered_amount = 0.00;
+                $budget->advance_cleared_at = now();
+                $budget->save();
+
+                if ($project->status === 'in_progress') {
+                    $project->status = 'completed';
+                    $project->save();
+                }
+
+                if ($clearing->procurement_id) {
+                    $proc = Procurement::find($clearing->procurement_id);
+                    if ($proc) {
+                        $proc->loan_status = 'cleared';
+                        $proc->finance_disbursed_amount = (float)$clearing->actual_spent_amount;
+                        $proc->save();
+                    }
+                }
+            }
+        }
+
+        // 2. Release encumbrance and finalize spent amount in Routine Budget Plan
+        if ($clearing->routine_budget_plan_id) {
+            $rbp = RoutineBudgetPlan::find($clearing->routine_budget_plan_id);
+            if ($rbp) {
+                $rbp->spent_amount = (float)$clearing->actual_spent_amount;
+                $rbp->encumbered_amount = 0.00;
+                $rbp->save();
+            }
+        }
+
+        // 3. Finalize Travel Loan with refund amount credited back
+        if ($clearing->travel_loan_id) {
+            $travelLoan = TravelLoan::find($clearing->travel_loan_id);
+            if ($travelLoan) {
+                $travelLoan->loan_status = 'cleared';
+                $travelLoan->cleared_amount = (float)$clearing->actual_spent_amount;
+                $travelLoan->refund_amount = ($clearing->clearing_result === 'refund') ? (float)$clearing->difference_amount : 0.00;
+                $travelLoan->cleared_at = now();
+                $travelLoan->save();
+            }
+        }
+
+        return redirect()->back()->with('message', 'งานการเงินได้บันทึกรับเงินคืน/โอนเงินชดเชย และปิดยอดการเคลียร์เงินสมบูรณ์แล้ว (เงินคงเหลือคืนเข้าสู่งบประมาณ)');
     }
 
     /**

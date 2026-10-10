@@ -483,8 +483,6 @@ class ProcurementController extends Controller
         if ($procurement->loan_status === 'cleared') {
             $budget->advance_cleared_at = $now;
         }
-        $budget->save();
-
         $isLoanDone = ($procurement->loan_status === 'cleared');
         $isProcDone = ($procurement->status === 'completed');
 
@@ -501,6 +499,14 @@ class ProcurementController extends Controller
         } else {
             $isAllDone = $isProcDone;
         }
+
+        // Release encumbrance when completed or cleared so refund is restored to available budget
+        if ($target === 'all' || $isAllDone) {
+            $budget->encumbered_amount = 0.00;
+        } elseif ($procurement->loan_status === 'cleared' && $procurement->status === 'completed') {
+            $budget->encumbered_amount = 0.00;
+        }
+        $budget->save();
 
         if ($target === 'all' || $isAllDone) {
             $project->status = 'completed';

@@ -114,7 +114,13 @@ class DashboardController extends Controller
                 ->sum('total_loan_amount');
             $tlSpent = (float)TravelLoan::where('funding_source_id', $source->id)
                 ->whereIn('loan_status', ['disbursed', 'cleared'])
-                ->sum('finance_disbursed_amount');
+                ->get()
+                ->sum(function($tl) {
+                    if ($tl->loan_status === 'cleared') {
+                        return (float)($tl->cleared_amount ?? ($tl->finance_disbursed_amount - ($tl->refund_amount ?? 0)));
+                    }
+                    return (float)($tl->finance_disbursed_amount ?? 0);
+                });
 
             $totalEncumbered = $encumbered + $routineEncumbered + $tlEncumbered;
             $totalSpent = $spent + $routineSpent + $tlSpent;
