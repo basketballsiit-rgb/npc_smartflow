@@ -964,6 +964,7 @@ class DashboardController extends Controller
                             'evaluate_url' => route('surveys.evaluate', $p->id),
                         ],
                         'print_url' => route('projects.print', $p->id),
+                        'full_report_print_url' => route('projects.full_report.print', $p->id),
                         'has_completed_book' => !empty($p->full_report_completed_at) || (!empty($p->chapter_5_content) && !empty($p->chapter_4_content)),
                         'travel_loans' => $p->travelLoans ? $p->travelLoans->map(function ($tl) {
                             return [

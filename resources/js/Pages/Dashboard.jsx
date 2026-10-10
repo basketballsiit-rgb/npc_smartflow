@@ -16614,20 +16614,16 @@ ${itemsListText}
                             <thead>
                                 <tr className="border-b border-slate-200 bg-slate-100/75 text-[11px] font-black text-slate-700 uppercase tracking-wider">
                                     <th className="px-4 py-3 text-center w-12">#</th>
-                                    <th className="px-4 py-3 min-w-[320px]">ชื่อโครงการ, แถบสถานะ & สัญลักษณ์ 5 ระดับ</th>
-                                    <th className="px-4 py-3 min-w-[140px]">ผู้รับผิดชอบ/แผนก</th>
+                                    <th className="px-4 py-3 min-w-[280px]">ชื่อโครงการ & ข้อมูลผู้รับผิดชอบ</th>
                                     <th className="px-4 py-3 text-right min-w-[120px]">งบประมาณ</th>
-                                    <th className="px-4 py-3 text-center min-w-[130px]">สายอนุมัติ 6 ขั้น</th>
-                                    <th className="px-4 py-3 min-w-[160px]">สัญญายืมเงิน / จัดซื้อ</th>
-                                    <th className="px-4 py-3 text-center min-w-[130px]">สรุปรูปเล่ม (5 บท)</th>
-                                    <th className="px-4 py-3 text-center min-w-[120px]">การเคลียร์เงิน</th>
-                                    <th className="px-4 py-3 text-right min-w-[100px]">จัดการ</th>
+                                    <th className="px-4 py-3 min-w-[340px]">แถบสถานะการดำเนินงานโครงการ (5 ระดับ)</th>
+                                    <th className="px-4 py-3 min-w-[260px] text-right">ไฟล์รูปเล่มพร้อมรายละเอียดครบทั้งหมด</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-xs">
                                 {filtered.length === 0 ? (
                                     <tr>
-                                        <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
+                                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                                             <div className="space-y-2">
                                                 <span className="text-4xl block">🔍</span>
                                                 <p className="font-bold text-slate-600">ไม่พบโครงการตรงตามเงื่อนไขที่เลือก</p>
@@ -16641,37 +16637,36 @@ ${itemsListText}
                                         const hasLoans = loans.length > 0;
                                         const procNum = p.procurement_number || p.procurement?.procurement_number;
                                         const hasCompletedBook = Boolean(p.full_report_completed_at) || Boolean(p.has_completed_book) || (Boolean(p.chapter_5_content) && Boolean(p.chapter_4_content));
-                                        const allLoansCleared = hasLoans && loans.every(l => Boolean(l.cleared_at) || l.loan_status === 'cleared');
-                                        const hasUnclearedLoans = hasLoans && loans.some(l => !l.cleared_at && l.loan_status !== 'cleared');
+                                        const appendicesCount = p.appendices?.length || 0;
+                                        const photosCount = p.photos?.length || 0;
 
                                         return (
                                             <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                                                {/* Index */}
-                                                <td className="px-4 py-3.5 text-center font-mono text-slate-400 align-top">
+                                                {/* 1. Index */}
+                                                <td className="px-4 py-4 text-center font-mono text-slate-400 align-top">
                                                     {idx + 1}
                                                 </td>
 
-                                                {/* Project Title with Status Badge & Graphic Meter Slider */}
-                                                <td className="px-4 py-3.5 align-top">
-                                                    <div className="space-y-2">
-                                                        <div className="flex flex-wrap items-center gap-1.5">
-                                                            <a
-                                                                href={route('projects.show', p.id)}
-                                                                className="font-black text-xs sm:text-sm text-slate-900 hover:text-indigo-600 transition hover:underline cursor-pointer leading-snug"
-                                                            >
-                                                                {p.title}
-                                                            </a>
-                                                            {/* 5-Level Status Badge directly behind title */}
-                                                            {renderExecutionStatusBadge(p, true)}
+                                                {/* 2. Project Title & Proposer / Department */}
+                                                <td className="px-4 py-4 align-top">
+                                                    <div className="space-y-1.5 max-w-sm">
+                                                        <a
+                                                            href={route('projects.show', p.id)}
+                                                            className="font-black text-sm text-slate-900 hover:text-indigo-600 transition hover:underline cursor-pointer leading-snug block"
+                                                        >
+                                                            {p.title}
+                                                        </a>
+                                                        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-600">
+                                                            <span className="font-bold text-slate-800">
+                                                                👤 {p.proposer_name || p.user?.name || 'ไม่ระบุ'}
+                                                            </span>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span className="text-indigo-700 font-semibold">
+                                                                🏢 {p.department_name || p.department?.name || '-'}
+                                                            </span>
                                                         </div>
-
-                                                        {/* Graphic Status Gauge Meter Slider (Reversed spectrum matching user image with pointer arrow & thumb) */}
-                                                        <div className="pt-0.5">
-                                                            {renderExecutionStatusGraphic(p, true)}
-                                                        </div>
-
-                                                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 pt-0.5">
-                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">
+                                                        <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-500">
+                                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-bold">
                                                                 ปี {p.academic_year || '2569'}
                                                             </span>
                                                             <span className="text-slate-400">•</span>
@@ -16682,21 +16677,9 @@ ${itemsListText}
                                                     </div>
                                                 </td>
 
-                                                {/* Proposer & Department */}
-                                                <td className="px-4 py-3.5 align-top">
-                                                    <div className="space-y-0.5">
-                                                        <div className="font-extrabold text-slate-900">
-                                                            👤 {(p.proposer_name || p.user?.name || 'ไม่ระบุ').trim().split(/\s+/)[0]}
-                                                        </div>
-                                                        <div className="text-[11px] text-indigo-700 font-semibold">
-                                                            {p.department_name || p.department?.name || '-'}
-                                                        </div>
-                                                    </div>
-                                                </td>
-
-                                                {/* Budget */}
-                                                <td className="px-4 py-3.5 text-right font-mono align-top whitespace-nowrap">
-                                                    <div className="font-black text-slate-900 text-xs sm:text-sm">
+                                                {/* 3. Budget */}
+                                                <td className="px-4 py-4 text-right font-mono align-top whitespace-nowrap">
+                                                    <div className="font-black text-slate-900 text-sm">
                                                         ฿{new Intl.NumberFormat('th-TH').format(parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0)}
                                                     </div>
                                                     {parseFloat(p.allocated_budget) > 0 && parseFloat(p.allocated_budget) !== parseFloat(p.estimated_budget) && (
@@ -16706,88 +16689,97 @@ ${itemsListText}
                                                     )}
                                                 </td>
 
-                                                {/* Approval 6 Steps */}
-                                                <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
-                                                    {getStatusBadge(p.status, p.current_approval_step, p)}
-                                                </td>
+                                                {/* 4. Execution Status Gauge & Badge (5 Levels) */}
+                                                <td className="px-4 py-4 align-top">
+                                                    <div className="space-y-2.5 max-w-md">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            {renderExecutionStatusBadge(p, true)}
+                                                        </div>
 
-                                                {/* Loan Contract / Procurement */}
-                                                <td className="px-4 py-3.5 align-top">
-                                                    <div className="space-y-1 text-[11px]">
-                                                        {hasLoans && (
-                                                            <div className="space-y-0.5">
-                                                                {loans.map((l, lIdx) => (
-                                                                    <div key={l.id || lIdx} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
-                                                                        <span>📝</span>
-                                                                        <span className="font-mono font-bold">{l.contract_no || 'สัญญายืมเงิน'}</span>
-                                                                        <span className="text-[10px]">
-                                                                            (฿{new Intl.NumberFormat('th-TH').format(l.total_loan_amount || 0)})
-                                                                        </span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                        {procNum && (
-                                                            <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 border border-purple-200">
-                                                                <span>📦</span>
-                                                                <span className="font-mono font-bold">{procNum}</span>
-                                                            </div>
-                                                        )}
-                                                        {!hasLoans && !procNum && (
-                                                            <span className="text-slate-400 italic">-</span>
-                                                        )}
+                                                        {/* Visual Spectrum Graphic Bar with Downward Arrow & Pointer Thumb */}
+                                                        <div>
+                                                            {renderExecutionStatusGraphic(p, false)}
+                                                        </div>
                                                     </div>
                                                 </td>
 
-                                                {/* Full Report Book (5 chapters) */}
-                                                <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
-                                                    {hasCompletedBook ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300">
-                                                            <span>✅</span> สรุปรูปเล่มครบถ้วน
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px]">
-                                                            <span>⏳</span> ยังไม่สรุปรูปเล่ม
-                                                        </span>
-                                                    )}
-                                                </td>
+                                                {/* 5. Complete Report Book Files & Full Details */}
+                                                <td className="px-4 py-4 align-top text-right">
+                                                    <div className="inline-flex flex-col items-end gap-2 text-left">
+                                                        {/* Report Completion Badge */}
+                                                        {hasCompletedBook ? (
+                                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-900 font-bold text-xs border border-emerald-300 shadow-2xs">
+                                                                <span>📘</span> จัดทำรูปเล่มสมบูรณ์
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-amber-50 text-amber-800 font-bold text-[11px] border border-amber-200">
+                                                                <span>⏳</span> อยู่ระหว่างจัดทำรูปเล่ม
+                                                            </span>
+                                                        )}
 
-                                                {/* Clearings status */}
-                                                <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
-                                                    {allLoansCleared ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold text-[11px] border border-sky-300">
-                                                            <span>✅</span> เคลียร์เงินเรียบร้อย
-                                                        </span>
-                                                    ) : hasUnclearedLoans ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[11px] border border-amber-300">
-                                                            <span>⚠️</span> รอเคลียร์เงินยืม
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-400 text-[11px]">
-                                                            ไม่ต้องเคลียร์เงิน
-                                                        </span>
-                                                    )}
-                                                </td>
+                                                        {/* Primary Full Report Print / View Button */}
+                                                        <div className="flex flex-wrap items-center justify-end gap-1.5 pt-0.5">
+                                                            <a
+                                                                href={route('projects.full_report.print', p.id)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs shadow-2xs transition cursor-pointer ${
+                                                                    hasCompletedBook
+                                                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200'
+                                                                        : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
+                                                                }`}
+                                                                title="เปิดดูและพิมพ์รูปเล่มรายงานฉบับสมบูรณ์ (บทที่ 1-5 พร้อมบทสรุป)"
+                                                            >
+                                                                <span>📖</span>
+                                                                <span>เปิดดู/พิมพ์รูปเล่มฉบับสมบูรณ์</span>
+                                                            </a>
+                                                        </div>
 
-                                                {/* Action Buttons */}
-                                                <td className="px-4 py-3.5 text-right align-top whitespace-nowrap">
-                                                    <div className="flex items-center justify-end gap-1.5">
-                                                        <a
-                                                            href={route('projects.show', p.id)}
-                                                            className="px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 transition cursor-pointer"
-                                                            title="เปิดดูรายละเอียดโครงการ"
-                                                        >
-                                                            ดูรายละเอียด
-                                                        </a>
-                                                        <a
-                                                            href={route('projects.print', p.id)}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="p-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs transition cursor-pointer"
-                                                            title="พิมพ์โครงการ"
-                                                        >
-                                                            🖨️
-                                                        </a>
+                                                        {/* Secondary Action Links: Proposal Print & Project Details */}
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            <a
+                                                                href={route('projects.print', p.id)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold border border-slate-200 transition cursor-pointer"
+                                                                title="พิมพ์เอกสารเสนอขอโครงการ"
+                                                            >
+                                                                <span>📄</span>
+                                                                <span>พิมพ์แบบขอโครงการ</span>
+                                                            </a>
+                                                            <a
+                                                                href={route('projects.show', p.id)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-indigo-700 text-[11px] font-bold border border-indigo-200 transition cursor-pointer"
+                                                                title="เปิดดูรายละเอียดข้อมูลโครงการทั้งหมด"
+                                                            >
+                                                                <span>🔍</span>
+                                                                <span>รายละเอียดทั้งหมด</span>
+                                                            </a>
+                                                        </div>
+
+                                                        {/* Attached Files & Photo Meta chips if present */}
+                                                        <div className="flex flex-wrap items-center justify-end gap-1.5 text-[10px] text-slate-500 pt-0.5">
+                                                            {appendicesCount > 0 && (
+                                                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+                                                                    📎 ภาคผนวก {appendicesCount} รายการ
+                                                                </span>
+                                                            )}
+                                                            {photosCount > 0 && (
+                                                                <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold border border-slate-200">
+                                                                    📷 รูปภาพ {photosCount} รูป
+                                                                </span>
+                                                            )}
+                                                            {hasLoans && (
+                                                                <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 font-semibold border border-blue-200">
+                                                                    📝 สัญญายืมเงิน {loans.length} รายการ
+                                                                </span>
+                                                            )}
+                                                            {procNum && (
+                                                                <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 font-semibold border border-purple-200">
+                                                                    📦 จัดซื้อ ({procNum})
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
                                             </tr>
