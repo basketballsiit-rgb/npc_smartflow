@@ -871,13 +871,22 @@ export default function AuthenticatedLayout({ header, children }) {
                             {(!isSidebarOpen || openSections.plan_hub) && (
                             <div className="pl-2.5 border-l-2 border-amber-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
                                 <Link
+                                    href={route('dashboard', { tab: 'document_tracking', from: 'plan' })}
+                                    className={getSubLinkClass(url.includes('tab=document_tracking') && (url.includes('from=plan') || (!url.includes('from=procurement') && !url.includes('from=finance') && !url.includes('from=loan') && (isPlanStaff || isAdmin))))}
+                                    title="ทะเบียนตัดยอดงบ ผง. (จัดซื้อจัดจ้าง / สัญญายืมเงิน)"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=document_tracking') && (url.includes('from=plan') || (!url.includes('from=procurement') && !url.includes('from=finance') && !url.includes('from=loan') && (isPlanStaff || isAdmin))), 'text-amber-300')}>●</span>
+                                    <span className="text-sm">📑</span>
+                                    {isSidebarOpen && <span className="font-black text-amber-300">ตัดยอดงบ ผง. (จัดซื้อ/ยืมเงิน)</span>}
+                                </Link>
+                                <Link
                                     href={route('dashboard', { tab: 'annual_budget_requests' })}
                                     className={getSubLinkClass(url.includes('tab=annual_budget_requests'))}
                                     title="ภาพรวมคำของบประมาณประจำปี แยก 4 ฝ่าย พร้อมพิจารณาอนุมัติจัดสรร"
                                 >
-                                    <span className={getPrefixClass(url.includes('tab=annual_budget_requests'), 'text-amber-300')}>●</span>
+                                    <span className={getPrefixClass(url.includes('tab=annual_budget_requests'), 'text-amber-300')}>└─</span>
                                     <span className="text-sm">📊</span>
-                                    {isSidebarOpen && <span className="font-black text-amber-300">ภาพรวมคำของบแยก 4 ฝ่าย</span>}
+                                    {isSidebarOpen && <span>ภาพรวมคำของบแยก 4 ฝ่าย</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'budgets' })}
@@ -905,15 +914,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className={getPrefixClass(url.includes('routine-budgets'), 'text-amber-300')}>└─</span>
                                     <span className="text-sm">📋</span>
                                     {isSidebarOpen && <span>จัดสรรงบดำเนินงานประจำปี</span>}
-                                </Link>
-                                <Link
-                                    href={route('dashboard', { tab: 'document_tracking', from: 'plan' })}
-                                    className={getSubLinkClass(url.includes('tab=document_tracking') && (url.includes('from=plan') || (!url.includes('from=procurement') && !url.includes('from=finance') && !url.includes('from=loan') && (isPlanStaff || isAdmin))))}
-                                    title="ทะเบียนตัดยอดงบ ผง. (จัดซื้อจัดจ้าง / สัญญายืมเงิน)"
-                                >
-                                    <span className={getPrefixClass(url.includes('tab=document_tracking') && (url.includes('from=plan') || (!url.includes('from=procurement') && !url.includes('from=finance') && !url.includes('from=loan') && (isPlanStaff || isAdmin))), 'text-amber-300')}>●</span>
-                                    <span className="text-sm">📑</span>
-                                    {isSidebarOpen && <span>ตัดยอดงบ ผง. (จัดซื้อ/ยืมเงิน)</span>}
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'action_plan_report' })}
@@ -1295,7 +1295,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {(isPlanStaff || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
                                         <div className="text-[10px] font-bold text-amber-300 uppercase px-2">6. งานแผนและงบประมาณ</div>
-                                        <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-amber-300 font-bold">
+                                        <Link href={route('dashboard', { tab: 'document_tracking', from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10 text-amber-300 font-bold">
+                                            <span>📑</span> ตัดยอดงบ ผง. (จัดซื้อ/ยืมเงิน)
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'annual_budget_requests' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📊</span> ภาพรวมคำของบแยก 4 ฝ่าย
                                         </Link>
                                         <Link href={route('dashboard', { tab: 'budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
@@ -1306,9 +1309,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </Link>
                                         <Link href={route('admin.routine_budgets.index', { from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📋</span> จัดสรรงบดำเนินงานประจำปี
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'document_tracking', from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📑</span> ตัดยอดงบ ผง. (จัดซื้อ/ยืมเงิน)
                                         </Link>
                                     </div>
                                 )}
