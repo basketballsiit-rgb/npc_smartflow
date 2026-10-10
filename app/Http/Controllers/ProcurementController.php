@@ -343,15 +343,19 @@ class ProcurementController extends Controller
         }
 
         $validated = $request->validate([
-            'prefix' => 'required|string|max:50',
-            'format' => 'required|string|max:100',
-            'digits' => 'required|integer|min:1|max:10',
-            'current_no' => 'required|integer|min:1',
+            'prefix' => 'sometimes|string|max:50',
+            'format' => 'sometimes|string|max:100',
+            'digits' => 'sometimes|integer|min:1|max:10',
+            'current_no' => 'sometimes|integer|min:1',
+            'loan_prefix' => 'nullable|string|max:50',
+            'loan_format' => 'nullable|string|max:100',
+            'loan_digits' => 'nullable|integer|min:1|max:10',
+            'loan_current_no' => 'nullable|integer|min:1',
         ]);
 
         DocumentNumberService::updateSettings($validated);
 
-        return redirect()->back()->with('message', 'บันทึกการตั้งค่ารูปแบบเลขที่เอกสารเรียบร้อยแล้ว (เลขถัดไป: ' . DocumentNumberService::previewNext() . ')');
+        return redirect()->back()->with('message', 'บันทึกการตั้งค่ารูปแบบเลขที่เอกสารเรียบร้อยแล้ว (เลขชุดจัดซื้อจัดจ้างถัดไป: ' . DocumentNumberService::previewNext() . ' | เลขสัญญายืมเงินถัดไป: ' . DocumentNumberService::previewNextLoan() . ')');
     }
 
     public function forwardToFinance(Request $request, Project $project)

@@ -2821,13 +2821,18 @@ export default function Dashboard({
         return 'kanban';
     });
 
-    // Unified Document Number Settings Modal State
+    // Unified & Loan Document Number Settings State
     const [isDocNumberModalOpen, setIsDocNumberModalOpen] = useState(false);
+    const [docNumberModalTab, setDocNumberModalTab] = useState('procurement');
     const { data: docNumberFormData, setData: setDocNumberFormData, post: postDocNumberSettings, processing: isSavingDocNumber } = useForm({
         prefix: docNumberSettings.prefix || 'ผง.',
         format: docNumberSettings.format || '{PREFIX} {NUMBER}/{YEAR}',
         digits: docNumberSettings.digits || 3,
         current_no: docNumberSettings.current_no || 1,
+        loan_prefix: docNumberSettings.loan_prefix || 'สย.',
+        loan_format: docNumberSettings.loan_format || '{PREFIX} {NUMBER}/{YEAR}',
+        loan_digits: docNumberSettings.loan_digits || 3,
+        loan_current_no: docNumberSettings.loan_current_no || 1,
     });
 
     const [projectSearch, setProjectSearch] = useState('');
@@ -4441,11 +4446,22 @@ export default function Dashboard({
 
     const handleSaveSettingsSubmit = (e) => {
         e.preventDefault();
-        router.post(route('admin.settings.update'), { settings: settingsForm }, {
+        const mergedSettings = {
+            ...settingsForm,
+            doc_unified_prefix: docNumberFormData.prefix,
+            doc_unified_format: docNumberFormData.format,
+            doc_unified_digits: docNumberFormData.digits,
+            doc_unified_current_no: docNumberFormData.current_no,
+            doc_loan_prefix: docNumberFormData.loan_prefix,
+            doc_loan_format: docNumberFormData.loan_format,
+            doc_loan_digits: docNumberFormData.loan_digits,
+            doc_loan_current_no: docNumberFormData.loan_current_no,
+        };
+        router.post(route('admin.settings.update'), { settings: mergedSettings }, {
             onSuccess: () => {
                 Swal.fire({
                     title: 'บันทึกการตั้งค่าเรียบร้อย!',
-                    text: 'อัปเดตการตั้งค่าระบบและปีการศึกษาสำเร็จแล้ว',
+                    text: 'อัปเดตการตั้งค่าระบบ ข้อมูลสถานศึกษา และเลขคุมเอกสารสำเร็จแล้ว',
                     icon: 'success',
                     confirmButtonColor: '#7c3aed',
                 });
@@ -6010,6 +6026,243 @@ export default function Dashboard({
                                         <p className="text-[10px] text-slate-500 mt-1">เบิกจ่ายงบประมาณ & สรุปผล</p>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Automatic Document Numbering Configuration Card */}
+                        <div className="space-y-4 border-t border-purple-100 pt-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                <h4 className="text-sm font-bold text-purple-900 border-l-4 border-purple-600 pl-3 flex items-center gap-2">
+                                    <span>📑</span>
+                                    <span>การตั้งค่าระบบเลขคุมเอกสารอัตโนมัติ (Document Auto-Numbering Settings)</span>
+                                </h4>
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                    กำหนดรูปแบบและลำดับเลขคุมงานแผนงานสำหรับจัดซื้อจัดจ้างและสัญญายืมเงิน (แยกชุดหรือรูปแบบเดียวกันได้)
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Procurement Document Numbering */}
+                                <div className="p-5 rounded-2xl bg-gradient-to-br from-purple-50/80 via-white to-indigo-50/40 border border-purple-200/90 shadow-2xs space-y-4">
+                                    <div className="flex items-center justify-between border-b border-purple-100 pb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="p-2 rounded-xl bg-purple-600 text-white text-xs shadow-xs">📦</span>
+                                            <div>
+                                                <h5 className="font-extrabold text-sm text-purple-950">เลขคุมชุดจัดซื้อจัดจ้าง</h5>
+                                                <p className="text-[11px] text-purple-700">ใช้ลงรับเอกสารชุดจัดซื้อจัดจ้าง 4 ฉบับ และส่งต่อไปยังงานพัสดุ</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                                            Procurement Series
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                คำนำหน้า / ตัวย่อ (Prefix):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={docNumberFormData.prefix}
+                                                onChange={(e) => setDocNumberFormData('prefix', e.target.value)}
+                                                className="w-full px-3 py-2 text-xs border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white"
+                                                placeholder="เช่น ผง."
+                                            />
+                                            <span className="text-[10px] text-slate-500">เช่น ผง. หรือ พด.</span>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                รูปแบบโครงสร้าง (Pattern):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={docNumberFormData.format}
+                                                onChange={(e) => setDocNumberFormData('format', e.target.value)}
+                                                className="w-full px-3 py-2 text-xs border border-purple-200 rounded-xl font-mono text-purple-800 focus:ring-2 focus:ring-purple-500 bg-white"
+                                                placeholder="{PREFIX} {NUMBER}/{YEAR}"
+                                            />
+                                            <span className="text-[10px] text-slate-500">มาตรฐาน: &#123;PREFIX&#125; &#123;NUMBER&#125;/&#123;YEAR&#125;</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                จำนวนหลัก (Digits):
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="8"
+                                                value={docNumberFormData.digits}
+                                                onChange={(e) => setDocNumberFormData('digits', parseInt(e.target.value) || 1)}
+                                                className="w-full px-3 py-2 text-xs border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white font-bold"
+                                            />
+                                            <span className="text-[10px] text-slate-500">3 = 001, 4 = 0001</span>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                ลำดับเลขถัดไป (Next No.):
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={docNumberFormData.current_no}
+                                                onChange={(e) => setDocNumberFormData('current_no', parseInt(e.target.value) || 1)}
+                                                className="w-full px-3 py-2 text-xs border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white font-black text-purple-900"
+                                            />
+                                            <span className="text-[10px] text-slate-500">เลขที่จะออกให้ฉบับถัดไป</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Live Preview Card */}
+                                    <div className="p-3.5 rounded-xl bg-purple-100/60 border border-purple-200/80">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[11px] font-bold text-purple-900 flex items-center gap-1">
+                                                <span>👁️</span> ตัวอย่างเลขชุดจัดซื้อจัดจ้างที่จะได้:
+                                            </span>
+                                            <span className="text-[10px] font-bold text-purple-700 bg-white px-2 py-0.5 rounded-md border border-purple-200">
+                                                Live Preview
+                                            </span>
+                                        </div>
+                                        <div className="text-base font-mono font-black text-purple-900 bg-white px-3 py-2 rounded-lg border border-purple-300 inline-block shadow-2xs">
+                                            {docNumberFormData.format
+                                                .replace('{PREFIX}', docNumberFormData.prefix || '')
+                                                .replace('{NUMBER}', String(docNumberFormData.current_no || 1).padStart(parseInt(docNumberFormData.digits) || 1, '0'))
+                                                .replace('{YEAR}', String(new Date().getFullYear() + 543))
+                                                .replace('{YEAR_SHORT}', String((new Date().getFullYear() + 543) % 100).padStart(2, '0'))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Loan Contract Document Numbering */}
+                                <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/40 border border-blue-200/90 shadow-2xs space-y-4">
+                                    <div className="flex items-center justify-between border-b border-blue-100 pb-3">
+                                        <div className="flex items-center gap-2">
+                                            <span className="p-2 rounded-xl bg-blue-600 text-white text-xs shadow-xs">💰</span>
+                                            <div>
+                                                <h5 className="font-extrabold text-sm text-blue-950">เลขคุมสัญญายืมเงิน</h5>
+                                                <p className="text-[11px] text-blue-700">ใช้ลงรับสัญญายืมเงิน (กค. 101) และคำขอยืมเงินโครงการ/ราชการ</p>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                                            Loan Series
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                คำนำหน้า / ตัวย่อ (Prefix):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={docNumberFormData.loan_prefix || ''}
+                                                onChange={(e) => setDocNumberFormData('loan_prefix', e.target.value)}
+                                                className="w-full px-3 py-2 text-xs border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white"
+                                                placeholder="เช่น สย."
+                                            />
+                                            <span className="text-[10px] text-slate-500">เช่น สย. หรือ กค.</span>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                รูปแบบโครงสร้าง (Pattern):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={docNumberFormData.loan_format || '{PREFIX} {NUMBER}/{YEAR}'}
+                                                onChange={(e) => setDocNumberFormData('loan_format', e.target.value)}
+                                                className="w-full px-3 py-2 text-xs border border-blue-200 rounded-xl font-mono text-blue-800 focus:ring-2 focus:ring-blue-500 bg-white"
+                                                placeholder="{PREFIX} {NUMBER}/{YEAR}"
+                                            />
+                                            <span className="text-[10px] text-slate-500">มาตรฐาน: &#123;PREFIX&#125; &#123;NUMBER&#125;/&#123;YEAR&#125;</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3.5">
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                จำนวนหลัก (Digits):
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="8"
+                                                value={docNumberFormData.loan_digits || 3}
+                                                onChange={(e) => setDocNumberFormData('loan_digits', parseInt(e.target.value) || 1)}
+                                                className="w-full px-3 py-2 text-xs border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white font-bold"
+                                            />
+                                            <span className="text-[10px] text-slate-500">3 = 001, 4 = 0001</span>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                ลำดับเลขถัดไป (Next No.):
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={docNumberFormData.loan_current_no || 1}
+                                                onChange={(e) => setDocNumberFormData('loan_current_no', parseInt(e.target.value) || 1)}
+                                                className="w-full px-3 py-2 text-xs border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white font-black text-blue-900"
+                                            />
+                                            <span className="text-[10px] text-slate-500">เลขที่จะออกให้ฉบับถัดไป</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Live Preview Card */}
+                                    <div className="p-3.5 rounded-xl bg-blue-100/60 border border-blue-200/80">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[11px] font-bold text-blue-900 flex items-center gap-1">
+                                                <span>👁️</span> ตัวอย่างเลขสัญญายืมเงินที่จะได้:
+                                            </span>
+                                            <span className="text-[10px] font-bold text-blue-700 bg-white px-2 py-0.5 rounded-md border border-blue-200">
+                                                Live Preview
+                                            </span>
+                                        </div>
+                                        <div className="text-base font-mono font-black text-blue-900 bg-white px-3 py-2 rounded-lg border border-blue-300 inline-block shadow-2xs">
+                                            {(docNumberFormData.loan_format || '{PREFIX} {NUMBER}/{YEAR}')
+                                                .replace('{PREFIX}', docNumberFormData.loan_prefix || '')
+                                                .replace('{NUMBER}', String(docNumberFormData.loan_current_no || 1).padStart(parseInt(docNumberFormData.loan_digits) || 1, '0'))
+                                                .replace('{YEAR}', String(new Date().getFullYear() + 543))
+                                                .replace('{YEAR_SHORT}', String((new Date().getFullYear() + 543) % 100).padStart(2, '0'))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Quick Action & Variables guide */}
+                            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                <div className="text-xs text-slate-600 flex flex-wrap items-center gap-1.5">
+                                    <span className="font-bold text-slate-700">ตัวแปรโครงสร้างที่ใช้ได้:</span>
+                                    <code className="bg-white px-1.5 py-0.5 rounded border border-slate-300 text-purple-700 font-bold">&#123;PREFIX&#125;</code>
+                                    <code className="bg-white px-1.5 py-0.5 rounded border border-slate-300 text-purple-700 font-bold">&#123;NUMBER&#125;</code>
+                                    <code className="bg-white px-1.5 py-0.5 rounded border border-slate-300 text-purple-700 font-bold">&#123;YEAR&#125;</code>
+                                    <code className="bg-white px-1.5 py-0.5 rounded border border-slate-300 text-purple-700 font-bold">&#123;YEAR_SHORT&#125;</code>
+                                </div>
+                                <button
+                                    type="button"
+                                    disabled={isSavingDocNumber}
+                                    onClick={() => {
+                                        postDocNumberSettings(route('procurements.update_doc_numbering_settings'), {
+                                            preserveScroll: true,
+                                            onSuccess: () => {
+                                                Swal.fire({
+                                                    title: 'บันทึกสำเร็จ!',
+                                                    text: 'อัปเดตรูปแบบและลำดับเลขคุมเอกสารจัดซื้อจัดจ้างและสัญญายืมเงินเรียบร้อยแล้ว',
+                                                    icon: 'success',
+                                                    confirmButtonColor: '#7e22ce'
+                                                });
+                                            },
+                                            onError: () => {
+                                                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกการตั้งค่าเลขเอกสารได้ กรุณาตรวจสอบข้อมูล', 'error');
+                                            }
+                                        });
+                                    }}
+                                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white text-xs font-black shadow-md hover:scale-105 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                                >
+                                    <span>{isSavingDocNumber ? '⏳ กำลังบันทึก...' : '💾 บันทึกการตั้งค่าเลขคุมเอกสาร'}</span>
+                                </button>
                             </div>
                         </div>
 
@@ -19274,6 +19527,34 @@ return (
                                 </button>
                             </div>
 
+                            {/* Tab Switcher */}
+                            <div className="flex border-b border-purple-100 bg-slate-50 px-6 pt-3 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setDocNumberModalTab('procurement')}
+                                    className={`px-4 py-2 text-xs font-bold rounded-t-xl transition border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                                        docNumberModalTab === 'procurement'
+                                            ? 'border-purple-600 text-purple-900 bg-white shadow-2xs'
+                                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <span>📦</span>
+                                    <span>ชุดจัดซื้อจัดจ้าง</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setDocNumberModalTab('loan')}
+                                    className={`px-4 py-2 text-xs font-bold rounded-t-xl transition border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                                        docNumberModalTab === 'loan'
+                                            ? 'border-blue-600 text-blue-900 bg-white shadow-2xs'
+                                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <span>💰</span>
+                                    <span>สัญญายืมเงิน</span>
+                                </button>
+                            </div>
+
                             <form
                                 onSubmit={(e) => {
                                     e.preventDefault();
@@ -19290,91 +19571,183 @@ return (
                                 }}
                                 className="p-6 space-y-4"
                             >
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                                        ตัวย่อ / คำนำหน้า (Prefix):
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={docNumberFormData.prefix}
-                                        onChange={(e) => setDocNumberFormData('prefix', e.target.value)}
-                                        className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                                        placeholder="เช่น ผง. หรือ อว 0625"
-                                        required
-                                    />
-                                    <span className="text-[10px] text-slate-500">เช่น อักษรย่อหน่วยงานงานแผนงานและงบประมาณ</span>
-                                </div>
+                                {docNumberModalTab === 'procurement' ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                ตัวย่อ / คำนำหน้า (Prefix):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={docNumberFormData.prefix}
+                                                onChange={(e) => setDocNumberFormData('prefix', e.target.value)}
+                                                className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                                placeholder="เช่น ผง. หรือ อว 0625"
+                                                required
+                                            />
+                                            <span className="text-[10px] text-slate-500">เช่น อักษรย่อหน่วยงานงานแผนงานและงบประมาณ</span>
+                                        </div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-700 mb-1">
-                                        รูปแบบโครงสร้างเลข (Pattern):
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={docNumberFormData.format}
-                                        onChange={(e) => setDocNumberFormData('format', e.target.value)}
-                                        className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl font-mono text-indigo-700 focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                                        placeholder="{PREFIX} {NUMBER}/{YEAR}"
-                                        required
-                                    />
-                                    <div className="mt-1 text-[10px] text-slate-500 space-x-2">
-                                        <span>ตัวแปรที่ใช้ได้:</span>
-                                        <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;PREFIX&#125;</code>
-                                        <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;NUMBER&#125;</code>
-                                        <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;YEAR&#125;</code>
-                                        <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;YEAR_SHORT&#125;</code>
-                                    </div>
-                                </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                รูปแบบโครงสร้างเลข (Pattern):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={docNumberFormData.format}
+                                                onChange={(e) => setDocNumberFormData('format', e.target.value)}
+                                                className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl font-mono text-indigo-700 focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                                placeholder="{PREFIX} {NUMBER}/{YEAR}"
+                                                required
+                                            />
+                                            <div className="mt-1 text-[10px] text-slate-500 space-x-2">
+                                                <span>ตัวแปรที่ใช้ได้:</span>
+                                                <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;PREFIX&#125;</code>
+                                                <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;NUMBER&#125;</code>
+                                                <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;YEAR&#125;</code>
+                                                <code className="bg-slate-100 px-1 py-0.5 rounded text-purple-700 font-bold">&#123;YEAR_SHORT&#125;</code>
+                                            </div>
+                                        </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                                            จำนวนหลักตัวเลข (เติม 0 ข้างหน้า):
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            max="8"
-                                            value={docNumberFormData.digits}
-                                            onChange={(e) => setDocNumberFormData('digits', parseInt(e.target.value) || 1)}
-                                            className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                                            required
-                                        />
-                                        <span className="text-[10px] text-slate-500">เช่น 3 = 001, 4 = 0001</span>
-                                    </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                    จำนวนหลักตัวเลข (เติม 0 ข้างหน้า):
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="8"
+                                                    value={docNumberFormData.digits}
+                                                    onChange={(e) => setDocNumberFormData('digits', parseInt(e.target.value) || 1)}
+                                                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                                                    required
+                                                />
+                                                <span className="text-[10px] text-slate-500">เช่น 3 = 001, 4 = 0001</span>
+                                            </div>
 
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1">
-                                            ลำดับเลขปัจจุบัน (Next Number):
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={docNumberFormData.current_no}
-                                            onChange={(e) => setDocNumberFormData('current_no', parseInt(e.target.value) || 1)}
-                                            className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none font-bold text-purple-900"
-                                            required
-                                        />
-                                        <span className="text-[10px] text-slate-500">เลขที่จะถูกออกให้ฉบับถัดไป</span>
-                                    </div>
-                                </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                    ลำดับเลขปัจจุบัน (Next Number):
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={docNumberFormData.current_no}
+                                                    onChange={(e) => setDocNumberFormData('current_no', parseInt(e.target.value) || 1)}
+                                                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none font-bold text-purple-900"
+                                                    required
+                                                />
+                                                <span className="text-[10px] text-slate-500">เลขที่จะถูกออกให้ฉบับถัดไป</span>
+                                            </div>
+                                        </div>
 
-                                {/* Live Preview Card */}
-                                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200">
-                                    <div className="text-[11px] font-bold text-amber-900 mb-1 flex items-center gap-1.5">
-                                        <span>👁️</span> ตัวอย่างหมายเลขที่จะได้ (Live Preview):
-                                    </div>
-                                    <div className="text-sm font-mono font-black text-indigo-900 bg-white px-3 py-2 rounded-xl border border-amber-300 inline-block shadow-2xs">
-                                        {docNumberFormData.format
-                                            .replace('{PREFIX}', docNumberFormData.prefix || '')
-                                            .replace('{NUMBER}', String(docNumberFormData.current_no || 1).padStart(parseInt(docNumberFormData.digits) || 1, '0'))
-                                            .replace('{YEAR}', String(new Date().getFullYear() + 543))
-                                            .replace('{YEAR_SHORT}', String((new Date().getFullYear() + 543) % 100).padStart(2, '0'))}
-                                    </div>
-                                    <p className="text-[10px] text-slate-600 mt-1.5">
-                                        หมายเลขนี้จะถูกใช้เป็น <strong>เลขคุมชุดเอกสารเดียวกันตลอดเส้นทาง</strong> ทั้งชุดจัดซื้อจัดจ้าง (4 ฉบับ) และสัญญายืมเงิน (กค. 101)
-                                    </p>
-                                </div>
+                                        {/* Live Preview Card */}
+                                        <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200">
+                                            <div className="text-[11px] font-bold text-purple-900 mb-1 flex items-center gap-1.5">
+                                                <span>👁️</span> ตัวอย่างเลขชุดจัดซื้อจัดจ้าง (Live Preview):
+                                            </div>
+                                            <div className="text-sm font-mono font-black text-purple-900 bg-white px-3 py-2 rounded-xl border border-purple-300 inline-block shadow-2xs">
+                                                {docNumberFormData.format
+                                                    .replace('{PREFIX}', docNumberFormData.prefix || '')
+                                                    .replace('{NUMBER}', String(docNumberFormData.current_no || 1).padStart(parseInt(docNumberFormData.digits) || 1, '0'))
+                                                    .replace('{YEAR}', String(new Date().getFullYear() + 543))
+                                                    .replace('{YEAR_SHORT}', String((new Date().getFullYear() + 543) % 100).padStart(2, '0'))}
+                                            </div>
+                                            <p className="text-[10px] text-slate-600 mt-1.5">
+                                                หมายเลขนี้จะถูกใช้เป็น <strong>เลขคุมชุดจัดซื้อจัดจ้าง</strong> 4 ฉบับ และส่งต่อไปยังงานพัสดุ
+                                            </p>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                ตัวย่อ / คำนำหน้าสัญญายืมเงิน (Prefix):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={docNumberFormData.loan_prefix || ''}
+                                                onChange={(e) => setDocNumberFormData('loan_prefix', e.target.value)}
+                                                className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                                placeholder="เช่น สย. หรือ กค."
+                                                required
+                                            />
+                                            <span className="text-[10px] text-slate-500">เช่น ตัวย่อสัญญายืมเงิน</span>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                รูปแบบโครงสร้างเลขสัญญายืมเงิน (Pattern):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={docNumberFormData.loan_format || '{PREFIX} {NUMBER}/{YEAR}'}
+                                                onChange={(e) => setDocNumberFormData('loan_format', e.target.value)}
+                                                className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl font-mono text-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                                placeholder="{PREFIX} {NUMBER}/{YEAR}"
+                                                required
+                                            />
+                                            <div className="mt-1 text-[10px] text-slate-500 space-x-2">
+                                                <span>ตัวแปรที่ใช้ได้:</span>
+                                                <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-bold">&#123;PREFIX&#125;</code>
+                                                <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-bold">&#123;NUMBER&#125;</code>
+                                                <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-bold">&#123;YEAR&#125;</code>
+                                                <code className="bg-slate-100 px-1 py-0.5 rounded text-blue-700 font-bold">&#123;YEAR_SHORT&#125;</code>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                    จำนวนหลักตัวเลข (เติม 0 ข้างหน้า):
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    max="8"
+                                                    value={docNumberFormData.loan_digits || 3}
+                                                    onChange={(e) => setDocNumberFormData('loan_digits', parseInt(e.target.value) || 1)}
+                                                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                                    required
+                                                />
+                                                <span className="text-[10px] text-slate-500">เช่น 3 = 001, 4 = 0001</span>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-700 mb-1">
+                                                    ลำดับเลขปัจจุบัน (Next Number):
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={docNumberFormData.loan_current_no || 1}
+                                                    onChange={(e) => setDocNumberFormData('loan_current_no', parseInt(e.target.value) || 1)}
+                                                    className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none font-bold text-blue-900"
+                                                    required
+                                                />
+                                                <span className="text-[10px] text-slate-500">เลขสัญญายืมเงินที่จะออกให้ฉบับถัดไป</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Live Preview Card */}
+                                        <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200">
+                                            <div className="text-[11px] font-bold text-blue-900 mb-1 flex items-center gap-1.5">
+                                                <span>👁️</span> ตัวอย่างเลขสัญญายืมเงิน (Live Preview):
+                                            </div>
+                                            <div className="text-sm font-mono font-black text-blue-900 bg-white px-3 py-2 rounded-xl border border-blue-300 inline-block shadow-2xs">
+                                                {(docNumberFormData.loan_format || '{PREFIX} {NUMBER}/{YEAR}')
+                                                    .replace('{PREFIX}', docNumberFormData.loan_prefix || '')
+                                                    .replace('{NUMBER}', String(docNumberFormData.loan_current_no || 1).padStart(parseInt(docNumberFormData.loan_digits) || 1, '0'))
+                                                    .replace('{YEAR}', String(new Date().getFullYear() + 543))
+                                                    .replace('{YEAR_SHORT}', String((new Date().getFullYear() + 543) % 100).padStart(2, '0'))}
+                                            </div>
+                                            <p className="text-[10px] text-slate-600 mt-1.5">
+                                                หมายเลขนี้จะถูกใช้เป็น <strong>เลขคุมสัญญายืมเงิน (กค. 101)</strong> และคำขอยืมเงินโครงการ
+                                            </p>
+                                        </div>
+                                    </>
+                                )}
 
                                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                                     <button

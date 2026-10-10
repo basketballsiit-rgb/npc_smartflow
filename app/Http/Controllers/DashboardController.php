@@ -71,6 +71,7 @@ class DashboardController extends Controller
         $data['systemSettings'] = SystemSetting::all();
         $data['docNumberSettings'] = DocumentNumberService::getSettings();
         $data['nextUnifiedDocNumber'] = DocumentNumberService::previewNext();
+        $data['nextLoanDocNumber'] = DocumentNumberService::previewNextLoan();
         $data['allUsers'] = User::where('is_active', true)->orderBy('name', 'asc')->get();
         $data['allVendors'] = \App\Models\Vendor::orderBy('name', 'asc')->get();
         $data['allFundingSources'] = FundingSource::orderBy('id', 'asc')->get();
@@ -400,6 +401,7 @@ class DashboardController extends Controller
                 'advancePayments' => $advancePayments,
                 'externalTravelLoans' => $travelLoansForReviews,
                 'nextDocNumberPreview' => DocumentNumberService::previewNext(),
+                'nextLoanDocNumberPreview' => DocumentNumberService::previewNextLoan(),
                 'apiIntegrationStatus' => $apiIntegrationStatus,
             ];
         }
