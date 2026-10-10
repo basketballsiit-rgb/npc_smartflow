@@ -3832,22 +3832,20 @@ export default function Dashboard({
 
     const getStatusBadge = (status, step, project = null) => renderProjectProgressBar(status, step, project);
 
-    // 5-Level Execution Status helper for Executive, Planning and Admin tracking
+    // 5-Level Execution Status helper for Executive, Planning and Admin tracking (Reversed spectrum: Red -> Orange -> Yellow -> Green -> Blue)
     const getExecutionStatus = (p) => {
         if (!p) {
             return {
                 key: 'red',
+                level: 1,
+                percentage: 10,
                 label: 'ยังไม่ได้เริ่มดำเนินการ',
                 short_label: 'ยังไม่ได้เริ่มดำเนินการ',
                 dot: '🔴',
                 color: 'red',
+                hex: '#ef4444',
                 bg_class: 'bg-rose-50 text-rose-800 border-rose-300 font-bold',
             };
-        }
-
-        // Backend attribute if present
-        if (p.execution_status && p.execution_status.key) {
-            return p.execution_status;
         }
 
         const hasCompletedBook = Boolean(p.full_report_completed_at) || Boolean(p.has_completed_book) || (Boolean(p.chapter_5_content) && Boolean(p.chapter_4_content));
@@ -3857,20 +3855,24 @@ export default function Dashboard({
         const clearingsCount = p.expense_clearings_count ?? 0;
         const clearingsDone = p.expense_clearings_completed ?? 0;
         const allClearingsDone = clearingsCount === 0 || clearingsCount === clearingsDone;
+        const isFinanciallyCleared = (!hasLoans || allLoansCleared) && allClearingsDone;
 
-        // 1. Green: ดำเนินการสรุปโครงการรูปเล่ม และมีการเคลียร์เงินต่าง ๆ เรียบร้อย
-        if (hasCompletedBook && allLoansCleared && allClearingsDone) {
+        // 1. Level 5 (Blue / 80-100%): สรุปโครงการรูปเล่ม และมีการเคลียร์เงินต่าง ๆ เรียบร้อย
+        if (hasCompletedBook && isFinanciallyCleared && (p.status === 'completed' || hasLoans || Boolean(p.procurement_number) || parseFloat(p.allocated_budget) > 0)) {
             return {
-                key: 'green',
+                key: 'blue',
+                level: 5,
+                percentage: 92,
                 label: 'ดำเนินการสรุปโครงการรูปเล่ม และมีการเคลียร์เงินต่าง ๆ เรียบร้อย',
                 short_label: 'สรุปรูปเล่ม & เคลียร์เงินเรียบร้อย',
-                dot: '🟢',
-                color: 'emerald',
-                bg_class: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold',
+                dot: '🔵',
+                color: 'sky',
+                hex: '#0284c7',
+                bg_class: 'bg-sky-50 text-sky-800 border-sky-300 font-extrabold',
             };
         }
 
-        // 2. Orange-Red: ดำเนินการโครงการเรียบร้อย แต่ยังไม่ได้สรุปรูปเล่ม
+        // 2. Level 4 (Green / 60-80%): ดำเนินการโครงการเรียบร้อย แต่ยังไม่ได้สรุปรูปเล่ม
         const isExecutionDone = p.status === 'completed' || p.status === 'evaluating'
             || (hasLoans && travelLoans.some(l => Boolean(l.finance_disbursed_at)))
             || Boolean(p.finance_disbursed_at)
@@ -3878,16 +3880,19 @@ export default function Dashboard({
 
         if (isExecutionDone && !hasCompletedBook) {
             return {
-                key: 'orange_red',
+                key: 'green',
+                level: 4,
+                percentage: 72,
                 label: 'ดำเนินการโครงการเรียบร้อย แต่ยังไม่ได้สรุปรูปเล่ม',
                 short_label: 'ดำเนินโครงการแล้ว รอสรุปรูปเล่ม',
-                dot: '🟧',
-                color: 'orange_red',
-                bg_class: 'bg-red-50 text-orange-950 border-orange-400 font-extrabold',
+                dot: '🟢',
+                color: 'emerald',
+                hex: '#10b981',
+                bg_class: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold',
             };
         }
 
-        // 3. Orange: มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง
+        // 3. Level 3 (Yellow / 40-60%): มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง
         const isFullyApproved = p.status === 'approved' || p.status === 'in_progress' || (parseInt(p.current_approval_step, 10) >= 6);
         const hasStartedContract = hasLoans
             || Boolean(p.procurement_number)
@@ -3898,37 +3903,46 @@ export default function Dashboard({
 
         if (isFullyApproved && hasStartedContract) {
             return {
-                key: 'orange',
+                key: 'yellow',
+                level: 3,
+                percentage: 50,
                 label: 'มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง',
                 short_label: 'อนุมัติครบ & ดำเนินโครงการ (ยืมเงิน/จัดซื้อ)',
-                dot: '🟠',
-                color: 'orange',
-                bg_class: 'bg-orange-50 text-orange-800 border-orange-300 font-bold',
+                dot: '🟡',
+                color: 'amber',
+                hex: '#eab308',
+                bg_class: 'bg-amber-50 text-amber-900 border-amber-300 font-bold',
             };
         }
 
-        // 4. Yellow: มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ
+        // 4. Level 2 (Orange / 20-40%): มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ
         const hasFullContent = Boolean(p.chapter_1_content) || (Array.isArray(p.activities) && p.activities.length > 0) || ['submitted', 'pending_approval', 'approved', 'budget_approved'].includes(p.status);
         const isPreliminaryOnly = (p.status === 'preliminary') && !p.chapter_1_content;
 
         if (!isPreliminaryOnly && (hasFullContent || ['draft', 'submitted', 'pending_approval', 'approved'].includes(p.status))) {
             return {
-                key: 'yellow',
+                key: 'orange',
+                level: 2,
+                percentage: 30,
                 label: 'มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ',
                 short_label: 'เริ่มจัดทำโครงการแบบเต็มรูปแบบ',
-                dot: '🟡',
-                color: 'amber',
-                bg_class: 'bg-amber-50 text-amber-800 border-amber-300 font-semibold',
+                dot: '🟠',
+                color: 'orange',
+                hex: '#f97316',
+                bg_class: 'bg-orange-50 text-orange-800 border-orange-300 font-semibold',
             };
         }
 
-        // 5. Red: ยังไม่ได้เริ่มดำเนินการ
+        // 5. Level 1 (Red / 0-20%): ยังไม่ได้เริ่มดำเนินการ
         return {
             key: 'red',
+            level: 1,
+            percentage: 10,
             label: 'ยังไม่ได้เริ่มดำเนินการ',
             short_label: 'ยังไม่ได้เริ่มดำเนินการ',
             dot: '🔴',
             color: 'red',
+            hex: '#ef4444',
             bg_class: 'bg-rose-50 text-rose-800 border-rose-300 font-semibold',
         };
     };
@@ -3939,7 +3953,7 @@ export default function Dashboard({
             return (
                 <span
                     className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] border shadow-2xs shrink-0 whitespace-nowrap transition-all ${st.bg_class}`}
-                    title={`สถานะโครงการ: ${st.label}`}
+                    title={`สถานะโครงการ: ${st.label} (ระดับ ${st.level}: ${st.percentage}%)`}
                 >
                     <span className="text-xs leading-none">{st.dot}</span>
                     <span>{st.short_label}</span>
@@ -3950,11 +3964,135 @@ export default function Dashboard({
         return (
             <span
                 className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs border shadow-2xs whitespace-nowrap transition-all ${st.bg_class}`}
-                title={`สถานะโครงการ: ${st.label}`}
+                title={`สถานะโครงการ: ${st.label} (ระดับ ${st.level}: ${st.percentage}%)`}
             >
                 <span className="text-sm leading-none">{st.dot}</span>
                 <span>{st.label}</span>
             </span>
+        );
+    };
+
+    // Graphic Gauge Meter Slider (Reversed gradient from user-provided image)
+    const renderExecutionStatusGraphic = (project, isCompact = false) => {
+        const st = getExecutionStatus(project);
+        const pct = st.percentage || 10;
+
+        if (isCompact) {
+            return (
+                <div className="relative inline-flex flex-col items-start pt-3 pb-0.5 w-[210px] select-none" title={`สถานะโครงการ: ${st.label} (ระดับที่ ${st.level}: ${pct}%)`}>
+                    {/* Floating Pointer Arrow & Percentage */}
+                    <div
+                        className="absolute top-0 -translate-x-1/2 flex flex-col items-center transition-all duration-300 pointer-events-none z-10"
+                        style={{ left: `${pct}%` }}
+                    >
+                        <span className="text-[9.5px] font-black text-slate-800 leading-none whitespace-nowrap bg-white/95 px-1 py-0.5 rounded shadow-2xs border border-slate-200">
+                            {st.dot} {pct}%
+                        </span>
+                        <span className="text-[8px] leading-none text-slate-700 -mt-0.5 font-bold">▼</span>
+                    </div>
+
+                    {/* Scale Ticks Labels */}
+                    <div className="w-full flex justify-between text-[8px] text-slate-400 font-mono font-bold px-0.5 mb-0.5">
+                        <span>0%</span>
+                        <span>20%</span>
+                        <span>40%</span>
+                        <span>60%</span>
+                        <span>80%</span>
+                        <span>100%</span>
+                    </div>
+
+                    {/* Gauge Bar Track Container with Tick Dividers */}
+                    <div
+                        className="relative w-full h-2.5 rounded-full shadow-inner flex items-center"
+                        style={{ background: 'linear-gradient(90deg, #ef4444 0%, #f97316 22%, #eab308 45%, #10b981 72%, #0ea5e9 92%, #2563eb 100%)' }}
+                    >
+                        {/* Tick Mark Lines */}
+                        <div className="absolute inset-0 flex justify-between px-1 pointer-events-none">
+                            <span className="w-[1px] h-full bg-white/40" />
+                            <span className="w-[1px] h-full bg-white/40" />
+                            <span className="w-[1px] h-full bg-white/40" />
+                            <span className="w-[1px] h-full bg-white/40" />
+                            <span className="w-[1px] h-full bg-white/40" />
+                            <span className="w-[1px] h-full bg-white/40" />
+                        </div>
+
+                        {/* Pointer Thumb (Circle with colored center) */}
+                        <div
+                            className="absolute -translate-x-1/2 w-4 h-4 rounded-full bg-white shadow-md border border-slate-300/90 flex items-center justify-center transition-all duration-300"
+                            style={{ left: `${pct}%` }}
+                        >
+                            <span
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: st.hex || '#ef4444' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Detailed Graphic Gauge (For expanded / modal / cards)
+        return (
+            <div className="relative flex flex-col items-start pt-4 pb-2 w-full max-w-[320px] select-none">
+                {/* Floating Pointer Arrow & Label */}
+                <div
+                    className="absolute top-0 -translate-x-1/2 flex flex-col items-center transition-all duration-300 z-10"
+                    style={{ left: `${pct}%` }}
+                >
+                    <div className="px-2 py-0.5 rounded-md bg-slate-900 text-white text-[10px] font-black shadow-md flex items-center gap-1 whitespace-nowrap">
+                        <span>{st.dot}</span>
+                        <span>ระดับ {st.level}: {pct}%</span>
+                    </div>
+                    <span className="text-[10px] leading-none text-slate-900 -mt-0.5 font-bold">▼</span>
+                </div>
+
+                {/* Scale Ticks Labels */}
+                <div className="w-full flex justify-between text-[10px] text-slate-500 font-mono font-bold px-1 mb-1">
+                    <span>0%</span>
+                    <span>20%</span>
+                    <span>40%</span>
+                    <span>60%</span>
+                    <span>80%</span>
+                    <span>100%</span>
+                </div>
+
+                {/* Gauge Bar Track Container */}
+                <div
+                    className="relative w-full h-3.5 rounded-full shadow-inner flex items-center border border-black/10"
+                    style={{ background: 'linear-gradient(90deg, #ef4444 0%, #f97316 22%, #eab308 45%, #10b981 72%, #0ea5e9 92%, #2563eb 100%)' }}
+                >
+                    {/* Tick Mark Lines */}
+                    <div className="absolute inset-0 flex justify-between px-1.5 pointer-events-none">
+                        <span className="w-[1.5px] h-full bg-white/40" />
+                        <span className="w-[1.5px] h-full bg-white/40" />
+                        <span className="w-[1.5px] h-full bg-white/40" />
+                        <span className="w-[1.5px] h-full bg-white/40" />
+                        <span className="w-[1.5px] h-full bg-white/40" />
+                        <span className="w-[1.5px] h-full bg-white/40" />
+                    </div>
+
+                    {/* Circular Pointer Thumb */}
+                    <div
+                        className="absolute -translate-x-1/2 w-5 h-5 rounded-full bg-white shadow-lg border-2 border-slate-200 flex items-center justify-center transition-all duration-300"
+                        style={{ left: `${pct}%` }}
+                    >
+                        <span
+                            className="w-2.5 h-2.5 rounded-full"
+                            style={{ backgroundColor: st.hex || '#ef4444' }}
+                        />
+                    </div>
+                </div>
+
+                {/* Status Subtitle below */}
+                <div className="w-full flex justify-between items-center mt-1 text-[10px] text-slate-500">
+                    <span className="font-bold" style={{ color: st.hex }}>
+                        ● {st.short_label}
+                    </span>
+                    <span className="font-mono text-slate-400">
+                        สถานะระดับ {st.level}/5
+                    </span>
+                </div>
+            </div>
         );
     };
 
@@ -16077,7 +16215,7 @@ ${itemsListText}
             };
         });
 
-        // Compute counts and sums for all 5 colors
+        // Compute counts and sums for all 5 colors (Red -> Orange -> Yellow -> Green -> Blue)
         const stats = {
             total: projectsWithStatus.length,
             totalBudget: projectsWithStatus.reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
@@ -16085,21 +16223,21 @@ ${itemsListText}
                 count: projectsWithStatus.filter(p => p._execStatus.key === 'red').length,
                 budget: projectsWithStatus.filter(p => p._execStatus.key === 'red').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
             },
-            yellow: {
-                count: projectsWithStatus.filter(p => p._execStatus.key === 'yellow').length,
-                budget: projectsWithStatus.filter(p => p._execStatus.key === 'yellow').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
-            },
             orange: {
                 count: projectsWithStatus.filter(p => p._execStatus.key === 'orange').length,
                 budget: projectsWithStatus.filter(p => p._execStatus.key === 'orange').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
             },
-            orange_red: {
-                count: projectsWithStatus.filter(p => p._execStatus.key === 'orange_red').length,
-                budget: projectsWithStatus.filter(p => p._execStatus.key === 'orange_red').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
+            yellow: {
+                count: projectsWithStatus.filter(p => p._execStatus.key === 'yellow').length,
+                budget: projectsWithStatus.filter(p => p._execStatus.key === 'yellow').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
             },
             green: {
                 count: projectsWithStatus.filter(p => p._execStatus.key === 'green').length,
                 budget: projectsWithStatus.filter(p => p._execStatus.key === 'green').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
+            },
+            blue: {
+                count: projectsWithStatus.filter(p => p._execStatus.key === 'blue').length,
+                budget: projectsWithStatus.filter(p => p._execStatus.key === 'blue').reduce((acc, p) => acc + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0), 0),
             },
         };
 
@@ -16154,7 +16292,7 @@ ${itemsListText}
                             <span>📊</span> ติดตามสถานะการดำเนินงานโครงการ (5 ระดับ)
                         </h3>
                         <p className="text-xs sm:text-sm text-indigo-200 max-w-3xl leading-relaxed">
-                            ศูนย์ตรวจสอบและติดตามสถานะความคืบหน้าโครงการสำหรับ <span className="text-amber-300 font-bold">ผู้บริหาร</span>, <span className="text-amber-300 font-bold">งานแผนและงบประมาณ</span> และ <span className="text-amber-300 font-bold">ผู้ดูแลระบบ</span> ตั้งแต่ขั้นตอนขอตั้งงบ จัดทำเล่มฉบับเต็ม การทำสัญญายืมเงิน/จัดซื้อจัดจ้าง การจัดทำเล่มรายงาน 5 บท จนถึงการเคลียร์เงินเสร็จสมบูรณ์
+                            ศูนย์ตรวจสอบและติดตามสถานะความคืบหน้าโครงการสำหรับ <span className="text-amber-300 font-bold">ผู้บริหาร</span>, <span className="text-amber-300 font-bold">งานแผนและงบประมาณ</span> และ <span className="text-amber-300 font-bold">ผู้ดูแลระบบ</span> พร้อมแถบสเปกตรัมแสดงสถานะโครงการแบบเรียลไทม์ (แดง ➔ ส้ม ➔ เหลือง ➔ เขียว ➔ ฟ้า)
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
@@ -16171,9 +16309,9 @@ ${itemsListText}
                     </div>
                 </div>
 
-                {/* 5 Status KPI Summary Cards */}
+                {/* 5 Status KPI Summary Cards (Reversed Spectrum Colors) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-                    {/* Card 1: Red */}
+                    {/* Card 1: Red (0% - 20%) */}
                     <button
                         type="button"
                         onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'red' ? 'all' : 'red')}
@@ -16186,7 +16324,7 @@ ${itemsListText}
                         <div className="flex items-center justify-between">
                             <span className="text-2xl">🔴</span>
                             <span className="text-xs font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
-                                ระดับที่ 1
+                                ระดับ 1 (0-20%)
                             </span>
                         </div>
                         <div className="mt-3">
@@ -16201,35 +16339,7 @@ ${itemsListText}
                         </div>
                     </button>
 
-                    {/* Card 2: Yellow */}
-                    <button
-                        type="button"
-                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'yellow' ? 'all' : 'yellow')}
-                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
-                            lifecycleStatusFilter === 'yellow'
-                                ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400 shadow-md scale-[1.02]'
-                                : 'bg-white border-amber-100 hover:border-amber-300 hover:shadow-sm'
-                        }`}
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-2xl">🟡</span>
-                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                                ระดับที่ 2
-                            </span>
-                        </div>
-                        <div className="mt-3">
-                            <h4 className="text-xs font-black text-slate-800">เริ่มจัดทำโครงการเต็มรูปแบบ</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เขียนบทที่ 1 / รอการอนุมัติ 6 ขั้น</p>
-                        </div>
-                        <div className="mt-3 pt-2.5 border-t border-amber-100 flex items-baseline justify-between">
-                            <span className="text-lg font-black text-amber-700 font-mono">{stats.yellow.count} โครงการ</span>
-                            <span className="text-[11px] font-bold text-slate-500 font-mono">
-                                ฿{new Intl.NumberFormat('th-TH').format(stats.yellow.budget)}
-                            </span>
-                        </div>
-                    </button>
-
-                    {/* Card 3: Orange */}
+                    {/* Card 2: Orange (20% - 40%) */}
                     <button
                         type="button"
                         onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'orange' ? 'all' : 'orange')}
@@ -16242,12 +16352,12 @@ ${itemsListText}
                         <div className="flex items-center justify-between">
                             <span className="text-2xl">🟠</span>
                             <span className="text-xs font-black px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
-                                ระดับที่ 3
+                                ระดับ 2 (20-40%)
                             </span>
                         </div>
                         <div className="mt-3">
-                            <h4 className="text-xs font-black text-slate-800">อนุมัติครบ & ดำเนินโครงการ</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เขียนสัญญายืมเงิน / จัดซื้อจัดจ้าง</p>
+                            <h4 className="text-xs font-black text-slate-800">เริ่มจัดทำโครงการเต็มรูปแบบ</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เขียนบทที่ 1 / รอการอนุมัติ 6 ขั้น</p>
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-orange-100 flex items-baseline justify-between">
                             <span className="text-lg font-black text-orange-700 font-mono">{stats.orange.count} โครงการ</span>
@@ -16257,35 +16367,35 @@ ${itemsListText}
                         </div>
                     </button>
 
-                    {/* Card 4: Orange-Red */}
+                    {/* Card 3: Yellow (40% - 60%) */}
                     <button
                         type="button"
-                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'orange_red' ? 'all' : 'orange_red')}
+                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'yellow' ? 'all' : 'yellow')}
                         className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
-                            lifecycleStatusFilter === 'orange_red'
-                                ? 'bg-red-50 border-orange-500 ring-2 ring-orange-500 shadow-md scale-[1.02]'
-                                : 'bg-white border-orange-200 hover:border-orange-400 hover:shadow-sm'
+                            lifecycleStatusFilter === 'yellow'
+                                ? 'bg-amber-50 border-amber-400 ring-2 ring-amber-400 shadow-md scale-[1.02]'
+                                : 'bg-white border-amber-100 hover:border-amber-300 hover:shadow-sm'
                         }`}
                     >
                         <div className="flex items-center justify-between">
-                            <span className="text-2xl">🟧</span>
-                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-red-100 text-orange-950">
-                                ระดับที่ 4
+                            <span className="text-2xl">🟡</span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                                ระดับ 3 (40-60%)
                             </span>
                         </div>
                         <div className="mt-3">
-                            <h4 className="text-xs font-black text-slate-800">ดำเนินโครงการแล้ว รอสรุปเล่ม</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เบิกจ่าย/จัดโครงการแล้ว ยังไม่สรุป 5 บท</p>
+                            <h4 className="text-xs font-black text-slate-800">อนุมัติครบ & ดำเนินโครงการ</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เขียนสัญญายืมเงิน / จัดซื้อจัดจ้าง</p>
                         </div>
-                        <div className="mt-3 pt-2.5 border-t border-orange-200 flex items-baseline justify-between">
-                            <span className="text-lg font-black text-orange-900 font-mono">{stats.orange_red.count} โครงการ</span>
+                        <div className="mt-3 pt-2.5 border-t border-amber-100 flex items-baseline justify-between">
+                            <span className="text-lg font-black text-amber-800 font-mono">{stats.yellow.count} โครงการ</span>
                             <span className="text-[11px] font-bold text-slate-500 font-mono">
-                                ฿{new Intl.NumberFormat('th-TH').format(stats.orange_red.budget)}
+                                ฿{new Intl.NumberFormat('th-TH').format(stats.yellow.budget)}
                             </span>
                         </div>
                     </button>
 
-                    {/* Card 5: Green */}
+                    {/* Card 4: Green (60% - 80%) */}
                     <button
                         type="button"
                         onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'green' ? 'all' : 'green')}
@@ -16298,17 +16408,45 @@ ${itemsListText}
                         <div className="flex items-center justify-between">
                             <span className="text-2xl">🟢</span>
                             <span className="text-xs font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                                ระดับที่ 5
+                                ระดับ 4 (60-80%)
                             </span>
                         </div>
                         <div className="mt-3">
-                            <h4 className="text-xs font-black text-slate-800">สรุปเล่ม & เคลียร์เงินเรียบร้อย</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">สรุปรูปเล่มครบถ้วนและเคลียร์เงินครบ</p>
+                            <h4 className="text-xs font-black text-slate-800">ดำเนินโครงการแล้ว รอสรุปเล่ม</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เบิกจ่าย/จัดกิจกรรมแล้ว ยังไม่สรุป 5 บท</p>
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-emerald-100 flex items-baseline justify-between">
                             <span className="text-lg font-black text-emerald-700 font-mono">{stats.green.count} โครงการ</span>
                             <span className="text-[11px] font-bold text-slate-500 font-mono">
                                 ฿{new Intl.NumberFormat('th-TH').format(stats.green.budget)}
+                            </span>
+                        </div>
+                    </button>
+
+                    {/* Card 5: Blue (80% - 100%) */}
+                    <button
+                        type="button"
+                        onClick={() => setLifecycleStatusFilter(lifecycleStatusFilter === 'blue' ? 'all' : 'blue')}
+                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer ${
+                            lifecycleStatusFilter === 'blue'
+                                ? 'bg-sky-50 border-sky-400 ring-2 ring-sky-400 shadow-md scale-[1.02]'
+                                : 'bg-white border-sky-100 hover:border-sky-300 hover:shadow-sm'
+                        }`}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-2xl">🔵</span>
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
+                                ระดับ 5 (80-100%)
+                            </span>
+                        </div>
+                        <div className="mt-3">
+                            <h4 className="text-xs font-black text-slate-800">สรุปเล่ม & เคลียร์เงินเรียบร้อย</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">สรุปรูปเล่ม 5 บท & ปิดยอดเคลียร์เงินครบ</p>
+                        </div>
+                        <div className="mt-3 pt-2.5 border-t border-sky-100 flex items-baseline justify-between">
+                            <span className="text-lg font-black text-sky-700 font-mono">{stats.blue.count} โครงการ</span>
+                            <span className="text-[11px] font-bold text-slate-500 font-mono">
+                                ฿{new Intl.NumberFormat('th-TH').format(stats.blue.budget)}
                             </span>
                         </div>
                     </button>
@@ -16344,17 +16482,6 @@ ${itemsListText}
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setLifecycleStatusFilter('yellow')}
-                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
-                                    lifecycleStatusFilter === 'yellow'
-                                        ? 'bg-amber-600 text-white shadow-2xs'
-                                        : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
-                                }`}
-                            >
-                                <span>🟡</span> เริ่มทำฉบับเต็ม ({stats.yellow.count})
-                            </button>
-                            <button
-                                type="button"
                                 onClick={() => setLifecycleStatusFilter('orange')}
                                 className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
                                     lifecycleStatusFilter === 'orange'
@@ -16362,18 +16489,18 @@ ${itemsListText}
                                         : 'bg-orange-50 text-orange-800 hover:bg-orange-100 border border-orange-200'
                                 }`}
                             >
-                                <span>🟠</span> อนุมัติ&ยืมเงิน/จัดซื้อ ({stats.orange.count})
+                                <span>🟠</span> เริ่มทำฉบับเต็ม ({stats.orange.count})
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setLifecycleStatusFilter('orange_red')}
+                                onClick={() => setLifecycleStatusFilter('yellow')}
                                 className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
-                                    lifecycleStatusFilter === 'orange_red'
-                                        ? 'bg-red-700 text-white shadow-2xs'
-                                        : 'bg-red-50 text-orange-950 hover:bg-red-100 border border-orange-300'
+                                    lifecycleStatusFilter === 'yellow'
+                                        ? 'bg-amber-600 text-white shadow-2xs'
+                                        : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
                                 }`}
                             >
-                                <span>🟧</span> ทำแล้วรอสรุปเล่ม ({stats.orange_red.count})
+                                <span>🟡</span> อนุมัติ&ยืมเงิน/จัดซื้อ ({stats.yellow.count})
                             </button>
                             <button
                                 type="button"
@@ -16384,7 +16511,18 @@ ${itemsListText}
                                         : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
                                 }`}
                             >
-                                <span>🟢</span> สรุปเล่ม&เคลียร์เงิน ({stats.green.count})
+                                <span>🟢</span> ทำแล้วรอสรุปเล่ม ({stats.green.count})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLifecycleStatusFilter('blue')}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                                    lifecycleStatusFilter === 'blue'
+                                        ? 'bg-sky-600 text-white shadow-2xs'
+                                        : 'bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200'
+                                }`}
+                            >
+                                <span>🔵</span> สรุปเล่ม&เคลียร์เงิน ({stats.blue.count})
                             </button>
                         </div>
 
@@ -16467,7 +16605,7 @@ ${itemsListText}
                             </h4>
                         </div>
                         <span className="text-xs text-slate-500">
-                            คลิกที่ชื่อโครงการเพื่อดูรายละเอียดและเอกสารฉบับเต็ม
+                            แถบสีแสดงสถานะการดำเนินงานโครงการ 0% - 100% พร้อมตัวชี้บอกตำแหน่งความคืบหน้า
                         </span>
                     </div>
 
@@ -16476,7 +16614,7 @@ ${itemsListText}
                             <thead>
                                 <tr className="border-b border-slate-200 bg-slate-100/75 text-[11px] font-black text-slate-700 uppercase tracking-wider">
                                     <th className="px-4 py-3 text-center w-12">#</th>
-                                    <th className="px-4 py-3 min-w-[280px]">ชื่อโครงการ & สถานะ 5 ระดับ</th>
+                                    <th className="px-4 py-3 min-w-[320px]">ชื่อโครงการ, แถบสถานะ & สัญลักษณ์ 5 ระดับ</th>
                                     <th className="px-4 py-3 min-w-[140px]">ผู้รับผิดชอบ/แผนก</th>
                                     <th className="px-4 py-3 text-right min-w-[120px]">งบประมาณ</th>
                                     <th className="px-4 py-3 text-center min-w-[130px]">สายอนุมัติ 6 ขั้น</th>
@@ -16513,9 +16651,9 @@ ${itemsListText}
                                                     {idx + 1}
                                                 </td>
 
-                                                {/* Project Title with Status Badge directly behind */}
+                                                {/* Project Title with Status Badge & Graphic Meter Slider */}
                                                 <td className="px-4 py-3.5 align-top">
-                                                    <div className="space-y-1.5">
+                                                    <div className="space-y-2">
                                                         <div className="flex flex-wrap items-center gap-1.5">
                                                             <a
                                                                 href={route('projects.show', p.id)}
@@ -16527,7 +16665,12 @@ ${itemsListText}
                                                             {renderExecutionStatusBadge(p, true)}
                                                         </div>
 
-                                                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                                        {/* Graphic Status Gauge Meter Slider (Reversed spectrum matching user image with pointer arrow & thumb) */}
+                                                        <div className="pt-0.5">
+                                                            {renderExecutionStatusGraphic(p, true)}
+                                                        </div>
+
+                                                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 pt-0.5">
                                                             <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold">
                                                                 ปี {p.academic_year || '2569'}
                                                             </span>
@@ -16612,7 +16755,7 @@ ${itemsListText}
                                                 {/* Clearings status */}
                                                 <td className="px-4 py-3.5 text-center align-top whitespace-nowrap">
                                                     {allLoansCleared ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] border border-emerald-300">
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold text-[11px] border border-sky-300">
                                                             <span>✅</span> เคลียร์เงินเรียบร้อย
                                                         </span>
                                                     ) : hasUnclearedLoans ? (
@@ -16656,63 +16799,198 @@ ${itemsListText}
                     </div>
                 </div>
 
-                {/* Explanation / Color Legend Card */}
-                <div className="bg-gradient-to-br from-slate-50 to-indigo-50/40 p-5 sm:p-6 rounded-3xl border border-indigo-100 shadow-2xs space-y-4">
-                    <div className="flex items-center gap-2">
-                        <span className="text-xl">💡</span>
-                        <h4 className="font-black text-slate-900 text-sm sm:text-base">
-                            เกณฑ์การจัดระดับสถานะการดำเนินงานโครงการ (5 ระดับ)
-                        </h4>
+                {/* Master Graphic Explanation / Color Legend Card */}
+                <div className="bg-gradient-to-br from-slate-50 to-indigo-50/50 p-6 sm:p-8 rounded-3xl border border-indigo-100 shadow-sm space-y-6">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-indigo-100 pb-4">
+                        <div>
+                            <div className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 bg-indigo-100/60 px-2.5 py-0.5 rounded-full mb-1">
+                                <span>📐</span> มาตรวัดกราฟิกสเปกตรัมสถานะโครงการ (Project Execution Lifecycle Gauge)
+                            </div>
+                            <h4 className="font-black text-slate-900 text-base sm:text-lg flex items-center gap-2">
+                                <span>💡</span> เกณฑ์และช่วงสีการดำเนินงานโครงการ 5 ระดับ (0% - 100%)
+                            </h4>
+                        </div>
+                        <span className="text-xs text-slate-500 font-medium">
+                            แถบสีเรียงจากซ้ายไปขวา: แดง ➔ ส้ม ➔ เหลือง ➔ เขียว ➔ ฟ้า
+                        </span>
                     </div>
 
+                    {/* Master Gauge Meter Demonstration with 5 Arrows pointing to their color zones */}
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+                        <div className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                            <span>ภาพแสดงแถบสีสเปกตรัมและตำแหน่งลูกศรชี้ตามแต่ละช่วงระดับสถานะ:</span>
+                            <span className="text-[11px] text-slate-400 font-mono">0% (ยังไม่เริ่ม) ────────➔ 100% (เสร็จสมบูรณ์)</span>
+                        </div>
+
+                        {/* Large Demonstration Meter Bar with 5 Pointers */}
+                        <div className="relative pt-8 pb-3 select-none">
+                            {/* 5 Arrows with Badges pointing down */}
+                            <div className="absolute top-0 inset-x-0 h-8">
+                                {/* Level 1 Pointer (at 10%) */}
+                                <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center" style={{ left: '10%' }}>
+                                    <span className="px-1.5 py-0.5 rounded bg-rose-600 text-white text-[9.5px] font-black shadow-2xs whitespace-nowrap">
+                                        🔴 10% (ระดับ 1)
+                                    </span>
+                                    <span className="text-[10px] leading-none text-rose-600 font-bold -mt-0.5">▼</span>
+                                </div>
+
+                                {/* Level 2 Pointer (at 30%) */}
+                                <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center" style={{ left: '30%' }}>
+                                    <span className="px-1.5 py-0.5 rounded bg-orange-500 text-white text-[9.5px] font-black shadow-2xs whitespace-nowrap">
+                                        🟠 30% (ระดับ 2)
+                                    </span>
+                                    <span className="text-[10px] leading-none text-orange-500 font-bold -mt-0.5">▼</span>
+                                </div>
+
+                                {/* Level 3 Pointer (at 50%) */}
+                                <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center" style={{ left: '50%' }}>
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-500 text-white text-[9.5px] font-black shadow-2xs whitespace-nowrap">
+                                        🟡 50% (ระดับ 3)
+                                    </span>
+                                    <span className="text-[10px] leading-none text-amber-500 font-bold -mt-0.5">▼</span>
+                                </div>
+
+                                {/* Level 4 Pointer (at 70%) */}
+                                <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center" style={{ left: '70%' }}>
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9.5px] font-black shadow-2xs whitespace-nowrap">
+                                        🟢 70% (ระดับ 4)
+                                    </span>
+                                    <span className="text-[10px] leading-none text-emerald-600 font-bold -mt-0.5">▼</span>
+                                </div>
+
+                                {/* Level 5 Pointer (at 90%) */}
+                                <div className="absolute top-0 -translate-x-1/2 flex flex-col items-center" style={{ left: '90%' }}>
+                                    <span className="px-1.5 py-0.5 rounded bg-sky-600 text-white text-[9.5px] font-black shadow-2xs whitespace-nowrap">
+                                        🔵 90% (ระดับ 5)
+                                    </span>
+                                    <span className="text-[10px] leading-none text-sky-600 font-bold -mt-0.5">▼</span>
+                                </div>
+                            </div>
+
+                            {/* Scale Percentage Labels */}
+                            <div className="w-full flex justify-between text-xs text-slate-500 font-mono font-black px-1 mb-1">
+                                <span>0%</span>
+                                <span>20%</span>
+                                <span>40%</span>
+                                <span>60%</span>
+                                <span>80%</span>
+                                <span>100%</span>
+                            </div>
+
+                            {/* The Gradient Track with Dividers */}
+                            <div
+                                className="relative w-full h-4 sm:h-5 rounded-full shadow-inner flex items-center border border-slate-300/80"
+                                style={{ background: 'linear-gradient(90deg, #ef4444 0%, #f97316 22%, #eab308 45%, #10b981 72%, #0ea5e9 92%, #2563eb 100%)' }}
+                            >
+                                {/* Vertical Grid Lines */}
+                                <div className="absolute inset-0 flex justify-between px-2 pointer-events-none">
+                                    <span className="w-[1.5px] h-full bg-white/40" />
+                                    <span className="w-[1.5px] h-full bg-white/40" />
+                                    <span className="w-[1.5px] h-full bg-white/40" />
+                                    <span className="w-[1.5px] h-full bg-white/40" />
+                                    <span className="w-[1.5px] h-full bg-white/40" />
+                                    <span className="w-[1.5px] h-full bg-white/40" />
+                                </div>
+
+                                {/* 5 Demonstration Thumbs */}
+                                <div className="absolute -translate-x-1/2 w-4 sm:w-5 h-4 sm:h-5 rounded-full bg-white shadow-md border border-slate-300 flex items-center justify-center" style={{ left: '10%' }}>
+                                    <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-rose-500" />
+                                </div>
+                                <div className="absolute -translate-x-1/2 w-4 sm:w-5 h-4 sm:h-5 rounded-full bg-white shadow-md border border-slate-300 flex items-center justify-center" style={{ left: '30%' }}>
+                                    <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-orange-500" />
+                                </div>
+                                <div className="absolute -translate-x-1/2 w-4 sm:w-5 h-4 sm:h-5 rounded-full bg-white shadow-md border border-slate-300 flex items-center justify-center" style={{ left: '50%' }}>
+                                    <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-amber-500" />
+                                </div>
+                                <div className="absolute -translate-x-1/2 w-4 sm:w-5 h-4 sm:h-5 rounded-full bg-white shadow-md border border-slate-300 flex items-center justify-center" style={{ left: '70%' }}>
+                                    <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-emerald-500" />
+                                </div>
+                                <div className="absolute -translate-x-1/2 w-4 sm:w-5 h-4 sm:h-5 rounded-full bg-white shadow-md border border-slate-300 flex items-center justify-center" style={{ left: '90%' }}>
+                                    <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-sky-500" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 5 Detailed Explanation Cards Matching Color Zones */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
-                        <div className="p-3.5 rounded-2xl bg-white border border-rose-200 shadow-2xs space-y-1.5">
-                            <div className="flex items-center gap-1.5 font-black text-rose-800">
-                                <span>🔴</span> ระดับที่ 1 (สีแดง)
+                        {/* Level 1: Red */}
+                        <div className="p-4 rounded-2xl bg-white border border-rose-200 shadow-2xs space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="font-black text-rose-700 flex items-center gap-1">
+                                    <span>🔴</span> ระดับที่ 1 (สีแดง)
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 text-[10px] font-mono font-bold">
+                                    0% - 20%
+                                </span>
                             </div>
                             <div className="font-bold text-slate-800">ยังไม่ได้เริ่มดำเนินการ</div>
                             <p className="text-slate-600 text-[11px] leading-relaxed">
-                                โครงการที่อยู่ในขั้นตอนเสนอขอตั้งงบประมาณเบื้องต้น หรือยังไม่ได้เริ่มจัดทำเนื้อหาโครงการแบบเต็มรูปแบบ (บทที่ 1)
+                                โครงการอยู่ในขั้นตอนเสนอขอตั้งงบประมาณเบื้องต้น (Preliminary) หรือยังไม่ได้เริ่มจัดทำเนื้อหาโครงการแบบเต็มรูปแบบ (ยังไม่มีบทที่ 1)
                             </p>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-white border border-amber-200 shadow-2xs space-y-1.5">
-                            <div className="flex items-center gap-1.5 font-black text-amber-800">
-                                <span>🟡</span> ระดับที่ 2 (สีเหลือง)
+                        {/* Level 2: Orange */}
+                        <div className="p-4 rounded-2xl bg-white border border-orange-200 shadow-2xs space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="font-black text-orange-700 flex items-center gap-1">
+                                    <span>🟠</span> ระดับที่ 2 (สีส้ม)
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 text-[10px] font-mono font-bold">
+                                    20% - 40%
+                                </span>
                             </div>
                             <div className="font-bold text-slate-800">เริ่มจัดทำโครงการเต็มรูปแบบ</div>
                             <p className="text-slate-600 text-[11px] leading-relaxed">
-                                โครงการที่มีการเขียนเนื้อหาโครงการแบบเต็ม (บทที่ 1) และยื่นเข้าสู่กระบวนการพิจารณาอนุมัติตามลำดับขั้น 6 ขั้นตอน
+                                โครงการมีการเขียนเนื้อหาโครงการแบบเต็ม (บทที่ 1 หรือระบุกิจกรรม) และยื่นเข้าสู่กระบวนการพิจารณาอนุมัติตามสายงาน 6 ขั้นตอน
                             </p>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-white border border-orange-200 shadow-2xs space-y-1.5">
-                            <div className="flex items-center gap-1.5 font-black text-orange-800">
-                                <span>🟠</span> ระดับที่ 3 (สีส้ม)
+                        {/* Level 3: Yellow */}
+                        <div className="p-4 rounded-2xl bg-white border border-amber-200 shadow-2xs space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="font-black text-amber-800 flex items-center gap-1">
+                                    <span>🟡</span> ระดับที่ 3 (สีเหลือง)
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-mono font-bold">
+                                    40% - 60%
+                                </span>
                             </div>
                             <div className="font-bold text-slate-800">อนุมัติครบ & ดำเนินโครงการ</div>
                             <p className="text-slate-600 text-[11px] leading-relaxed">
-                                โครงการผ่านการอนุมัติครบ 6 ขั้นตอน และมีการเริ่มเขียนสัญญายืมเงินราชการ หรือจัดทำชุดจัดซื้อจัดจ้าง
+                                โครงการผ่านการอนุมัติครบ 6 ขั้นตอน และเริ่มดำเนินโครงการ โดยตรวจสอบจากการเขียนสัญญายืมเงินราชการ หรือจัดทำชุดจัดซื้อจัดจ้าง
                             </p>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-white border border-orange-300 shadow-2xs space-y-1.5">
-                            <div className="flex items-center gap-1.5 font-black text-orange-950">
-                                <span>🟧</span> ระดับที่ 4 (สีส้มแดง)
+                        {/* Level 4: Green */}
+                        <div className="p-4 rounded-2xl bg-white border border-emerald-200 shadow-2xs space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="font-black text-emerald-700 flex items-center gap-1">
+                                    <span>🟢</span> ระดับที่ 4 (สีเขียว)
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-mono font-bold">
+                                    60% - 80%
+                                </span>
                             </div>
                             <div className="font-bold text-slate-800">ดำเนินโครงการแล้ว รอสรุปเล่ม</div>
                             <p className="text-slate-600 text-[11px] leading-relaxed">
-                                มีการเบิกจ่ายเงิน/จัดกิจกรรมโครงการเรียบร้อยแล้ว แต่ยังไม่ได้จัดทำรายงานสรุปผลรูปเล่ม 5 บท
+                                มีการโอน/เบิกจ่ายเงิน หรือจัดกิจกรรมโครงการเรียบร้อยแล้ว แต่อยู่ระหว่างการจัดทำรายงานสรุปผลรูปเล่ม 5 บท
                             </p>
                         </div>
 
-                        <div className="p-3.5 rounded-2xl bg-white border border-emerald-200 shadow-2xs space-y-1.5">
-                            <div className="flex items-center gap-1.5 font-black text-emerald-800">
-                                <span>🟢</span> ระดับที่ 5 (สีเขียว)
+                        {/* Level 5: Blue */}
+                        <div className="p-4 rounded-2xl bg-white border border-sky-200 shadow-2xs space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className="font-black text-sky-700 flex items-center gap-1">
+                                    <span>🔵</span> ระดับที่ 5 (สีฟ้า/น้ำเงิน)
+                                </span>
+                                <span className="px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 text-[10px] font-mono font-bold">
+                                    80% - 100%
+                                </span>
                             </div>
                             <div className="font-bold text-slate-800">สรุปเล่ม & เคลียร์เงินเรียบร้อย</div>
                             <p className="text-slate-600 text-[11px] leading-relaxed">
-                                จัดทำรายงานผลรูปเล่มครบถ้วน (5 บท) และทำการเคลียร์เงินยืม/เงินทดรองเรียบร้อยสมบูรณ์ทุกรายการ
+                                จัดทำรายงานผลรูปเล่มครบถ้วน (5 บท) และทำการเคลียร์เงินยืม/เงินทดรองราชการเรียบร้อยสมบูรณ์ทุกรายการ ปิดโครงการสำเร็จ
                             </p>
                         </div>
                     </div>
