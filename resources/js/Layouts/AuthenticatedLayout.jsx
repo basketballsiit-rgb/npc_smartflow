@@ -89,6 +89,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        currentUrl.includes('tab=action_plan_report') ||
                        currentUrl.includes('tab=admin_strategies') ||
                        currentUrl.includes('strategies/dashboard') ||
+                       (currentUrl.includes('tab=all_projects') && currentUrl.includes('from=plan')) ||
                        (typeof route !== 'undefined' && route().current('strategies.dashboard'));
             case 'executive_hub':
                 return currentUrl.includes('tab=executive_overview') ||
@@ -103,7 +104,7 @@ export default function AuthenticatedLayout({ header, children }) {
                        currentUrl.includes('tab=admin_settings') ||
                        currentUrl.includes('tab=admin_strategies') ||
                        currentUrl.includes('tab=admin_ai') ||
-                       currentUrl.includes('tab=all_projects');
+                       (currentUrl.includes('tab=all_projects') && !currentUrl.includes('from=plan') && !currentUrl.includes('from=finance'));
             default:
                 return false;
         }
@@ -113,7 +114,16 @@ export default function AuthenticatedLayout({ header, children }) {
         if (currentUrl.includes('chapter=') || currentUrl.includes('filter=reporting') || currentUrl.includes('chapter-2') || currentUrl.includes('tab=appendix') || currentUrl.includes('tab=preliminary') || currentUrl.includes('tab=full_report')) {
             return 'five_chapters';
         }
-        if (currentUrl.includes('tab=admin_users') || currentUrl.includes('tab=admin_settings') || currentUrl.includes('tab=admin_strategies') || currentUrl.includes('tab=admin_ai') || currentUrl.includes('tab=all_projects')) {
+        if (currentUrl.includes('tab=all_projects')) {
+            if (currentUrl.includes('from=plan')) {
+                return 'plan_hub';
+            }
+            if (currentUrl.includes('from=finance')) {
+                return 'finance_hub';
+            }
+            return 'admin_console';
+        }
+        if (currentUrl.includes('tab=admin_users') || currentUrl.includes('tab=admin_settings') || currentUrl.includes('tab=admin_strategies') || currentUrl.includes('tab=admin_ai')) {
             return 'admin_console';
         }
         if (currentUrl.includes('tab=executive_overview')) {
@@ -127,7 +137,7 @@ export default function AuthenticatedLayout({ header, children }) {
         if (currentUrl.includes('tab=annual_budget_requests') || currentUrl.includes('tab=budgets') || (currentUrl.includes('tab=reviews') && (isPlanStaff || isAdmin)) || ((isPlanStaff || isAdmin) && currentUrl.includes('routine-budgets')) || (currentUrl.includes('tab=document_tracking') && isPlanStaff) || currentUrl.includes('tab=action_plan_report') || (currentUrl.includes('strategies/dashboard') || (typeof route !== 'undefined' && route().current('strategies.dashboard')))) {
             return 'plan_hub';
         }
-        if (currentUrl.includes('tab=admin_') || (currentUrl.includes('tab=all_projects') && isAdmin)) {
+        if (currentUrl.includes('tab=admin_')) {
             return 'admin_console';
         }
         if (currentUrl.includes('tab=procurement') || (currentUrl.includes('vendors') && isProcurementStaff) || (currentUrl.includes('tab=document_tracking') && isProcurementStaff)) {
@@ -818,11 +828,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>งบประจำปี & โอนเงินยืมจัดซื้อ</span>}
                                 </Link>
                                 <Link
-                                    href={route('dashboard', { tab: 'all_projects' })}
-                                    className={getSubLinkClass(url.includes('tab=all_projects'))}
+                                    href={route('dashboard', { tab: 'all_projects', from: 'finance' })}
+                                    className={getSubLinkClass(url.includes('tab=all_projects') && url.includes('from=finance'))}
                                     title="สรุปโครงการทั้งหมดของวิทยาลัย"
                                 >
-                                    <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-emerald-300')}>└─</span>
+                                    <span className={getPrefixClass(url.includes('tab=all_projects') && url.includes('from=finance'), 'text-emerald-300')}>└─</span>
                                     <span className="text-sm">📁</span>
                                     {isSidebarOpen && <span>สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                 </Link>
@@ -909,11 +919,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>รายงานแผนปฏิบัติราชการ</span>}
                                 </Link>
                                 <Link
-                                    href={route('dashboard', { tab: 'all_projects' })}
-                                    className={getSubLinkClass(url.includes('tab=all_projects'))}
+                                    href={route('dashboard', { tab: 'all_projects', from: 'plan' })}
+                                    className={getSubLinkClass(url.includes('tab=all_projects') && url.includes('from=plan'))}
                                     title="สรุปโครงการทั้งหมดของวิทยาลัย"
                                 >
-                                    <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-amber-300')}>└─</span>
+                                    <span className={getPrefixClass(url.includes('tab=all_projects') && url.includes('from=plan'), 'text-amber-300')}>└─</span>
                                     <span className="text-sm">🏛️</span>
                                     {isSidebarOpen && <span>สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                 </Link>
@@ -1083,10 +1093,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'all_projects' })}
-                                    className={getSubLinkClass(url.includes('tab=all_projects'))}
+                                    className={getSubLinkClass(url.includes('tab=all_projects') && !url.includes('from=plan') && !url.includes('from=finance'))}
                                     title="จัดการโครงการทั้งหมดของวิทยาลัย และปลดล็อคแก้ไข"
                                 >
-                                    <span className={getPrefixClass(url.includes('tab=all_projects'), 'text-rose-300')}>└─</span>
+                                    <span className={getPrefixClass(url.includes('tab=all_projects') && !url.includes('from=plan') && !url.includes('from=finance'), 'text-rose-300')}>└─</span>
                                     <span className="text-sm">🏛️</span>
                                     {isSidebarOpen && <span>จัดการโครงการทั้งหมด & ปลดล็อค</span>}
                                 </Link>

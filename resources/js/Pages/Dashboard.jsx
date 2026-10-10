@@ -4682,6 +4682,23 @@ export default function Dashboard({
         });
     };
 
+    const handleUnlockProject = (project) => {
+        Swal.fire({
+            title: 'ปลดล็อคโครงการเพื่อแก้ไข?',
+            text: `ต้องการปลดล็อคโครงการ "${project.title}" เพื่อเข้าสู่หน้าแก้ไขข้อมูลใช่หรือไม่?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#7c3aed',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: '🔓 ใช่, ปลดล็อคและไปหน้าแก้ไข',
+            cancelButtonText: 'ยกเลิก'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                router.post(route('projects.unlock_for_edit', project.id));
+            }
+        });
+    };
+
     // 0. Admin Component Rendering (Command Center / Kanban + User Management)
     const renderAdminUsersTab = () => {
         if (!adminData) return null;
@@ -15256,9 +15273,23 @@ ${itemsListText}
     const renderAllProjectsTab = () => {
         if (!allProjectsMaster || allProjectsMaster.length === 0) {
             return (
-                <div className="rounded-2xl border border-purple-100 bg-white p-12 text-center text-slate-500 shadow-sm font-sans">
-                    <span className="text-4xl">📁</span>
-                    <p className="mt-3 font-bold text-slate-700">ไม่พบรายการโครงการในระบบ</p>
+                <div className="rounded-3xl border border-purple-100 bg-white p-12 text-center text-slate-500 shadow-sm font-sans space-y-4">
+                    <span className="text-5xl block animate-bounce">📁</span>
+                    <div>
+                        <p className="mt-2 font-black text-base sm:text-lg text-slate-800">ไม่พบรายการโครงการในระบบ</p>
+                        <p className="text-xs text-slate-500 mt-1">
+                            ยังไม่มีการบันทึกโครงการในปีงบประมาณนี้ หรือยังไม่มีผู้เสนอโครงการเข้ามา
+                        </p>
+                    </div>
+                    <div className="pt-2">
+                        <a
+                            href={route('projects.quick_create')}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md transition hover:scale-105 active:scale-95 cursor-pointer"
+                        >
+                            <span>➕</span>
+                            <span>สร้าง / เสนอโครงการใหม่ทันที</span>
+                        </a>
+                    </div>
                 </div>
             );
         }
@@ -15688,23 +15719,41 @@ ${itemsListText}
                                                                 >
                                                                     🖨️ PDF
                                                                 </a>
-                                                                {p.status !== 'approved' && p.status !== 'completed' && (
+                                                                {/* Edit Button: Admin can edit ANY project, otherwise only non-approved/non-completed */}
+                                                                {(isAdmin || (p.status !== 'approved' && p.status !== 'completed')) && (
                                                                     <a
                                                                         href={route('projects.edit', p.id)}
-                                                                        className="px-2 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition cursor-pointer"
-                                                                        title="แก้ไขโครงการ"
+                                                                        className="px-2.5 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs border border-amber-300 transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                                                        title={isAdmin ? "แก้ไขโครงการ (สิทธิ์ผู้ดูแลระบบ)" : "แก้ไขโครงการ"}
                                                                     >
-                                                                        ✏️
+                                                                        <span>✏️</span>
+                                                                        <span>แก้ไข</span>
                                                                     </a>
                                                                 )}
-                                                                {(role === 'admin' || auth.user.is_admin) && (
+
+                                                                {/* Unlock Button for Admin */}
+                                                                {isAdmin && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleUnlockProject(p)}
+                                                                        className="px-2.5 py-1 rounded-xl bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold text-xs border border-indigo-300 transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                                                        title="ปลดล็อคโครงการเพื่อเข้าแก้ไข (สิทธิ์ผู้ดูแลระบบ)"
+                                                                    >
+                                                                        <span>🔓</span>
+                                                                        <span>ปลดล็อค</span>
+                                                                    </button>
+                                                                )}
+
+                                                                {/* Delete Button for Admin */}
+                                                                {isAdmin && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleDeleteProject(p)}
-                                                                        className="px-2 py-1 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-xs border border-rose-300 transition cursor-pointer"
-                                                                        title="ลบโครงการ"
+                                                                        className="px-2.5 py-1 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold text-xs border border-rose-300 transition cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                                                        title="ลบโครงการ (สิทธิ์ผู้ดูแลระบบ)"
                                                                     >
-                                                                        🗑️
+                                                                        <span>🗑️</span>
+                                                                        <span>ลบ</span>
                                                                     </button>
                                                                 )}
                                                             </div>
