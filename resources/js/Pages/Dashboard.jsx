@@ -15877,24 +15877,76 @@ ${itemsListText}
         }
         return (
             <div className="space-y-6">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">งบประมาณได้รับจัดสรรรวม</span>
-                        <p className="mt-2 text-3xl font-black text-purple-950">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-700">งบประมาณได้รับจัดสรรรวม</span>
+                            <span className="text-base">💰</span>
+                        </div>
+                        <p className="mt-2 text-2xl sm:text-3xl font-black text-purple-950">
                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(executiveData.budgetSummary.total_allocated)}
                         </p>
+                        <p className="mt-1 text-[11px] text-slate-500 font-medium">งบประมาณจัดสรรทั้งหมด</p>
                     </div>
-                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">ผูกพันงบประมาณแล้ว</span>
-                        <p className="mt-2 text-3xl font-black text-purple-950">
+
+                    <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/40 to-amber-100/30 p-5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-amber-700">ผูกพันงบประมาณแล้ว</span>
+                            <span className="text-base">📑</span>
+                        </div>
+                        <p className="mt-2 text-2xl sm:text-3xl font-black text-amber-950">
                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(executiveData.budgetSummary.total_encumbered)}
                         </p>
+                        <div className="mt-1 flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 font-medium">คิดเป็น</span>
+                            <span className="font-bold text-amber-700">
+                                {Number(executiveData.budgetSummary.encumbrance_percentage ?? (executiveData.budgetSummary.total_allocated > 0 ? (executiveData.budgetSummary.total_encumbered / executiveData.budgetSummary.total_allocated) * 100 : 0)).toFixed(2)}% ของงบที่มี
+                            </span>
+                        </div>
                     </div>
-                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-6 shadow-sm">
-                        <span className="text-xs font-bold uppercase tracking-wider text-purple-700">เบิกจ่ายจริงแล้ว</span>
-                        <p className="mt-2 text-3xl font-black text-purple-950">
+
+                    <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/40 to-emerald-100/30 p-5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">เบิกจ่ายจริงแล้ว</span>
+                            <span className="text-base">✅</span>
+                        </div>
+                        <p className="mt-2 text-2xl sm:text-3xl font-black text-emerald-950">
                             {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(executiveData.budgetSummary.total_spent)}
                         </p>
+                        <div className="mt-1 flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 font-medium">คิดเป็น</span>
+                            <span className="font-bold text-emerald-700">
+                                {Number(executiveData.budgetSummary.disbursement_percentage ?? (executiveData.budgetSummary.total_allocated > 0 ? (executiveData.budgetSummary.total_spent / executiveData.budgetSummary.total_allocated) * 100 : 0)).toFixed(2)}% ของงบที่มี
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-indigo-300 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-950 p-5 shadow-md text-white">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-purple-200">ร้อยละการเบิกจ่ายจริง</span>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-400 text-slate-950">
+                                % Disbursement
+                            </span>
+                        </div>
+                        <div className="mt-1 flex items-baseline gap-2">
+                            <p className="text-3xl sm:text-4xl font-black text-emerald-300 tracking-tight">
+                                {Number(executiveData.budgetSummary.disbursement_percentage ?? (executiveData.budgetSummary.total_allocated > 0 ? (executiveData.budgetSummary.total_spent / executiveData.budgetSummary.total_allocated) * 100 : 0)).toFixed(2)}%
+                            </p>
+                            <span className="text-xs text-purple-200 font-medium">ของงบที่มี</span>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="mt-2.5 w-full bg-white/20 rounded-full h-2 overflow-hidden">
+                            <div
+                                className="bg-gradient-to-r from-emerald-400 to-teal-300 h-2 rounded-full transition-all duration-500"
+                                style={{
+                                    width: `${Math.min(100, Math.max(0, Number(executiveData.budgetSummary.disbursement_percentage ?? 0)))}%`
+                                }}
+                            />
+                        </div>
+                        <div className="mt-1.5 flex items-center justify-between text-[10px] text-purple-200">
+                            <span>คงเหลือ {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(executiveData.budgetSummary.remaining_budget ?? Math.max(0, (executiveData.budgetSummary.total_allocated || 0) - (executiveData.budgetSummary.total_spent || 0)))}</span>
+                            <span>({Number(executiveData.budgetSummary.remaining_percentage ?? (executiveData.budgetSummary.total_allocated > 0 ? (Math.max(0, (executiveData.budgetSummary.total_allocated - executiveData.budgetSummary.total_spent)) / executiveData.budgetSummary.total_allocated) * 100 : 0)).toFixed(1)}%)</span>
+                        </div>
                     </div>
                 </div>
 
@@ -15957,62 +16009,77 @@ ${itemsListText}
                                         <th className="px-6 py-3.5">อนุมัติแล้ว</th>
                                         <th className="px-6 py-3.5">งบประมาณเสนอขอ</th>
                                         <th className="px-6 py-3.5">เบิกจ่ายจริงแล้ว</th>
+                                        <th className="px-6 py-3.5 text-right">% เบิกจ่าย</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-purple-100 text-sm">
-                                    {(executiveData.divisionTreeMetrics || []).map((mainDiv) => (
-                                        <div key={`main-group-${mainDiv.id}`} className="contents">
-                                            {/* Main Division Header Row */}
-                                            <tr className="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-950 text-white font-bold">
-                                                <td className="px-6 py-3.5 text-base flex items-center gap-2">
-                                                    <span>🏛️</span>
-                                                    <span>{mainDiv.name}</span>
-                                                </td>
-                                                <td className="px-6 py-3.5 font-bold">{mainDiv.total_projects} โครงการ</td>
-                                                <td className="px-6 py-3.5 font-bold text-emerald-300">{mainDiv.approved_projects} โครงการ</td>
-                                                <td className="px-6 py-3.5 font-bold">
-                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(mainDiv.total_estimated_budget)}
-                                                </td>
-                                                <td className="px-6 py-3.5 font-bold text-emerald-200">
-                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(mainDiv.total_spent_budget)}
-                                                </td>
-                                            </tr>
+                                    {(executiveData.divisionTreeMetrics || []).map((mainDiv) => {
+                                        const mainDivPct = Number(mainDiv.disbursement_percentage ?? (mainDiv.total_estimated_budget > 0 ? (mainDiv.total_spent_budget / mainDiv.total_estimated_budget) * 100 : 0)).toFixed(2);
+                                        return (
+                                            <div key={`main-group-${mainDiv.id}`} className="contents">
+                                                {/* Main Division Header Row */}
+                                                <tr className="bg-gradient-to-r from-purple-900 via-purple-800 to-indigo-950 text-white font-bold">
+                                                    <td className="px-6 py-3.5 text-base flex items-center gap-2">
+                                                        <span>🏛️</span>
+                                                        <span>{mainDiv.name}</span>
+                                                    </td>
+                                                    <td className="px-6 py-3.5 font-bold">{mainDiv.total_projects} โครงการ</td>
+                                                    <td className="px-6 py-3.5 font-bold text-emerald-300">{mainDiv.approved_projects} โครงการ</td>
+                                                    <td className="px-6 py-3.5 font-bold">
+                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(mainDiv.total_estimated_budget)}
+                                                    </td>
+                                                    <td className="px-6 py-3.5 font-bold text-emerald-200">
+                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(mainDiv.total_spent_budget)}
+                                                    </td>
+                                                    <td className="px-6 py-3.5 font-black text-right text-emerald-300">
+                                                        <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                                                            {mainDivPct}%
+                                                        </span>
+                                                    </td>
+                                                </tr>
 
-                                            {/* Sub-work units under this main division */}
-                                            {mainDiv.children && mainDiv.children.map((sub) => {
-                                                const isOffice = String(sub.id).includes('main');
-                                                const hasProjects = (sub.total_projects || 0) > 0;
-                                                return (
-                                                    <tr key={`sub-${sub.id}`} className={`transition-colors ${hasProjects ? 'bg-purple-50/20 hover:bg-purple-50/50' : 'hover:bg-slate-50/50'} text-slate-800`}>
-                                                        <td className="px-6 py-3 pl-12 font-medium flex items-center gap-2">
-                                                            <span className="text-purple-400 font-mono text-xs">└─</span>
-                                                            {isOffice && <span className="text-sm">🏢</span>}
-                                                            <span className={hasProjects ? 'font-bold text-purple-950' : 'text-slate-700'}>
-                                                                {sub.name}
-                                                            </span>
-                                                            {isOffice && (
-                                                                <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-bold">
-                                                                    ระดับฝ่าย
+                                                {/* Sub-work units under this main division */}
+                                                {mainDiv.children && mainDiv.children.map((sub) => {
+                                                    const isOffice = String(sub.id).includes('main');
+                                                    const hasProjects = (sub.total_projects || 0) > 0;
+                                                    const subPct = Number(sub.disbursement_percentage ?? (sub.total_estimated_budget > 0 ? (sub.total_spent_budget / sub.total_estimated_budget) * 100 : 0)).toFixed(2);
+                                                    return (
+                                                        <tr key={`sub-${sub.id}`} className={`transition-colors ${hasProjects ? 'bg-purple-50/20 hover:bg-purple-50/50' : 'hover:bg-slate-50/50'} text-slate-800`}>
+                                                            <td className="px-6 py-3 pl-12 font-medium flex items-center gap-2">
+                                                                <span className="text-purple-400 font-mono text-xs">└─</span>
+                                                                {isOffice && <span className="text-sm">🏢</span>}
+                                                                <span className={hasProjects ? 'font-bold text-purple-950' : 'text-slate-700'}>
+                                                                    {sub.name}
                                                                 </span>
-                                                            )}
-                                                        </td>
-                                                        <td className={`px-6 py-3 ${hasProjects ? 'font-black text-purple-950' : 'text-slate-500'}`}>
-                                                            {sub.total_projects} โครงการ
-                                                        </td>
-                                                        <td className={`px-6 py-3 ${sub.approved_projects > 0 ? 'font-bold text-emerald-700' : 'text-slate-400'}`}>
-                                                            {sub.approved_projects} โครงการ
-                                                        </td>
-                                                        <td className={`px-6 py-3 ${sub.total_estimated_budget > 0 ? 'font-mono font-bold text-slate-900' : 'font-mono text-slate-400'}`}>
-                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_estimated_budget)}
-                                                        </td>
-                                                        <td className={`px-6 py-3 ${sub.total_spent_budget > 0 ? 'font-mono font-bold text-emerald-700' : 'font-mono text-slate-400'}`}>
-                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_spent_budget)}
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </div>
-                                    ))}
+                                                                {isOffice && (
+                                                                    <span className="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-[10px] font-bold">
+                                                                        ระดับฝ่าย
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className={`px-6 py-3 ${hasProjects ? 'font-black text-purple-950' : 'text-slate-500'}`}>
+                                                                {sub.total_projects} โครงการ
+                                                            </td>
+                                                            <td className={`px-6 py-3 ${sub.approved_projects > 0 ? 'font-bold text-emerald-700' : 'text-slate-400'}`}>
+                                                                {sub.approved_projects} โครงการ
+                                                            </td>
+                                                            <td className={`px-6 py-3 ${sub.total_estimated_budget > 0 ? 'font-mono font-bold text-slate-900' : 'font-mono text-slate-400'}`}>
+                                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_estimated_budget)}
+                                                            </td>
+                                                            <td className={`px-6 py-3 ${sub.total_spent_budget > 0 ? 'font-mono font-bold text-emerald-700' : 'font-mono text-slate-400'}`}>
+                                                                {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(sub.total_spent_budget)}
+                                                            </td>
+                                                            <td className="px-6 py-3 text-right">
+                                                                <span className={`font-mono text-xs font-bold ${Number(subPct) > 0 ? 'text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded' : 'text-slate-400'}`}>
+                                                                    {subPct}%
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>

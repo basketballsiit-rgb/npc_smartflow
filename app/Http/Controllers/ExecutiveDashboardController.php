@@ -31,10 +31,25 @@ class ExecutiveDashboardController extends Controller
         });
 
         // 2. Budget comparison summary
+        $execTotalAllocated = (float) Budget::sum('allocated_amount');
+        if ($execTotalAllocated <= 0) {
+            $execTotalAllocated = (float) Project::whereIn('status', ['approved', 'budget_approved', 'completed', 'in_progress'])->sum('allocated_budget');
+        }
+        $execTotalEncumbered = (float) Budget::sum('encumbered_amount');
+        $execTotalSpent = (float) Budget::sum('spent_amount');
+        $execDisbursementRate = $execTotalAllocated > 0 ? round(($execTotalSpent / $execTotalAllocated) * 100, 2) : 0.00;
+        $execEncumbranceRate = $execTotalAllocated > 0 ? round(($execTotalEncumbered / $execTotalAllocated) * 100, 2) : 0.00;
+        $execRemainingBudget = max(0, $execTotalAllocated - $execTotalSpent);
+        $execRemainingRate = $execTotalAllocated > 0 ? round(($execRemainingBudget / $execTotalAllocated) * 100, 2) : 0.00;
+
         $budgetSummary = [
-            'total_allocated' => Budget::sum('allocated_amount'),
-            'total_encumbered' => Budget::sum('encumbered_amount'),
-            'total_spent' => Budget::sum('spent_amount'),
+            'total_allocated' => $execTotalAllocated,
+            'total_encumbered' => $execTotalEncumbered,
+            'total_spent' => $execTotalSpent,
+            'remaining_budget' => $execRemainingBudget,
+            'disbursement_percentage' => $execDisbursementRate,
+            'encumbrance_percentage' => $execEncumbranceRate,
+            'remaining_percentage' => $execRemainingRate,
         ];
 
         // 3. Completed projects list (approved projects with survey response counts)

@@ -553,6 +553,7 @@ class DashboardController extends Controller
                         $q->where('department_id', $mainDept->id);
                     })->sum('spent_amount');
 
+                    $dDisbursementRate = $dEstimated > 0 ? round(($dSpent / $dEstimated) * 100, 2) : 0.00;
                     $childrenMetrics[] = [
                         'id' => $mainDept->id . '_main',
                         'name' => 'โครงการระดับฝ่าย / สำนักงาน' . $mainDept->name,
@@ -560,6 +561,7 @@ class DashboardController extends Controller
                         'approved_projects' => $dApproved,
                         'total_estimated_budget' => $dEstimated,
                         'total_spent_budget' => $dSpent,
+                        'disbursement_percentage' => $dDisbursementRate,
                     ];
                 }
 
@@ -571,6 +573,7 @@ class DashboardController extends Controller
                     $cSpent = (float)Budget::whereHas('project', function ($q) use ($child) {
                         $q->where('department_id', $child->id);
                     })->sum('spent_amount');
+                    $cDisbursementRate = $cEstimated > 0 ? round(($cSpent / $cEstimated) * 100, 2) : 0.00;
 
                     $childrenMetrics[] = [
                         'id' => $child->id,
@@ -579,9 +582,11 @@ class DashboardController extends Controller
                         'approved_projects' => $cApproved,
                         'total_estimated_budget' => $cEstimated,
                         'total_spent_budget' => $cSpent,
+                        'disbursement_percentage' => $cDisbursementRate,
                     ];
                 }
 
+                $mainDisbursementRate = $totalEstimated > 0 ? round(($totalSpent / $totalEstimated) * 100, 2) : 0.00;
                 $divisionTreeMetrics[] = [
                     'id' => $mainDept->id,
                     'name' => $mainDept->name,
@@ -590,6 +595,7 @@ class DashboardController extends Controller
                     'approved_projects' => $approvedProjects,
                     'total_estimated_budget' => $totalEstimated,
                     'total_spent_budget' => $totalSpent,
+                    'disbursement_percentage' => $mainDisbursementRate,
                     'children' => $childrenMetrics,
                 ];
             }
@@ -623,13 +629,28 @@ class DashboardController extends Controller
                     ];
                 });
 
+            $execTotalAllocated = (float)Budget::sum('allocated_amount');
+            if ($execTotalAllocated <= 0) {
+                $execTotalAllocated = (float)Project::whereIn('status', ['approved', 'budget_approved', 'completed', 'in_progress'])->sum('allocated_budget');
+            }
+            $execTotalEncumbered = (float)Budget::sum('encumbered_amount');
+            $execTotalSpent = (float)Budget::sum('spent_amount');
+            $execDisbursementRate = $execTotalAllocated > 0 ? round(($execTotalSpent / $execTotalAllocated) * 100, 2) : 0.00;
+            $execEncumbranceRate = $execTotalAllocated > 0 ? round(($execTotalEncumbered / $execTotalAllocated) * 100, 2) : 0.00;
+            $execRemainingBudget = max(0, $execTotalAllocated - $execTotalSpent);
+            $execRemainingRate = $execTotalAllocated > 0 ? round(($execRemainingBudget / $execTotalAllocated) * 100, 2) : 0.00;
+
             $data['executiveData'] = [
                 'divisionTreeMetrics' => $divisionTreeMetrics,
                 'departmentMetrics' => $flatDepartmentMetrics,
                 'budgetSummary' => [
-                    'total_allocated' => Budget::sum('allocated_amount'),
-                    'total_encumbered' => Budget::sum('encumbered_amount'),
-                    'total_spent' => Budget::sum('spent_amount'),
+                    'total_allocated' => $execTotalAllocated,
+                    'total_encumbered' => $execTotalEncumbered,
+                    'total_spent' => $execTotalSpent,
+                    'remaining_budget' => $execRemainingBudget,
+                    'disbursement_percentage' => $execDisbursementRate,
+                    'encumbrance_percentage' => $execEncumbranceRate,
+                    'remaining_percentage' => $execRemainingRate,
                 ],
                 'completedProjects' => $completedProjects,
             ];
