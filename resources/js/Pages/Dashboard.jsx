@@ -10579,44 +10579,53 @@ ${itemsListText}
                         aside, nav, header, footer, .no-print, [role="navigation"], button, .no-print * {
                             display: none !important;
                         }
-                        #app, .min-h-screen, .flex-1, main, .w-full, .max-w-\\[100rem\\] {
+                        #app, .min-h-screen, .flex-1, main, .w-full, .max-w-\\[100rem\\], .space-y-6 {
                             display: block !important;
                             width: 100% !important;
                             max-width: 100% !important;
-                            min-width: 0 !important;
+                            min-width: 100% !important;
                             margin: 0 !important;
                             padding: 0 !important;
                             border: none !important;
                             box-shadow: none !important;
                         }
+                        main {
+                            padding: 0 !important;
+                            margin: 0 !important;
+                            width: 100% !important;
+                            max-width: 100% !important;
+                        }
                         .print-area {
+                            display: block !important;
                             position: static !important;
                             width: 100% !important;
                             max-width: 100% !important;
-                            min-width: 0 !important;
+                            min-width: 100% !important;
                             margin: 0 !important;
                             padding: 0 !important;
                             border: none !important;
                             box-shadow: none !important;
+                            border-radius: 0 !important;
                             background: white !important;
                         }
                         .action-plan-table-wrapper {
                             overflow: visible !important;
                             width: 100% !important;
                             max-width: 100% !important;
-                            min-width: 0 !important;
-                            border: none !important;
+                            min-width: 100% !important;
+                            border: 0.5pt solid black !important;
+                            border-radius: 0 !important;
                             box-shadow: none !important;
                             padding: 0 !important;
                             margin: 0 !important;
                         }
                         table.action-plan-table {
-                            min-width: 0 !important;
+                            min-width: 100% !important;
                             width: 100% !important;
                             max-width: 100% !important;
                             table-layout: fixed !important;
-                            font-size: 5.5pt !important;
-                            line-height: 1.15 !important;
+                            font-size: 7.2pt !important;
+                            line-height: 1.25 !important;
                             border-collapse: collapse !important;
                             border: 0.5pt solid black !important;
                         }
@@ -10633,40 +10642,42 @@ ${itemsListText}
                         table.action-plan-table th,
                         table.action-plan-table td {
                             border: 0.5pt solid black !important;
-                            padding: 1.5px 1px !important;
+                            padding: 2.5px 2px !important;
                             word-break: break-word !important;
                             box-sizing: border-box !important;
                         }
                         table.action-plan-table th {
-                            font-size: 5.5pt !important;
+                            font-size: 7.2pt !important;
                             font-weight: bold !important;
                             background-color: #f1f5f9 !important;
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
-                            line-height: 1.1 !important;
+                            line-height: 1.15 !important;
                             text-align: center !important;
                         }
                         table.action-plan-table td {
-                            font-size: 5.5pt !important;
+                            font-size: 7.2pt !important;
                         }
                         table.action-plan-table td.font-mono,
                         table.action-plan-table td[class*="font-mono"] {
                             font-family: 'Sarabun', 'TH Sarabun New', monospace, sans-serif !important;
-                            font-size: 5.2pt !important;
-                            letter-spacing: -0.25px !important;
+                            font-size: 7pt !important;
+                            letter-spacing: -0.2px !important;
                             white-space: nowrap !important;
-                            padding: 1.5px 0.5px !important;
+                            padding: 2px 1.5px !important;
                         }
                         .print-sheet-header h3 {
-                            font-size: 11pt !important;
+                            font-size: 13.5pt !important;
+                            font-weight: bold !important;
                             margin-bottom: 2px !important;
                         }
                         .print-sheet-header h4 {
-                            font-size: 8.5pt !important;
+                            font-size: 10.5pt !important;
+                            font-weight: bold !important;
                             margin-top: 0 !important;
                         }
                         .print-sheet-header div {
-                            font-size: 6.5pt !important;
+                            font-size: 8pt !important;
                         }
                     }
                 `}} />
@@ -10707,23 +10718,23 @@ ${itemsListText}
                     </div>
 
                     {/* 14-Column Table Container */}
-                    <div className="overflow-x-auto border border-slate-400 rounded-xl max-w-full shadow-2xs action-plan-table-wrapper">
-                        <table className="w-full border-collapse text-[11px] text-slate-800 min-w-[1280px] table-fixed action-plan-table">
+                    <div className="overflow-x-auto border border-slate-400 rounded-xl max-w-full shadow-2xs action-plan-table-wrapper" style={{ width: '100%', minWidth: '100%' }}>
+                        <table className="w-full border-collapse text-[11px] text-slate-800 min-w-[1100px] table-fixed action-plan-table print:min-w-full print:w-full" style={{ width: '100%', minWidth: '100%', tableLayout: 'fixed' }}>
                             <colgroup>
-                                <col style={{ width: '21%' }} />
-                                <col style={{ width: '7%' }} />
-                                <col style={{ width: '5.7%' }} />
-                                <col style={{ width: '5.7%' }} />
-                                <col style={{ width: '6%' }} />
-                                <col style={{ width: '6%' }} />
-                                <col style={{ width: '5.7%' }} />
-                                <col style={{ width: '6%' }} />
-                                <col style={{ width: '6%' }} />
-                                <col style={{ width: '5.7%' }} />
-                                <col style={{ width: '5.7%' }} />
-                                <col style={{ width: '5.7%' }} />
-                                <col style={{ width: '6%' }} />
-                                <col style={{ width: '7.8%' }} />
+                                <col style={{ width: '21.4%' }} />
+                                <col style={{ width: '7.2%' }} />
+                                <col style={{ width: '5.6%' }} />
+                                <col style={{ width: '5.6%' }} />
+                                <col style={{ width: '6.1%' }} />
+                                <col style={{ width: '6.1%' }} />
+                                <col style={{ width: '5.6%' }} />
+                                <col style={{ width: '6.1%' }} />
+                                <col style={{ width: '6.1%' }} />
+                                <col style={{ width: '5.6%' }} />
+                                <col style={{ width: '5.6%' }} />
+                                <col style={{ width: '5.6%' }} />
+                                <col style={{ width: '5.8%' }} />
+                                <col style={{ width: '7.6%' }} />
                             </colgroup>
                             <thead>
                                 {/* Header Row 1 */}
