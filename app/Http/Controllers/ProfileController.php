@@ -182,6 +182,10 @@ class ProfileController extends Controller
             $user->save();
         }
 
+        if ($request->header('X-Inertia')) {
+            return Redirect::back()->with('message', 'บันทึกข้อมูลภาระงานและหน้าที่ความรับผิดชอบเรียบร้อยแล้ว');
+        }
+
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,

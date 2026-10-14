@@ -28,7 +28,18 @@ export default function UpdateProfileInformation({
 
     const submit = (e) => {
         e.preventDefault();
-        patch(route('profile.update'));
+        patch(route('profile.update'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: 'บันทึกสำเร็จ!',
+                    text: 'บันทึกข้อมูลผู้ใช้งานทั่วไปเรียบร้อยแล้ว',
+                    icon: 'success',
+                    confirmButtonColor: '#7c3aed',
+                    confirmButtonText: 'ตกลง',
+                });
+            },
+        });
     };
 
     // ── 2. Positions & Duties State ──
@@ -200,10 +211,11 @@ export default function UpdateProfileInformation({
                 onFinish: () => setIsSavingPositions(false),
                 onSuccess: () => {
                     Swal.fire({
-                        title: 'สำเร็จ!',
-                        text: 'บันทึกข้อมูลฝ่ายและภาระงานทั้งหมดเรียบร้อยแล้ว',
+                        title: 'บันทึกสำเร็จ!',
+                        text: 'บันทึกข้อมูลฝ่ายและหน้าที่ความรับผิดชอบเรียบร้อยแล้ว',
                         icon: 'success',
                         confirmButtonColor: '#7c3aed',
+                        confirmButtonText: 'ตกลง',
                     });
                 },
                 onError: (err) => {

@@ -80,29 +80,36 @@ class KeycloakController extends Controller
                 // อัปเดตข้อมูลล่าสุดจาก npcjob ทุกครั้งที่ login
                 $updateData = ['name' => $name];
 
-                if ($department) {
-                    $updateData['department_id'] = $department->id;
-                }
-                $resolvedPosition = $this->resolvePosition($npcjobProfile);
-                if ($resolvedPosition) {
-                    $updateData['position'] = $resolvedPosition;
-                }
+                // ตรวจสอบว่าผู้ใช้มีการตั้งค่าภาระงาน/หน้าที่ (duty) ใน SmartFlow แล้วหรือไม่
+                $hasSmartFlowDuties = $user->userPositions()->whereNotNull('duty')->exists();
 
-                // อัปเดต Role ตามตำแหน่งจาก npcjob (ถ้าไม่ใช่ admin)
-                if (!$user->isAdmin()) {
-                    $resolvedRole = $this->resolveRole($npcjobProfile, $user);
-                    if ($resolvedRole) {
-                        $updateData['role_id'] = $resolvedRole->id;
+                if (!$hasSmartFlowDuties) {
+                    if ($department) {
+                        $updateData['department_id'] = $department->id;
+                    }
+                    $resolvedPosition = $this->resolvePosition($npcjobProfile);
+                    if ($resolvedPosition) {
+                        $updateData['position'] = $resolvedPosition;
+                    }
+
+                    // อัปเดต Role ตามตำแหน่งจาก npcjob (ถ้าไม่ใช่ admin และยังไม่มีการกำหนดหน้าที่ใน SmartFlow)
+                    if (!$user->isAdmin()) {
+                        $resolvedRole = $this->resolveRole($npcjobProfile, $user);
+                        if ($resolvedRole) {
+                            $updateData['role_id'] = $resolvedRole->id;
+                        }
                     }
                 }
 
                 $user->update($updateData);
 
-                Log::info("Keycloak SSO: อัปเดตข้อมูล [{$email}] ฝ่าย: " . ($npcjobProfile['department_name'] ?? '-') . " ตำแหน่ง: " . ($resolvedPosition ?? '-'));
+                Log::info("Keycloak SSO: อัปเดตข้อมูล [{$email}] ฝ่าย: " . ($user->department?->name ?? '-') . " ตำแหน่ง: " . ($user->position ?? '-'));
             }
 
-            // 5.5 Sync ตำแหน่งทั้งหมดจาก npcjob → user_positions
-            $this->syncUserPositions($user, $npcjobProfile);
+            // 5.5 Sync ตำแหน่งทั้งหมดจาก npcjob → user_positions (เฉพาะเมื่อยังไม่มีการกำหนดหน้าที่ใน SmartFlow)
+            if (!$user->userPositions()->whereNotNull('duty')->exists()) {
+                $this->syncUserPositions($user, $npcjobProfile);
+            }
 
             // 5.6 ตรวจสอบและดึงข้อมูล Line User ID จากระบบ npc_eleve มาบันทึกใน SmartFlow (ถ้ายังไม่มี)
             if (empty($user->line_user_id)) {
@@ -345,6 +352,11 @@ class KeycloakController extends Controller
      */
     private function syncUserPositions(User $user, array $npcjobProfile): void
     {
+        // หากผู้ใช้มีการกำหนดภาระงาน/หน้าที่ (duty) ใน SmartFlow แล้ว จะไม่ลบหรือเขียนทับเด็ดขาด
+        if ($user->userPositions()->whereNotNull('duty')->exists()) {
+            return;
+        }
+
         $allPositions = $npcjobProfile['all_positions'] ?? [];
 
         if (empty($allPositions)) {

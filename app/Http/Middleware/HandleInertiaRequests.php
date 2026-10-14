@@ -78,7 +78,7 @@ class HandleInertiaRequests extends Middleware
                     'has_citizen_id'  => $hasCitizenId,
                     'has_signature'   => $hasSignature,
                     'signature_data'  => $signatureData,
-                    'has_set_positions' => $user->userPositions()->exists(),
+                    'has_set_positions' => $user->userPositions()->whereNotNull('duty')->exists(),
                     'department_name' => $user->department?->name,
                     'department_id'   => $user->department_id,
                     'role'            => $user->role?->name,
