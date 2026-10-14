@@ -988,6 +988,31 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
+                        {/* เมนูหลักแยกอิสระ: งบเฉพาะกิจโครงการ (Dedicated / Special Project Budgets) */}
+                        {(isPlanStaff || isAdmin || isExecutive || isFinanceStaff) && (
+                        <div className="pt-2">
+                            <Link
+                                href={route('dashboard', { tab: 'special_project_budgets' })}
+                                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all border ${
+                                    url.includes('tab=special_project_budgets')
+                                        ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white border-amber-300 shadow-md shadow-amber-500/30 ring-2 ring-amber-300/40'
+                                        : 'bg-white/5 hover:bg-white/10 text-amber-200 hover:text-white border-amber-400/20'
+                                }`}
+                                title="ระบบทะเบียนคุมงบเฉพาะสำหรับโครงการ (จัดสรรเฉพาะกิจจากส่วนกลาง/ภายนอก)"
+                            >
+                                <div className="flex items-center gap-x-2">
+                                    <span className="text-base">💼</span>
+                                    {isSidebarOpen && <span>งบเฉพาะกิจโครงการ</span>}
+                                </div>
+                                {isSidebarOpen && (
+                                    <span className="text-[10px] bg-amber-400/20 text-amber-200 border border-amber-400/30 px-2 py-0.5 rounded-full font-semibold">
+                                        ส่วนกลาง
+                                    </span>
+                                )}
+                            </Link>
+                        </div>
+                        )}
+
                         {/* 7. EXECUTIVE HUB (สำหรับ ผอ., รอง ผอ. 4 ฝ่าย และ Admin) */}
                         {(isExecutive || isAdmin) && (
                         <div className="pt-2 space-y-1">
@@ -1374,6 +1399,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </Link>
                                         <Link href={route('admin.routine_budgets.index', { from: 'plan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>📋</span> จัดสรรงบดำเนินงานประจำปี
+                                        </Link>
+                                        <Link href={route('dashboard', { tab: 'special_project_budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold border border-amber-400/20">
+                                            <span className="flex items-center gap-2"><span>💼</span> งบเฉพาะกิจโครงการ</span>
+                                            <span className="text-[9px] bg-amber-400/20 px-1.5 py-0.5 rounded text-amber-200">ส่วนกลาง</span>
                                         </Link>
                                     </div>
                                 )}

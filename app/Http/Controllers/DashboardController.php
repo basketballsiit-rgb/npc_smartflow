@@ -94,6 +94,17 @@ class DashboardController extends Controller
             $data['centralAllocations'] = [];
         }
 
+        // Fetch special project budgets (Dedicated/Special Project Budgets from Central/External)
+        $data['specialProjectBudgets'] = \App\Models\SpecialProjectBudget::with(['project.user', 'project.department', 'creator'])
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                if ($item->project) {
+                    $item->spent_amount = (float)($item->project->spent_amount ?: ($item->project->budget?->spent_amount ?? $item->spent_amount));
+                }
+                return $item;
+            });
+
         // Global Funding Sources & Channel Progress for Plan Head & Finance
         $fundingSources = FundingSource::orderBy('id', 'asc')->get();
         $fundingChannelProgress = [];

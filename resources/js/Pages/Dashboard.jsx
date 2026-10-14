@@ -28,6 +28,7 @@ export default function Dashboard({
     allVendors = [],
     allFundingSources = [],
     centralAllocations = [],
+    specialProjectBudgets = [],
     fundingChannelProgress = [],
     advancePayments = [],
     allTravelLoans = [],
@@ -465,6 +466,7 @@ export default function Dashboard({
         committee_comment: 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว',
         committee_feedback: '',
         budget_adjustment_reason: '',
+        special_project_budget_id: '',
     });
 
     // Quick Preliminary Proposal Modal for Teachers / Proposers
@@ -2807,6 +2809,119 @@ export default function Dashboard({
     const [selectedDetailItem, setSelectedDetailItem] = useState(null);
     const [selectedProjectQuickView, setSelectedProjectQuickView] = useState(null);
 
+    // Special Project Budgets States & Handlers
+    const [specialBudgetYearFilter, setSpecialBudgetYearFilter] = useState('all');
+    const [specialBudgetSearch, setSpecialBudgetSearch] = useState('');
+    const [isSpecialBudgetModalOpen, setIsSpecialBudgetModalOpen] = useState(false);
+    const [editingSpecialBudget, setEditingSpecialBudget] = useState(null);
+    const {
+        data: specialBudgetFormData,
+        setData: setSpecialBudgetFormData,
+        post: postSpecialBudget,
+        put: putSpecialBudget,
+        reset: resetSpecialBudget,
+        processing: isSavingSpecialBudget,
+        errors: specialBudgetErrors
+    } = useForm({
+        fiscal_year: fiscalYear || '2569',
+        document_number: '',
+        document_date: new Date().toISOString().split('T')[0],
+        agency_name: 'สำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)',
+        title: '',
+        allocated_amount: '',
+        project_id: '',
+        description: '',
+    });
+
+    const handleOpenAddSpecialBudget = () => {
+        setEditingSpecialBudget(null);
+        setSpecialBudgetFormData({
+            fiscal_year: fiscalYear || '2569',
+            document_number: '',
+            document_date: new Date().toISOString().split('T')[0],
+            agency_name: 'สำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)',
+            title: '',
+            allocated_amount: '',
+            project_id: '',
+            description: '',
+        });
+        setIsSpecialBudgetModalOpen(true);
+    };
+
+    const handleOpenEditSpecialBudget = (item) => {
+        setEditingSpecialBudget(item);
+        setSpecialBudgetFormData({
+            fiscal_year: item.fiscal_year || fiscalYear || '2569',
+            document_number: item.document_number || '',
+            document_date: item.document_date ? item.document_date.split('T')[0] : '',
+            agency_name: item.agency_name || '',
+            title: item.title || '',
+            allocated_amount: item.allocated_amount || '',
+            project_id: item.project_id || '',
+            description: item.description || '',
+        });
+        setIsSpecialBudgetModalOpen(true);
+    };
+
+    const handleSpecialBudgetSubmit = (e) => {
+        e.preventDefault();
+        if (editingSpecialBudget) {
+            putSpecialBudget(route('admin.special_project_budgets.update', editingSpecialBudget.id), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsSpecialBudgetModalOpen(false);
+                    setEditingSpecialBudget(null);
+                    Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: 'แก้ไขข้อมูลงบเฉพาะกิจโครงการเรียบร้อยแล้ว',
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed',
+                    });
+                }
+            });
+        } else {
+            postSpecialBudget(route('admin.special_project_budgets.store'), {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsSpecialBudgetModalOpen(false);
+                    Swal.fire({
+                        title: 'สำเร็จ!',
+                        text: 'ลงทะเบียนรับงบเฉพาะกิจโครงการเรียบร้อยแล้ว',
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed',
+                    });
+                }
+            });
+        }
+    };
+
+    const handleSpecialBudgetDelete = (item) => {
+        Swal.fire({
+            title: 'ยืนยันการลบงบเฉพาะกิจ?',
+            text: `ต้องการลบรายการ "${item.title}" (เลขที่หนังสือ: ${item.document_number}) ใช่หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'ใช่, ลบรายการ',
+            cancelButtonText: 'ยกเลิก',
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.delete(route('admin.special_project_budgets.destroy', item.id), {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: 'ลบสำเร็จ!',
+                            text: 'ลบรายการงบเฉพาะกิจโครงการเรียบร้อยแล้ว',
+                            icon: 'success',
+                            confirmButtonColor: '#7c3aed',
+                        });
+                    }
+                });
+            }
+        });
+    };
+
     // All Projects Master Tracking Filter States
     
     // Document & Loan Tracking States
@@ -3465,6 +3580,7 @@ export default function Dashboard({
             committee_comment: p.committee_comment || 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว',
             committee_feedback: p.committee_feedback || '',
             budget_adjustment_reason: p.budget_adjustment_reason || '',
+            special_project_budget_id: p.special_project_budget_id || '',
         });
         setIsCommitteeModalOpen(true);
     };
@@ -14310,6 +14426,490 @@ ${itemsListText}
         );
     };
 
+    // Special Project Budgets Tab (งบเฉพาะกิจโครงการจากส่วนกลาง/ภายนอก)
+    const renderSpecialProjectBudgetsTab = () => {
+        const items = Array.isArray(specialProjectBudgets) ? specialProjectBudgets : [];
+        const currentYearStr = String(fiscalYear || '2569');
+
+        // Extract all fiscal years
+        const availableYears = Array.from(new Set([
+            currentYearStr,
+            ...items.map(i => String(i.fiscal_year || ''))
+        ])).filter(Boolean).sort().reverse();
+
+        // Filter items
+        const filteredItems = items.filter(item => {
+            if (specialBudgetYearFilter !== 'all' && String(item.fiscal_year) !== String(specialBudgetYearFilter)) {
+                return false;
+            }
+            if (specialBudgetSearch.trim()) {
+                const q = specialBudgetSearch.toLowerCase();
+                const title = (item.title || '').toLowerCase();
+                const docNum = (item.document_number || '').toLowerCase();
+                const agency = (item.agency_name || '').toLowerCase();
+                const projName = (item.project?.name || '').toLowerCase();
+                const projCode = (item.project?.code || '').toLowerCase();
+                return title.includes(q) || docNum.includes(q) || agency.includes(q) || projName.includes(q) || projCode.includes(q);
+            }
+            return true;
+        });
+
+        // Totals
+        const totalAllocated = filteredItems.reduce((sum, i) => sum + (parseFloat(i.allocated_amount) || 0), 0);
+        const totalSpent = filteredItems.reduce((sum, i) => {
+            const sp = parseFloat(i.spent_amount) || (i.project?.spent_amount ? parseFloat(i.project.spent_amount) : (i.project?.budget?.spent_amount ? parseFloat(i.project.budget.spent_amount) : 0));
+            return sum + sp;
+        }, 0);
+        const totalRemaining = totalAllocated - totalSpent;
+        const linkedCount = filteredItems.filter(i => i.project_id || i.project).length;
+        const totalItemsCount = filteredItems.length;
+        const overallSpentPct = totalAllocated > 0 ? Math.min(100, (totalSpent / totalAllocated) * 100).toFixed(1) : '0';
+
+        return (
+            <div className="space-y-6 font-sans">
+                {/* Header Banner */}
+                <div className="rounded-3xl border border-amber-200/70 bg-gradient-to-r from-amber-500/10 via-amber-50/50 to-orange-500/10 p-6 sm:p-8 backdrop-blur-md relative overflow-hidden shadow-sm">
+                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div className="space-y-2">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold shadow-xs">
+                                <span>🏛️ ส่วนกลาง / งบอุดหนุนเฉพาะกิจ</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                <span>แผนงานและงบประมาณ</span>
+                            </div>
+                            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+                                <span>💼 ทะเบียนคุมงบเฉพาะกิจโครงการ</span>
+                                <span className="text-xs px-2.5 py-1 rounded-lg bg-white border border-amber-200 text-amber-800 font-bold shadow-xs">
+                                    ปีงบ {specialBudgetYearFilter === 'all' ? 'ทั้งหมด' : specialBudgetYearFilter}
+                                </span>
+                            </h2>
+                            <p className="text-slate-600 text-xs sm:text-sm max-w-3xl leading-relaxed">
+                                บันทึกและควบคุมงบประมาณที่ได้รับจัดสรรเฉพาะกิจหรือเงินอุดหนุนภายนอกจากส่วนกลาง (เช่น สอศ., กสศ., หน่วยงานภาครัฐ/เอกชน) 
+                                เพื่อใช้สำหรับดำเนินโครงการที่ระบุไว้โดยตรง ไม่ปะปนกับงบดำเนินงานปกติของสถานศึกษา
+                            </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            {isPlanStaff && (
+                                <button
+                                    type="button"
+                                    onClick={handleOpenAddSpecialBudget}
+                                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition cursor-pointer"
+                                >
+                                    <span>➕</span>
+                                    <span>ลงทะเบียนรับงบเฉพาะกิจ</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4 KPI Summary Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Card 1: Total Allocated */}
+                    <div className="rounded-2xl border border-amber-200 bg-white p-5 shadow-xs hover:shadow-md transition">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-slate-500">ยอดงบเฉพาะกิจที่ได้รับ</span>
+                            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-lg font-black">
+                                💰
+                            </div>
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black text-amber-950">
+                            {fmt(totalAllocated)}
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                            <span>จากส่วนกลาง/ภายนอก {totalItemsCount} รายการ</span>
+                        </div>
+                    </div>
+
+                    {/* Card 2: Linked Projects */}
+                    <div className="rounded-2xl border border-sky-200 bg-white p-5 shadow-xs hover:shadow-md transition">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-slate-500">โครงการที่ผูกเชื่อมโยง</span>
+                            <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg font-black">
+                                🎯
+                            </div>
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black text-sky-950">
+                            {linkedCount} <span className="text-xs font-bold text-slate-500">/ {totalItemsCount} รายการ</span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                            <span>{totalItemsCount - linkedCount > 0 ? `รอผูกโครงการ ${totalItemsCount - linkedCount} รายการ` : 'ผูกโครงการครบทุกรายการ'}</span>
+                        </div>
+                    </div>
+
+                    {/* Card 3: Total Spent */}
+                    <div className="rounded-2xl border border-rose-200 bg-white p-5 shadow-xs hover:shadow-md transition">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-slate-500">ยอดเบิกจ่ายสะสม</span>
+                            <div className="w-9 h-9 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center text-lg font-black">
+                                💳
+                            </div>
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black text-rose-950">
+                            {fmt(totalSpent)}
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+                            <span>เบิกจ่ายแล้ว</span>
+                            <span className="font-bold text-rose-700">{overallSpentPct}%</span>
+                        </div>
+                    </div>
+
+                    {/* Card 4: Total Remaining */}
+                    <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-xs hover:shadow-md transition">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-bold text-slate-500">งบประมาณคงเหลือพร้อมใช้</span>
+                            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg font-black">
+                                📊
+                            </div>
+                        </div>
+                        <div className="text-xl sm:text-2xl font-black text-emerald-950">
+                            {fmt(totalRemaining)}
+                        </div>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-2">
+                            <div 
+                                className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                                style={{ width: `${Math.min(100, Math.max(0, 100 - parseFloat(overallSpentPct)))}%` }}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <label className="text-xs font-bold text-slate-600 shrink-0">ปีงบประมาณ:</label>
+                        <select
+                            value={specialBudgetYearFilter}
+                            onChange={(e) => setSpecialBudgetYearFilter(e.target.value)}
+                            className="rounded-xl border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-800 focus:border-amber-500 focus:ring-amber-500"
+                        >
+                            <option value="all">ทุกปีงบประมาณ</option>
+                            {availableYears.map(yr => (
+                                <option key={yr} value={yr}>ปีงบประมาณ {yr}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="w-full sm:w-80 relative">
+                        <input
+                            type="text"
+                            value={specialBudgetSearch}
+                            onChange={(e) => setSpecialBudgetSearch(e.target.value)}
+                            placeholder="ค้นหาเลขที่หนังสือ, รายการ, หน่วยงาน..."
+                            className="w-full rounded-xl border-slate-300 pl-9 pr-4 py-1.5 text-xs text-slate-800 focus:border-amber-500 focus:ring-amber-500 shadow-inner"
+                        />
+                        <span className="absolute left-3 top-2 text-slate-400 text-xs">🔍</span>
+                        {specialBudgetSearch && (
+                            <button
+                                type="button"
+                                onClick={() => setSpecialBudgetSearch('')}
+                                className="absolute right-2.5 top-2 text-slate-400 hover:text-slate-600 text-xs"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Table Register */}
+                <div className="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800 text-sm">รายการงบเฉพาะกิจโครงการ</span>
+                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
+                                {filteredItems.length} รายการ
+                            </span>
+                        </div>
+                    </div>
+
+                    {filteredItems.length === 0 ? (
+                        <div className="p-12 text-center space-y-3">
+                            <div className="text-4xl">💼</div>
+                            <h3 className="text-base font-bold text-slate-800">ไม่พบข้อมูลงบเฉพาะกิจโครงการ</h3>
+                            <p className="text-xs text-slate-500 max-w-md mx-auto">
+                                ยังไม่มีการบันทึกรายการงบเฉพาะกิจสำหรับปีงบประมาณนี้ หรือไม่มีรายการที่ตรงกับคำค้นหา
+                            </p>
+                            {isPlanStaff && (
+                                <button
+                                    type="button"
+                                    onClick={handleOpenAddSpecialBudget}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs cursor-pointer shadow-sm mt-2"
+                                >
+                                    <span>➕ ลงทะเบียนรับงบเฉพาะกิจรายการแรก</span>
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+                                    <tr>
+                                        <th className="px-4 py-3.5 text-center w-14">ลำดับ</th>
+                                        <th className="px-4 py-3.5 w-32">ปีงบ / วันที่</th>
+                                        <th className="px-4 py-3.5 w-48">เลขที่หนังสือ & หน่วยงาน</th>
+                                        <th className="px-4 py-3.5">ชื่อรายการงบเฉพาะกิจ</th>
+                                        <th className="px-4 py-3.5 w-60">โครงการที่ผูกดำเนินงาน</th>
+                                        <th className="px-4 py-3.5 text-right w-32">วงเงินจัดสรร (บาท)</th>
+                                        <th className="px-4 py-3.5 text-right w-32">เบิกจ่ายแล้ว (บาท)</th>
+                                        <th className="px-4 py-3.5 text-right w-32">คงเหลือ (บาท)</th>
+                                        {isPlanStaff && <th className="px-4 py-3.5 text-center w-24">จัดการ</th>}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                    {filteredItems.map((item, idx) => {
+                                        const spent = parseFloat(item.spent_amount) || (item.project?.spent_amount ? parseFloat(item.project.spent_amount) : (item.project?.budget?.spent_amount ? parseFloat(item.project.budget.spent_amount) : 0));
+                                        const allocated = parseFloat(item.allocated_amount) || 0;
+                                        const remaining = allocated - spent;
+                                        const pct = allocated > 0 ? Math.min(100, (spent / allocated) * 100).toFixed(1) : '0';
+
+                                        return (
+                                            <tr key={item.id} className="hover:bg-amber-50/30 transition">
+                                                <td className="px-4 py-3.5 text-center font-bold text-slate-400">
+                                                    {idx + 1}
+                                                </td>
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                    <span className="inline-block px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[11px] mb-1">
+                                                        ปี {item.fiscal_year}
+                                                    </span>
+                                                    <div className="text-[11px] text-slate-500">
+                                                        {item.document_date ? new Date(item.document_date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5">
+                                                    <div className="font-bold text-slate-900">{item.document_number}</div>
+                                                    <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                                                        <span>🏛️</span>
+                                                        <span>{item.agency_name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5">
+                                                    <div className="font-bold text-slate-900 line-clamp-2">{item.title}</div>
+                                                    {item.description && (
+                                                        <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                                                            {item.description}
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3.5">
+                                                    {item.project ? (
+                                                        <a
+                                                            href={getSecureProjectShowUrl(item.project.id)}
+                                                            className="block p-2 rounded-xl bg-slate-50 hover:bg-white border border-slate-200 hover:border-amber-300 transition group shadow-2xs"
+                                                        >
+                                                            <div className="text-[10px] font-bold text-amber-700 mb-0.5">
+                                                                {item.project.code || 'โครงการ'}
+                                                            </div>
+                                                            <div className="font-bold text-slate-900 group-hover:text-amber-800 line-clamp-2 leading-tight text-[11px]">
+                                                                {item.project.name}
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between">
+                                                                <span>{item.project.department?.name || 'ฝ่าย/แผนก'}</span>
+                                                                <span className="text-amber-600 group-hover:translate-x-0.5 transition font-bold">↗</span>
+                                                            </div>
+                                                        </a>
+                                                    ) : (
+                                                        <div className="p-2 rounded-xl border border-dashed border-slate-300 text-center bg-slate-50/50">
+                                                            <span className="text-[11px] text-slate-400 font-semibold">ยังไม่ผูกโครงการ</span>
+                                                            <p className="text-[9px] text-slate-400 mt-0.5">ผูกได้เมื่อพิจารณางบ</p>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3.5 text-right font-black text-slate-900 whitespace-nowrap">
+                                                    {fmt(allocated)}
+                                                </td>
+                                                <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                                                    <div className="font-bold text-rose-700">{fmt(spent)}</div>
+                                                    <div className="flex items-center justify-end gap-1 text-[10px] text-slate-400 mt-0.5">
+                                                        <span>เบิก {pct}%</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                                                    <div className={`font-black ${remaining >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                                        {fmt(remaining)}
+                                                    </div>
+                                                </td>
+                                                {isPlanStaff && (
+                                                    <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                                        <div className="inline-flex items-center gap-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenEditSpecialBudget(item)}
+                                                                title="แก้ไขข้อมูล"
+                                                                className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition cursor-pointer"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleSpecialBudgetDelete(item)}
+                                                                title="ลบรายการ"
+                                                                className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition cursor-pointer"
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+
+                {/* Modal: Add / Edit Special Project Budget */}
+                {isSpecialBudgetModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                        <div className="w-full max-w-xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-amber-200 my-8">
+                            <div className="flex justify-between items-center border-b border-slate-100 pb-4 mb-5">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-300 mb-1">
+                                        <span>💼 งบเฉพาะกิจโครงการ</span>
+                                    </div>
+                                    <h3 className="text-lg font-black text-slate-800">
+                                        {editingSpecialBudget ? 'แก้ไขข้อมูลงบเฉพาะกิจโครงการ' : 'ลงทะเบียนรับงบประมาณเฉพาะกิจ (จากส่วนกลาง/ภายนอก)'}
+                                    </h3>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSpecialBudgetModalOpen(false)}
+                                    className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 text-sm font-bold transition"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSpecialBudgetSubmit} className="space-y-4 text-xs font-semibold text-slate-700">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">ปีงบประมาณ *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={specialBudgetFormData.fiscal_year}
+                                            onChange={(e) => setSpecialBudgetFormData({ ...specialBudgetFormData, fiscal_year: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3.5 py-2 text-xs focus:border-amber-500 focus:ring-amber-500"
+                                            placeholder="2569"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">วันที่ตามหนังสือจัดสรร</label>
+                                        <input
+                                            type="date"
+                                            value={specialBudgetFormData.document_date}
+                                            onChange={(e) => setSpecialBudgetFormData({ ...specialBudgetFormData, document_date: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3.5 py-2 text-xs focus:border-amber-500 focus:ring-amber-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">เลขที่หนังสือสั่งการ/จัดสรร *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={specialBudgetFormData.document_number}
+                                            onChange={(e) => setSpecialBudgetFormData({ ...specialBudgetFormData, document_number: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3.5 py-2 text-xs focus:border-amber-500 focus:ring-amber-500"
+                                            placeholder="เช่น ศธ 0601/ว 1234"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">หน่วยงานผู้จัดสรรงบประมาณ *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={specialBudgetFormData.agency_name}
+                                            onChange={(e) => setSpecialBudgetFormData({ ...specialBudgetFormData, agency_name: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3.5 py-2 text-xs focus:border-amber-500 focus:ring-amber-500"
+                                            placeholder="เช่น สำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block mb-1 text-slate-800 font-bold">ชื่อรายการงบเฉพาะกิจ / วัตถุประสงค์ *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={specialBudgetFormData.title}
+                                        onChange={(e) => setSpecialBudgetFormData({ ...specialBudgetFormData, title: e.target.value })}
+                                        className="w-full rounded-xl border-slate-300 px-3.5 py-2 text-xs focus:border-amber-500 focus:ring-amber-500"
+                                        placeholder="เช่น งบเฉพาะกิจโครงการพัฒนาทักษะวิชาชีพและเทคโนโลยีขั้นสูง..."
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">วงเงินที่ได้รับจัดสรร (บาท) *</label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            required
+                                            value={specialBudgetFormData.allocated_amount}
+                                            onChange={(e) => setSpecialBudgetFormData({ ...specialBudgetFormData, allocated_amount: e.target.value })}
+                                            className="w-full rounded-xl border-amber-400 bg-amber-50/40 px-3.5 py-2 text-xs font-black text-amber-950 focus:border-amber-600 focus:ring-amber-500"
+                                            placeholder="0.00"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block mb-1 text-slate-800 font-bold">ผูกกับโครงการที่ดำเนินงาน (ถ้ามี)</label>
+                                        <select
+                                            value={specialBudgetFormData.project_id || ''}
+                                            onChange={(e) => setSpecialBudgetFormData({ ...specialBudgetFormData, project_id: e.target.value })}
+                                            className="w-full rounded-xl border-slate-300 px-3.5 py-2 text-xs focus:border-amber-500 focus:ring-amber-500"
+                                        >
+                                            <option value="">-- ยังไม่ผูกโครงการ (ผูกภายหลังได้) --</option>
+                                            {(allProjectsMaster || []).map(p => (
+                                                <option key={p.id} value={p.id}>
+                                                    [{p.code || 'ไม่มีรหัส'}] {p.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block mb-1 text-slate-800 font-bold">รายละเอียดเพิ่มเติม / เงื่อนไขการเบิกจ่าย</label>
+                                    <textarea
+                                        rows={3}
+                                        value={specialBudgetFormData.description || ''}
+                                        onChange={(e) => setSpecialBudgetFormData({ ...specialBudgetFormData, description: e.target.value })}
+                                        className="w-full rounded-xl border-slate-300 px-3.5 py-2 text-xs focus:border-amber-500 focus:ring-amber-500"
+                                        placeholder="ระบุวัตถุประสงค์ เงื่อนไข ระยะเวลาสิ้นสุด หรือรายละเอียดเพิ่มเติม..."
+                                    />
+                                </div>
+
+                                <div className="flex justify-end items-center gap-3 pt-3 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsSpecialBudgetModalOpen(false)}
+                                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingSpecialBudget}
+                                        className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md cursor-pointer disabled:opacity-50"
+                                    >
+                                        {isSavingSpecialBudget ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     // 3. Procurement Head Component Rendering
     const renderProcurementTab = () => {
         if (!procurementData) {
@@ -22953,6 +23553,7 @@ return (
                         {activeTab === 'project_status' && renderProjectStatusTab()}
                         {activeTab === 'operation_calendar' && renderOperationCalendarTab()}
                         {activeTab === 'central_budgets' && renderCentralBudgetsTab()}
+                        {activeTab === 'special_project_budgets' && renderSpecialProjectBudgetsTab()}
                         {activeTab === 'document_tracking' && renderDocumentTrackingTab()}
                         {activeTab === 'proposals' && renderProposalsTab()}
                         {activeTab === 'annual_budget_requests' && renderAnnualBudgetRequestsTab()}
@@ -24546,25 +25147,58 @@ return (
                                                     </div>
 
                                                     {/* Box 2: Approved Budget (Editable) */}
-                                                    <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 p-3.5 focus-within:ring-2 focus-within:ring-emerald-400 transition">
+                                                    <div className={`rounded-2xl border-2 p-3.5 transition ${
+                                                        Number(committeeForm.funding_source_id) === 12
+                                                            ? 'border-slate-300 bg-slate-100/70'
+                                                            : Number(committeeForm.funding_source_id) === 13
+                                                            ? 'border-amber-400 bg-amber-50/50 focus-within:ring-2 focus-within:ring-amber-400'
+                                                            : 'border-emerald-300 bg-emerald-50/40 focus-within:ring-2 focus-within:ring-emerald-400'
+                                                    }`}>
                                                         <div className="flex items-center justify-between mb-1">
-                                                            <label className="text-[11px] font-bold text-emerald-900">2. วงเงินจัดสรรจริงที่อนุมัติ *</label>
-                                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-bold">อนุมัติจริง</span>
+                                                            <label className={`text-[11px] font-bold ${
+                                                                Number(committeeForm.funding_source_id) === 12
+                                                                    ? 'text-slate-700'
+                                                                    : Number(committeeForm.funding_source_id) === 13
+                                                                    ? 'text-amber-900'
+                                                                    : 'text-emerald-900'
+                                                            }`}>
+                                                                2. วงเงินจัดสรรจริงที่อนุมัติ *
+                                                            </label>
+                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                                                                Number(committeeForm.funding_source_id) === 12
+                                                                    ? 'bg-slate-300 text-slate-800'
+                                                                    : Number(committeeForm.funding_source_id) === 13
+                                                                    ? 'bg-amber-200 text-amber-900'
+                                                                    : 'bg-emerald-200 text-emerald-800'
+                                                            }`}>
+                                                                {Number(committeeForm.funding_source_id) === 12 ? 'ไม่ใช้งบประมาณ' : 'อนุมัติจริง'}
+                                                            </span>
                                                         </div>
                                                         <div className="relative">
                                                             <input
                                                                 type="number"
                                                                 step="0.01"
                                                                 required
-                                                                value={committeeForm.allocated_budget}
+                                                                disabled={Number(committeeForm.funding_source_id) === 12}
+                                                                value={Number(committeeForm.funding_source_id) === 12 ? '0' : committeeForm.allocated_budget}
                                                                 onChange={(e) => setCommitteeForm({ ...committeeForm, allocated_budget: e.target.value })}
-                                                                className="w-full rounded-xl border-emerald-400 bg-white px-3 py-1.5 text-base font-black text-emerald-950 focus:border-emerald-600 focus:ring-emerald-500 shadow-inner"
+                                                                className={`w-full rounded-xl px-3 py-1.5 text-base font-black shadow-inner ${
+                                                                    Number(committeeForm.funding_source_id) === 12
+                                                                        ? 'border-slate-300 bg-slate-200/60 text-slate-500 cursor-not-allowed'
+                                                                        : Number(committeeForm.funding_source_id) === 13
+                                                                        ? 'border-amber-400 bg-white text-amber-950 focus:border-amber-600 focus:ring-amber-500'
+                                                                        : 'border-emerald-400 bg-white text-emerald-950 focus:border-emerald-600 focus:ring-emerald-500'
+                                                                }`}
                                                                 placeholder="0.00"
                                                             />
                                                             <span className="absolute right-3 top-2 text-xs font-bold text-slate-400 pointer-events-none">บาท</span>
                                                         </div>
                                                         <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                                                            {diff === 0 ? (
+                                                            {Number(committeeForm.funding_source_id) === 12 ? (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-bold">
+                                                                    ⚪ ไม่ใช้งบประมาณ (0.00 บาท) ดำเนินการโดยไม่เบิกจ่ายงบ
+                                                                </span>
+                                                            ) : diff === 0 ? (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                                                                     ✓ อนุมัติเต็มตามที่ขอ (100%)
                                                                 </span>
@@ -24601,29 +25235,42 @@ return (
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                                                 <div>
                                                     <label className="block mb-1 text-purple-900 font-bold">
-                                                        แหล่งเงินงบประมาณ (11 หมวดตามแผนปฏิบัติราชการ) *
+                                                        แหล่งเงินงบประมาณ *
                                                     </label>
                                                     <select
                                                         value={committeeForm.funding_source_id}
-                                                        onChange={(e) => setCommitteeForm({ ...committeeForm, funding_source_id: Number(e.target.value) })}
+                                                        onChange={(e) => {
+                                                            const val = Number(e.target.value);
+                                                            if (val === 12) {
+                                                                setCommitteeForm({ ...committeeForm, funding_source_id: val, allocated_budget: '0' });
+                                                            } else {
+                                                                setCommitteeForm({ ...committeeForm, funding_source_id: val });
+                                                            }
+                                                        }}
                                                         className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
                                                     >
-                                                        {(planHeadData?.fundingSources || [
-                                                            { id: 1, name: 'ปวช.' },
-                                                            { id: 2, name: 'ปวส.' },
-                                                            { id: 3, name: 'ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)' },
-                                                            { id: 4, name: 'ระยะสั้น (ค่าสาธารณูปโภค)' },
-                                                            { id: 5, name: 'ทวิศึกษา' },
-                                                            { id: 6, name: 'อุดหนุนเพื่อการจัดการ' },
-                                                            { id: 7, name: 'อุดหนุนพัฒนา' },
-                                                            { id: 8, name: 'อุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือ)' },
-                                                            { id: 9, name: 'อุดหนุนเรียนฟรี 15 ปี (อุปกรณ์การเรียน)' },
-                                                            { id: 10, name: 'อุดหนุนเรียนฟรี 15 ปี (เครื่องแบบนักเรียน)' },
-                                                            { id: 11, name: 'บกศ.' },
-                                                        ]).map(s => {
-                                                            const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
-                                                            return <option key={s.id} value={s.id}>{displayName}</option>;
-                                                        })}
+                                                        <optgroup label="📋 แหล่งเงิน 11 หมวดตามแผนปฏิบัติราชการ">
+                                                            {(planHeadData?.fundingSources || [
+                                                                { id: 1, name: 'ปวช.' },
+                                                                { id: 2, name: 'ปวส.' },
+                                                                { id: 3, name: 'ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)' },
+                                                                { id: 4, name: 'ระยะสั้น (ค่าสาธารณูปโภค)' },
+                                                                { id: 5, name: 'ทวิศึกษา' },
+                                                                { id: 6, name: 'อุดหนุนเพื่อการจัดการ' },
+                                                                { id: 7, name: 'อุดหนุนพัฒนา' },
+                                                                { id: 8, name: 'อุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือ)' },
+                                                                { id: 9, name: 'อุดหนุนเรียนฟรี 15 ปี (อุปกรณ์การเรียน)' },
+                                                                { id: 10, name: 'อุดหนุนเรียนฟรี 15 ปี (เครื่องแบบนักเรียน)' },
+                                                                { id: 11, name: 'บกศ.' },
+                                                            ]).filter(s => s.id <= 11).map(s => {
+                                                                const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
+                                                                return <option key={s.id} value={s.id}>{displayName}</option>;
+                                                            })}
+                                                        </optgroup>
+                                                        <optgroup label="⚡ แหล่งเงินพิเศษ / เฉพาะกิจ">
+                                                            <option value={12}>⚪ ไม่ใช้งบประมาณ (Non-budgeted / 0.00 บาท)</option>
+                                                            <option value={13}>💼 งบเฉพาะโครงการ (จัดสรรเฉพาะกิจจากส่วนกลาง)</option>
+                                                        </optgroup>
                                                     </select>
                                                 </div>
 
@@ -24643,6 +25290,41 @@ return (
                                                     </select>
                                                 </div>
                                             </div>
+
+                                            {/* Optional Special Budget Linkage when funding_source_id === 13 */}
+                                            {Number(committeeForm.funding_source_id) === 13 && (
+                                                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 p-3.5 space-y-2">
+                                                    <div className="flex items-center justify-between">
+                                                        <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
+                                                            <span>💼</span> ผูกกับทะเบียนงบเฉพาะกิจโครงการ (ที่ลงทะเบียนไว้)
+                                                        </label>
+                                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold">งบจัดสรรเฉพาะกิจ</span>
+                                                    </div>
+                                                    <select
+                                                        value={committeeForm.special_project_budget_id || ''}
+                                                        onChange={(e) => {
+                                                            const spId = e.target.value;
+                                                            const matchSp = (specialProjectBudgets || []).find(b => String(b.id) === String(spId));
+                                                            setCommitteeForm({
+                                                                ...committeeForm,
+                                                                special_project_budget_id: spId,
+                                                                allocated_budget: matchSp ? String(matchSp.allocated_amount) : committeeForm.allocated_budget
+                                                            });
+                                                        }}
+                                                        className="w-full rounded-xl border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-amber-500 focus:ring-amber-500"
+                                                    >
+                                                        <option value="">-- ยังไม่ผูกรายการงบเฉพาะกิจ (สามารถผูกหรือบันทึกได้ในเมนู 'งบเฉพาะกิจโครงการ') --</option>
+                                                        {(specialProjectBudgets || []).map(sp => (
+                                                            <option key={sp.id} value={sp.id}>
+                                                                [ปี {sp.fiscal_year}] {sp.document_number} - {sp.title} ({sp.agency_name}) : {fmt(sp.allocated_amount)}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <p className="text-[10px] text-amber-800">
+                                                        💡 สามารถตรวจสอบ บันทึกรับงบ และติดตามการเบิกจ่ายโครงการนี้ได้โดยตรงในเมนู <strong>"💼 งบเฉพาะกิจโครงการ"</strong>
+                                                    </p>
+                                                </div>
+                                            )}
 
                                             {/* Committee Feedback for Full Proposal */}
                                             <div>

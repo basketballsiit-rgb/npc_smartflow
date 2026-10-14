@@ -206,6 +206,11 @@ Route::middleware('auth')->group(function () {
     // Central Budget Allocation Routes
     Route::post('/admin/central-allocations', [CentralAllocationController::class, 'store'])->name('admin.central_allocations.store');
     Route::put('/admin/central-allocations/{centralAllocation}', [CentralAllocationController::class, 'update'])->name('admin.central_allocations.update');
+
+    // Special Dedicated Project Budget Routes (งบเฉพาะกิจโครงการ)
+    Route::post('/admin/special-project-budgets', [\App\Http\Controllers\SpecialProjectBudgetController::class, 'store'])->name('admin.special_project_budgets.store');
+    Route::put('/admin/special-project-budgets/{specialProjectBudget}', [\App\Http\Controllers\SpecialProjectBudgetController::class, 'update'])->name('admin.special_project_budgets.update');
+    Route::delete('/admin/special-project-budgets/{specialProjectBudget}', [\App\Http\Controllers\SpecialProjectBudgetController::class, 'destroy'])->name('admin.special_project_budgets.destroy');
     // Standard Material Item Catalog Routes
     Route::get('/api/standard-items/search', [\App\Http\Controllers\StandardItemController::class, 'search'])->name('standard_items.search');
     Route::get('/api/standard-items', [\App\Http\Controllers\StandardItemController::class, 'index'])->name('standard_items.index');

@@ -606,6 +606,9 @@ class ProjectController extends Controller
             }
 
             $approvedAmount = (float)$request->input('allocated_budget');
+            if ((int)$request->input('funding_source_id') === 12) {
+                $approvedAmount = 0.00;
+            }
             $feedback = $request->input('committee_feedback') ?: $request->input('committee_comment', 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว');
             $adjReason = $request->input('budget_adjustment_reason');
 
@@ -618,6 +621,15 @@ class ProjectController extends Controller
             $project->committee_feedback = $feedback;
             $project->committee_comment = $feedback;
             $project->budget_adjustment_reason = $adjReason;
+            $specialBudgetId = $request->input('special_project_budget_id');
+            if ($specialBudgetId) {
+                $project->special_project_budget_id = $specialBudgetId;
+                $sp = \App\Models\SpecialProjectBudget::find($specialBudgetId);
+                if ($sp) {
+                    $sp->project_id = $project->id;
+                    $sp->save();
+                }
+            }
             $project->budget_approved_at = now();
             $project->status = 'budget_approved';
             $project->current_approval_step = 1;
