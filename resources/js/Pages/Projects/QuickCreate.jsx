@@ -66,11 +66,12 @@ export default function QuickCreate({
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         academic_year: currentFiscalYear || new Date().getFullYear() + 543,
+        proposed_budget: '',
         user_position_id: defaultPosition ? defaultPosition.id : '',
+        proposer_duty: defaultPosition ? defaultPosition.duty : '',
         department_id: defaultPosition 
             ? (defaultPosition.sub_department_id || defaultPosition.department_id || auth.user.department_id || '')
             : (auth.user.department_id || (departments?.[0]?.id || '')),
-        proposed_budget: '',
         responsible_person: auth.user.name || '',
         position: defaultPosition ? defaultPosition.formatted_title : (auth.user.position || 'ครูผู้สอน'),
         phone: '',
@@ -104,6 +105,7 @@ export default function QuickCreate({
             setData(prev => ({
                 ...prev,
                 user_position_id: selected.id,
+                proposer_duty: selected.duty || prev.proposer_duty || '',
                 department_id: selected.sub_department_id || selected.department_id || prev.department_id,
                 position: selected.formatted_title || selected.position || prev.position,
             }));
@@ -111,6 +113,7 @@ export default function QuickCreate({
             setData(prev => ({
                 ...prev,
                 user_position_id: '',
+                proposer_duty: '',
             }));
         }
     };

@@ -231,6 +231,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
         academic_year: project?.academic_year || 2569,
         disbursement_type: determineInitialDisbursementType(),
         user_position_id: project?.user_position_id || '',
+        proposer_duty: project?.proposer_duty || '',
         department_id: project?.department_id || '',
         responsible_person: project?.responsible_person || project?.user?.name || '',
         position: project?.position || 'ครูผู้สอน / ผู้รับผิดชอบโครงการ',
@@ -1185,6 +1186,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                     setData(prev => ({
                                                         ...prev,
                                                         user_position_id: selected.id,
+                                                        proposer_duty: selected.duty || prev.proposer_duty || '',
                                                         department_id: selected.sub_department_id || selected.department_id || prev.department_id,
                                                         position: selected.formatted_title || selected.position || prev.position,
                                                     }));

@@ -1060,12 +1060,22 @@ class ProjectController extends Controller
             $isHeadProposer = false;
             if ($project->user_position_id) {
                 $userPos = \App\Models\UserPosition::find($project->user_position_id);
-                if ($userPos && in_array($userPos->duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา'])) {
-                    $isHeadProposer = true;
+                if ($userPos) {
+                    // Strictly respect chosen position duty: if teacher or staff, isHeadProposer must remain false
+                    $isHeadProposer = in_array($userPos->duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา']);
                 }
-            }
-            if (!$isHeadProposer && $user->isDepartmentHead($project->department_id)) {
-                $isHeadProposer = true;
+            } elseif (!empty($project->proposer_duty)) {
+                $isHeadProposer = in_array($project->proposer_duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา']);
+            } elseif (!empty($project->position)) {
+                if (str_contains($project->position, 'หัวหน้า')) {
+                    $isHeadProposer = true;
+                } elseif (str_contains($project->position, 'ครู') || str_contains($project->position, 'เจ้าหน้าที่')) {
+                    $isHeadProposer = false;
+                } else {
+                    $isHeadProposer = $user->isDepartmentHead($project->department_id);
+                }
+            } else {
+                $isHeadProposer = $user->isDepartmentHead($project->department_id);
             }
 
             $project->status = 'pending_approval';
@@ -1231,12 +1241,22 @@ class ProjectController extends Controller
         $isHeadProposer = false;
         if ($project->user_position_id) {
             $userPos = \App\Models\UserPosition::find($project->user_position_id);
-            if ($userPos && in_array($userPos->duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา'])) {
-                $isHeadProposer = true;
+            if ($userPos) {
+                // Strictly respect chosen position duty: if teacher or staff, isHeadProposer must remain false
+                $isHeadProposer = in_array($userPos->duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา']);
             }
-        }
-        if (!$isHeadProposer && $user->isDepartmentHead($project->department_id)) {
-            $isHeadProposer = true;
+        } elseif (!empty($project->proposer_duty)) {
+            $isHeadProposer = in_array($project->proposer_duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา']);
+        } elseif (!empty($project->position)) {
+            if (str_contains($project->position, 'หัวหน้า')) {
+                $isHeadProposer = true;
+            } elseif (str_contains($project->position, 'ครู') || str_contains($project->position, 'เจ้าหน้าที่')) {
+                $isHeadProposer = false;
+            } else {
+                $isHeadProposer = $user->isDepartmentHead($project->department_id);
+            }
+        } else {
+            $isHeadProposer = $user->isDepartmentHead($project->department_id);
         }
 
         $project->status = 'pending_approval';
