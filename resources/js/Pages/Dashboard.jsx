@@ -10256,8 +10256,11 @@ ${itemsListText}
             if (cat === '3.3') cat = '3.4';
             if (cat === '7.1' && (plan.title?.includes('สำรอง') || plan.title?.includes('สำรองจ่าย'))) cat = '8';
             if (!cat || !rowData[cat]) return;
+            // หมวด 6 เป็นของโครงการจริง (Projects) ที่ได้รับการอนุมัติแล้วเท่านั้น ไม่นำงบประมาณประจำเข้ามาปะปน
+            if (cat.startsWith('6')) return;
 
             const alloc = parseFloat(plan.allocated_amount || 0);
+            if (alloc <= 0) return;
             const spent = parseFloat(plan.spent_amount || 0);
 
             rowData[cat].planBudget += alloc;
@@ -10281,10 +10284,14 @@ ${itemsListText}
 
         const isProjectApprovedForReport = (p) => {
             if (!p) return false;
+            // โครงการต้องผ่านการอนุมัติแล้วเท่านั้น (สถานะ approved, budget_approved หรือ completed)
+            // โครงการที่ยังไม่อนุมัติ เช่น preliminary (เสนอคำขอเบื้องต้น), pending_approval (รออนุมัติ), submitted, เสนอตั้งงบ ฯลฯ ต้องไม่แสดง
             const approvedStatuses = ['approved', 'budget_approved', 'completed'];
-            if (approvedStatuses.includes(p.status)) return true;
-            if (parseFloat(p.allocated_amount || p.allocated_budget || 0) > 0) return true;
-            return false;
+            if (!approvedStatuses.includes(p.status)) return false;
+
+            // ต้องมีงบประมาณที่ได้รับอนุมัติจริงมากกว่า 0 (ไม่ใช่ยอดเสนอขอ)
+            const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
+            return alloc > 0;
         };
 
         // 2. Populate Projects (Row 6.1 - 6.4)
@@ -10305,7 +10312,9 @@ ${itemsListText}
                 cat = expectedCat;
             }
 
-            const alloc = parseFloat(p.allocated_amount || p.allocated_budget || p.estimated_budget || p.proposed_budget || 0);
+            // ใช้งบประมาณที่ได้รับการอนุมัติจริงเท่านั้น (ไม่ fallback เป็น estimated_budget หรืองบเสนอขอ)
+            const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
+            if (alloc <= 0) return; // หากไม่พบงบประมาณที่อนุมัติจริง ไม่นำเข้ามาแสดงในตาราง
             const spent = parseFloat(p.spent_amount || 0);
 
             if (rowData[cat]) {
@@ -10376,7 +10385,10 @@ ${itemsListText}
             const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
             const colId = getColumnIdBySource(sourceName, sourceId);
             if (colId && estimateIncomeByCol[colId] !== undefined) {
-                estimateIncomeByCol[colId] += parseFloat(p.allocated_amount || p.allocated_budget || p.estimated_budget || p.proposed_budget || 0);
+                const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
+                if (alloc > 0) {
+                    estimateIncomeByCol[colId] += alloc;
+                }
             }
         });
         const estimateIncomeTotal = Object.values(estimateIncomeByCol).reduce((sum, v) => sum + v, 0);
