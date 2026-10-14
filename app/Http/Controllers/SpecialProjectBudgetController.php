@@ -40,7 +40,21 @@ class SpecialProjectBudgetController extends Controller
             $project = Project::find($validated['project_id']);
             if ($project) {
                 $project->special_project_budget_id = $special->id;
+                $project->funding_source_id = 13;
+                if ((float)$special->allocated_amount > 0) {
+                    $project->allocated_budget = $special->allocated_amount;
+                    $project->approved_budget = $special->allocated_amount;
+                }
                 $project->save();
+
+                \App\Models\Budget::updateOrCreate(
+                    ['project_id' => $project->id],
+                    [
+                        'funding_source_id' => 13,
+                        'allocated_amount' => $special->allocated_amount,
+                        'encumbered_amount' => $special->allocated_amount,
+                    ]
+                );
             }
         }
 
@@ -87,7 +101,21 @@ class SpecialProjectBudgetController extends Controller
             $proj = Project::find($validated['project_id']);
             if ($proj) {
                 $proj->special_project_budget_id = $specialProjectBudget->id;
+                $proj->funding_source_id = 13;
+                if ((float)$specialProjectBudget->allocated_amount > 0) {
+                    $proj->allocated_budget = $specialProjectBudget->allocated_amount;
+                    $proj->approved_budget = $specialProjectBudget->allocated_amount;
+                }
                 $proj->save();
+
+                \App\Models\Budget::updateOrCreate(
+                    ['project_id' => $proj->id],
+                    [
+                        'funding_source_id' => 13,
+                        'allocated_amount' => $specialProjectBudget->allocated_amount,
+                        'encumbered_amount' => $specialProjectBudget->allocated_amount,
+                    ]
+                );
             }
         }
 

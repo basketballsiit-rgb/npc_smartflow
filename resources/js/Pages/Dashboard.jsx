@@ -25293,36 +25293,53 @@ return (
 
                                             {/* Optional Special Budget Linkage when funding_source_id === 13 */}
                                             {Number(committeeForm.funding_source_id) === 13 && (
-                                                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 p-3.5 space-y-2">
-                                                    <div className="flex items-center justify-between">
+                                                <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 p-4 space-y-3">
+                                                    <div className="flex items-center justify-between flex-wrap gap-2">
                                                         <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
-                                                            <span>💼</span> ผูกกับทะเบียนงบเฉพาะกิจโครงการ (ที่ลงทะเบียนไว้)
+                                                            <span>💼</span> การผูกทะเบียนงบเฉพาะกิจโครงการ (ไม่บังคับ - ผูกภายหลังได้)
                                                         </label>
-                                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold">งบจัดสรรเฉพาะกิจ</span>
+                                                        <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-bold">
+                                                            {committeeForm.special_project_budget_id ? 'ผูกงบแล้ว' : 'รองบจัดสรรจริง / ยังไม่ผูก'}
+                                                        </span>
                                                     </div>
-                                                    <select
-                                                        value={committeeForm.special_project_budget_id || ''}
-                                                        onChange={(e) => {
-                                                            const spId = e.target.value;
-                                                            const matchSp = (specialProjectBudgets || []).find(b => String(b.id) === String(spId));
-                                                            setCommitteeForm({
-                                                                ...committeeForm,
-                                                                special_project_budget_id: spId,
-                                                                allocated_budget: matchSp ? String(matchSp.allocated_amount) : committeeForm.allocated_budget
-                                                            });
-                                                        }}
-                                                        className="w-full rounded-xl border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-amber-500 focus:ring-amber-500"
-                                                    >
-                                                        <option value="">-- ยังไม่ผูกรายการงบเฉพาะกิจ (สามารถผูกหรือบันทึกได้ในเมนู 'งบเฉพาะกิจโครงการ') --</option>
-                                                        {(specialProjectBudgets || []).map(sp => (
-                                                            <option key={sp.id} value={sp.id}>
-                                                                [ปี {sp.fiscal_year}] {sp.document_number} - {sp.title} ({sp.agency_name}) : {fmt(sp.allocated_amount)}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                    <p className="text-[10px] text-amber-800">
-                                                        💡 สามารถตรวจสอบ บันทึกรับงบ และติดตามการเบิกจ่ายโครงการนี้ได้โดยตรงในเมนู <strong>"💼 งบเฉพาะกิจโครงการ"</strong>
-                                                    </p>
+
+                                                    <div className="p-2.5 rounded-xl bg-amber-100/70 border border-amber-200 text-[11px] text-amber-900 leading-relaxed space-y-1">
+                                                        <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                                                            <span>📌</span> สำหรับโครงการที่ยังไม่ได้รับหนังสือจัดสรรงบประมาณจากส่วนกลาง:
+                                                        </div>
+                                                        <p>
+                                                            สามารถเลือกเป็น <strong>"ยังไม่ผูกรายการงบเฉพาะกิจ"</strong> ได้ทันที เพื่ออนุมัติในหลักการให้ผู้เสนอโครงการจัดทำเล่มเต็มและบรรจุเข้า <strong>"เล่มแผนปฏิบัติราชการประจำปี"</strong> ได้ล่วงหน้า
+                                                        </p>
+                                                        <p className="text-[10px] text-amber-800">
+                                                            เมื่อหนังสือสั่งการ/งบประมาณส่งมาถึงในภายหลัง งานแผนงานสามารถนำเลขที่หนังสือและวงเงินจริงไปลงทะเบียน แล้วผูกกับโครงการนี้ได้ทุกเมื่อที่เมนู <strong>"💼 งบเฉพาะกิจโครงการ"</strong> บนแถบเมนูหลัก
+                                                        </p>
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                                                            เลือกรายการงบที่ได้รับจัดสรร (หากมีหนังสือสั่งการแล้ว):
+                                                        </label>
+                                                        <select
+                                                            value={committeeForm.special_project_budget_id || ''}
+                                                            onChange={(e) => {
+                                                                const spId = e.target.value;
+                                                                const matchSp = (specialProjectBudgets || []).find(b => String(b.id) === String(spId));
+                                                                setCommitteeForm({
+                                                                    ...committeeForm,
+                                                                    special_project_budget_id: spId,
+                                                                    allocated_budget: matchSp ? String(matchSp.allocated_amount) : committeeForm.allocated_budget
+                                                                });
+                                                            }}
+                                                            className="w-full rounded-xl border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-amber-500 focus:ring-amber-500 shadow-xs"
+                                                        >
+                                                            <option value="">-- ยังไม่ผูกรายการ (รองบจัดสรรจากส่วนกลาง / ให้จัดทำเล่มโครงการเข้าแผนฯ ก่อน) --</option>
+                                                            {(specialProjectBudgets || []).map(sp => (
+                                                                <option key={sp.id} value={sp.id}>
+                                                                    [ปี {sp.fiscal_year}] {sp.document_number} - {sp.title} ({sp.agency_name}) : {fmt(sp.allocated_amount)}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
                                                 </div>
                                             )}
 
