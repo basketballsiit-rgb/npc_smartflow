@@ -10242,7 +10242,7 @@ ${itemsListText}
             { id: '7.3', title: '7.3 เครื่องแบบนักเรียน', level: 1, parentId: '7' },
 
             // 8. สำรองจ่าย
-            { id: '8', title: '7. สำรองจ่าย', isMain: true },
+            { id: '8', title: '8. สำรองจ่าย', isMain: true },
         ];
 
         const formatCell = (val) => {
@@ -10518,20 +10518,20 @@ ${itemsListText}
 
                     {/* 14-Column Table Container */}
                     <div className="overflow-x-auto border border-slate-400 rounded-xl max-w-full shadow-2xs">
-                        <table className="w-full border-collapse text-[11px] text-slate-800 min-w-[1260px] table-fixed">
+                        <table className="w-full border-collapse text-[11px] text-slate-800 min-w-[1320px] table-fixed">
                             <thead>
                                 {/* Header Row 1 */}
                                 <tr className="bg-slate-100 border-b border-slate-400 text-[11px] font-bold text-slate-900 text-center">
                                     <th rowSpan={4} className="py-2.5 px-2 text-center border-r border-slate-400 w-[240px] align-middle">
                                         รายการ
                                     </th>
-                                    <th rowSpan={4} className="py-2.5 px-1.5 border-r border-slate-400 w-[78px] align-middle">
+                                    <th rowSpan={4} className="py-2.5 px-1 border-r border-slate-400 w-[84px] align-middle whitespace-nowrap">
                                         ตั้งงบ
                                     </th>
                                     <th colSpan={11} className="py-1 px-1 border-b border-r border-slate-400 text-center font-bold">
                                         งบประมาณ
                                     </th>
-                                    <th rowSpan={4} className="py-2.5 px-1.5 border-slate-400 w-[85px] align-middle">
+                                    <th rowSpan={4} className="py-2.5 px-1 border-slate-400 w-[98px] align-middle whitespace-nowrap">
                                         รวมค่าใช้จ่าย
                                     </th>
                                 </tr>
@@ -10605,7 +10605,7 @@ ${itemsListText}
                                             {formatCell(estimateIncomeByCol[col.id])}
                                         </td>
                                     ))}
-                                    <td className="py-2 px-1.5 text-right font-mono text-[10px] font-bold">
+                                    <td className="py-2 px-1 text-right font-mono text-[10px] font-bold whitespace-nowrap">
                                         {formatCell(estimateIncomeTotal)}
                                     </td>
                                 </tr>
@@ -10623,7 +10623,7 @@ ${itemsListText}
                                             {formatCell(actualAllocByCol[col.id])}
                                         </td>
                                     ))}
-                                    <td className="py-2 px-1.5 text-right font-mono text-[10px] font-bold text-emerald-900">
+                                    <td className="py-2 px-1 text-right font-mono text-[10px] font-bold text-emerald-900 whitespace-nowrap">
                                         {formatCell(actualAllocTotal)}
                                     </td>
                                 </tr>
@@ -10675,7 +10675,7 @@ ${itemsListText}
                                                     {formatCell(row.cols[col.id])}
                                                 </td>
                                             ))}
-                                            <td className={`py-1 px-1.5 text-right font-mono ${isBold ? 'font-bold' : ''}`}>
+                                            <td className={`py-1 px-1 text-right font-mono whitespace-nowrap ${isBold ? 'font-bold' : ''}`}>
                                                 {formatCell(totalRowExpense)}
                                             </td>
                                         </tr>
@@ -10695,7 +10695,7 @@ ${itemsListText}
                                             {formatCell(grandBudgetByCol[col.id])}
                                         </td>
                                     ))}
-                                    <td className="py-1.5 px-1.5 text-right font-mono font-bold">
+                                    <td className="py-1.5 px-1 text-right font-mono font-bold whitespace-nowrap">
                                         {formatCell(grandPlanBudget)}
                                     </td>
                                 </tr>
@@ -10713,7 +10713,7 @@ ${itemsListText}
                                             {formatCell(grandBudgetByCol[col.id])}
                                         </td>
                                     ))}
-                                    <td className="py-1.5 px-1.5 text-right font-mono font-bold">
+                                    <td className="py-1.5 px-1 text-right font-mono font-bold whitespace-nowrap">
                                         {formatCell(grandPlanBudget)}
                                     </td>
                                 </tr>
@@ -10731,7 +10731,7 @@ ${itemsListText}
                                             {formatCell(remainingByCol[col.id])}
                                         </td>
                                     ))}
-                                    <td className={`py-1.5 px-1.5 text-right font-mono font-bold ${remainingTotal < 0 ? 'text-red-600' : ''}`}>
+                                    <td className={`py-1.5 px-1 text-right font-mono font-bold whitespace-nowrap ${remainingTotal < 0 ? 'text-red-600' : ''}`}>
                                         {formatCell(remainingTotal)}
                                     </td>
                                 </tr>
