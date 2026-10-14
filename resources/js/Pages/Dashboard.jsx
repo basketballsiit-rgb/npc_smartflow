@@ -10200,7 +10200,7 @@ ${itemsListText}
             // 3. ค่าวัสดุ
             { id: '3', title: '3. ค่าวัสดุ', isMain: true },
             { id: '3.1', title: '3.1 วัสดุงานอาคาร', level: 1, parentId: '3' },
-            { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSub: true, parentId: '3.2' },
+            { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSub: true, parentId: '3' },
             { id: '3.2.1', title: 'ฝ่ายวิชาการ', level: 2, parentId: '3.2' },
             { id: '3.2.2', title: 'ฝ่ายกิจการนักเรียนนักศึกษา', level: 2, parentId: '3.2' },
             { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', level: 2, parentId: '3.2' },
@@ -10671,7 +10671,11 @@ ${itemsListText}
                                                 {formatCell(row.planBudget)}
                                             </td>
                                             {budgetColumns.map(col => (
-                                                <td key={col.id} className={`py-1 px-1 text-right border-r border-slate-400 font-mono text-[10px] ${isBold ? 'font-bold' : ''}`}>
+                                                <td
+                                                    key={col.id}
+                                                    title={`${col.name}${row.cols[col.id] ? `: ฿${Number(row.cols[col.id]).toLocaleString()}` : ''}`}
+                                                    className={`py-1 px-1 text-right border-r border-slate-400 font-mono text-[10px] ${isBold ? 'font-bold' : ''}`}
+                                                >
                                                     {formatCell(row.cols[col.id])}
                                                 </td>
                                             ))}
