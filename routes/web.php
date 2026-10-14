@@ -285,6 +285,11 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/procurement/save', [ProcurementController::class, 'saveProcurement'])->name('procurements.save');
     Route::post('projects/{project}/procurement/receive', [ProcurementController::class, 'receive'])->name('procurements.receive');
     Route::post('projects/{project}/procurement/plan-cut-budget', [ProcurementController::class, 'planCutBudget'])->name('procurements.plan_cut_budget');
+    Route::post('procurements/plan-cut-external', [ProcurementController::class, 'planCutExternalBudget'])->name('procurements.plan_cut_external');
+    Route::post('routine-procurements/{procurement}/receive', [ProcurementController::class, 'receiveRoutineProcurement'])->name('routine_procurements.receive');
+    Route::post('routine-procurements/{procurement}/forward-to-finance', [ProcurementController::class, 'forwardRoutineToFinance'])->name('routine_procurements.forward_to_finance');
+    Route::post('routine-procurements/{procurement}/finance-receive', [ProcurementController::class, 'financeReceiveRoutine'])->name('routine_procurements.finance_receive');
+    Route::post('routine-procurements/{procurement}/finance-disburse', [ProcurementController::class, 'financeDisburseRoutine'])->name('routine_procurements.finance_disburse');
     Route::post('procurements/document-numbering-settings', [ProcurementController::class, 'updateDocumentNumberingSettings'])->name('procurements.document_numbering_settings');
     Route::post('procurements/update-doc-numbering-settings', [ProcurementController::class, 'updateDocumentNumberingSettings'])->name('procurements.update_doc_numbering_settings');
     Route::post('projects/{project}/procurement/forward-to-finance', [ProcurementController::class, 'forwardToFinance'])->name('procurements.forward_to_finance');

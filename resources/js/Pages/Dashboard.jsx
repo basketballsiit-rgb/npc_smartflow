@@ -2952,6 +2952,76 @@ export default function Dashboard({
         loan_current_no: docNumberSettings.loan_current_no || 1,
     });
 
+    // External Plan Budget Cut Modal State (Walk-in Paper Packages: Non-Project Routine & Project)
+    const [isExternalCutModalOpen, setIsExternalCutModalOpen] = useState(false);
+    const [externalCutMode, setExternalCutMode] = useState('non_project'); // 'non_project' | 'project'
+    const { data: externalCutForm, setData: setExternalCutForm, post: postExternalCut, processing: isSavingExternalCut, reset: resetExternalCut } = useForm({
+        cut_mode: 'non_project',
+        target: 'all',
+        project_id: '',
+        department_id: '',
+        funding_source_id: '',
+        report_category: '4.2',
+        title: '',
+        amount: '',
+        proposer_name: '',
+        plan_doc_number: '',
+        cut_date: new Date().toISOString().split('T')[0],
+        notes: '',
+    });
+
+    const handleOpenExternalCutModal = () => {
+        setExternalCutMode('non_project');
+        setExternalCutForm({
+            cut_mode: 'non_project',
+            target: 'all',
+            project_id: '',
+            department_id: allDepartments[0]?.id || '',
+            funding_source_id: allFundingSources[0]?.id || '',
+            report_category: '4.2',
+            title: '',
+            amount: '',
+            proposer_name: '',
+            plan_doc_number: nextUnifiedDocNumber || '',
+            cut_date: new Date().toISOString().split('T')[0],
+            notes: '',
+        });
+        setIsExternalCutModalOpen(true);
+    };
+
+    const handleExternalCutSubmit = (e) => {
+        e.preventDefault();
+        if (externalCutMode === 'non_project') {
+            if (!externalCutForm.title || !externalCutForm.amount || !externalCutForm.department_id) {
+                Swal.fire('กรุณากรอกข้อมูลให้ครบถ้วน', 'กรุณาระบุชื่อรายการ วงเงิน และแผนกวิชา/งานที่ขอใช้', 'warning');
+                return;
+            }
+        } else {
+            if (!externalCutForm.project_id) {
+                Swal.fire('กรุณาเลือกโครงการ', 'กรุณาเลือกโครงการในระบบที่ต้องการตัดยอด', 'warning');
+                return;
+            }
+        }
+
+        postExternalCut(route('procurements.plan_cut_external'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsExternalCutModalOpen(false);
+                resetExternalCut();
+                Swal.fire({
+                    icon: 'success',
+                    title: 'บันทึกตัดยอดสำเร็จ!',
+                    text: 'ระบบได้ออกเลขคุมเอกสารและตัดยอดงบประมาณเรียบร้อยแล้ว รายการจะแสดงในทะเบียนคุมและตารางแผนปฏิบัติราชการทันที',
+                    confirmButtonColor: '#4f46e5',
+                });
+            },
+            onError: (errors) => {
+                const firstErr = Object.values(errors)[0] || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+                Swal.fire('เกิดข้อผิดพลาด', firstErr, 'error');
+            }
+        });
+    };
+
     const [projectSearch, setProjectSearch] = useState('');
     const [projectStatusFilter, setProjectStatusFilter] = useState('all');
     const [projectYearFilter, setProjectYearFilter] = useState('all');
@@ -19281,7 +19351,148 @@ ${itemsListText}
             };
         });
 
-        const trackingList = [...sourceTrackingProjects, ...travelLoanTrackingItems].filter(p => {
+        // External / Routine Operational Spending Procurements (งบดำเนินงานทั่วไป ไม่อิงโครงการ)
+        const routineTrackingItems = (routinePlans || []).flatMap(rp => {
+            if (!rp.procurements || rp.procurements.length === 0) return [];
+
+            if (!isPowerTrackingUser && !isProcurementView && !isStrictFinanceUser) {
+                const userDeptId = auth?.user?.department_id;
+                if (userDeptId && rp.department_id !== userDeptId) return [];
+            }
+
+            return rp.procurements.map(proc => {
+                const totalProcAmount = parseFloat(rp.spent_amount || rp.allocated_amount || 0);
+                const hasLoanComponent = Boolean(proc.plan_loan_cut_at || proc.loan_status === 'plan_cut' || proc.loan_status === 'finance_received' || proc.loan_status === 'cleared');
+                const hasProcComponent = Boolean(proc.plan_procurement_cut_at || proc.status === 'plan_cut' || proc.status === 'received' || proc.status === 'forwarded_to_finance' || proc.status === 'completed' || proc.status === 'disbursed');
+
+                const isLoanCleared = Boolean(proc.loan_status === 'cleared');
+                const isLoanFinReceived = Boolean(proc.loan_status === 'finance_received' || proc.finance_received_at);
+                const isLoanPlanCut = Boolean(proc.plan_loan_cut_at || proc.loan_status === 'plan_cut');
+
+                const isProcDisbursed = Boolean(proc.status === 'completed' || proc.status === 'disbursed');
+                const isProcForwardedToFin = Boolean(proc.status === 'forwarded_to_finance');
+                const isProcReceived = Boolean(proc.status === 'received');
+                const isProcPlanCut = Boolean(proc.plan_procurement_cut_at || proc.status === 'plan_cut');
+
+                let loanLocation = null;
+                let loanHolder = null;
+                let loanStatusText = null;
+                let loanBadgeClass = '';
+                let loanCategory = null;
+
+                if (hasLoanComponent) {
+                    loanLocation = 'อยู่ที่งานการเงิน (รอลงรับ/โอนเงินยืม)';
+                    loanHolder = proc.plan_loan_doc_number ? `เลขตัดยอดแผน: ${proc.plan_loan_doc_number}` : 'เจ้าหน้าที่งานการเงิน';
+                    loanStatusText = '⏳ แผนงานตัดยอดแล้ว (รอการเงินลงรับ)';
+                    loanBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                    loanCategory = 'at_finance';
+
+                    if (isLoanCleared) {
+                        loanLocation = 'งานการเงิน / ปิดสัญญาแล้ว';
+                        loanHolder = proc.finance_payment_ref ? `เลขอ้างอิง: ${proc.finance_payment_ref}` : 'ปิดเคลียร์เงินยืมสมบูรณ์';
+                        loanStatusText = `🎉 เคลียร์ปิดยอดสัญญายืมเงินแล้ว (฿${new Intl.NumberFormat('th-TH').format(totalProcAmount)})`;
+                        loanBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
+                        loanCategory = 'completed';
+                    } else if (isLoanFinReceived) {
+                        loanLocation = 'อยู่ที่ผู้ยืมเงิน (รับเงินยืมแล้ว)';
+                        loanHolder = rp.department?.name || 'ผู้ยืมเงิน';
+                        loanStatusText = '💵 การเงินโอนเงินยืมแล้ว (รอส่งใช้เงินยืม)';
+                        loanBadgeClass = 'bg-purple-100 text-purple-900 border-purple-300 font-bold';
+                        loanCategory = 'with_borrower';
+                    }
+                }
+
+                let procLocation = null;
+                let procHolder = null;
+                let procStatusText = null;
+                let procBadgeClass = '';
+                let procCategory = null;
+
+                if (hasProcComponent) {
+                    procLocation = 'อยู่ที่งานพัสดุ (รอลงรับ)';
+                    procHolder = (proc.plan_procurement_doc_number || proc.procurement_number) ? `เลขตัดยอดแผน: ${proc.plan_procurement_doc_number || proc.procurement_number}` : 'รอเจ้าหน้าที่พัสดุลงรับ';
+                    procStatusText = '⏳ รอพัสดุลงรับ';
+                    procBadgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-bold';
+                    procCategory = 'at_procurement';
+
+                    if (isProcDisbursed) {
+                        procLocation = 'งานการเงิน / เบิกจ่ายแล้ว';
+                        procHolder = proc.finance_payment_ref ? `เลขอ้างอิง: ${proc.finance_payment_ref}` : 'เบิกจ่ายจัดซื้อเรียบร้อย';
+                        procStatusText = '🎉 เบิกจ่ายจัดซื้อแล้ว';
+                        procBadgeClass = 'bg-teal-100 text-teal-950 border-teal-300 font-bold';
+                        procCategory = 'completed';
+                    } else if (isProcForwardedToFin) {
+                        procLocation = 'อยู่ที่งานการเงิน';
+                        procHolder = 'เจ้าหน้าที่งานการเงิน (รอเบิกจ่าย)';
+                        procStatusText = '💰 ส่งงานการเงินเบิกจ่ายแล้ว';
+                        procBadgeClass = 'bg-emerald-100 text-emerald-950 border-emerald-300 font-bold';
+                        procCategory = 'at_finance';
+                    } else if (isProcReceived) {
+                        procLocation = 'อยู่ที่งานพัสดุ';
+                        procHolder = proc.procurement_number ? `เลขที่: ${proc.procurement_number}` : 'เจ้าหน้าที่งานพัสดุ';
+                        procStatusText = '📦 พัสดุลงรับเรื่องแล้ว (ดำเนินการจัดซื้อ)';
+                        procBadgeClass = 'bg-blue-100 text-blue-900 border-blue-300 font-bold';
+                        procCategory = 'at_procurement';
+                    }
+                }
+
+                const hasLoanAtFinance = Boolean(hasLoanComponent && (isLoanPlanCut || isLoanFinReceived || isLoanCleared));
+                const hasProcAtFinance = Boolean(hasProcComponent && (isProcForwardedToFin || isProcDisbursed));
+                const isAllFinCompleted = (hasLoanComponent && hasProcComponent)
+                    ? (isLoanCleared && isProcDisbursed)
+                    : (hasLoanComponent ? isLoanCleared : isProcDisbursed);
+
+                return {
+                    id: `routine_proc_${proc.id}`,
+                    routine_budget_plan_id: rp.id,
+                    procurement_id: proc.id,
+                    isRoutineProcurement: true,
+                    isNonProject: true,
+                    rawRoutinePlan: rp,
+                    procurement: proc,
+                    title: proc.memo_subject || rp.title,
+                    department: rp.department,
+                    funding_source: rp.fundingSource || rp.funding_source,
+                    report_category: rp.report_category,
+                    allocated_budget: totalProcAmount,
+                    estimated_budget: totalProcAmount,
+                    loanAmount: hasLoanComponent ? totalProcAmount : 0,
+                    totalProcAmount: hasProcComponent ? totalProcAmount : 0,
+                    procSets: [],
+                    status: 'approved',
+                    hasLoanComponent,
+                    hasProcComponent,
+                    isLoanPlanCut,
+                    isLoanFinReceived,
+                    isLoanCleared,
+                    isProcPlanCut,
+                    isProcReceived,
+                    isProcForwardedToFin,
+                    isProcDisbursed,
+                    hasLoanAtFinance,
+                    hasProcAtFinance,
+                    isAllFinCompleted,
+                    loanLocation,
+                    loanHolder,
+                    loanStatusText,
+                    loanBadgeClass,
+                    loanCategory,
+                    procLocation,
+                    procHolder,
+                    procStatusText,
+                    procBadgeClass,
+                    procCategory,
+                    plan_procurement_doc_number: proc.plan_procurement_doc_number || proc.procurement_number || null,
+                    plan_loan_doc_number: proc.plan_loan_doc_number || null,
+                    prNumber: proc.procurement_number || null,
+                    unifiedDoc: proc.plan_procurement_doc_number || proc.plan_loan_doc_number || proc.procurement_number || null,
+                    created_at: proc.created_at || rp.created_at,
+                    updated_at: proc.updated_at || rp.updated_at,
+                };
+            });
+        });
+
+        const trackingList = [...sourceTrackingProjects, ...travelLoanTrackingItems, ...routineTrackingItems].filter(p => {
             if (isProcurementView) {
                 // งานพัสดุ: แสดงเฉพาะโครงการที่มีชุดจัดซื้อจัดจ้าง (ไม่แสดงสัญญายืมเงินเพียวๆ)
                 return p.hasProcComponent && (
@@ -19525,7 +19736,10 @@ ${itemsListText}
                 }
             }).then((res) => {
                 if (res.isConfirmed) {
-                    router.post(route('procurements.finance_disburse', item.id), res.value, {
+                    const disburseRoute = item.isRoutineProcurement 
+                        ? route('routine_procurements.finance_disburse', item.procurement_id) 
+                        : route('procurements.finance_disburse', item.id);
+                    router.post(disburseRoute, res.value, {
                         onSuccess: () => {
                             Swal.fire('สำเร็จ!', 'บันทึกการโอนเงินเรียบร้อยแล้ว', 'success');
                             if (selectedFinanceDocDetails) {
@@ -19559,6 +19773,16 @@ return (
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
+                            {(isPlanStaff || isAdmin) && (
+                                <button
+                                    type="button"
+                                    onClick={handleOpenExternalCutModal}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 px-3.5 py-2 text-xs font-black text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-emerald-300/40"
+                                    title="สิทธิ์งานแผนงาน/Admin: บันทึกตัดยอดชุดจัดซื้อจัดจ้าง / สัญญายืมเงินกระดาษจากภายนอกระบบ ทั้งแบบไม่อิงโครงการ และ อิงโครงการ"
+                                >
+                                    <span>✂️</span> ตัดยอดภายนอกระบบ (จัดซื้อ/ยืมเงิน)
+                                </button>
+                            )}
                             {isPlanStaff && (
                                 <button
                                     type="button"
@@ -19984,6 +20208,15 @@ return (
                                                                 </div>
                                                             )}
                                                         </div>
+                                                    ) : item.isRoutineProcurement ? (
+                                                        <div className="space-y-0.5">
+                                                            <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 text-[11px] font-black border border-emerald-300">
+                                                                <span>🏢</span> งบดำเนินงานทั่วไป (ไม่อิงโครงการ)
+                                                            </div>
+                                                            <div className="text-xs sm:text-sm font-bold text-slate-900 leading-snug break-words">
+                                                                {item.title}
+                                                            </div>
+                                                        </div>
                                                     ) : (
                                                         <div className="flex flex-wrap items-center gap-1.5">
                                                             <Link
@@ -20039,6 +20272,20 @@ return (
                                                                 ✈️ ยืมไปราชการ ➔
                                                             </span>
                                                         </button>
+                                                    ) : item.isRoutineProcurement ? (
+                                                        <a
+                                                            href={route('routine_procurements.download_document', [item.procurement_id, 'request_form'])}
+                                                            target="_blank"
+                                                            className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
+                                                            title="คลิกที่ตัวเลขเพื่อเปิดดูเอกสารงบดำเนินงาน"
+                                                        >
+                                                            <span className="text-xs sm:text-sm font-bold text-emerald-950 font-mono underline decoration-emerald-400 group-hover:text-emerald-700">
+                                                                ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.loanAmount)}
+                                                            </span>
+                                                            <span className="text-[10px] text-emerald-700 font-medium group-hover:underline">
+                                                                💵 ยืมเงินประจำ ➔
+                                                            </span>
+                                                        </a>
                                                     ) : (
                                                         <a
                                                             href={route('procurements.download_document', [item.id, 'loan_contract'])}
@@ -20102,6 +20349,24 @@ return (
                                                                     </button>
                                                                 )}
                                                             </div>
+                                                        );
+                                                    }
+
+                                                    if (item.isRoutineProcurement) {
+                                                        return (
+                                                            <a
+                                                                href={route('routine_procurements.download_document', [item.procurement_id, 'request_form'])}
+                                                                target="_blank"
+                                                                className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-teal-50/90 hover:bg-teal-100 border border-teal-300 text-teal-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
+                                                                title="คลิกที่ตัวเลขเพื่อเปิดดูชุดจัดซื้อจัดจ้าง (แบบขออนุมัติ)"
+                                                            >
+                                                                <span className="text-xs sm:text-sm font-bold text-teal-950 font-mono underline decoration-teal-400 group-hover:text-teal-700">
+                                                                    ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.totalProcAmount)}
+                                                                </span>
+                                                                <span className="text-[10px] text-teal-700 font-medium group-hover:underline">
+                                                                    📦 จัดซื้อประจำ ➔
+                                                                </span>
+                                                            </a>
                                                         );
                                                     }
 
@@ -20245,7 +20510,10 @@ return (
                                                                             })
                                                                         }).then((res) => {
                                                                             if (res.isConfirmed) {
-                                                                                router.post(route('procurements.receive', item.id), res.value, {
+                                                                                const receiveRoute = item.isRoutineProcurement
+                                                                                    ? route('routine_procurements.receive', item.procurement_id)
+                                                                                    : route('procurements.receive', item.id);
+                                                                                router.post(receiveRoute, res.value, {
                                                                                     onSuccess: () => Swal.fire('สำเร็จ', 'บันทึกการรับเอกสารเรียบร้อยแล้ว', 'success')
                                                                                 });
                                                                             }
@@ -20272,7 +20540,10 @@ return (
                                                                             confirmButtonColor: '#059669'
                                                                         }).then((res) => {
                                                                             if (res.isConfirmed) {
-                                                                                router.post(route('procurements.forward_to_finance', item.id), {}, {
+                                                                                const forwardRoute = item.isRoutineProcurement
+                                                                                    ? route('routine_procurements.forward_to_finance', item.procurement_id)
+                                                                                    : route('procurements.forward_to_finance', item.id);
+                                                                                router.post(forwardRoute, {}, {
                                                                                     onSuccess: () => Swal.fire('สำเร็จ', 'ส่งเรื่องต่อให้งานการเงินเรียบร้อยแล้ว', 'success')
                                                                                 });
                                                                             }
@@ -20325,7 +20596,10 @@ return (
                                                                             })
                                                                         }).then((res) => {
                                                                             if (res.isConfirmed) {
-                                                                                router.post(route('procurements.finance_receive', item.id), res.value, {
+                                                                                const finReceiveRoute = item.isRoutineProcurement
+                                                                                    ? route('routine_procurements.finance_receive', item.procurement_id)
+                                                                                    : route('procurements.finance_receive', item.id);
+                                                                                router.post(finReceiveRoute, res.value, {
                                                                                     onSuccess: () => Swal.fire('สำเร็จ!', 'งานการเงินลงรับสัญญายืมเงินเรียบร้อยแล้ว', 'success')
                                                                                 });
                                                                             }
@@ -20743,6 +21017,385 @@ return (
                                         className="px-5 py-2 rounded-xl text-xs font-black bg-purple-700 hover:bg-purple-800 text-white shadow-md hover:scale-105 active:scale-95 transition cursor-pointer disabled:opacity-50"
                                     >
                                         {isSavingDocNumber ? 'กำลังบันทึก...' : '💾 บันทึกการตั้งค่า'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* External Budget Cut Modal (Non-Project Routine & Project) */}
+                {isExternalCutModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200 font-sans overflow-y-auto">
+                        <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 my-8">
+                            {/* Header */}
+                            <div className="p-5 sm:p-6 bg-gradient-to-r from-emerald-700 via-teal-800 to-cyan-900 text-white flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <span className="p-2.5 rounded-2xl bg-white/10 text-emerald-300 text-xl border border-white/10 shadow-inner">✂️</span>
+                                    <div>
+                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-[10px] font-bold text-emerald-200 mb-1">
+                                            <span>🏢 งานวางแผนและงบประมาณ (ผง.)</span>
+                                        </div>
+                                        <h3 className="font-black text-base sm:text-lg text-white">บันทึกตัดยอดงบประมาณภายนอกระบบ</h3>
+                                        <p className="text-xs text-teal-100">สำหรับชุดจัดซื้อจัดจ้าง หรือสัญญายืมเงินกระดาษที่ผู้ขอเดินเรื่องมาที่งานแผนโดยตรง</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsExternalCutModalOpen(false)}
+                                    className="text-white/70 hover:text-white text-2xl p-1 rounded-xl hover:bg-white/10 transition cursor-pointer"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Mode Switcher Tabs */}
+                            <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setExternalCutMode('non_project');
+                                        setExternalCutForm('cut_mode', 'non_project');
+                                    }}
+                                    className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-b-2 flex items-center gap-2 cursor-pointer ${
+                                        externalCutMode === 'non_project'
+                                            ? 'border-emerald-600 text-emerald-950 bg-white shadow-2xs'
+                                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <span>🏢</span>
+                                    <span>ไม่อิงโครงการ (งบดำเนินงาน / งบประจำทั่วไป)</span>
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-black">แนะนำ/พบบ่อย</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setExternalCutMode('project');
+                                        setExternalCutForm('cut_mode', 'project');
+                                    }}
+                                    className={`px-4 py-2.5 text-xs font-bold rounded-t-xl transition border-b-2 flex items-center gap-2 cursor-pointer ${
+                                        externalCutMode === 'project'
+                                            ? 'border-indigo-600 text-indigo-950 bg-white shadow-2xs'
+                                            : 'border-transparent text-slate-500 hover:text-slate-800'
+                                    }`}
+                                >
+                                    <span>📁</span>
+                                    <span>อิงโครงการ (มีโครงการในระบบ)</span>
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleExternalCutSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                                {/* 1. Target Selector */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-800 mb-1.5">
+                                        เป้าหมายการตัดยอดงบประมาณ: <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <label className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition ${
+                                            externalCutForm.target === 'all'
+                                                ? 'bg-emerald-50 border-emerald-500 text-emerald-950 shadow-2xs ring-1 ring-emerald-400'
+                                                : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                                        }`}>
+                                            <input
+                                                type="radio"
+                                                name="ext_target"
+                                                value="all"
+                                                checked={externalCutForm.target === 'all'}
+                                                onChange={(e) => setExternalCutForm('target', e.target.value)}
+                                                className="text-emerald-600 focus:ring-emerald-500"
+                                            />
+                                            <span>📑 ทั้งจัดซื้อ + สัญญายืม</span>
+                                        </label>
+                                        <label className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition ${
+                                            externalCutForm.target === 'procurement'
+                                                ? 'bg-purple-50 border-purple-500 text-purple-950 shadow-2xs ring-1 ring-purple-400'
+                                                : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                                        }`}>
+                                            <input
+                                                type="radio"
+                                                name="ext_target"
+                                                value="procurement"
+                                                checked={externalCutForm.target === 'procurement'}
+                                                onChange={(e) => setExternalCutForm('target', e.target.value)}
+                                                className="text-purple-600 focus:ring-purple-500"
+                                            />
+                                            <span>📦 ชุดจัดซื้อ (ส่งพัสดุ)</span>
+                                        </label>
+                                        <label className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition ${
+                                            externalCutForm.target === 'loan'
+                                                ? 'bg-blue-50 border-blue-500 text-blue-950 shadow-2xs ring-1 ring-blue-400'
+                                                : 'border-slate-200 hover:bg-slate-50 text-slate-700'
+                                        }`}>
+                                            <input
+                                                type="radio"
+                                                name="ext_target"
+                                                value="loan"
+                                                checked={externalCutForm.target === 'loan'}
+                                                onChange={(e) => setExternalCutForm('target', e.target.value)}
+                                                className="text-blue-600 focus:ring-blue-500"
+                                            />
+                                            <span>💵 สัญญายืมเงิน (ส่งการเงิน)</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                {/* Conditional Fields based on Mode */}
+                                {externalCutMode === 'non_project' ? (
+                                    <>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-800 mb-1">
+                                                    หน่วยงาน / แผนกวิชาที่ขอใช้: <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    value={externalCutForm.department_id}
+                                                    onChange={(e) => setExternalCutForm('department_id', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 font-semibold"
+                                                    required
+                                                >
+                                                    <option value="">-- เลือกแผนกวิชา / ฝ่ายงาน --</option>
+                                                    {(allDepartments || []).map(dept => (
+                                                        <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-800 mb-1">
+                                                    แหล่งเงินงบประมาณ (14 คอลัมน์): <span className="text-red-500">*</span>
+                                                </label>
+                                                <select
+                                                    value={externalCutForm.funding_source_id}
+                                                    onChange={(e) => setExternalCutForm('funding_source_id', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 font-semibold"
+                                                    required
+                                                >
+                                                    <option value="">-- เลือกแหล่งเงินงบประมาณ --</option>
+                                                    {(allFundingSources || []).map(fs => (
+                                                        <option key={fs.id} value={fs.id}>{fs.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-800 mb-1">
+                                                หมวดรายจ่ายในแผนปฏิบัติราชการ: <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                value={externalCutForm.report_category}
+                                                onChange={(e) => setExternalCutForm('report_category', e.target.value)}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 font-semibold"
+                                                required
+                                            >
+                                                <optgroup label="หมวด 4. วัสดุการศึกษา / วัสดุฝึก (ยอดนิยม)">
+                                                    <option value="4.2">4.2 สาขาวิชาช่างยนต์</option>
+                                                    <option value="4.3">4.3 สาขาวิชาไฟฟ้ากำลัง</option>
+                                                    <option value="4.4">4.4 สาขาวิชาเทคนิคพื้นฐาน</option>
+                                                    <option value="4.5">4.5 สาขาวิชาอิเล็กทรอนิกส์</option>
+                                                    <option value="4.6">4.6 สาขาวิชาการบัญชี</option>
+                                                    <option value="4.7">4.7 สาขาวิชาการตลาด</option>
+                                                    <option value="4.8">4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ</option>
+                                                    <option value="4.9">4.9 แผนกสามัญสัมพันธ์</option>
+                                                    <option value="4.1">4.1 หลักสูตรวิชาชีพระยะสั้น</option>
+                                                </optgroup>
+                                                <optgroup label="หมวด 3. ค่าวัสดุ">
+                                                    <option value="3.1">3.1 วัสดุงานอาคาร</option>
+                                                    <option value="3.2.1">3.2.1 วัสดุสำนักงาน (ฝ่ายวิชาการ)</option>
+                                                    <option value="3.2.2">3.2.2 วัสดุสำนักงาน (ฝ่ายกิจการฯ)</option>
+                                                    <option value="3.2.3">3.2.3 วัสดุสำนักงาน (ฝ่ายบริหารฯ)</option>
+                                                    <option value="3.2.4">3.2.4 วัสดุสำนักงาน (ฝ่ายแผนงานฯ)</option>
+                                                    <option value="3.3">3.3 วัสดุเชื้อเพลิงและหล่อลื่น</option>
+                                                </optgroup>
+                                                <optgroup label="หมวด 2. งบดำเนินงาน">
+                                                    <option value="2.1.1">2.1.1 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                                    <option value="2.1.2">2.1.2 ค่าตอบแทนสอนเกินภาระงานครู</option>
+                                                    <option value="2.1.3">2.1.3 ค่าตอบแทนครูสอนระยะสั้น</option>
+                                                    <option value="2.2.1">2.2.1 ค่าเดินทางไปราชการ</option>
+                                                    <option value="2.2.2">2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง</option>
+                                                    <option value="2.2.3">2.2.3 ค่าซ่อมแซมครุภัณฑ์</option>
+                                                    <option value="2.2.4">2.2.4 ค่าโฆษณาและเผยแพร่</option>
+                                                </optgroup>
+                                                <optgroup label="หมวด 5. ค่าสาธารณูปโภค">
+                                                    <option value="5.1">5.1 ค่าไฟฟ้า</option>
+                                                    <option value="5.2">5.2 ค่าน้ำประปา</option>
+                                                    <option value="5.3">5.3 ค่าโทรศัพท์ / สื่อสารโทรคมนาคม</option>
+                                                    <option value="5.4">5.4 ค่าไปรษณีย์</option>
+                                                    <option value="5.6">5.6 ค่าขยะและสิ่งปฏิกูล</option>
+                                                </optgroup>
+                                                <optgroup label="หมวด 1. งบบุคลากร">
+                                                    <option value="1.1">1.1 ครูอัตราจ้าง</option>
+                                                    <option value="1.2">1.2 ประกันสังคมครูอัตราจ้าง</option>
+                                                    <option value="1.3">1.3 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                                </optgroup>
+                                                <optgroup label="หมวด 7. เรียนฟรี 15 ปี / อื่นๆ">
+                                                    <option value="7.1">7.1 ค่าหนังสือ</option>
+                                                    <option value="7.2">7.2 อุปกรณ์การเรียน</option>
+                                                    <option value="7.3">7.3 เครื่องแบบนักเรียน</option>
+                                                </optgroup>
+                                                <optgroup label="หมวด 8. สำรองจ่าย">
+                                                    <option value="8">8. สำรองจ่าย</option>
+                                                </optgroup>
+                                            </select>
+                                            <p className="text-[10px] text-slate-500 mt-0.5">ระบบจะนำยอดนี้ไปลงในตารางรายงานแผนปฏิบัติราชการ 14 คอลัมน์ในหมวดที่เลือกโดยอัตโนมัติ</p>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-800 mb-1">
+                                                ชื่อรายการ / เรื่องที่ขอจัดซื้อหรือยืมเงิน: <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={externalCutForm.title}
+                                                onChange={(e) => setExternalCutForm('title', e.target.value)}
+                                                placeholder="เช่น จัดซื้อวัสดุฝึกปฏิบัติการ แผนกวิชาช่างยนต์ งวดที่ 1"
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 font-medium"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-800 mb-1">
+                                                    วงเงินงบประมาณ (บาท): <span className="text-red-500">*</span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0.01"
+                                                    value={externalCutForm.amount}
+                                                    onChange={(e) => setExternalCutForm('amount', e.target.value)}
+                                                    placeholder="0.00"
+                                                    className="w-full px-3 py-2 border-2 border-emerald-400 rounded-xl text-sm font-black text-emerald-800 focus:ring-2 focus:ring-emerald-500"
+                                                    required
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-slate-800 mb-1">
+                                                    ชื่อผู้ขอจัดซื้อ / ผู้ยืมเงิน (ผู้เดินเรื่อง):
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={externalCutForm.proposer_name}
+                                                    onChange={(e) => setExternalCutForm('proposer_name', e.target.value)}
+                                                    placeholder="เช่น นายสมชาย ใจดี"
+                                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 font-medium"
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-800 mb-1">
+                                                เลือกโครงการในระบบ: <span className="text-red-500">*</span>
+                                            </label>
+                                            <select
+                                                value={externalCutForm.project_id}
+                                                onChange={(e) => {
+                                                    const projId = e.target.value;
+                                                    setExternalCutForm('project_id', projId);
+                                                    const selectedProj = (allProjectsMaster || []).find(p => String(p.id) === String(projId));
+                                                    if (selectedProj) {
+                                                        setExternalCutForm(prev => ({
+                                                            ...prev,
+                                                            project_id: projId,
+                                                            amount: selectedProj.allocated_budget || selectedProj.estimated_budget || prev.amount,
+                                                            title: selectedProj.title || prev.title,
+                                                        }));
+                                                    }
+                                                }}
+                                                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-indigo-500 font-semibold"
+                                                required
+                                            >
+                                                <option value="">-- เลือกโครงการที่ต้องการตัดยอดงบ --</option>
+                                                {(allProjectsMaster || [])
+                                                    .filter(p => p.status === 'approved' || p.status === 'budget_approved' || p.status === 'in_progress' || p.status === 'preliminary')
+                                                    .map(p => (
+                                                        <option key={p.id} value={p.id}>
+                                                            [{p.department?.name || 'ไม่ระบุฝ่าย'}] {p.title} (วงเงิน ฿{new Intl.NumberFormat('th-TH').format(p.allocated_budget || p.estimated_budget || 0)})
+                                                        </option>
+                                                    ))}
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-800 mb-1">
+                                                วงเงินงบประมาณที่จะตัดยอด (บาท): <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0.01"
+                                                value={externalCutForm.amount}
+                                                onChange={(e) => setExternalCutForm('amount', e.target.value)}
+                                                placeholder="0.00"
+                                                className="w-full px-3 py-2 border-2 border-indigo-400 rounded-xl text-sm font-black text-indigo-900 focus:ring-2 focus:ring-indigo-500"
+                                                required
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Common Fields: Document Number & Cut Date */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-800 mb-1">
+                                            เลขที่หนังสือตัดยอดแผนงาน (ผง.):
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={externalCutForm.plan_doc_number}
+                                            onChange={(e) => setExternalCutForm('plan_doc_number', e.target.value)}
+                                            placeholder="เช่น ผง. 001/2569"
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-500 bg-slate-50"
+                                        />
+                                        <span className="text-[10px] text-slate-500">ระบบรันเลขคุมถัดไปให้อัตโนมัติ สามารถแก้ไขตามตรายางที่ประทับจริงได้</span>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-800 mb-1">
+                                            วันที่ตัดยอดงบประมาณ: <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={externalCutForm.cut_date}
+                                            onChange={(e) => setExternalCutForm('cut_date', e.target.value)}
+                                            className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 font-semibold"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-800 mb-1">
+                                        หมายเหตุ / รายละเอียดเพิ่มเติม (ถ้ามี):
+                                    </label>
+                                    <textarea
+                                        rows="2"
+                                        value={externalCutForm.notes}
+                                        onChange={(e) => setExternalCutForm('notes', e.target.value)}
+                                        placeholder="ระบุข้อความเพิ่มเติมหรือรายละเอียดของเอกสารภายนอก..."
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500"
+                                    ></textarea>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsExternalCutModalOpen(false)}
+                                        className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingExternalCut}
+                                        className="px-6 py-2.5 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 hover:from-emerald-700 hover:to-cyan-800 text-white shadow-md hover:scale-105 active:scale-95 transition cursor-pointer disabled:opacity-50"
+                                    >
+                                        {isSavingExternalCut ? 'กำลังบันทึกตัดยอด...' : '✓ บันทึกตัดยอดงบประมาณทันที'}
                                     </button>
                                 </div>
                             </form>

@@ -333,6 +333,261 @@ class ProcurementController extends Controller
     }
 
     /**
+     * Planning staff cuts budget for external paper documents (both non-project routine budget and project-based).
+     */
+    public function planCutExternalBudget(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานวางแผนและงบประมาณหรือผู้ดูแลระบบเท่านั้นที่สามารถตัดยอดงบประมาณได้');
+        }
+
+        $validated = $request->validate([
+            'cut_mode' => 'required|string|in:non_project,project',
+            'target' => 'required|string|in:all,procurement,loan',
+            'project_id' => 'required_if:cut_mode,project|nullable|exists:projects,id',
+            'department_id' => 'required_if:cut_mode,non_project|nullable|exists:departments,id',
+            'funding_source_id' => 'required_if:cut_mode,non_project|nullable|exists:funding_sources,id',
+            'report_category' => 'nullable|string|max:50',
+            'title' => 'required_if:cut_mode,non_project|nullable|string|max:255',
+            'amount' => 'required|numeric|min:0.01',
+            'proposer_name' => 'nullable|string|max:150',
+            'plan_doc_number' => 'nullable|string|max:100',
+            'cut_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $target = $validated['target'];
+        $cutDate = !empty($validated['cut_date']) ? \Carbon\Carbon::parse($validated['cut_date']) : now();
+        $amount = (float)$validated['amount'];
+
+        // Unified document number handling
+        if (!empty($validated['plan_doc_number'])) {
+            $docNumber = trim($validated['plan_doc_number']);
+            if ($docNumber === DocumentNumberService::previewNext()) {
+                DocumentNumberService::generateAndIncrement();
+            }
+        } else {
+            $docNumber = DocumentNumberService::generateAndIncrement();
+        }
+
+        if ($validated['cut_mode'] === 'non_project') {
+            $fiscalYear = \App\Models\SystemSetting::where('key', 'current_fiscal_year')->value('value')
+                ?: (string)(date('Y') + 543 + (date('n') >= 10 ? 1 : 0));
+
+            $routinePlan = RoutineBudgetPlan::create([
+                'fiscal_year' => $fiscalYear,
+                'department_id' => $validated['department_id'],
+                'title' => $validated['title'],
+                'allocated_amount' => $amount,
+                'encumbered_amount' => $amount,
+                'spent_amount' => $amount,
+                'funding_source_id' => $validated['funding_source_id'],
+                'report_category' => $validated['report_category'] ?: '2.2.1',
+            ]);
+
+            $memoSubject = $validated['title'];
+            if (!empty($validated['proposer_name'])) {
+                $memoSubject .= ' (ผู้ขอ: ' . $validated['proposer_name'] . ')';
+            }
+
+            $procurement = Procurement::create([
+                'project_id' => null,
+                'routine_budget_plan_id' => $routinePlan->id,
+                'procurement_number' => $docNumber,
+                'memo_subject' => $memoSubject,
+                'memo_date' => $cutDate,
+                'tor_specifications' => $validated['notes'] ?? null,
+                'status' => ($target === 'all' || $target === 'procurement') ? 'plan_cut' : 'pending',
+                'loan_status' => ($target === 'all' || $target === 'loan') ? 'plan_cut' : 'pending',
+                'plan_procurement_cut_at' => ($target === 'all' || $target === 'procurement') ? $cutDate : null,
+                'plan_procurement_doc_number' => ($target === 'all' || $target === 'procurement') ? $docNumber : null,
+                'plan_loan_cut_at' => ($target === 'all' || $target === 'loan') ? $cutDate : null,
+                'plan_loan_doc_number' => ($target === 'all' || $target === 'loan') ? $docNumber : null,
+            ]);
+
+            ProcurementItem::create([
+                'procurement_id' => $procurement->id,
+                'description' => $validated['title'],
+                'quantity' => 1,
+                'unit' => 'รายการ',
+                'unit_price' => $amount,
+                'total_price' => $amount,
+            ]);
+
+            $targetText = $target === 'all' ? 'ชุดจัดซื้อจัดจ้างและสัญญายืมเงิน' : ($target === 'procurement' ? 'ชุดจัดซื้อจัดจ้าง (ส่งต่อไปพัสดุ)' : 'สัญญายืมเงิน (ส่งต่อไปการเงิน)');
+            return redirect()->back()->with('message', "งานแผนงานได้ออกเลขคุมหลักและตัดยอดงบประมาณ {$targetText} งบดำเนินงานทั่วไป (ไม่อิงโครงการ) เรียบร้อยแล้ว (เลขคุมเอกสาร: {$docNumber})");
+        } else {
+            $project = Project::findOrFail($validated['project_id']);
+            $procurement = $project->procurement;
+            if (!$procurement) {
+                $procurement = Procurement::create([
+                    'project_id' => $project->id,
+                    'status' => 'pending',
+                    'loan_status' => 'pending',
+                ]);
+            }
+
+            if ($target === 'all' || $target === 'procurement') {
+                $procurement->plan_procurement_cut_at = $cutDate;
+                $procurement->plan_procurement_doc_number = $docNumber;
+                if (empty($procurement->procurement_number) || str_starts_with($procurement->procurement_number, 'PR-')) {
+                    $procurement->procurement_number = $docNumber;
+                }
+                if ($procurement->status === 'pending' || empty($procurement->status)) {
+                    $procurement->status = 'plan_cut';
+                }
+            }
+
+            if ($target === 'all' || $target === 'loan') {
+                $procurement->plan_loan_cut_at = $cutDate;
+                $procurement->plan_loan_doc_number = $docNumber;
+                if ($procurement->loan_status === 'pending' || empty($procurement->loan_status)) {
+                    $procurement->loan_status = 'plan_cut';
+                }
+
+                $budget = $project->budget;
+                if (!$budget) {
+                    $budget = new \App\Models\Budget();
+                    $budget->project_id = $project->id;
+                    $budget->funding_source_id = $project->funding_source_id;
+                }
+                $budget->allocated_amount = (float)($project->allocated_budget ?: $project->estimated_budget);
+                $budget->encumbered_amount = $budget->allocated_amount;
+                $budget->save();
+            }
+
+            $procurement->save();
+
+            $targetText = $target === 'all' ? 'ชุดจัดซื้อจัดจ้างและสัญญายืมเงิน' : ($target === 'procurement' ? 'ชุดจัดซื้อจัดจ้าง (ส่งต่อไปพัสดุ)' : 'สัญญายืมเงิน (ส่งต่อไปการเงิน)');
+            return redirect()->back()->with('message', "งานแผนงานได้ออกเลขคุมหลักและตัดยอดงบประมาณ {$targetText} โครงการ \"{$project->title}\" เรียบร้อยแล้ว (เลขคุมเอกสาร: {$docNumber})");
+        }
+    }
+
+    /**
+     * Procurement staff acknowledges and logs receipt of routine procurement package.
+     */
+    public function receiveRoutineProcurement(Request $request, Procurement $procurement)
+    {
+        if (!auth()->user()->isProcurementHead() && !auth()->user()->isAdmin()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานพัสดุหรือผู้ดูแลระบบเท่านั้นที่สามารถลงรับเอกสารได้');
+        }
+
+        $docNumber = $procurement->procurement_number;
+        if ($request->filled('procurement_number')) {
+            $docNumber = trim($request->input('procurement_number'));
+        }
+        if (!$docNumber) {
+            $docNumber = DocumentNumberService::generateAndIncrement();
+        }
+
+        $procurement->procurement_number = $docNumber;
+        if (empty($procurement->plan_procurement_doc_number)) {
+            $procurement->plan_procurement_doc_number = $docNumber;
+        }
+
+        $procurement->memo_date = $request->filled('memo_date') ? $request->input('memo_date') : now();
+        $procurement->status = 'received';
+        $procurement->save();
+
+        return redirect()->back()->with('message', 'งานพัสดุลงรับชุดจัดซื้อจัดจ้างงบดำเนินงาน "' . ($procurement->memo_subject ?: $procurement->routineBudgetPlan?->title) . '" เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Procurement staff forwards routine procurement package to finance.
+     */
+    public function forwardRoutineToFinance(Request $request, Procurement $procurement)
+    {
+        if (!auth()->user()->isProcurementHead() && !auth()->user()->isAdmin()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานพัสดุหรือผู้ดูแลระบบเท่านั้นที่สามารถส่งต่อได้');
+        }
+
+        $procurement->status = 'forwarded_to_finance';
+        $procurement->save();
+
+        return redirect()->back()->with('message', 'ตั้งเบิกชุดจัดซื้อจัดจ้างและส่งต่อให้งานการเงินเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Finance staff acknowledges and logs receipt of routine loan or procurement.
+     */
+    public function financeReceiveRoutine(Request $request, Procurement $procurement)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isFinanceStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานการเงินหรือผู้ดูแลระบบเท่านั้นที่สามารถลงรับเอกสารการเงินได้');
+        }
+
+        $validated = $request->validate([
+            'finance_number' => 'nullable|string|max:100',
+            'receive_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $procurement->loan_status = 'finance_received';
+        $procurement->finance_received_at = now();
+        $procurement->finance_doc_number = $validated['finance_number'] 
+            ?? $procurement->plan_loan_doc_number 
+            ?? $procurement->plan_procurement_doc_number 
+            ?? ('กง. R-' . $procurement->id . '/' . (date('Y') + 543));
+        $procurement->save();
+
+        return redirect()->back()->with('message', 'งานการเงินได้ลงรับสัญญายืมเงิน/เอกสารการเงินงบดำเนินงานเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Finance staff records disbursement for routine procurement / loan.
+     */
+    public function financeDisburseRoutine(Request $request, Procurement $procurement)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isFinanceStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานการเงินหรือผู้ดูแลระบบเท่านั้นที่สามารถบันทึกจ่ายเงินได้');
+        }
+
+        $validated = $request->validate([
+            'actual_spent_amount' => 'required|numeric|min:0',
+            'payment_ref' => 'nullable|string|max:100',
+            'disburse_date' => 'nullable|date',
+            'notes' => 'nullable|string|max:500',
+            'target' => 'nullable|string',
+        ]);
+
+        $target = $request->input('target', 'all');
+        $actualSpent = (float)$validated['actual_spent_amount'];
+        $now = now();
+        $ref = $validated['payment_ref'] ?? 'โอนเงิน KTB';
+
+        if ($target === 'loan') {
+            $procurement->loan_status = 'cleared';
+            $procurement->finance_disbursed_at = $now;
+            $procurement->finance_disbursed_amount = (float)($procurement->finance_disbursed_amount ?: 0) + $actualSpent;
+            $procurement->finance_payment_ref = $ref;
+        } elseif ($target === 'procurement') {
+            $procurement->status = 'completed';
+            $procurement->finance_disbursed_at = $now;
+            $procurement->finance_disbursed_amount = (float)($procurement->finance_disbursed_amount ?: 0) + $actualSpent;
+            $procurement->finance_payment_ref = $ref;
+        } else {
+            $procurement->status = 'completed';
+            $procurement->loan_status = 'cleared';
+            $procurement->finance_disbursed_at = $now;
+            $procurement->finance_disbursed_amount = $actualSpent;
+            $procurement->finance_payment_ref = $ref;
+        }
+        $procurement->save();
+
+        $routinePlan = $procurement->routineBudgetPlan;
+        if ($routinePlan) {
+            $routinePlan->spent_amount = $actualSpent;
+            $routinePlan->save();
+        }
+
+        return redirect()->back()->with('message', 'งานการเงินได้บันทึกจ่ายเงิน/โอนเงินและปิดสัญญาเรียบร้อยแล้ว (อ้างอิง: ' . $ref . ')');
+    }
+
+
+    /**
      * Update unified document numbering settings.
      */
     public function updateDocumentNumberingSettings(Request $request)
