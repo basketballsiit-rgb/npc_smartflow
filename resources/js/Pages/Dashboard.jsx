@@ -3449,6 +3449,14 @@ export default function Dashboard({
             initialAction = 'reject';
         }
 
+        const defaultSource = p.funding_source_id 
+            || p.fundingSource?.id 
+            || p.budget?.funding_source_id 
+            || p.budget?.fundingSource?.id 
+            || planHeadData?.fundingSources?.[0]?.id 
+            || planHeadData?.fundingChannelProgress?.[0]?.id 
+            || '1';
+
         setCommitteeForm({
             action: initialAction,
             allocated_budget: approvedVal,
