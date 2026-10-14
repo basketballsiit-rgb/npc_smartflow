@@ -2812,6 +2812,9 @@ export default function Dashboard({
     // Special Project Budgets States & Handlers
     const [specialBudgetYearFilter, setSpecialBudgetYearFilter] = useState('all');
     const [specialBudgetSearch, setSpecialBudgetSearch] = useState('');
+    const [specialProjectActiveDivision, setSpecialProjectActiveDivision] = useState('all');
+    const [specialProjectStatusFilter, setSpecialProjectStatusFilter] = useState('all'); // 'all', 'pending', 'allocated'
+    const [specialBudgetViewMode, setSpecialBudgetViewMode] = useState('projects'); // 'projects', 'register', 'all'
     const [isSpecialBudgetModalOpen, setIsSpecialBudgetModalOpen] = useState(false);
     const [editingSpecialBudget, setEditingSpecialBudget] = useState(null);
     const {
@@ -2833,17 +2836,25 @@ export default function Dashboard({
         description: '',
     });
 
-    const handleOpenAddSpecialBudget = () => {
+    const handleOpenAddSpecialBudget = (targetProject = null) => {
         setEditingSpecialBudget(null);
+        const pYear = targetProject?.academic_year || targetProject?.fiscal_year || fiscalYear || '2569';
+        const pTitle = targetProject?.title || targetProject?.name || '';
+        const pAmount = targetProject?.allocated_budget > 0 
+            ? String(targetProject.allocated_budget) 
+            : (targetProject?.proposed_budget > 0 
+                ? String(targetProject.proposed_budget) 
+                : (targetProject?.estimated_budget > 0 ? String(targetProject.estimated_budget) : ''));
+
         setSpecialBudgetFormData({
-            fiscal_year: fiscalYear || '2569',
+            fiscal_year: pYear,
             document_number: '',
             document_date: new Date().toISOString().split('T')[0],
             agency_name: 'สำนักงานคณะกรรมการการอาชีวศึกษา (สอศ.)',
-            title: '',
-            allocated_amount: '',
-            project_id: '',
-            description: '',
+            title: targetProject ? `งบสนับสนุนเฉพาะกิจสำหรับโครงการ ${pTitle}` : '',
+            allocated_amount: pAmount,
+            project_id: targetProject ? String(targetProject.id) : '',
+            description: targetProject ? `ผูกกับโครงการ: ${pTitle} (${targetProject.department?.name || targetProject.department_name || 'ไม่ระบุฝ่าย'})` : '',
         });
         setIsSpecialBudgetModalOpen(true);
     };
@@ -14702,7 +14713,103 @@ ${itemsListText}
             return true;
         });
 
-        // Totals
+        // 1. Identify all projects designated to use Special Central Project Budget (ID 13 or explicit special budget)
+        const allSpecialProjects = (allProjectsMaster || []).filter(p => {
+            const sId = Number(p.funding_source_id || p.budget?.funding_source_id || p.fundingSource?.id || 0);
+            const hasSpecialBudgetRecord = Boolean(p.special_project_budget_id || p.specialProjectBudget || items.some(sp => sp.project_id === p.id));
+            const sName = p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+            return sId === 13 || sName.includes('งบเฉพาะโครงการ') || sName.includes('เฉพาะกิจ') || hasSpecialBudgetRecord;
+        });
+
+        const getProjDivKey = (p) => {
+            if (p.report_category === '6.1') return 'acad';
+            if (p.report_category === '6.2') return 'stud';
+            if (p.report_category === '6.3') return 'admin';
+            if (p.report_category === '6.4') return 'plan';
+
+            const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+            const dName = (mainDiv?.name || '').toLowerCase();
+            const dCode = (mainDiv?.code || '').toUpperCase();
+
+            if (dCode === 'ACAD' || dName.includes('วิชาการ')) return 'acad';
+            if (dCode === 'STUD' || dName.includes('กิจการ')) return 'stud';
+            if (dCode === 'RESOURCE' || dCode === 'ADMIN' || dName.includes('ทรัพยากร')) return 'admin';
+            if (dCode === 'STRATEGY_PLAN' || dCode === 'PLAN' || dName.includes('แผน') || dName.includes('ยุทธศาสตร์')) return 'plan';
+
+            const deptName = (p.department?.name || p.department_name || '').toLowerCase();
+            if (deptName.includes('วิชาการ') || deptName.includes('หลักสูตร') || deptName.includes('วัดผล') || deptName.includes('ช่าง') || deptName.includes('สาขา')) return 'acad';
+            if (deptName.includes('กิจการ') || deptName.includes('แนะแนว') || deptName.includes('ปกครอง') || deptName.includes('กิจกรรม') || deptName.includes('พยาบาล')) return 'stud';
+            if (deptName.includes('ทรัพยากร') || deptName.includes('การเงิน') || deptName.includes('พัสดุ') || deptName.includes('สารบรรณ') || deptName.includes('บุคลากร')) return 'admin';
+            if (deptName.includes('แผน') || deptName.includes('ยุทธศาสตร์') || deptName.includes('ประกันคุณภาพ') || deptName.includes('ความร่วมมือ') || deptName.includes('วิจัย')) return 'plan';
+
+            return 'acad';
+        };
+
+        const fourDivisionsMeta = [
+            { id: 'acad', cat: '6.1', name: 'ฝ่ายวิชาการ', icon: '📘', color: 'from-blue-600 to-indigo-600', badgeClass: 'bg-blue-100 text-blue-900 border-blue-200', activeRing: 'border-blue-500 ring-2 ring-blue-300' },
+            { id: 'stud', cat: '6.2', name: 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', icon: '🎓', color: 'from-emerald-600 to-teal-600', badgeClass: 'bg-emerald-100 text-emerald-900 border-emerald-200', activeRing: 'border-emerald-500 ring-2 ring-emerald-300' },
+            { id: 'admin', cat: '6.3', name: 'ฝ่ายบริหารทรัพยากร', icon: '🏛️', color: 'from-purple-600 to-violet-600', badgeClass: 'bg-purple-100 text-purple-900 border-purple-200', activeRing: 'border-purple-500 ring-2 ring-purple-300' },
+            { id: 'plan', cat: '6.4', name: 'ฝ่ายยุทธศาสตร์และแผนงาน', icon: '📊', color: 'from-amber-600 to-orange-600', badgeClass: 'bg-amber-100 text-amber-900 border-amber-200', activeRing: 'border-amber-500 ring-2 ring-amber-300' },
+        ];
+
+        // Filter special projects
+        const filteredSpecialProjects = allSpecialProjects.filter(p => {
+            if (specialBudgetYearFilter !== 'all') {
+                const pYr = String(p.academic_year || p.fiscal_year || '');
+                if (pYr !== String(specialBudgetYearFilter)) return false;
+            }
+            const divKey = getProjDivKey(p);
+            if (specialProjectActiveDivision !== 'all' && divKey !== specialProjectActiveDivision) {
+                return false;
+            }
+            const isAlloc = Boolean(items.find(sp => sp.project_id === p.id || sp.id === p.special_project_budget_id) || p.specialProjectBudget) || Number(p.allocated_budget) > 0;
+            if (specialProjectStatusFilter === 'pending' && isAlloc) return false;
+            if (specialProjectStatusFilter === 'allocated' && !isAlloc) return false;
+
+            if (specialBudgetSearch.trim()) {
+                const q = specialBudgetSearch.toLowerCase();
+                const title = (p.title || p.name || '').toLowerCase();
+                const code = (p.code || '').toLowerCase();
+                const proposer = (p.user?.name || p.proposer_name || p.responsible_person || '').toLowerCase();
+                const dept = (p.department?.name || p.department_name || '').toLowerCase();
+                return title.includes(q) || code.includes(q) || proposer.includes(q) || dept.includes(q);
+            }
+            return true;
+        });
+
+        // 4-division statistics
+        const divisionStats = fourDivisionsMeta.map(div => {
+            const projs = allSpecialProjects.filter(p => {
+                if (specialBudgetYearFilter !== 'all') {
+                    const pYr = String(p.academic_year || p.fiscal_year || '');
+                    if (pYr !== String(specialBudgetYearFilter)) return false;
+                }
+                return getProjDivKey(p) === div.id;
+            });
+            const totalCount = projs.length;
+            const pendingCount = projs.filter(p => !(items.find(sp => sp.project_id === p.id || sp.id === p.special_project_budget_id) || p.specialProjectBudget) && !(Number(p.allocated_budget) > 0)).length;
+            const allocatedCount = totalCount - pendingCount;
+            const proposedSum = projs.reduce((s, p) => s + (Number(p.proposed_budget || p.estimated_budget) || 0), 0);
+            const allocatedSum = projs.reduce((s, p) => s + (Number(p.allocated_budget) || 0), 0);
+            return {
+                ...div,
+                totalCount,
+                pendingCount,
+                allocatedCount,
+                proposedSum,
+                allocatedSum
+            };
+        });
+
+        const totalSpecialProjectsCount = allSpecialProjects.filter(p => specialBudgetYearFilter === 'all' || String(p.academic_year || p.fiscal_year || '') === String(specialBudgetYearFilter)).length;
+        const totalPendingSpecialCount = allSpecialProjects.filter(p => {
+            if (specialBudgetYearFilter !== 'all' && String(p.academic_year || p.fiscal_year || '') !== String(specialBudgetYearFilter)) return false;
+            const isAlloc = Boolean(items.find(sp => sp.project_id === p.id || sp.id === p.special_project_budget_id) || p.specialProjectBudget) || Number(p.allocated_budget) > 0;
+            return !isAlloc;
+        }).length;
+        const totalAllocatedSpecialCount = totalSpecialProjectsCount - totalPendingSpecialCount;
+
+        // Totals for Central Register
         const totalAllocated = filteredItems.reduce((sum, i) => sum + (parseFloat(i.allocated_amount) || 0), 0);
         const totalSpent = filteredItems.reduce((sum, i) => {
             const sp = parseFloat(i.spent_amount) || (i.project?.spent_amount ? parseFloat(i.project.spent_amount) : (i.project?.budget?.spent_amount ? parseFloat(i.project.budget.spent_amount) : 0));
@@ -14740,7 +14847,7 @@ ${itemsListText}
                             {isPlanStaff && (
                                 <button
                                     type="button"
-                                    onClick={handleOpenAddSpecialBudget}
+                                    onClick={() => handleOpenAddSpecialBudget()}
                                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition cursor-pointer"
                                 >
                                     <span>➕</span>
@@ -14772,16 +14879,17 @@ ${itemsListText}
                     {/* Card 2: Linked Projects */}
                     <div className="rounded-2xl border border-sky-200 bg-white p-5 shadow-xs hover:shadow-md transition">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-bold text-slate-500">โครงการที่ผูกเชื่อมโยง</span>
+                            <span className="text-xs font-bold text-slate-500">โครงการที่ใช้/รองบเฉพาะกิจ</span>
                             <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-lg font-black">
                                 🎯
                             </div>
                         </div>
                         <div className="text-xl sm:text-2xl font-black text-sky-950">
-                            {linkedCount} <span className="text-xs font-bold text-slate-500">/ {totalItemsCount} รายการ</span>
+                            {totalSpecialProjectsCount} <span className="text-xs font-bold text-slate-500">โครงการ (4 ฝ่าย)</span>
                         </div>
-                        <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
-                            <span>{totalItemsCount - linkedCount > 0 ? `รอผูกโครงการ ${totalItemsCount - linkedCount} รายการ` : 'ผูกโครงการครบทุกรายการ'}</span>
+                        <div className="text-[11px] text-slate-500 mt-1 flex items-center justify-between">
+                            <span className="text-emerald-700 font-bold">🟢 จัดสรรแล้ว {totalAllocatedSpecialCount}</span>
+                            <span className="text-amber-700 font-bold">🟡 รอจัดสรร {totalPendingSpecialCount}</span>
                         </div>
                     </div>
 
@@ -14859,11 +14967,359 @@ ${itemsListText}
                     </div>
                 </div>
 
-                {/* Table Register */}
+                {/* View Mode Switcher (Tab Selection) */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-slate-100 border border-slate-200/80 w-fit">
+                        <button
+                            type="button"
+                            onClick={() => setSpecialBudgetViewMode('projects')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                                specialBudgetViewMode === 'projects'
+                                    ? 'bg-white text-purple-950 shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <span>📌</span>
+                            <span>สถานะโครงการแยก 4 ฝ่าย</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                specialBudgetViewMode === 'projects' ? 'bg-purple-100 text-purple-900' : 'bg-slate-200 text-slate-700'
+                            }`}>
+                                {totalSpecialProjectsCount}
+                            </span>
+                            {totalPendingSpecialCount > 0 && (
+                                <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black animate-pulse">
+                                    รอจัดสรร {totalPendingSpecialCount}
+                                </span>
+                            )}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setSpecialBudgetViewMode('register')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                                specialBudgetViewMode === 'register'
+                                    ? 'bg-white text-amber-950 shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <span>💼</span>
+                            <span>ทะเบียนคุมรับงบ (หนังสือสั่งการ)</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                                specialBudgetViewMode === 'register' ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-700'
+                            }`}>
+                                {filteredItems.length}
+                            </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setSpecialBudgetViewMode('all')}
+                            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                                specialBudgetViewMode === 'all'
+                                    ? 'bg-white text-slate-900 shadow-xs'
+                                    : 'text-slate-600 hover:text-slate-900'
+                            }`}
+                        >
+                            <span>📑</span>
+                            <span>แสดงทั้งสองส่วน</span>
+                        </button>
+                    </div>
+
+                    <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                        <span>💡 คลิกปุ่ม <strong>"➕ ลงทะเบียนรับงบ"</strong> ในตารางโครงการเพื่อลงทะเบียนเลขที่หนังสือและผูกงบได้ทันที</span>
+                    </div>
+                </div>
+
+                {/* SECTION 1: Status of Projects Requiring Special Budgets (4 Divisions) */}
+                {(specialBudgetViewMode === 'projects' || specialBudgetViewMode === 'all') && (
+                    <div className="space-y-4">
+                        {/* 4 Division Status Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                            {divisionStats.map(div => {
+                                const isSelected = specialProjectActiveDivision === div.id;
+                                return (
+                                    <button
+                                        key={div.id}
+                                        type="button"
+                                        onClick={() => setSpecialProjectActiveDivision(isSelected ? 'all' : div.id)}
+                                        className={`text-left rounded-2xl border-2 p-4 transition-all duration-200 cursor-pointer bg-white shadow-2xs hover:shadow-md ${
+                                            isSelected 
+                                                ? `${div.activeRing} bg-slate-50/80 scale-[1.02]` 
+                                                : 'border-slate-200 hover:border-slate-300'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-lg">{div.icon}</span>
+                                                <div>
+                                                    <h4 className="font-black text-slate-900 text-xs sm:text-sm">{div.name}</h4>
+                                                    <span className="text-[10px] text-slate-500 font-semibold">หมวดรายงาน {div.cat}</span>
+                                                </div>
+                                            </div>
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-black ${
+                                                div.totalCount > 0 ? 'bg-purple-100 text-purple-900' : 'bg-slate-100 text-slate-500'
+                                            }`}>
+                                                {div.totalCount} โครงการ
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-1 pt-2 border-t border-slate-100 text-xs">
+                                            <div className="flex items-center justify-between text-[11px]">
+                                                <span className="text-slate-500">งบเสนอขอรวม:</span>
+                                                <span className="font-black text-slate-800">{fmt(div.proposedSum)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[11px]">
+                                                <span className="text-slate-500">จัดสรรจริงแล้ว:</span>
+                                                <span className="font-black text-emerald-700">{fmt(div.allocatedSum)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[10px] pt-1">
+                                                <span className="inline-flex items-center gap-1 font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                    🟡 รอจัดสรร {div.pendingCount}
+                                                </span>
+                                                <span className="inline-flex items-center gap-1 font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                                    🟢 ผูกงบแล้ว {div.allocatedCount}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Table Card for Special Budget Projects */}
+                        <div className="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+                            <div className="px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-base">📌</span>
+                                    <span className="font-black text-slate-800 text-sm">
+                                        รายการโครงการที่ระบุใช้งบเฉพาะกิจ (แยก 4 ฝ่าย)
+                                    </span>
+                                    <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-900 text-xs font-bold">
+                                        {filteredSpecialProjects.length} โครงการ
+                                    </span>
+                                    {specialProjectActiveDivision !== 'all' && (
+                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 text-xs font-bold">
+                                            {fourDivisionsMeta.find(d => d.id === specialProjectActiveDivision)?.name}
+                                            <button
+                                                type="button"
+                                                onClick={() => setSpecialProjectActiveDivision('all')}
+                                                className="hover:text-rose-600 ml-1 text-xs cursor-pointer"
+                                            >✕</button>
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Status Filter Pills */}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-xs text-slate-500 font-bold mr-1">สถานะงบ:</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSpecialProjectStatusFilter('all')}
+                                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                                            specialProjectStatusFilter === 'all'
+                                                ? 'bg-slate-800 text-white shadow-2xs'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        ทั้งหมด ({allSpecialProjects.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSpecialProjectStatusFilter('pending')}
+                                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                                            specialProjectStatusFilter === 'pending'
+                                                ? 'bg-amber-500 text-white shadow-2xs'
+                                                : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+                                        }`}
+                                    >
+                                        <span>🟡</span>
+                                        <span>รอหนังสือจัดสรร ({totalPendingSpecialCount})</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSpecialProjectStatusFilter('allocated')}
+                                        className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                                            specialProjectStatusFilter === 'allocated'
+                                                ? 'bg-emerald-600 text-white shadow-2xs'
+                                                : 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100'
+                                        }`}
+                                    >
+                                        <span>🟢</span>
+                                        <span>ได้รับจัดสรร/ผูกงบแล้ว ({totalAllocatedSpecialCount})</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {filteredSpecialProjects.length === 0 ? (
+                                <div className="p-12 text-center space-y-3">
+                                    <div className="text-4xl">📋</div>
+                                    <h3 className="text-base font-bold text-slate-800">ไม่พบโครงการที่ระบุใช้งบเฉพาะกิจ</h3>
+                                    <p className="text-xs text-slate-500 max-w-md mx-auto">
+                                        {specialProjectActiveDivision !== 'all' || specialProjectStatusFilter !== 'all' || specialBudgetSearch
+                                            ? 'ไม่มีโครงการที่ตรงกับเงื่อนไขการกรองฝ่ายหรือคำค้นหาที่ระบุ'
+                                            : 'ยังไม่มีโครงการที่ได้รับการจัดสรรแหล่งเงินเป็น "งบเฉพาะโครงการ (จัดสรรเฉพาะกิจจากส่วนกลาง)" สำหรับปีงบประมาณนี้'}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left text-xs">
+                                        <thead className="bg-slate-50 text-slate-600 uppercase tracking-wider font-bold border-b border-slate-200">
+                                            <tr>
+                                                <th className="px-4 py-3.5 text-center w-14">ลำดับ</th>
+                                                <th className="px-4 py-3.5">โครงการ & ผู้รับผิดชอบ</th>
+                                                <th className="px-4 py-3.5 w-44">ฝ่ายงาน / แผนก</th>
+                                                <th className="px-4 py-3.5 text-right w-32">งบเสนอขอ (บาท)</th>
+                                                <th className="px-4 py-3.5 w-60">สถานะงบเฉพาะกิจ</th>
+                                                <th className="px-4 py-3.5 text-center w-36">สถานะโครงการ</th>
+                                                <th className="px-4 py-3.5 text-center w-48">การดำเนินการ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 text-slate-700">
+                                            {filteredSpecialProjects.map((p, idx) => {
+                                                const divKey = getProjDivKey(p);
+                                                const divMeta = fourDivisionsMeta.find(d => d.id === divKey);
+                                                const linkedBudget = items.find(sp => sp.project_id === p.id || sp.id === p.special_project_budget_id) || p.specialProjectBudget;
+                                                const isAllocated = Boolean(linkedBudget) || Number(p.allocated_budget) > 0;
+                                                const proposed = Number(p.proposed_budget || p.estimated_budget || 0);
+                                                const allocated = Number(p.allocated_budget || linkedBudget?.allocated_amount || 0);
+
+                                                return (
+                                                    <tr key={p.id} className="hover:bg-amber-50/20 transition">
+                                                        <td className="px-4 py-3.5 text-center font-bold text-slate-400">
+                                                            {idx + 1}
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            <div className="space-y-1">
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <span className="font-mono text-[11px] font-bold text-purple-700">
+                                                                        {p.code || `PROJ-${p.id}`}
+                                                                    </span>
+                                                                    <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 font-bold text-[10px]">
+                                                                        ปี {p.academic_year || p.fiscal_year || fiscalYear}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="font-bold text-slate-900 text-xs sm:text-sm line-clamp-2">
+                                                                    {p.title || p.name}
+                                                                </div>
+                                                                <div className="text-[11px] text-slate-500 flex items-center gap-2">
+                                                                    <span>👤 {p.user?.name || p.proposer_name || p.responsible_person || 'ไม่ระบุผู้เสนอ'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            <div className="space-y-1">
+                                                                <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border ${divMeta?.badgeClass || 'bg-slate-100 text-slate-700'}`}>
+                                                                    {divMeta?.icon} {divMeta?.name || 'ฝ่ายงาน'}
+                                                                </span>
+                                                                <div className="text-[11px] text-slate-600 font-medium">
+                                                                    {p.department?.name || p.department_name || '-'}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                                                            <div className="font-mono font-bold text-slate-800">
+                                                                {fmt(proposed)}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            {isAllocated ? (
+                                                                <div className="space-y-1">
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold text-[11px]">
+                                                                        🟢 ได้รับจัดสรร: {fmt(allocated)}
+                                                                    </span>
+                                                                    {linkedBudget ? (
+                                                                        <div className="text-[10px] text-slate-600 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                                                                            <div className="font-bold text-slate-800">
+                                                                                📜 {linkedBudget.document_number || 'ไม่ระบุเลขหนังสือ'}
+                                                                            </div>
+                                                                            <div className="text-slate-500">
+                                                                                {linkedBudget.agency_name || 'สอศ.'} • {linkedBudget.document_date ? new Date(linkedBudget.document_date).toLocaleDateString('th-TH') : ''}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-[10px] text-slate-500">
+                                                                            อนุมัติจัดสรรในระบบแล้ว
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="space-y-1">
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[11px]">
+                                                                        🟡 รอหนังสือจัดสรรจากส่วนกลาง
+                                                                    </span>
+                                                                    <div className="text-[10px] text-slate-500">
+                                                                        อนุมัติในหลักการเพื่อเข้าเล่มแผนแล้ว
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                                            {getStatusBadge(p.status, p.current_approval_step, p)}
+                                                        </td>
+                                                        <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                                                            <div className="inline-flex items-center justify-center gap-1 flex-wrap">
+                                                                {isPlanStaff && !linkedBudget && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenAddSpecialBudget(p)}
+                                                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-[11px] shadow-xs hover:shadow transition cursor-pointer"
+                                                                        title="ลงทะเบียนหนังสือจัดสรรและผูกกับโครงการนี้"
+                                                                    >
+                                                                        <span>➕</span>
+                                                                        <span>ลงทะเบียนรับงบ</span>
+                                                                    </button>
+                                                                )}
+                                                                {isPlanStaff && linkedBudget && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenEditSpecialBudget(linkedBudget)}
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold transition cursor-pointer"
+                                                                        title="ดู/แก้ไขหนังสือจัดสรรงบ"
+                                                                    >
+                                                                        <span>📜</span>
+                                                                        <span>หนังสือรับงบ</span>
+                                                                    </button>
+                                                                )}
+                                                                {isPlanStaff && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => openCommitteeModal(p)}
+                                                                        className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 text-[11px] font-bold transition cursor-pointer"
+                                                                        title="ปรับปรุงยอดจัดสรรโครงการ"
+                                                                    >
+                                                                        <span>✏️</span>
+                                                                        <span>ปรับงบ</span>
+                                                                    </button>
+                                                                )}
+                                                                <a
+                                                                    href={route('projects.print', p.id)}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
+                                                                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
+                                                                    title="พิมพ์ / ดูเอกสารโครงการ"
+                                                                >
+                                                                    🖨️
+                                                                </a>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* SECTION 2: Central Register Table (หนังสือจัดสรรจากส่วนกลาง) */}
+                {(specialBudgetViewMode === 'register' || specialBudgetViewMode === 'all') && (
                 <div className="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-xs">
                     <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800 text-sm">รายการงบเฉพาะกิจโครงการ</span>
+                            <span className="text-base">💼</span>
+                            <span className="font-bold text-slate-800 text-sm">รายการงบเฉพาะกิจโครงการ (หนังสือสั่งการจัดสรร)</span>
                             <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-bold">
                                 {filteredItems.length} รายการ
                             </span>
@@ -15006,6 +15462,7 @@ ${itemsListText}
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Modal: Add / Edit Special Project Budget */}
                 {isSpecialBudgetModalOpen && (

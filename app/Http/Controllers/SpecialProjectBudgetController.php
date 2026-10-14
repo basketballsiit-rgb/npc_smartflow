@@ -44,7 +44,13 @@ class SpecialProjectBudgetController extends Controller
                 if ((float)$special->allocated_amount > 0) {
                     $project->allocated_budget = $special->allocated_amount;
                     $project->approved_budget = $special->allocated_amount;
+                    $project->estimated_budget = $special->allocated_amount;
                 }
+                if (in_array($project->status, ['draft', 'preliminary'])) {
+                    $project->status = 'budget_approved';
+                    $project->current_approval_step = 1;
+                }
+                $project->allocation_status = 'allocated';
                 $project->save();
 
                 \App\Models\Budget::updateOrCreate(
@@ -105,7 +111,13 @@ class SpecialProjectBudgetController extends Controller
                 if ((float)$specialProjectBudget->allocated_amount > 0) {
                     $proj->allocated_budget = $specialProjectBudget->allocated_amount;
                     $proj->approved_budget = $specialProjectBudget->allocated_amount;
+                    $proj->estimated_budget = $specialProjectBudget->allocated_amount;
                 }
+                if (in_array($proj->status, ['draft', 'preliminary'])) {
+                    $proj->status = 'budget_approved';
+                    $proj->current_approval_step = 1;
+                }
+                $proj->allocation_status = 'allocated';
                 $proj->save();
 
                 \App\Models\Budget::updateOrCreate(

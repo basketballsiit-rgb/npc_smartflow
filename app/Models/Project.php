@@ -291,6 +291,14 @@ class Project extends Model
     }
 
     /**
+     * Get the special project budget allocation linked to this project.
+     */
+    public function specialProjectBudget()
+    {
+        return $this->hasOne(SpecialProjectBudget::class, 'project_id');
+    }
+
+    /**
      * Get the 5-level execution lifecycle status.
      * 1. 🔴 สีแดง - ยังไม่ได้เริ่มดำเนินการ
      * 2. 🟡 สีเหลือง - มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ

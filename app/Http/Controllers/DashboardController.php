@@ -837,8 +837,8 @@ class DashboardController extends Controller
             || $user->isFinanceStaff() || $user->isExecutive()
             || $activeDelegatedPrincipals->some(fn($p) => $p->isAdmin() || $p->isPlanHead() || $p->isPlanStaff() || $p->isProcurementHead() || $p->isProcurementStaff() || $p->isFinanceStaff() || $p->isExecutive());
 
-        if ($isPowerUser || in_array($activeTab, ['operation_calendar', 'project_status', 'all_projects', 'document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
-            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'approvals.delegatedFromUser', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
+        if ($isPowerUser || in_array($activeTab, ['operation_calendar', 'project_status', 'all_projects', 'document_tracking', 'central_budgets', 'special_project_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
+            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'specialProjectBudget', 'approvals.user', 'approvals.delegatedFromUser', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
                 ->latest();
 
             // Non-power users (e.g. general teachers/proposers) only track their own projects, or specifically selected project (unless viewing all_projects tab)
