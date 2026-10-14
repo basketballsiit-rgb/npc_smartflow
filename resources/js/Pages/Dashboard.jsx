@@ -3428,15 +3428,17 @@ export default function Dashboard({
 
     const openCommitteeModal = (p) => {
         setSelectedProjectForAllocation(p);
-        const defaultSource = p.funding_source_id || (p.budget?.funding_source_id || planHeadData?.fundingSources?.[0]?.id || '1');
+        const fourDivs = getFourMainDivisions();
+        const [adminDept, acadDept, studDept, planDept] = fourDivs;
+        const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+        const expectedCat = (mainDiv?.id === planDept?.id || mainDiv?.code === 'STRATEGY_PLAN' || mainDiv?.code === 'PLAN') ? '6.4'
+            : (mainDiv?.id === studDept?.id || mainDiv?.code === 'STUD') ? '6.2'
+            : (mainDiv?.id === adminDept?.id || mainDiv?.code === 'RESOURCE' || mainDiv?.code === 'ADMIN') ? '6.3'
+            : '6.1';
+
         let defaultCat = p.report_category;
-        const deptText = p.department?.name || p.department_name || '';
-        if (!defaultCat) {
-            if (deptText.includes('วิชาการ')) defaultCat = '6.1';
-            else if (deptText.includes('กิจการ') || deptText.includes('พัฒนากิจการ') || deptText.includes('นักเรียน')) defaultCat = '6.2';
-            else if (deptText.includes('บริหาร') || deptText.includes('พัสดุ') || deptText.includes('ทรัพยากร')) defaultCat = '6.3';
-            else if (deptText.includes('แผน') || deptText.includes('ยุทธศาสตร์')) defaultCat = '6.4';
-            else defaultCat = '6.1';
+        if (!defaultCat || !['6.1', '6.2', '6.3', '6.4'].includes(defaultCat) || defaultCat !== expectedCat) {
+            defaultCat = expectedCat;
         }
         const proposedVal = p.proposed_budget || p.estimated_budget || 0;
         const approvedVal = p.approved_budget || p.allocated_budget || proposedVal || '';
@@ -4154,7 +4156,50 @@ export default function Dashboard({
         const dept = allDepartments.find(d => String(d.id) === String(deptId));
         const nameStr = String(deptName || dept?.name || '');
 
-        // 1. If it's a department/major (แผนกวิชา / สาขาวิชา / งานสอน / ช่าง / ฯลฯ) -> ALWAYS Academic Division (ฝ่ายวิชาการ)
+        // Priority 1: Direct match with one of the 4 main divisions by ID
+        if (dept && fourDivisions.some(m => String(m.id) === String(dept.id))) {
+            return fourDivisions.find(m => String(m.id) === String(dept.id));
+        }
+
+        // Priority 2: Direct match by parent_id (direct database hierarchy)
+        if (dept && dept.parent_id) {
+            const parent = allDepartments.find(d => String(d.id) === String(dept.parent_id));
+            if (parent) {
+                const matchedDiv = fourDivisions.find(m => String(m.id) === String(parent.id));
+                if (matchedDiv) return matchedDiv;
+            }
+        }
+
+        // Priority 3: Division Code matching
+        if (dept?.code) {
+            const c = dept.code.toUpperCase();
+            if (c === 'STRATEGY_PLAN' || c === 'PLAN') return planDept;
+            if (c === 'STUD' || c === 'STUDENT') return studDept;
+            if (c === 'RESOURCE' || c === 'ADMIN') return adminDept;
+            if (c === 'ACAD' || c === 'ACADEMIC') return acadDept;
+        }
+
+        // Priority 4: Exact string equality with main division names
+        if (nameStr.includes('ฝ่ายยุทธศาสตร์และแผนงาน') || nameStr.includes('ยุทธศาสตร์และแผนงาน')) return planDept;
+        if (nameStr.includes('ฝ่ายพัฒนากิจการนักเรียน') || nameStr.includes('พัฒนากิจการนักเรียน นักศึกษา') || nameStr.includes('กิจการนักเรียน นักศึกษา')) return studDept;
+        if (nameStr.includes('ฝ่ายบริหารทรัพยากร') || nameStr.includes('บริหารทรัพยากร')) return adminDept;
+        if (nameStr.includes('ฝ่ายวิชาการ')) return acadDept;
+
+        // Priority 5: Strategic Planning Division sub-departments
+        if (
+            nameStr.includes('แผนงาน') || 
+            nameStr.includes('ยุทธศาสตร์') || 
+            nameStr.includes('วางแผน') || 
+            nameStr.includes('ประกันคุณภาพ') || 
+            nameStr.includes('วิจัย') || 
+            nameStr.includes('บ่มเพาะ') || 
+            nameStr.includes('ดิจิทัล') || 
+            nameStr.includes('ประชาสัมพันธ์')
+        ) {
+            return planDept;
+        }
+
+        // Priority 6: Academic Division sub-departments
         if (
             nameStr.includes('แผนก') || 
             nameStr.includes('สาขา') || 
@@ -4176,7 +4221,7 @@ export default function Dashboard({
             return acadDept;
         }
 
-        // 2. Student Affairs Division (ฝ่ายพัฒนากิจการนักเรียน นักศึกษา)
+        // Priority 7: Student Affairs Division sub-departments
         if (
             nameStr.includes('กิจการ') || 
             nameStr.includes('นักเรียน') || 
@@ -4190,9 +4235,8 @@ export default function Dashboard({
             return studDept;
         }
 
-        // 3. Resource Management Division (ฝ่ายบริหารทรัพยากร)
+        // Priority 8: Resource Management Division sub-departments
         if (
-            nameStr.includes('บริหารทรัพยากร') || 
             nameStr.includes('บริหารทั่วไป') || 
             nameStr.includes('สารบรรณ') || 
             nameStr.includes('การเงิน') || 
@@ -4202,32 +4246,6 @@ export default function Dashboard({
             nameStr.includes('ยานพาหนะ')
         ) {
             return adminDept;
-        }
-
-        // 4. Strategic Planning Division (ฝ่ายยุทธศาสตร์และแผนงาน)
-        if (
-            nameStr.includes('แผนงาน') || 
-            nameStr.includes('ยุทธศาสตร์') || 
-            nameStr.includes('ประกันคุณภาพ') || 
-            nameStr.includes('วิจัย') || 
-            nameStr.includes('บ่มเพาะ') || 
-            nameStr.includes('ดิจิทัล') || 
-            nameStr.includes('ประชาสัมพันธ์')
-        ) {
-            return planDept;
-        }
-
-        // 5. Check parent_id if available
-        if (dept && dept.parent_id) {
-            const parent = allDepartments.find(d => d.id === dept.parent_id);
-            if (parent) {
-                return getMainDivision(parent.id, parent.name);
-            }
-        }
-
-        // Direct match with one of the 4 main divisions
-        if (dept && fourDivisions.some(m => m.id === dept.id)) {
-            return fourDivisions.find(m => m.id === dept.id);
         }
 
         return acadDept; // Default to academic division
@@ -10270,17 +10288,21 @@ ${itemsListText}
         };
 
         // 2. Populate Projects (Row 6.1 - 6.4)
+        const fourDivisionsList = getFourMainDivisions();
+        const [divAdmin, divAcad, divStud, divPlan] = fourDivisionsList;
+
         (allProjectsMaster || []).forEach(p => {
             if (!isProjectApprovedForReport(p)) return;
 
+            const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+            const expectedCat = (mainDiv?.id === divPlan?.id || mainDiv?.code === 'STRATEGY_PLAN' || mainDiv?.code === 'PLAN') ? '6.4'
+                : (mainDiv?.id === divStud?.id || mainDiv?.code === 'STUD') ? '6.2'
+                : (mainDiv?.id === divAdmin?.id || mainDiv?.code === 'RESOURCE' || mainDiv?.code === 'ADMIN') ? '6.3'
+                : '6.1';
+
             let cat = p.report_category;
-            if (!cat) {
-                const deptName = p.department_name || p.department?.name || '';
-                if (deptName.includes('วิชาการ')) cat = '6.1';
-                else if (deptName.includes('กิจการ') || deptName.includes('พัฒนากิจการ') || deptName.includes('นักเรียน')) cat = '6.2';
-                else if (deptName.includes('บริหาร') || deptName.includes('พัสดุ') || deptName.includes('บริหารทรัพยากร')) cat = '6.3';
-                else if (deptName.includes('วางแผน') || deptName.includes('แผน') || deptName.includes('ยุทธศาสตร์')) cat = '6.4';
-                else cat = '6.1';
+            if (!cat || !['6.1', '6.2', '6.3', '6.4'].includes(cat) || (cat !== expectedCat && ['6.1', '6.2', '6.3', '6.4'].includes(expectedCat))) {
+                cat = expectedCat;
             }
 
             const alloc = parseFloat(p.allocated_amount || p.allocated_budget || p.estimated_budget || p.proposed_budget || 0);
@@ -23971,7 +23993,16 @@ return (
                                             <label className="block mb-1 text-slate-800 font-bold">ฝ่าย / งานที่รับผิดชอบโครงการ *</label>
                                             <select
                                                 value={directAllocateForm.department_id}
-                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, department_id: Number(e.target.value) })}
+                                                onChange={(e) => {
+                                                    const newDeptId = Number(e.target.value);
+                                                    const [divAdmin, divAcad, divStud, divPlan] = getFourMainDivisions();
+                                                    const mainDiv = getMainDivision(newDeptId);
+                                                    const autoCat = (mainDiv?.id === divPlan?.id || mainDiv?.code === 'STRATEGY_PLAN' || mainDiv?.code === 'PLAN') ? '6.4'
+                                                        : (mainDiv?.id === divStud?.id || mainDiv?.code === 'STUD') ? '6.2'
+                                                        : (mainDiv?.id === divAdmin?.id || mainDiv?.code === 'RESOURCE' || mainDiv?.code === 'ADMIN') ? '6.3'
+                                                        : '6.1';
+                                                    setDirectAllocateForm({ ...directAllocateForm, department_id: newDeptId, report_category: autoCat });
+                                                }}
                                                 className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 focus:ring-purple-500"
                                             >
                                                 {allDepartments.map(d => (

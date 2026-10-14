@@ -165,6 +165,7 @@ class ProjectController extends Controller
         $project = new Project($validated);
         $project->user_id = auth()->id();
         $project->department_id = auth()->user()->department_id ?? Department::first()->id;
+        $project->report_category = Project::resolveCategoryForDepartment(Department::find($project->department_id));
         $project->status = 'draft';
         $project->current_approval_step = 1;
         $project->save();
@@ -286,6 +287,7 @@ class ProjectController extends Controller
         $project->outputs = ['ผลผลิตโครงการ'];
         $project->outcomes = ['ผลลัพธ์โครงการ'];
         $project->status = 'preliminary';
+        $project->report_category = Project::resolveCategoryForDepartment(Department::find($deptId));
         $project->current_approval_step = 1;
         $project->save();
 
@@ -337,14 +339,10 @@ class ProjectController extends Controller
         ]);
 
         // Auto-detect report_category if not explicitly provided
-        $dept = Department::find($validated['department_id']);
+        $dept = Department::with('parent')->find($validated['department_id']);
         $cat = $validated['report_category'] ?? null;
-        if (!$cat) {
-            if ($dept && (str_contains($dept->name, 'วิชาการ') || $dept->code === 'ACAD')) $cat = '6.1';
-            elseif ($dept && (str_contains($dept->name, 'พัฒนากิจการ') || str_contains($dept->name, 'นักเรียน') || $dept->code === 'STUD')) $cat = '6.2';
-            elseif ($dept && (str_contains($dept->name, 'บริหาร') || str_contains($dept->name, 'พัสดุ') || str_contains($dept->name, 'ทรัพยากร') || $dept->code === 'ADMIN')) $cat = '6.3';
-            elseif ($dept && (str_contains($dept->name, 'แผน') || $dept->code === 'PLAN')) $cat = '6.4';
-            else $cat = '6.1';
+        if (!$cat || !in_array($cat, ['6.1', '6.2', '6.3', '6.4'])) {
+            $cat = Project::resolveCategoryForDepartment($dept, $cat);
         }
 
         $iqa = \App\Models\IqaStrategy::firstOrCreate(
@@ -436,14 +434,10 @@ class ProjectController extends Controller
                 'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
             ]);
 
-            $dept = $project->department;
+            $dept = $project->department ?: Department::with('parent')->find($project->department_id);
             $cat = $request->input('report_category');
-            if (!$cat) {
-                if ($dept && (str_contains($dept->name, 'วิชาการ') || $dept->code === 'ACAD')) $cat = '6.1';
-                elseif ($dept && (str_contains($dept->name, 'พัฒนากิจการ') || str_contains($dept->name, 'นักเรียน') || $dept->code === 'STUD')) $cat = '6.2';
-                elseif ($dept && (str_contains($dept->name, 'บริหาร') || str_contains($dept->name, 'พัสดุ') || str_contains($dept->name, 'ทรัพยากร') || $dept->code === 'ADMIN')) $cat = '6.3';
-                elseif ($dept && (str_contains($dept->name, 'แผน') || $dept->code === 'PLAN')) $cat = '6.4';
-                else $cat = '6.1';
+            if (!$cat || !in_array($cat, ['6.1', '6.2', '6.3', '6.4'])) {
+                $cat = Project::resolveCategoryForDepartment($dept, $project->report_category);
             }
 
             $approvedAmount = (float)$request->input('allocated_budget');
@@ -936,6 +930,11 @@ class ProjectController extends Controller
                 $validated['proposer_duty'] = $userPos->duty;
                 $validated['position'] = $userPos->formatPositionTitle();
             }
+        }
+
+        $targetDeptId = $validated['department_id'] ?? $project->department_id;
+        if ($targetDeptId) {
+            $validated['report_category'] = Project::resolveCategoryForDepartment(Department::with('parent')->find($targetDeptId), $project->report_category);
         }
 
         // Capture raw original state before update for audit trail diff

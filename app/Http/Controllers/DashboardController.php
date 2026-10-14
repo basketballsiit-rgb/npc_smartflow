@@ -727,7 +727,7 @@ class DashboardController extends Controller
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
                         'funding_source_id' => $p->funding_source_id ?: ($p->budget?->funding_source_id ?? null),
                         'funding_source_name' => $p->fundingSource?->name ?: ($p->budget?->fundingSource?->name ?? 'ยังไม่จัดสรร'),
-                        'report_category' => $p->report_category,
+                        'report_category' => $p->resolveReportCategory(),
                         'committee_comment' => $p->committee_comment,
                         'created_at' => $p->created_at ? $p->created_at->format('d/m/Y H:i') : '',
                         'is_preliminary' => $p->status === 'preliminary',
@@ -936,7 +936,7 @@ class DashboardController extends Controller
                         'proposed_budget' => (float)($p->proposed_budget ?: $p->estimated_budget),
                         'allocated_budget' => $allocAmt,
                         'allocated_amount' => $allocAmt,
-                        'report_category' => $p->report_category,
+                        'report_category' => $p->resolveReportCategory(),
                         'status' => $p->status,
                         'current_approval_step' => $p->current_approval_step,
                         'procurement' => $p->procurement ? [

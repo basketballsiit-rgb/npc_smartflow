@@ -412,4 +412,66 @@ class Project extends Model
             'bg_class' => 'bg-rose-50 text-rose-800 border-rose-300 font-semibold',
         ];
     }
+
+    /**
+     * Resolve the correct Section 6 Action Plan category (6.1, 6.2, 6.3, 6.4) based on department and its parent.
+     */
+    public function resolveReportCategory(): string
+    {
+        $dept = $this->department;
+        if (!$dept && $this->department_id) {
+            $dept = Department::with('parent')->find($this->department_id);
+        }
+
+        return self::resolveCategoryForDepartment($dept, $this->report_category);
+    }
+
+    /**
+     * Statically resolve Action Plan category (6.1 - 6.4) from Department.
+     */
+    public static function resolveCategoryForDepartment(?Department $dept, ?string $currentCategory = null): string
+    {
+        if (!$dept) {
+            return $currentCategory ?: '6.1';
+        }
+
+        // Determine main division
+        $parent = $dept->parent;
+        $divDept = $parent ?: $dept;
+        $divId = $divDept->id;
+        $divName = $divDept->name ?? '';
+        $deptName = $dept->name ?? '';
+        $combined = mb_strtolower("{$deptName} {$divName}");
+
+        // Direct Division ID matching (1=Resource, 2=Academic, 3=Student, 4=Strategy/Plan)
+        if ($divId == 4 || $divDept->code === 'STRATEGY_PLAN' || $divDept->code === 'PLAN') {
+            return '6.4';
+        }
+        if ($divId == 3 || $divDept->code === 'STUD') {
+            return '6.2';
+        }
+        if ($divId == 1 || $divDept->code === 'RESOURCE' || $divDept->code === 'ADMIN') {
+            return '6.3';
+        }
+        if ($divId == 2 || $divDept->code === 'ACAD') {
+            return '6.1';
+        }
+
+        // Name matching on combined department and parent division names
+        if (str_contains($combined, 'ยุทธศาสตร์') || str_contains($combined, 'แผนงาน') || str_contains($combined, 'วางแผน')) {
+            return '6.4';
+        }
+        if (str_contains($combined, 'พัฒนากิจการ') || str_contains($combined, 'กิจการนักเรียน') || str_contains($combined, 'นักเรียน') || str_contains($combined, 'นักศึกษา') || str_contains($combined, 'กิจกรรม')) {
+            return '6.2';
+        }
+        if (str_contains($combined, 'บริหารทรัพยากร') || str_contains($combined, 'บริหารทั่วไป') || str_contains($combined, 'สารบรรณ') || str_contains($combined, 'การเงิน') || str_contains($combined, 'พัสดุ')) {
+            return '6.3';
+        }
+        if (str_contains($combined, 'วิชาการ') || str_contains($combined, 'หลักสูตร') || str_contains($combined, 'วัดผล')) {
+            return '6.1';
+        }
+
+        return $currentCategory ?: '6.1';
+    }
 }
+
