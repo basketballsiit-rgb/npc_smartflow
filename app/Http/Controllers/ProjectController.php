@@ -1917,27 +1917,28 @@ class ProjectController extends Controller
             || str_contains($proposerPos, 'ยุทธศาสตร์')
             || str_contains($proposerPos, 'แผนงาน');
 
-        // 1. Check if Step 2 approval exists
+        // 1. Check if Step 2 approval exists (and is not teacher Chatnapa)
         $sig2 = $project->approvals->where('step_number', 2)->first();
-        if ($sig2 && $sig2->user) {
+        if ($sig2 && $sig2->user && !str_contains($sig2->user->name, 'ฉัตรนภา')) {
             $name = $sig2->user->name;
-            $pos = $sig2->acting_position_text ?: ($sig2->user->position_level ?: ($isPlanning ? 'หัวหน้างานยุทธศาสตร์และแผนงาน' : null));
+            $pos = $sig2->acting_position_text ?: ($sig2->user->position_level ?: ($isPlanning ? 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ' : null));
             return [
                 'name' => $name,
-                'position' => $pos ?: ($isPlanning ? 'หัวหน้างานยุทธศาสตร์และแผนงาน' : "หัวหน้า{$deptName}"),
+                'position' => $pos ?: ($isPlanning ? 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ' : "หัวหน้า{$deptName}"),
             ];
         }
 
         // 2. Planning department
         if ($isPlanning) {
-            $planUser = \App\Models\User::where('role_id', 3)
-                ->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')
-                ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
-                ->orWhere('position', 'like', '%หัวหน้างานวางแผน%')
-                ->first();
-
-            $planHeadName = \App\Models\SystemSetting::where('key', 'plan_head_name')->value('value') ?: ($planUser ? $planUser->name : 'นายพิพัฒน์ สีมา');
-            $planHeadPosition = \App\Models\SystemSetting::where('key', 'plan_head_position')->value('value') ?: 'หัวหน้างานยุทธศาสตร์และแผนงาน';
+            $planHeadName = \App\Models\SystemSetting::where('key', 'plan_head_name')->value('value');
+            if (!$planHeadName || str_contains($planHeadName, 'ฉัตรนภา')) {
+                $planUser = \App\Models\User::where('role_id', 3)
+                    ->orWhere('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')
+                    ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
+                    ->first();
+                $planHeadName = ($planUser && !str_contains($planUser->name, 'ฉัตรนภา')) ? $planUser->name : 'นายพิพัฒน์ สีมา';
+            }
+            $planHeadPosition = 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ';
 
             return [
                 'name' => $planHeadName,

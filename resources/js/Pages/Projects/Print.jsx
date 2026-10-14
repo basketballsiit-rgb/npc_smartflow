@@ -220,7 +220,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         large: { docSize: '16.5px', lineHeight: '1.5', tableSize: '14px', titleSize: '17.5px' },
     }[fontSizePreset];
 
-    const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || 'นางสาวฉัตรนภา ถิ่นมีกุล');
+    const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || '');
 
     const formatProjectTitleForApproval = (title) => {
         if (!title) return '';
@@ -275,6 +275,14 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         || proposerPos.includes('แผนงาน');
 
     const getStep2Name = () => {
+        if (isPlanning) {
+            // For Strategy & Planning, head is Pipat Sima (not teacher Chatnapa)
+            const candidate = sig2?.user?.name || resolvedHead?.name || college_settings?.plan_head_name;
+            if (candidate && !candidate.includes('ฉัตรนภา')) {
+                return toThaiNumerals(cleanPersonName(candidate));
+            }
+            return 'นายพิพัฒน์ สีมา';
+        }
         if (sig2?.user?.name) {
             return toThaiNumerals(cleanPersonName(sig2.user.name));
         }
@@ -283,9 +291,6 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         }
         if (project.department?.department_head_name) {
             return toThaiNumerals(cleanPersonName(project.department.department_head_name));
-        }
-        if (isPlanning) {
-            return toThaiNumerals(cleanPersonName(college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา'));
         }
         return '...............................................';
     };
@@ -298,7 +303,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
             return toThaiNumerals(sig2.user.position_level);
         }
         if (isPlanning) {
-            return toThaiNumerals(college_settings?.plan_head_position || 'หัวหน้างานยุทธศาสตร์และแผนงาน');
+            return toThaiNumerals(college_settings?.plan_head_position || 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ');
         }
         if (resolvedHead?.position) {
             return toThaiNumerals(resolvedHead.position);
@@ -540,7 +545,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                         <div className="pl-6 pt-1 space-y-0.5 text-slate-900 leading-relaxed">
                             <p><span className="font-bold">ผู้รับผิดชอบโครงการ ชื่อ-สกุล :</span> {toArabicNumerals(cleanedResponsiblePerson)}</p>
                             <p><span className="font-bold">ตำแหน่ง :</span> {toArabicNumerals(project.position || project.user?.position || (deptName ? (deptName.startsWith('ฝ่าย') ? `เจ้าหน้าที่งาน${deptName.replace(/^ฝ่าย/, '')}` : (deptName.startsWith('งาน') ? `เจ้าหน้าที่${deptName}` : `เจ้าหน้าที่${deptName}`)) : 'เจ้าหน้าที่ผู้รับผิดชอบโครงการ'))}</p>
-                            <p><span className="font-bold">โทรศัพท์เคลื่อนที่ :</span> {toArabicNumerals(project.phone || '080-6044450')} &nbsp;&nbsp;&nbsp;&nbsp; <span className="font-bold">E-mail :</span> {project.email || project.user?.email || 'Newchatnapa16@npc.ac.th'}</p>
+                            <p><span className="font-bold">โทรศัพท์เคลื่อนที่ :</span> {toArabicNumerals(project.phone || project.user?.phone || '-')} &nbsp;&nbsp;&nbsp;&nbsp; <span className="font-bold">E-mail :</span> {project.email || project.user?.email || '-'}</p>
                         </div>
                     </div>
 

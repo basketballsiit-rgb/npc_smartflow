@@ -283,13 +283,13 @@ class AdminController extends Controller
 
             // Sync with Plan Head User account
             if ($key === 'plan_head_name' && !empty($value)) {
-                $planUser = User::where('role_id', 3)->orWhere('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')->first();
+                $planUser = User::where('role_id', 3)->orWhere('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')->orWhere('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')->first();
                 if ($planUser) {
                     $planUser->update(['name' => trim((string)$value)]);
                 }
             }
             if ($key === 'plan_head_position' && !empty($value)) {
-                $planUser = User::where('role_id', 3)->orWhere('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')->first();
+                $planUser = User::where('role_id', 3)->orWhere('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')->orWhere('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')->first();
                 if ($planUser) {
                     $planUser->update(['position' => trim((string)$value)]);
                 }
