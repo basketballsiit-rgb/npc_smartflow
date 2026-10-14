@@ -948,6 +948,15 @@ export default function AuthenticatedLayout({ header, children }) {
                                     {isSidebarOpen && <span>จัดสรรงบดำเนินงานประจำปี</span>}
                                 </Link>
                                 <Link
+                                    href={route('dashboard', { tab: 'special_project_budgets' })}
+                                    className={getSubLinkClass(url.includes('tab=special_project_budgets'))}
+                                    title="งบเฉพาะกิจโครงการ (จัดสรรเฉพาะกิจจากส่วนกลาง/ภายนอก)"
+                                >
+                                    <span className={getPrefixClass(url.includes('tab=special_project_budgets'), 'text-amber-300')}>└─</span>
+                                    <span className="text-sm">💼</span>
+                                    {isSidebarOpen && <span>งบเฉพาะกิจโครงการ</span>}
+                                </Link>
+                                <Link
                                     href={route('dashboard', { tab: 'action_plan_report' })}
                                     className={getSubLinkClass(url.includes('tab=action_plan_report'))}
                                     title="รายงานงบรายจ่ายแผนปฏิบัติราชการ"
@@ -988,30 +997,7 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* เมนูหลักแยกอิสระ: งบเฉพาะกิจโครงการ (Dedicated / Special Project Budgets) */}
-                        {(isPlanStaff || isAdmin || isExecutive || isFinanceStaff) && (
-                        <div className="pt-2">
-                            <Link
-                                href={route('dashboard', { tab: 'special_project_budgets' })}
-                                className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl font-bold text-xs transition-all border ${
-                                    url.includes('tab=special_project_budgets')
-                                        ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white border-amber-300 shadow-md shadow-amber-500/30 ring-2 ring-amber-300/40'
-                                        : 'bg-white/5 hover:bg-white/10 text-amber-200 hover:text-white border-amber-400/20'
-                                }`}
-                                title="ระบบทะเบียนคุมงบเฉพาะสำหรับโครงการ (จัดสรรเฉพาะกิจจากส่วนกลาง/ภายนอก)"
-                            >
-                                <div className="flex items-center gap-x-2">
-                                    <span className="text-base">💼</span>
-                                    {isSidebarOpen && <span>งบเฉพาะกิจโครงการ</span>}
-                                </div>
-                                {isSidebarOpen && (
-                                    <span className="text-[10px] bg-amber-400/20 text-amber-200 border border-amber-400/30 px-2 py-0.5 rounded-full font-semibold">
-                                        ส่วนกลาง
-                                    </span>
-                                )}
-                            </Link>
-                        </div>
-                        )}
+
 
                         {/* 7. EXECUTIVE HUB (สำหรับ ผอ., รอง ผอ. 4 ฝ่าย และ Admin) */}
                         {(isExecutive || isAdmin) && (
