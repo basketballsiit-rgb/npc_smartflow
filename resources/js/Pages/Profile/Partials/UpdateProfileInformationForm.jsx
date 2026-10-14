@@ -221,6 +221,10 @@ export default function UpdateProfileInformation({
 
     const getDutyBadgeColor = (duty) => {
         switch (duty) {
+            case 'รองผู้อำนวยการ':
+                return 'bg-indigo-100 text-indigo-900 border-indigo-300';
+            case 'ผู้อำนวยการ':
+                return 'bg-violet-100 text-violet-900 border-violet-300';
             case 'หัวหน้างาน':
                 return 'bg-amber-100 text-amber-900 border-amber-300';
             case 'หัวหน้าสาขาวิชา':
@@ -244,7 +248,7 @@ export default function UpdateProfileInformation({
                             <span>💼</span> ภาระงาน สังกัดฝ่าย และหน้าที่ความรับผิดชอบ
                         </h2>
                         <p className="mt-1 text-xs text-slate-600">
-                            กำหนดฝ่ายที่สังกัด หน้าที่ (หัวหน้างาน/หัวหน้าสาขาวิชา/เจ้าหน้าที่/ครูผู้สอน) และงานหรือสาขาวิชา (ผู้ใช้ 1 ท่านมีได้มากกว่า 1 ภาระงาน)
+                            กำหนดฝ่ายที่สังกัด หน้าที่ (รองผู้อำนวยการ/หัวหน้างาน/หัวหน้าสาขาวิชา/เจ้าหน้าที่/ครูผู้สอน) และงานหรือสาขาวิชา (ผู้ใช้ 1 ท่านมีได้มากกว่า 1 ภาระงาน)
                         </p>
                     </div>
                     <button
@@ -261,7 +265,10 @@ export default function UpdateProfileInformation({
                     {positionsList.map((item, index) => {
                         const divisionName = getDivisionName(item.department_id);
                         const isMajorDuty = item.duty === 'หัวหน้าสาขาวิชา' || item.duty === 'ครูผู้สอน';
-                        const subName = isMajorDuty
+                        const isExecDuty = item.duty === 'รองผู้อำนวยการ' || item.duty === 'ผู้อำนวยการ';
+                        const subName = isExecDuty
+                            ? (item.duty === 'รองผู้อำนวยการ' ? `รองผู้อำนวยการ${divisionName}` : 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน')
+                            : isMajorDuty
                             ? item.major ? `สาขาวิชา${item.major}` : 'ยังไม่ระบุสาขาวิชา'
                             : item.sub_department_id ? getSubDeptName(item.sub_department_id) : 'ยังไม่ระบุงาน';
 
@@ -296,8 +303,12 @@ export default function UpdateProfileInformation({
 
                                         <p className="text-xs text-slate-600 flex items-center gap-2">
                                             <span>🏛️ <strong>ฝ่าย:</strong> {divisionName}</span>
-                                            <span className="text-slate-300">|</span>
-                                            <span>📂 <strong>งาน/สาขา:</strong> {subName}</span>
+                                            {!isExecDuty && (
+                                                <>
+                                                    <span className="text-slate-300">|</span>
+                                                    <span>📂 <strong>งาน/สาขา:</strong> {subName}</span>
+                                                </>
+                                            )}
                                         </p>
                                     </div>
 
@@ -414,7 +425,7 @@ export default function UpdateProfileInformation({
                                     }}
                                     className="w-full rounded-xl border-purple-200 px-3.5 py-2.5 text-sm focus:border-purple-500 focus:ring-purple-500 font-medium"
                                 >
-                                    {(availableDuties.length > 0 ? availableDuties : ['หัวหน้างาน', 'หัวหน้าสาขาวิชา', 'เจ้าหน้าที่', 'ครูผู้สอน']).map((duty) => (
+                                    {(availableDuties.length > 0 ? availableDuties : ['รองผู้อำนวยการ', 'หัวหน้างาน', 'หัวหน้าสาขาวิชา', 'เจ้าหน้าที่', 'ครูผู้สอน', 'ผู้อำนวยการ']).map((duty) => (
                                         <option key={duty} value={duty}>
                                             {duty}
                                         </option>
@@ -422,8 +433,20 @@ export default function UpdateProfileInformation({
                                 </select>
                             </div>
 
-                            {/* 3. งาน หรือ สาขาวิชา (แสดงตามหน้าที่ที่เลือก) */}
-                            {modalForm.duty === 'หัวหน้าสาขาวิชา' || modalForm.duty === 'ครูผู้สอน' ? (
+                            {/* 3. งาน หรือ สาขาวิชา หรือ ขอบเขตผู้บริหาร (แสดงตามหน้าที่ที่เลือก) */}
+                            {modalForm.duty === 'รองผู้อำนวยการ' || modalForm.duty === 'ผู้อำนวยการ' ? (
+                                <div className="bg-purple-50 border border-purple-200 rounded-xl p-3.5 text-xs text-purple-900">
+                                    <div className="font-bold flex items-center gap-1.5 text-purple-950">
+                                        <span className="text-base">🏛️</span>
+                                        <span>ขอบเขตหน้าที่ระดับผู้บริหาร</span>
+                                    </div>
+                                    <p className="mt-1 text-purple-700 leading-relaxed">
+                                        {modalForm.duty === 'รองผู้อำนวยการ'
+                                            ? `ตำแหน่งรองผู้อำนวยการจะกำกับดูแลภาพรวมทั้ง ${getDivisionName(modalForm.department_id)} (ไม่ต้องระบุงานย่อย)`
+                                            : 'ตำแหน่งผู้อำนวยการจะกำกับดูแลและบริหารงานทั้งวิทยาลัย (ไม่ต้องระบุงานย่อย)'}
+                                    </p>
+                                </div>
+                            ) : modalForm.duty === 'หัวหน้าสาขาวิชา' || modalForm.duty === 'ครูผู้สอน' ? (
                                 <div>
                                     <label className="block mb-1.5 text-purple-950 font-bold flex items-center justify-between">
                                         <span>3. สาขาวิชา (Major) *</span>

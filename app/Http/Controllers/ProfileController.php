@@ -44,10 +44,12 @@ class ProfileController extends Controller
         ];
 
         $availableDuties = [
+            'รองผู้อำนวยการ',
             'หัวหน้างาน',
             'หัวหน้าสาขาวิชา',
             'เจ้าหน้าที่',
             'ครูผู้สอน',
+            'ผู้อำนวยการ',
         ];
 
         $userPositions = $user->userPositions()
@@ -174,6 +176,9 @@ class ProfileController extends Controller
         if ($primaryPosModel) {
             $user->department_id = $primaryPosModel->sub_department_id ?: $primaryPosModel->department_id;
             $user->position = $primaryPosModel->position;
+            if (in_array($primaryPosModel->duty, ['รองผู้อำนวยการ', 'ผู้อำนวยการ']) && $user->role_id != 1) {
+                $user->role_id = 5;
+            }
             $user->save();
         }
 

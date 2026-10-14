@@ -25,10 +25,12 @@ export default function FirstTimeDutySetupModal({
         'ระยะสั้น',
     ];
     const availableDuties = departmentsData.available_duties || [
+        'รองผู้อำนวยการ',
         'หัวหน้างาน',
         'หัวหน้าสาขาวิชา',
         'เจ้าหน้าที่',
         'ครูผู้สอน',
+        'ผู้อำนวยการ',
     ];
 
     // List of positions added by user
@@ -78,6 +80,18 @@ export default function FirstTimeDutySetupModal({
     const formatDutySummary = (pos) => {
         const divName = getDivisionName(pos.department_id);
         const duty = pos.duty || '';
+        if (duty === 'รองผู้อำนวยการ') {
+            return {
+                title: divName ? `รองผู้อำนวยการ${divName}` : 'รองผู้อำนวยการวิทยาลัย',
+                division: divName,
+            };
+        }
+        if (duty === 'ผู้อำนวยการ') {
+            return {
+                title: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+                division: 'วิทยาลัยสารพัดช่างน่าน',
+            };
+        }
         if (duty === 'หัวหน้าสาขาวิชา' || duty === 'ครูผู้สอน') {
             const major = pos.major || getSubDeptName(pos.sub_department_id) || 'ไม่ระบุสาขา';
             return {
@@ -142,11 +156,12 @@ export default function FirstTimeDutySetupModal({
         setFormError('');
 
         const isAcademicDuty = currentForm.duty === 'หัวหน้าสาขาวิชา' || currentForm.duty === 'ครูผู้สอน';
+        const isExecutiveDuty = currentForm.duty === 'รองผู้อำนวยการ' || currentForm.duty === 'ผู้อำนวยการ';
         if (isAcademicDuty && !currentForm.major) {
             setFormError('กรุณาเลือกสาขาวิชา');
             return;
         }
-        if (!isAcademicDuty && !currentForm.sub_department_id) {
+        if (!isAcademicDuty && !isExecutiveDuty && !currentForm.sub_department_id) {
             setFormError('กรุณาเลือกงานที่สังกัด');
             return;
         }
@@ -297,6 +312,7 @@ export default function FirstTimeDutySetupModal({
     };
 
     const isAcademicDuty = currentForm.duty === 'หัวหน้าสาขาวิชา' || currentForm.duty === 'ครูผู้สอน';
+    const isExecutiveDuty = currentForm.duty === 'รองผู้อำนวยการ' || currentForm.duty === 'ผู้อำนวยการ';
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-purple-950/70 backdrop-blur-sm p-4 overflow-y-auto animate-fadeIn">
@@ -503,9 +519,20 @@ export default function FirstTimeDutySetupModal({
                             </div>
                         </div>
 
-                        {/* Row 2: Major (if academic duty) or Sub-Department (if work duty) */}
+                        {/* Row 2: Major (if academic duty) or Sub-Department (if work duty) or Executive note */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {isAcademicDuty ? (
+                            {isExecutiveDuty ? (
+                                <div className="sm:col-span-2 bg-purple-100/70 border border-purple-200 rounded-xl p-3 text-xs text-purple-900">
+                                    <p className="font-bold flex items-center gap-1.5">
+                                        <span>🏛️</span> ขอบเขตหน้าที่ระดับผู้บริหาร
+                                    </p>
+                                    <p className="text-[11px] text-purple-700 mt-0.5 leading-relaxed">
+                                        {currentForm.duty === 'รองผู้อำนวยการ'
+                                            ? `ตำแหน่งรองผู้อำนวยการจะกำกับดูแลภาพรวมทั้ง ${getDivisionName(currentForm.department_id)} (ไม่ต้องระบุงานย่อย)`
+                                            : 'ตำแหน่งผู้อำนวยการจะกำกับดูแลและบริหารงานทั้งวิทยาลัย (ไม่ต้องระบุงานย่อย)'}
+                                    </p>
+                                </div>
+                            ) : isAcademicDuty ? (
                                 <div className="sm:col-span-2">
                                     <label className="block text-[11px] font-black text-purple-900 mb-1">
                                         3. สาขาวิชาที่สอนหรือรับผิดชอบ <span className="text-rose-500">*</span>

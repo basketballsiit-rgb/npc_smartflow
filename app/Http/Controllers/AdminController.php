@@ -267,29 +267,53 @@ class AdminController extends Controller
                 ]);
             }
 
-            // Sync with Director/Executive User account
+            // Sync with Director/Executive User account (Strictly Director only, never overwrite Deputy Director / รองผู้อำนวยการ)
             if ($key === 'director_name' && !empty($value)) {
-                $directorUser = User::where('role_id', 5)->orWhere('position', 'like', '%ผู้อำนวยการ%')->first();
+                $directorUser = User::where(function ($q) {
+                    $q->where('position', 'like', '%ผู้อำนวยการ%')
+                      ->where('position', 'not like', '%รอง%');
+                })->where('email', 'not like', 'nipon%')
+                  ->where('name', 'not like', '%นิพนธ์%')
+                  ->first();
                 if ($directorUser) {
                     $directorUser->update(['name' => trim((string)$value)]);
                 }
             }
             if ($key === 'director_position' && !empty($value)) {
-                $directorUser = User::where('role_id', 5)->orWhere('position', 'like', '%ผู้อำนวยการ%')->first();
+                $directorUser = User::where(function ($q) {
+                    $q->where('position', 'like', '%ผู้อำนวยการ%')
+                      ->where('position', 'not like', '%รอง%');
+                })->where('email', 'not like', 'nipon%')
+                  ->where('name', 'not like', '%นิพนธ์%')
+                  ->first();
                 if ($directorUser) {
                     $directorUser->update(['position' => trim((string)$value)]);
                 }
             }
 
-            // Sync with Plan Head User account
+            // Sync with Plan Head User account (Strictly Plan Head only, never overwrite Deputy Director)
             if ($key === 'plan_head_name' && !empty($value)) {
-                $planUser = User::where('role_id', 3)->orWhere('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')->orWhere('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')->first();
+                $planUser = User::where(function ($q) {
+                    $q->where('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')
+                      ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
+                      ->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%');
+                })->where('position', 'not like', '%รอง%')
+                  ->where('email', 'not like', 'nipon%')
+                  ->where('name', 'not like', '%นิพนธ์%')
+                  ->first();
                 if ($planUser) {
                     $planUser->update(['name' => trim((string)$value)]);
                 }
             }
             if ($key === 'plan_head_position' && !empty($value)) {
-                $planUser = User::where('role_id', 3)->orWhere('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')->orWhere('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')->first();
+                $planUser = User::where(function ($q) {
+                    $q->where('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')
+                      ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
+                      ->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%');
+                })->where('position', 'not like', '%รอง%')
+                  ->where('email', 'not like', 'nipon%')
+                  ->where('name', 'not like', '%นิพนธ์%')
+                  ->first();
                 if ($planUser) {
                     $planUser->update(['position' => trim((string)$value)]);
                 }
