@@ -1015,6 +1015,14 @@ ${itemsListText}
                             >
                                 ✏️ แก้ไข/อัปเดตโครงการ
                             </Link>
+                        ) : project.status === 'preliminary' ? (
+                            <Link
+                                href={route('projects.preliminary_edit', project.id)}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-500 px-3.5 py-2 text-xs font-bold text-purple-950 shadow-md shadow-amber-400/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0"
+                                title="แก้ไขคำขอเสนองบประมาณโครงการเบื้องต้น"
+                            >
+                                ✏️ แก้ไขคำขอโครงการเบื้องต้น
+                            </Link>
                         ) : (
                             <Link
                                 href={route('projects.edit', project.id)}
@@ -1051,17 +1059,22 @@ ${itemsListText}
 
                         {/* Delete Button */}
                         {(() => {
-                            const isPlanOrAdmin = Boolean(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.is_plan_head || auth?.user?.is_plan_staff || (auth?.user?.department && (auth?.user?.department?.name?.includes('แผน') || auth?.user?.department?.code === 'PLAN')));
-                            const isNotApproved = !['approved', 'in_progress', 'completed'].includes(project.status) || ['rejected', 'budget_rejected', 'pending_approval', 'submitted', 'draft', 'preliminary'].includes(project.status);
-                            const isOwnerDraft = project.user_id === auth?.user?.id && ['draft', 'preliminary', 'rejected', 'budget_rejected'].includes(project.status);
+                            const isAdmin = Boolean(auth?.user?.is_admin || auth?.user?.role?.name === 'admin');
+                            const isOwner = project.user_id === auth?.user?.id;
+                            const hasAllocatedBudget = Number(project.allocated_budget || 0) > 0 || project.status === 'budget_approved';
+                            const isPreliminaryOrRejected = ['preliminary', 'budget_rejected', 'rejected'].includes(project.status);
 
-                            if (auth?.user?.is_admin || (isPlanOrAdmin && isNotApproved) || isOwnerDraft) {
+                            // Proposer can delete ONLY before budget allocation and when still in preliminary/rejected phase
+                            // Once budget is allocated and in full proposal mode, only Admin can delete
+                            const canDelete = isAdmin || (isOwner && !hasAllocatedBudget && isPreliminaryOrRejected);
+
+                            if (canDelete) {
                                 return (
                                     <button
                                         type="button"
                                         onClick={handleDeleteProject}
                                         className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-500 via-rose-600 to-red-600 px-3.5 py-2 text-xs font-bold text-white shadow-md shadow-rose-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
-                                        title="ลบโครงการนี้ออกจากระบบ"
+                                        title={isAdmin ? "ลบโครงการนี้ออกจากระบบ (สิทธิ์ผู้ดูแลระบบ)" : "ยกเลิก/ลบคำขอเสนอโครงการเบื้องต้น"}
                                     >
                                         🗑️ ลบโครงการ
                                     </button>

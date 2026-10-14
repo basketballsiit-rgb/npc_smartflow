@@ -103,6 +103,46 @@ class ProjectController extends Controller
     }
 
     /**
+     * Show the preliminary proposal quick edit form.
+     */
+    public function preliminaryEdit(Project $project)
+    {
+        $user = auth()->user();
+        if ($project->user_id !== $user->id && !$user->isAdmin()) {
+            abort(403, 'คุณไม่มีสิทธิ์แก้ไขคำขอเสนอโครงการนี้');
+        }
+
+        // If project already has allocated budget and is ready for full proposal mode
+        $hasAllocatedBudget = (float)($project->allocated_budget ?? 0) > 0 || $project->status === 'budget_approved';
+        if ($hasAllocatedBudget && !in_array($project->status, ['preliminary', 'draft'])) {
+            return redirect()->route('projects.edit', $project->id)
+                ->with('info', 'โครงการนี้ได้รับการอนุมัติงบประมาณแล้ว สามารถแก้ไขในรูปแบบโครงการฉบับเต็มได้ทันที');
+        }
+
+        $activeCategories = [];
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('strategy_categories')) {
+                $activeCategories = \App\Models\StrategyCategory::with(['items' => function($q) {
+                    $q->where('is_active', true)->orderBy('order_index', 'asc');
+                }])->where('is_active', true)->orderBy('order_index', 'asc')->get();
+            }
+        } catch (\Exception $e) {
+            $activeCategories = [];
+        }
+
+        return Inertia::render('Projects/QuickCreate', [
+            'project' => $project,
+            'departments' => Department::all(),
+            'currentFiscalYear' => $project->academic_year ?: (\App\Models\SystemSetting::where('key', 'current_fiscal_year')->value('value') ?: (int)(new \DateTime())->format('Y') + 543),
+            'strategyCategories' => $activeCategories,
+            'iqaStrategies' => IqaStrategy::all(),
+            'ovecStrategies' => OvecStrategy::all(),
+            'nationalStrategies' => \App\Models\NationalStrategy::all(),
+            'provincialStrategies' => \App\Models\ProvincialStrategy::all(),
+        ]);
+    }
+
+    /**
      * Store a newly created project in database as draft.
      */
     public function store(Request $request)
@@ -307,6 +347,131 @@ class ProjectController extends Controller
         );
 
         return redirect()->back()->with('success', 'บันทึกเสนอชื่อโครงการและงบประมาณเบื้องต้นเรียบร้อยแล้ว รอการพิจารณาจัดสรรงบจากงานแผนงาน/คณะกรรมการ');
+    }
+
+    /**
+     * Update preliminary project proposal.
+     */
+    public function preliminaryUpdate(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if ($project->user_id !== $user->id && !$user->isAdmin()) {
+            abort(403, 'คุณไม่มีสิทธิ์แก้ไขคำขอเสนอโครงการนี้');
+        }
+
+        $hasAllocatedBudget = (float)($project->allocated_budget ?? 0) > 0 || $project->status === 'budget_approved';
+        if ($hasAllocatedBudget && !in_array($project->status, ['preliminary', 'draft'])) {
+            abort(403, 'โครงการนี้ได้รับการจัดสรรงบประมาณแล้ว กรุณาแก้ไขผ่านแบบร่างโครงการฉบับเต็ม');
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'academic_year' => 'required|integer|min:2500|max:2650',
+            'proposed_budget' => 'required|numeric|min:0',
+            'user_position_id' => 'nullable|exists:user_positions,id',
+            'department_id' => 'nullable|exists:departments,id',
+            'responsible_person' => 'nullable|string',
+            'position' => 'nullable|string',
+            'phone' => 'nullable|string',
+            'email' => 'nullable|string',
+            'background_rationale' => 'nullable|string',
+            'mission' => 'nullable|string',
+            'goal' => 'nullable|string',
+            'strategy_tactic' => 'nullable|string',
+            'objectives' => 'nullable|array',
+            'targets' => 'nullable|array',
+            'indicators' => 'nullable|array',
+            'strategy_selections' => 'nullable|array',
+            'iqa_strategy_ids' => 'nullable|array',
+            'ovec_strategy_ids' => 'nullable|array',
+            'national_strategy_ids' => 'nullable|array',
+            'provincial_strategy_ids' => 'nullable|array',
+        ], [
+            'title.required' => 'กรุณาระบุชื่อโครงการ',
+            'academic_year.required' => 'กรุณาระบุปีงบประมาณ พ.ศ.',
+            'proposed_budget.required' => 'กรุณาระบุวงเงินงบประมาณที่ต้องการขอเสนอ',
+        ]);
+
+        $userPosId = $request->input('user_position_id');
+        $userPosition = null;
+        if ($userPosId) {
+            $userPosition = \App\Models\UserPosition::find($userPosId);
+        }
+        if (!$userPosition && $user->userPositions()->exists()) {
+            $userPosition = $user->userPositions()->where('is_primary', true)->first() ?: $user->userPositions()->first();
+        }
+
+        $deptId = $request->input('department_id') ?: ($userPosition ? ($userPosition->sub_department_id ?: $userPosition->department_id) : ($user->department_id ?: Department::first()->id));
+        $posTitle = $validated['position'] ?? ($userPosition ? $userPosition->formatPositionTitle() : $user->position);
+        $proposerDuty = $userPosition?->duty ?? $project->proposer_duty;
+
+        $iqa = \App\Models\IqaStrategy::firstOrCreate(
+            ['id' => 1],
+            ['name' => 'มาตรฐานการอาชีวศึกษา', 'description' => 'มาตรฐานการอาชีวศึกษา']
+        );
+        $ovec = \App\Models\OvecStrategy::firstOrCreate(
+            ['id' => 1],
+            ['name' => 'นโยบายเร่งด่วน สอศ.', 'description' => 'นโยบายเร่งด่วน สอศ.']
+        );
+        $defaultIqaId = $iqa->id;
+        $defaultOvecId = $ovec->id;
+
+        $iqaIds = $request->input('iqa_strategy_ids', [$defaultIqaId]);
+        if (empty($iqaIds)) $iqaIds = [$defaultIqaId];
+        $ovecIds = $request->input('ovec_strategy_ids', [$defaultOvecId]);
+        if (empty($ovecIds)) $ovecIds = [$defaultOvecId];
+
+        $userObjectives = array_values(array_filter($request->input('objectives', []), fn($val) => !empty(trim($val ?? ''))));
+        $userTargets = $request->input('targets', []);
+        $quantTargets = array_values(array_filter($userTargets['quantitative'] ?? [], fn($val) => !empty(trim($val ?? ''))));
+        $qualTargets = array_values(array_filter($userTargets['qualitative'] ?? [], fn($val) => !empty(trim($val ?? ''))));
+
+        $project->user_position_id = $userPosition?->id ?? $project->user_position_id;
+        $project->proposer_duty = $proposerDuty;
+        $project->department_id = $deptId;
+        $project->title = $validated['title'];
+        $project->academic_year = $validated['academic_year'];
+        $project->proposed_budget = $validated['proposed_budget'];
+        if (!$hasAllocatedBudget) {
+            $project->estimated_budget = $validated['proposed_budget'];
+        }
+        $project->responsible_person = $validated['responsible_person'] ?? $user->name;
+        $project->position = $posTitle;
+        $project->phone = $validated['phone'] ?? $project->phone;
+        $project->email = $validated['email'] ?? $user->email;
+        $project->background_rationale = $validated['background_rationale'] ?? $project->background_rationale;
+        $project->mission = $validated['mission'] ?? $project->mission;
+        $project->goal = $validated['goal'] ?? $project->goal;
+        $project->strategy_tactic = $validated['strategy_tactic'] ?? $project->strategy_tactic;
+        $project->iqa_strategy_id = $iqaIds[0] ?? $defaultIqaId;
+        $project->ovec_strategy_id = $ovecIds[0] ?? $defaultOvecId;
+        $project->iqa_strategy_ids = $iqaIds;
+        $project->ovec_strategy_ids = $ovecIds;
+        $project->national_strategy_ids = $request->input('national_strategy_ids', []);
+        $project->provincial_strategy_ids = $request->input('provincial_strategy_ids', []);
+        $project->strategy_selections = $request->input('strategy_selections', []);
+
+        if (!empty($userObjectives)) {
+            $project->objectives = $userObjectives;
+        }
+        $project->targets = [
+            'quantitative' => !empty($quantTargets) ? $quantTargets : ($project->targets['quantitative'] ?? ['ผู้เข้าร่วมโครงการตามเป้าหมาย']),
+            'qualitative' => !empty($qualTargets) ? $qualTargets : ($project->targets['qualitative'] ?? ['มีความพึงพอใจในระดับดีขึ้นไป'])
+        ];
+        if ($request->has('indicators')) {
+            $project->indicators = $request->input('indicators');
+        }
+        $project->report_category = Project::resolveCategoryForDepartment(Department::find($deptId));
+        $project->save();
+
+        AuditLog::record(
+            action: 'UPDATED_PRELIMINARY',
+            model: $project,
+            stepNumber: 1,
+            notes: 'แก้ไขคำของบประมาณโครงการเบื้องต้น'
+        );
+
+        return redirect()->route('dashboard')->with('success', 'บันทึกการแก้ไขคำของบประมาณโครงการเบื้องต้นเรียบร้อยแล้ว');
     }
 
     /**
@@ -1167,22 +1332,27 @@ class ProjectController extends Controller
     public function destroy(Project $project)
     {
         $user = auth()->user();
-        $isPlanOrAdmin = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff();
         
-        $isNotApproved = !in_array($project->status, ['approved', 'in_progress', 'completed']) 
-            || in_array($project->status, ['rejected', 'budget_rejected', 'draft', 'preliminary', 'pending_approval', 'submitted']);
+        $hasAllocatedBudget = (float)($project->allocated_budget ?? 0) > 0 || $project->status === 'budget_approved';
+        $isPreliminaryOrRejected = in_array($project->status, ['preliminary', 'budget_rejected', 'rejected']);
 
         $canDelete = false;
         if ($user->isAdmin()) {
+            // Admin can delete any project
             $canDelete = true;
-        } elseif ($isPlanOrAdmin && $isNotApproved) {
-            $canDelete = true;
-        } elseif ($project->user_id === $user->id && in_array($project->status, ['draft', 'rejected', 'preliminary', 'budget_rejected'])) {
+        } elseif ($project->user_id === $user->id) {
+            // Proposer can delete ONLY before budget allocation and when still in preliminary/rejected phase
+            if (!$hasAllocatedBudget && $isPreliminaryOrRejected) {
+                $canDelete = true;
+            } else {
+                abort(403, 'ไม่สามารถลบโครงการนี้ได้ เนื่องจากโครงการได้รับการอนุมัติงบประมาณและอยู่ระหว่างจัดทำหรือดำเนินโครงการแบบเต็มรูปแบบแล้ว การลบโครงการจะต้องดำเนินการโดยผู้ดูแลระบบ (Admin) เท่านั้น');
+            }
+        } elseif (($user->isPlanHead() || $user->isPlanStaff()) && !$hasAllocatedBudget && $isPreliminaryOrRejected) {
             $canDelete = true;
         }
 
         if (!$canDelete) {
-            abort(403, 'คุณไม่มีสิทธิ์ลบโครงการนี้ หรือโครงการนี้ได้รับการอนุมัติเรียบร้อยแล้ว');
+            abort(403, 'คุณไม่มีสิทธิ์ลบโครงการนี้ หรือโครงการนี้ได้รับการอนุมัติงบประมาณเรียบร้อยแล้ว');
         }
 
         // Clean up all related child records

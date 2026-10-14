@@ -252,6 +252,8 @@ Route::middleware('auth')->group(function () {
     // Projects CRUD & Approvals
     Route::get('projects/quick-create', [ProjectController::class, 'preliminaryCreate'])->name('projects.quick_create');
     Route::post('projects/preliminary', [ProjectController::class, 'preliminaryStore'])->name('projects.preliminary_store');
+    Route::get('projects/{project}/quick-edit', [ProjectController::class, 'preliminaryEdit'])->name('projects.preliminary_edit');
+    Route::put('projects/{project}/preliminary', [ProjectController::class, 'preliminaryUpdate'])->name('projects.preliminary_update');
     Route::post('projects/direct-allocate', [ProjectController::class, 'directStoreAndAllocate'])->name('projects.direct_allocate_store');
     Route::post('projects/{project}/committee-allocate', [ProjectController::class, 'committeeAllocateBudget'])->name('projects.committee_allocate');
     Route::post('projects/batch-allocate', [ProjectController::class, 'batchAllocateBudgets'])->name('projects.batch_allocate');

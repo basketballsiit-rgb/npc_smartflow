@@ -8008,6 +8008,15 @@ export default function Dashboard({
                                                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                                                     รอจัดสรรงบ
                                                                 </span>
+                                                                {(role === 'admin' || auth.user.is_admin || project.user_id === auth.user.id) && (
+                                                                    <Link
+                                                                        href={route('projects.preliminary_edit', project.id)}
+                                                                        className="p-1.5 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition text-xs"
+                                                                        title="แก้ไขคำขอเสนองบประมาณโครงการเบื้องต้น"
+                                                                    >
+                                                                        ✏️
+                                                                    </Link>
+                                                                )}
                                                                 <button
                                                                     onClick={() => handleDeleteProject(project)}
                                                                     className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition text-xs"
@@ -8084,11 +8093,11 @@ export default function Dashboard({
                                                                     </>
                                                                 )}
 
-                                                                {(role === 'admin' || auth.user.is_admin || project.status === 'draft') && (
+                                                                {(role === 'admin' || auth.user.is_admin) && (
                                                                     <button
                                                                         onClick={() => handleDeleteProject(project)}
                                                                         className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition text-xs"
-                                                                        title="ลบ"
+                                                                        title="ลบโครงการ (เฉพาะผู้ดูแลระบบ)"
                                                                     >
                                                                         🗑️
                                                                     </button>
@@ -19620,6 +19629,14 @@ return (
                                                                         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
                                                                         รอจัดสรรงบ
                                                                     </span>
+                                                                    {(isAdmin || auth?.user?.is_admin || item.user_id === auth?.user?.id) && (
+                                                                        <Link
+                                                                            href={route('projects.preliminary_edit', item.id)}
+                                                                            className="w-full inline-flex items-center justify-center gap-1 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs rounded-xl transition"
+                                                                        >
+                                                                            <span>✏️ แก้ไขคำขอ</span>
+                                                                        </Link>
+                                                                    )}
                                                                     <Link
                                                                         href={getSecureProjectShowUrl(item.id)}
                                                                         className="w-full inline-flex items-center justify-center gap-1 px-3 py-1 bg-slate-100 hover:bg-purple-100 text-purple-950 font-bold text-xs rounded-xl transition"
@@ -19684,13 +19701,16 @@ return (
                                                                     >
                                                                         <span>🚀 ยื่นขออนุมัติ</span>
                                                                     </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleDeleteProject(item)}
-                                                                        className="text-[11px] text-rose-500 hover:text-rose-700 hover:underline mt-0.5 cursor-pointer"
-                                                                    >
-                                                                        🗑️ ลบแบบร่าง
-                                                                    </button>
+                                                                    {(isAdmin || auth?.user?.is_admin) && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteProject(item)}
+                                                                            className="text-[11px] text-rose-500 hover:text-rose-700 hover:underline mt-0.5 cursor-pointer"
+                                                                            title="ลบแบบร่างโครงการ (เฉพาะ Admin)"
+                                                                        >
+                                                                            🗑️ ลบแบบร่าง (เฉพาะ Admin)
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             )}
 

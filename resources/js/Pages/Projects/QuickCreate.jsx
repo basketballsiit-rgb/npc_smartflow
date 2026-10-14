@@ -8,6 +8,7 @@ import DuplicateCheckModal from '@/Components/DuplicateCheckModal';
 
 export default function QuickCreate({ 
     auth, 
+    project = null,
     departments, 
     currentFiscalYear, 
     strategyCategories = [], 
@@ -16,6 +17,7 @@ export default function QuickCreate({
     nationalStrategies = [], 
     provincialStrategies = [] 
 }) {
+    const isEditMode = Boolean(project && project.id);
     const allPositions = auth.user.all_positions || [];
     const defaultPosition = allPositions.find(p => p.is_primary) || allPositions[0] || null;
 
@@ -31,7 +33,7 @@ export default function QuickCreate({
     // Initialize initial selections for dynamic strategy categories
     const initialSelections = {};
     strategyCategories.forEach(cat => {
-        initialSelections[cat.id] = [];
+        initialSelections[cat.id] = (project?.strategy_selections && project.strategy_selections[cat.id]) ? project.strategy_selections[cat.id] : [];
     });
 
     const [generatingAi, setGeneratingAi] = useState(false);
@@ -61,40 +63,45 @@ export default function QuickCreate({
     const [isDuplicateModalOpen, setIsDuplicateModalOpen] = useState(false);
 
     // Collapsible KPI Section (Default collapsed to avoid form fatigue)
-    const [showKpiSection, setShowKpiSection] = useState(false);
+    const [showKpiSection, setShowKpiSection] = useState(Boolean(project && (project.indicators || project.objectives?.length > 1)));
 
-    const { data, setData, post, processing, errors } = useForm({
-        title: '',
-        academic_year: currentFiscalYear || new Date().getFullYear() + 543,
-        proposed_budget: '',
-        user_position_id: defaultPosition ? defaultPosition.id : '',
-        proposer_duty: defaultPosition ? defaultPosition.duty : '',
-        department_id: defaultPosition 
+    const { data, setData, post, put, processing, errors } = useForm({
+        title: project?.title || '',
+        academic_year: project?.academic_year || currentFiscalYear || new Date().getFullYear() + 543,
+        proposed_budget: project ? (project.proposed_budget || project.estimated_budget || '') : '',
+        user_position_id: project?.user_position_id || (defaultPosition ? defaultPosition.id : ''),
+        proposer_duty: project?.proposer_duty || (defaultPosition ? defaultPosition.duty : ''),
+        department_id: project?.department_id || (defaultPosition 
             ? (defaultPosition.sub_department_id || defaultPosition.department_id || auth.user.department_id || '')
-            : (auth.user.department_id || (departments?.[0]?.id || '')),
-        responsible_person: auth.user.name || '',
-        position: defaultPosition ? defaultPosition.formatted_title : (auth.user.position || 'ครูผู้สอน'),
-        phone: '',
-        email: auth.user.email || '',
-        background_rationale: '',
+            : (auth.user.department_id || (departments?.[0]?.id || ''))),
+        responsible_person: project?.responsible_person || auth.user.name || '',
+        position: project?.position || (defaultPosition ? defaultPosition.formatted_title : (auth.user.position || 'ครูผู้สอน')),
+        phone: project?.phone || '',
+        email: project?.email || auth.user.email || '',
+        background_rationale: project?.background_rationale || '',
 
         // Optional Detailed Fields
-        objectives: [''],
-        targets: {
+        objectives: (Array.isArray(project?.objectives) && project.objectives.length > 0) 
+            ? project.objectives 
+            : [''],
+        targets: project?.targets ? {
+            quantitative: (Array.isArray(project.targets.quantitative) && project.targets.quantitative.length > 0) ? project.targets.quantitative : [''],
+            qualitative: (Array.isArray(project.targets.qualitative) && project.targets.qualitative.length > 0) ? project.targets.qualitative : ['']
+        } : {
             quantitative: [''],
             qualitative: ['']
         },
-        indicators: {
+        indicators: project?.indicators || {
             quantitative: { text: '', unit: '' },
             qualitative: { text: '', unit: '' },
             time: { text: '', unit: '' },
             cost: { text: '', unit: '' }
         },
-        strategy_selections: initialSelections,
-        iqa_strategy_ids: [],
-        ovec_strategy_ids: [],
-        national_strategy_ids: [],
-        provincial_strategy_ids: [],
+        strategy_selections: project?.strategy_selections || initialSelections,
+        iqa_strategy_ids: project?.iqa_strategy_ids || (project?.iqa_strategy_id ? [project.iqa_strategy_id] : []),
+        ovec_strategy_ids: project?.ovec_strategy_ids || (project?.ovec_strategy_id ? [project.ovec_strategy_id] : []),
+        national_strategy_ids: project?.national_strategy_ids || [],
+        provincial_strategy_ids: project?.provincial_strategy_ids || [],
     });
 
     const isPlanStaff = auth.user.is_admin || (auth.user.role?.name === 'plan_head' || auth.user.role?.name === 'admin');
@@ -342,24 +349,45 @@ export default function QuickCreate({
 
     const handleSubmit = (e) => {
         if (e && e.preventDefault) e.preventDefault();
-        post(route('projects.preliminary_store'), {
-            onSuccess: () => {
-                Swal.fire({
-                    title: '🎉 เสนอโครงการสำเร็จ!',
-                    text: 'บันทึกคำของบประมาณโครงการเบื้องต้นเรียบร้อยแล้ว เมื่อคณะกรรมการอนุมัติจัดสรรงบ ข้อมูลทั้งหมดจะถูกดึงเข้าเล่มโครงการฉบับเต็มโดยอัตโนมัติ',
-                    icon: 'success',
-                    confirmButtonColor: '#7c3aed',
-                });
-            },
-            onError: (err) => {
-                Swal.fire({
-                    title: 'เกิดข้อผิดพลาด',
-                    text: Object.values(err)[0] || 'กรุณาตรวจสอบความถูกต้องของข้อมูลที่กรอก',
-                    icon: 'error',
-                    confirmButtonColor: '#7c3aed',
-                });
-            }
-        });
+        if (isEditMode) {
+            put(route('projects.preliminary_update', project.id), {
+                onSuccess: () => {
+                    Swal.fire({
+                        title: '🎉 บันทึกการแก้ไขสำเร็จ!',
+                        text: 'บันทึกการแก้ไขคำขอเสนองบประมาณโครงการเบื้องต้นเรียบร้อยแล้ว',
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed',
+                    });
+                },
+                onError: (err) => {
+                    Swal.fire({
+                        title: 'เกิดข้อผิดพลาด',
+                        text: Object.values(err)[0] || 'กรุณาตรวจสอบความถูกต้องของข้อมูลที่กรอก',
+                        icon: 'error',
+                        confirmButtonColor: '#7c3aed',
+                    });
+                }
+            });
+        } else {
+            post(route('projects.preliminary_store'), {
+                onSuccess: () => {
+                    Swal.fire({
+                        title: '🎉 เสนอโครงการสำเร็จ!',
+                        text: 'บันทึกคำของบประมาณโครงการเบื้องต้นเรียบร้อยแล้ว เมื่อคณะกรรมการอนุมัติจัดสรรงบ ข้อมูลทั้งหมดจะถูกดึงเข้าเล่มโครงการฉบับเต็มโดยอัตโนมัติ',
+                        icon: 'success',
+                        confirmButtonColor: '#7c3aed',
+                    });
+                },
+                onError: (err) => {
+                    Swal.fire({
+                        title: 'เกิดข้อผิดพลาด',
+                        text: Object.values(err)[0] || 'กรุณาตรวจสอบความถูกต้องของข้อมูลที่กรอก',
+                        icon: 'error',
+                        confirmButtonColor: '#7c3aed',
+                    });
+                }
+            });
+        }
     };
 
     return (
@@ -369,10 +397,12 @@ export default function QuickCreate({
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h2 className="text-xl font-bold leading-tight text-purple-950 flex items-center gap-2">
-                            <span>💡</span> เสนอคำของบประมาณโครงการเบื้องต้น (Preliminary Project Proposal)
+                            <span>{isEditMode ? '✏️' : '💡'}</span> {isEditMode ? 'แก้ไขคำขอเสนองบประมาณโครงการเบื้องต้น (Edit Preliminary Proposal)' : 'เสนอคำของบประมาณโครงการเบื้องต้น (Preliminary Project Proposal)'}
                         </h2>
                         <p className="text-xs text-slate-500 mt-1">
-                            เสนอชื่อโครงการ วัตถุประสงค์ เป้าหมาย และยุทธศาสตร์ที่เกี่ยวข้องเพื่อขออนุมัติงบประมาณก่อนจัดทำรายละเอียดเล่มเต็ม
+                            {isEditMode 
+                                ? 'แก้ไขชื่อโครงการ วงเงิน วัตถุประสงค์ และยุทธศาสตร์ที่เกี่ยวข้อง ก่อนการจัดสรรงบประมาณ'
+                                : 'เสนอชื่อโครงการ วัตถุประสงค์ เป้าหมาย และยุทธศาสตร์ที่เกี่ยวข้องเพื่อขออนุมัติงบประมาณก่อนจัดทำรายละเอียดเล่มเต็ม'}
                         </p>
                     </div>
                     <Link
@@ -384,7 +414,7 @@ export default function QuickCreate({
                 </div>
             }
         >
-            <Head title="เสนอโครงการเบื้องต้น - NPC SMART FLOW" />
+            <Head title={isEditMode ? "แก้ไขโครงการเบื้องต้น - NPC SMART FLOW" : "เสนอโครงการเบื้องต้น - NPC SMART FLOW"} />
 
             <div className="py-8 pb-32">
                 <div className="mx-auto max-w-5xl sm:px-6 lg:px-8">
@@ -393,11 +423,15 @@ export default function QuickCreate({
                         {/* Info Banner */}
                         <div className="mb-6 rounded-2xl bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 p-5 text-white shadow-md">
                             <div className="flex items-start sm:items-center gap-3">
-                                <span className="text-3xl">📌</span>
+                                <span className="text-3xl">{isEditMode ? '📝' : '📌'}</span>
                                 <div>
-                                    <h3 className="text-base font-bold">ขั้นตอนที่ 1: เสนอโครงการเพื่อขอรับการจัดสรรงบประมาณ</h3>
+                                    <h3 className="text-base font-bold">
+                                        {isEditMode ? 'แก้ไขรายละเอียดคำขอเสนอโครงการเบื้องต้น' : 'ขั้นตอนที่ 1: เสนอโครงการเพื่อขอรับการจัดสรรงบประมาณ'}
+                                    </h3>
                                     <p className="text-xs text-purple-200 mt-0.5">
-                                        กรอกข้อมูลชื่อโครงการ วงเงิน วัตถุประสงค์ และเลือกยุทธศาสตร์ที่เกี่ยวข้องเบื้องต้น เมื่อคณะกรรมการอนุมัติงบประมาณแล้ว ข้อมูลทั้งหมดจะถูกดึงเข้าสู่การทำเล่มโครงการแบบเต็มรูปแบบทันทีโดยไม่ต้องพิมพ์ซ้ำ
+                                        {isEditMode 
+                                            ? 'ท่านกำลังแก้ไขข้อมูลคำขอเสนองบประมาณโครงการเบื้องต้น ก่อนได้รับการจัดสรรงบประมาณ เมื่อคณะกรรมการอนุมัติจัดสรรงบ ข้อมูลทั้งหมดจะถูกดึงเข้าสู่การทำเล่มโครงการแบบเต็มรูปแบบโดยอัตโนมัติ'
+                                            : 'กรอกข้อมูลชื่อโครงการ วงเงิน วัตถุประสงค์ และเลือกยุทธศาสตร์ที่เกี่ยวข้องเบื้องต้น เมื่อคณะกรรมการอนุมัติงบประมาณแล้ว ข้อมูลทั้งหมดจะถูกดึงเข้าสู่การทำเล่มโครงการแบบเต็มรูปแบบทันทีโดยไม่ต้องพิมพ์ซ้ำ'}
                                     </p>
                                 </div>
                             </div>
@@ -1083,7 +1117,7 @@ export default function QuickCreate({
                             disabled={processing}
                             className="rounded-xl bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 px-5 sm:px-7 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-purple-900/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
                         >
-                            {processing ? 'กำลังบันทึก...' : '🚀 ยื่นเสนอโครงการเบื้องต้น'}
+                            {processing ? 'กำลังบันทึก...' : (isEditMode ? '💾 บันทึกการแก้ไขคำขอ' : '🚀 ยื่นเสนอโครงการเบื้องต้น')}
                         </button>
                     </div>
                 </div>
