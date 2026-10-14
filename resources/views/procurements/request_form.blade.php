@@ -2,24 +2,24 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>รายงานขอซื้อ/ขอจ้าง (ใบเสนอซื้อจ้าง) - {{ $project->title }}</title>
+    <title>บันทึกข้อความขออนุมัติจัดซื้อ - {{ $project->title }}</title>
     <style>
         * {
             box-sizing: border-box;
         }
         body {
-            font-family: "TH Sarabun PSK", "Angsana New", sans-serif;
-            font-size: 13.5pt;
-            line-height: 1.2;
+            font-family: "TH Sarabun PSK", "TH Sarabun New", "Angsana New", sans-serif;
+            font-size: 13pt;
+            line-height: 1.18;
             color: #000;
-            padding: 0.15in 0.35in 0.15in 0.55in;
-            max-width: 7.4in;
+            padding: 0.18in 0.35in 0.12in 0.45in;
+            max-width: 7.5in;
             margin: auto;
         }
         .header-container {
             position: relative;
-            min-height: 50px;
-            margin-bottom: 4px;
+            min-height: 48px;
+            margin-bottom: 2px;
         }
         .garuda-img {
             position: absolute;
@@ -42,8 +42,8 @@
         .meta-table td {
             padding: 0;
             vertical-align: top;
-            font-size: 13.5pt;
-            line-height: 1.2;
+            font-size: 13pt;
+            line-height: 1.18;
         }
         .subject-title {
             font-weight: bold;
@@ -51,67 +51,83 @@
         .paragraph {
             text-indent: 0.45in;
             text-align: justify;
-            margin-bottom: 2px;
-            line-height: 1.2;
-            font-size: 13.5pt;
+            margin-bottom: 1.5px;
+            line-height: 1.18;
+            font-size: 13pt;
         }
-        .grid-box-table {
+        .proposer-section {
+            margin-left: auto;
+            width: 3.3in;
+            text-align: center;
+            margin-top: 3px;
+            margin-bottom: 3px;
+            font-size: 12.5pt;
+            line-height: 1.18;
+        }
+        .approval-grid {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 4px;
             border: 1.5px solid #000 !important;
             table-layout: fixed;
+            margin-top: 2px;
+            margin-bottom: 3px;
         }
-        .grid-box-table td {
+        .approval-grid td {
             border: 1px solid #000 !important;
             vertical-align: top;
-            padding: 4px 6px;
-            font-size: 12pt;
-            line-height: 1.2;
+            padding: 2.5px 5px;
+            font-size: 11pt;
+            line-height: 1.16;
         }
         .box-title {
             font-weight: bold;
-            font-size: 12.5pt;
+            font-size: 11.5pt;
             margin-bottom: 1px;
-        }
-        .bottom-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 4px;
-            table-layout: fixed;
-        }
-        .bottom-table td {
-            vertical-align: top;
-            font-size: 12pt;
-            line-height: 1.2;
-            padding: 1px 4px;
         }
         .dotted-line {
             border-bottom: 1px dotted #000;
             display: inline-block;
+        }
+        .director-order-box {
+            width: 100%;
+            margin-top: 2px;
+            text-align: center;
+            font-size: 11.5pt;
+            line-height: 1.18;
+        }
+        .chk-box {
+            display: inline-block;
+            cursor: pointer;
+            user-select: none;
+            padding: 0 1px;
+        }
+        .chk-box:hover {
+            background-color: #f1f5f9;
+            border-radius: 3px;
         }
         @media print {
             body { 
                 padding: 0 !important; 
                 margin: 0 !important;
                 max-width: 100% !important;
-                font-size: 13pt !important;
-                line-height: 1.18 !important;
+                font-size: 12.5pt !important;
+                line-height: 1.15 !important;
             }
             .paragraph {
-                font-size: 13pt !important;
-                line-height: 1.18 !important;
+                font-size: 12.5pt !important;
+                line-height: 1.15 !important;
             }
-            .grid-box-table td {
-                font-size: 11.5pt !important;
-                line-height: 1.18 !important;
+            .approval-grid td {
+                font-size: 10.5pt !important;
+                line-height: 1.13 !important;
+                padding: 2px 4px !important;
             }
             .box-title {
-                font-size: 12pt !important;
+                font-size: 11pt !important;
             }
-            .bottom-table td {
-                font-size: 11.5pt !important;
-                line-height: 1.18 !important;
+            .director-order-box {
+                font-size: 11pt !important;
+                line-height: 1.15 !important;
             }
             .no-print, 
             .no-print * { 
@@ -124,7 +140,7 @@
             }
             @page {
                 size: A4 portrait;
-                margin: 0.8cm 1.2cm 0.6cm 1.8cm;
+                margin: 0.6cm 1.0cm 0.4cm 1.4cm;
             }
         }
     </style>
@@ -136,8 +152,8 @@
     $year = date('Y') + 543;
     $thaiDateStr = "{$day} {$month} {$year}";
 
-    if (!function_exists('cleanPersonName')) {
-        function cleanPersonName($name) {
+    if (!function_exists('cleanPersonNameReqNew')) {
+        function cleanPersonNameReqNew($name) {
             if (!$name) return '..........................................................';
             $cleaned = preg_replace('/\s*\(.*?\)/u', '', $name);
             $cleaned = preg_replace('/\s*\[.*?\]/u', '', $cleaned);
@@ -170,8 +186,8 @@
         }
     }
 
-    if (!function_exists('convertToThaiBahtTextReq')) {
-        function convertToThaiBahtTextReq($number) {
+    if (!function_exists('convertToThaiBahtTextReqNew')) {
+        function convertToThaiBahtTextReqNew($number) {
             $number = floatval($number);
             if ($number == 0) return 'ศูนย์บาทถ้วน';
             
@@ -239,7 +255,7 @@
 
     // Proposer
     $rawProposerName = $project->responsible_person ?: ($project->user ? $project->user->name : '..........................................................');
-    $cleanProposerName = cleanPersonName($rawProposerName);
+    $cleanProposerName = cleanPersonNameReqNew($rawProposerName);
 
     // Department & Division details
     $dept = $project->department;
@@ -260,7 +276,7 @@
                   ->orWhere('position', 'like', '%รักษาการ%');
             })->first();
     }
-    $headOfDeptName = $headUser ? cleanPersonName($headUser->name) : $cleanProposerName;
+    $headOfDeptName = $headUser ? cleanPersonNameReqNew($headUser->name) : $cleanProposerName;
 
     // Deputy Directors
     $deputyOptions = [
@@ -291,7 +307,7 @@
             ->orWhere('position', 'like', "%{$opt['division']}%")
             ->first();
         if ($foundUser) {
-            $deputyOptions[$k]['name'] = cleanPersonName($foundUser->name);
+            $deputyOptions[$k]['name'] = cleanPersonNameReqNew($foundUser->name);
         }
     }
 
@@ -306,18 +322,19 @@
 
     $deputyDirectorName = $deputyOptions[$initialDeputyKey]['name'];
 
-    // Specific Officers for Section 3, 5, 6, 7
+    // Specific Officers for Section 3, 4, 5, 6, 7 (Matching the uploaded image)
     $planHeadUser = \App\Models\User::where('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างานวางแผน%')->first();
-    $planHeadName = $planHeadUser ? cleanPersonName($planHeadUser->name) : 'นายพิพัฒน์ สีมา';
+    $planHeadName = $planHeadUser ? cleanPersonNameReqNew($planHeadUser->name) : 'นายพิพัฒน์ สีมา';
+
+    $planDeputyName = $deputyOptions['planning']['name'] ?: 'นายนิพนธ์ ร่องพืช';
 
     $financeHeadUser = \App\Models\User::where('position', 'like', '%หัวหน้างานการเงิน%')->orWhere('position', 'like', '%งานการเงิน%')->first();
-    $financeHeadName = $financeHeadUser ? cleanPersonName($financeHeadUser->name) : 'นางสาวดวงดาว ไชยเขียว';
+    $financeHeadName = $financeHeadUser ? cleanPersonNameReqNew($financeHeadUser->name) : 'นางสาวพวงหาว ไทยเขียว';
 
     $procHeadUser = \App\Models\User::where('position', 'like', '%หัวหน้างานพัสดุ%')->orWhere('position', 'like', '%งานพัสดุ%')->first();
-    $procHeadName = $procHeadUser ? cleanPersonName($procHeadUser->name) : 'นายกิตติศักดิ์ ขัดเงางาม';
+    $procHeadName = $procHeadUser ? cleanPersonNameReqNew($procHeadUser->name) : 'นายกิตติศักดิ์ ขัดเงางาม';
 
     $resourceDeputyName = $deputyOptions['resources']['name'] ?: 'นายจักรพงศ์ พรหมสกุลปัญญา';
-    $planDeputyName = $deputyOptions['planning']['name'] ?: 'นายนิพนธ์ ร่องพืช';
 
     // College Director
     $directorUser = \App\Models\User::where('position', 'like', '%ผู้อำนวยการวิทยาลัย%')
@@ -325,7 +342,7 @@
         ->where('position', 'not like', '%รองผู้อำนวยการ%')
         ->first();
     $directorSetting = \App\Models\SystemSetting::where('key', 'director_name')->first();
-    $directorName = $directorSetting ? cleanPersonName($directorSetting->value) : ($directorUser ? cleanPersonName($directorUser->name) : 'นายกเชษฐ์ กิ่งชนะ');
+    $directorName = $directorSetting ? cleanPersonNameReqNew($directorSetting->value) : ($directorUser ? cleanPersonNameReqNew($directorUser->name) : 'นายกเชษฐ์ กิ่งชนะ');
 
     // Financial calculations
     $itemsCount = $items->count() > 0 ? $items->count() : ($project->items ? $project->items->count() : 1);
@@ -333,7 +350,10 @@
         return $carry + (floatval($i->quantity) * floatval($i->unit_price));
     }, 0);
     $finalProcAmount = $totalProcSum > 0 ? $totalProcSum : ($project->estimated_budget ?: 0);
-    $bahtText = convertToThaiBahtTextReq($finalProcAmount);
+    $bahtText = convertToThaiBahtTextReqNew($finalProcAmount);
+
+    $budgetAllocated = $project->allocated_budget ?: ($project->estimated_budget ?: $finalProcAmount);
+    $budgetRemaining = max(0, $budgetAllocated - $finalProcAmount);
 
     // Committees
     $pChair = $purchasingCommittee->where('pivot.role', 'chairperson')->first()?->name;
@@ -356,10 +376,10 @@
 
 <body>
     <!-- Top Interactive Control Bar (Hidden when printing) -->
-    <div class="no-print" style="margin-bottom: 12px; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 8px 14px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+    <div class="no-print" style="margin-bottom: 10px; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 8px 14px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <label for="deputy-select" style="font-weight: bold; color: #1e293b; font-size: 13pt;">
-                👔 เลือกรองฝ่ายฯ ที่เกี่ยวข้อง:
+                👔 เลือกรองฝ่ายฯ ที่เกี่ยวข้อง (ข้อ 2):
             </label>
             <select id="deputy-select" onchange="changeDeputy(this.value)" style="padding: 4px 10px; border-radius: 8px; border: 2px solid #7c3aed; font-family: inherit; font-size: 13pt; font-weight: bold; color: #4c1d95; background-color: #ffffff; cursor: pointer;">
                 @foreach($deputyOptions as $key => $opt)
@@ -371,9 +391,10 @@
             </select>
         </div>
 
-        <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 11pt; color: #64748b;">(คลิกที่วงเล็บเพื่อติ๊กเลือก/แก้ไขข้อความได้โดยตรง)</span>
             <button onclick="window.print()" style="padding: 5px 16px; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: white; border: none; border-radius: 8px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer; box-shadow: 0 2px 5px rgba(124,58,237,0.25);">
-                🖨️ สั่งพิมพ์เอกสาร / PDF
+                🖨️ สั่งพิมพ์เอกสาร / บันทึก PDF
             </button>
         </div>
     </div>
@@ -393,34 +414,34 @@
         </tr>
         <tr>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 8px;">ที่</td>
-            <td><span contenteditable="true" style="outline: none;">{{ $procurement->plan_procurement_doc_number ?: ($procurement->procurement_number ?: '........../2569') }}</span></td>
+            <td><span contenteditable="true" style="outline: none;">{{ $procurement->plan_procurement_doc_number ?: ($procurement->procurement_number ?: '........../2570') }}</span></td>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; text-align: right; padding-right: 8px;">วันที่</td>
-            <td><span contenteditable="true" style="outline: none;">{{ $thaiDateStr }}</span></td>
+            <td><span contenteditable="true" style="outline: none;">{{ $day }}</span> เดือน <span contenteditable="true" style="outline: none;">{{ $month }}</span> พ.ศ. <span contenteditable="true" style="outline: none;">{{ $year }}</span></td>
         </tr>
         <tr>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 8px;">เรื่อง</td>
-            <td colspan="3" class="subject-title">รายงานขอซื้อ/ขอจ้าง</td>
+            <td colspan="3" class="subject-title">ขออนุมัติจัดซื้อ</td>
+        </tr>
+        <tr>
+            <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 8px;">เรียน</td>
+            <td colspan="3">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</td>
         </tr>
     </table>
 
-    <div style="border-bottom: 1.5px solid #000; margin-bottom: 4px;"></div>
+    <div style="border-bottom: 1.5px solid #000; margin-bottom: 4px; margin-top: 2px;"></div>
 
-    <div style="margin-top: 2px; margin-bottom: 2px; font-size: 13pt;">
-        <strong>เรียน</strong> ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
-    </div>
-
-    <!-- Body text with blank checkboxes ( ) -->
+    <!-- Body Text (Exact layout matching the image) -->
     <div class="paragraph">
         ด้วยแผนกวิชา/งาน <span contenteditable="true" style="outline: none; font-weight: bold;">{{ $deptName }}</span> มีความประสงค์ขอ 
-        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) จัดซื้อวัสดุ/ครุภัณฑ์</span> &nbsp;&nbsp; 
-        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) จัดจ้าง</span> 
-        เพื่อใช้เป็น &nbsp;&nbsp; 
-        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) วัสดุฝึก</span> &nbsp;&nbsp; 
-        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อุปกรณ์การสอน</span> &nbsp;&nbsp; 
-        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งานปรับปรุง</span> &nbsp;&nbsp; 
-        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งานซ่อม/แก้ไขเปลี่ยนของเดิมที่ชำรุด</span> &nbsp;&nbsp; 
-        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> <span contenteditable="true" style="outline: none;">ดำเนินโครงการ {{ $project->title }}</span>
-        ประกอบการเรียนการสอนวิชา/งาน<span id="division-body-text" contenteditable="true" style="outline: none;">{{ $divisionName }}</span>
+        <span class="chk-box">(&nbsp;/&nbsp;) จัดซื้อวัสดุ</span> เพื่อใช้เป็น 
+        <span class="chk-box">(&nbsp;/&nbsp;) วัสดุฝึก</span> 
+        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) อุปกรณ์จัดการเรียนการสอน</span> 
+        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) งานซ่อม/แก้ไขเปลี่ยนของเดิมที่ชำรุด</span> 
+        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> <span contenteditable="true" style="outline: none;">................................................................</span>
+    </div>
+
+    <div class="paragraph" style="text-indent: 0;">
+        สำหรับประกอบการเรียนการสอนวิชา/งาน/โครงการ <span contenteditable="true" style="outline: none; font-weight: bold;">{{ $project->title }}</span>
     </div>
 
     <div class="paragraph" style="text-indent: 0;">
@@ -428,173 +449,173 @@
     </div>
 
     <div class="paragraph" style="text-indent: 0;">
-        จำนวน <strong style="font-size: 13.5pt;">{{ $itemsCount }}</strong> รายการ &nbsp; 
-        เป็นเงิน <strong style="font-size: 13.5pt;">{{ number_format($finalProcAmount, 2) }}</strong> บาท 
+        จำนวน <strong style="font-size: 13pt;">{{ $itemsCount }}</strong> รายการ &nbsp; 
+        เป็นเงิน <strong style="font-size: 13pt;">{{ number_format($finalProcAmount, 2) }}</strong> บาท 
         (<strong>{{ $bahtText }}</strong>) &nbsp; 
         ต้องการใช้วัสดุวันที่ <span contenteditable="true" style="outline: none;">ภายในกำหนดการดำเนินโครงการ</span>
     </div>
 
-    <div class="paragraph" style="text-indent: 0.5in; font-weight: bold; margin-top: 2px;">
+    <div class="paragraph" style="text-indent: 0.45in; font-weight: bold; margin-top: 2px;">
         ดังรายละเอียดในประมาณการหน้าที่ 2
     </div>
-    <div class="paragraph" style="text-indent: 0.5in; margin-top: 1px;">
+    <div class="paragraph" style="text-indent: 0.45in; margin-top: 1px;">
         จึงเรียนมาเพื่อโปรดพิจารณา
     </div>
 
-    <!-- Signature of Proposer -->
-    <div style="margin-left: auto; width: 3.2in; text-align: center; margin-top: 4px; margin-bottom: 4px;">
-        <div>ลงชื่อ ....................................................................... ผู้ขอซื้อ/ขอจ้าง</div>
+    <!-- Proposer Signature (Top Right) -->
+    <div class="proposer-section">
+        <div>ลงชื่อ ....................................................................... ผู้ขออนุมัติจัดซื้อ</div>
         <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $cleanProposerName }}</span> )</div>
-        <div style="font-size: 12pt; margin-top: 1px;">............../............../..............</div>
+        <div style="font-size: 11pt; margin-top: 1px;">............../....................../................</div>
     </div>
 
-    <!-- 7-Section Approval Grid Box (Without inner divider lines between questions) -->
-    <table class="grid-box-table">
-        <tr>
-            <!-- LEFT COLUMN (Box 1, 2, 3 without dividing lines) -->
-            <td style="width: 50%; padding: 4px 8px;">
-                <!-- Box 1 -->
-                <div style="margin-bottom: 8px;">
-                    <div class="box-title">1. ความเห็น หัวหน้าแผนก/งาน<span contenteditable="true" style="outline: none;">{{ $deptName }}</span></div>
-                    <div style="padding-left: 6px;">
-                        มีในแผนได้จัดสรรงบ <span class="dotted-line" style="width: 120px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
-                        จ่ายครั้งนี้แล้วคงเหลือ <span class="dotted-line" style="width: 130px;" contenteditable="true">&nbsp;</span> บาท
+    <!-- 2-Column Outer Box (Left: 1, 2, 3, 4 | Right: 5, 6, 7) Exactly Matching Image -->
+    <table class="approval-grid">
+        <colgroup>
+            <col style="width: 50%;">
+            <col style="width: 50%;">
+        </colgroup>
+        <tbody>
+            <!-- Row 1: Box 1 (Left) & Box 5 (Right) -->
+            <tr>
+                <!-- 1. ความเห็น หัวหน้าแผนก/งาน -->
+                <td style="padding: 3px 6px;">
+                    <div class="box-title">1. ความเห็น หัวหน้าแผนก/งาน <span contenteditable="true" style="outline: none;">{{ $deptName }}</span></div>
+                    <div style="padding-left: 6px; line-height: 1.2;">
+                        มีในแผนได้จัดสรรงบ <span class="dotted-line" style="min-width: 130px;" contenteditable="true">&nbsp;{{ number_format($budgetAllocated, 2) }}</span> บาท<br>
+                        จ่ายครั้งนี้แล้วคงเหลือ <span class="dotted-line" style="min-width: 140px;" contenteditable="true">&nbsp;{{ number_format($budgetRemaining, 2) }}</span> บาท
                     </div>
                     <div style="text-align: center; margin-top: 4px;">
-                        <div>ลงชื่อ ...................................................................</div>
-                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $headOfDeptName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                        <div>ลงชื่อ............................................................</div>
+                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $headOfDeptName }}</span> ) &nbsp;&nbsp; ........./............/............</div>
                     </div>
-                </div>
+                </td>
 
-                <!-- Box 2 (Directly following Box 1 without horizontal border) -->
-                <div style="margin-bottom: 8px;">
-                    <div class="box-title">2. ความเห็น รองผู้อำนวยการฝ่าย<span id="box2-div-text" contenteditable="true" style="outline: none;">{{ str_replace('ฝ่าย', '', $divisionName) }}</span></div>
-                    <div style="padding-left: 6px;">
-                        มีในแผนตามข้อ 1 / เห็นควรอนุญาต / อนุมัติ
-                    </div>
-                    <div style="text-align: center; margin-top: 4px;">
-                        <div>ลงชื่อ ...................................................................</div>
-                        <div style="margin-top: 1px;">( <span id="box2-name-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
-                    </div>
-                </div>
-
-                <!-- Box 3 (Directly following Box 2 without horizontal border) -->
-                <div>
-                    <div class="box-title">3. ความเห็นหัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ</div>
-                    <div style="padding-left: 4px;">
-                        <strong>ตรวจสอบแล้ว</strong> &nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) มีในแผน</span> &nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) ไม่มีในแผน ; ปรับแผนฯ</span><br>
-                        งปม. ที่ได้รับจาก สอศ. <span class="dotted-line" style="width: 75px;" contenteditable="true">&nbsp;</span> บาท คงเหลือ <span class="dotted-line" style="width: 70px;" contenteditable="true">&nbsp;</span> บาท<br>
-                        เงินจัดสรรโครงการ/งาน/กิจกรรม <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท คงเหลือ <span class="dotted-line" style="width: 55px;" contenteditable="true">&nbsp;</span> บาท<br>
-                        จำนวนที่ขออนุมัติจัดซื้อครั้งนี้ <span class="dotted-line" style="width: 90px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
-                        โดยให้เงินงบประมาณ <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) บกศ.</span> <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งปม.</span> <span class="dotted-line" style="width: 80px;" contenteditable="true">&nbsp;</span><br>
-                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) เงินอุดหนุน</span> ............................................................................<br>
-                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> .....................................................................................
-                    </div>
-                    <div style="text-align: center; margin-top: 4px;">
-                        <div>ลงชื่อ ...................................................................</div>
-                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $planHeadName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
-                    </div>
-                </div>
-            </td>
-
-            <!-- RIGHT COLUMN (Box 4, 5, 6, 7 without dividing lines) -->
-            <td style="width: 50%; padding: 4px 8px;">
-                <!-- Box 4 -->
-                <div style="margin-bottom: 7px;">
-                    <div class="box-title">4. ความเห็นรองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน</div>
-                    <div style="padding-left: 6px;">
-                        - ได้ตรวจสอบแล้วมีในแผนและมีงบพอจ่าย/เห็นควรอนุญาต/อนุมัติ
-                    </div>
-                    <div style="text-align: center; margin-top: 3px;">
-                        <div>ลงชื่อ ...................................................................</div>
-                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $planDeputyName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
-                    </div>
-                </div>
-
-                <!-- Box 5 -->
-                <div style="margin-bottom: 7px;">
+                <!-- 5. ความเห็นหัวหน้างานการเงิน -->
+                <td style="padding: 3px 6px;">
                     <div class="box-title">5. ความเห็นหัวหน้างานการเงิน</div>
-                    <div style="padding-left: 6px;">
+                    <div style="padding-left: 6px; line-height: 1.2;">
                         - โดยภาพรวม มีงบเพียงพอ กรณีจัดซื้อด้วยเงิน / ใช้เงิน<br>
-                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) บกศ</span> &nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) เงินอุดหนุน</span> &nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) งปม.</span> &nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> ....................<br>
-                        มียอดคงเหลือ <span class="dotted-line" style="width: 130px;" contenteditable="true">&nbsp;</span> บาท
+                        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) รายได้สถานศึกษา</span> &nbsp;
+                        <span class="chk-box">(&nbsp;/&nbsp;) เงินอุดหนุน</span> &nbsp;
+                        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) งปม.</span> &nbsp;
+                        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span>..........................<br>
+                        มียอดคงเหลือ <span class="dotted-line" style="min-width: 140px;" contenteditable="true">&nbsp;{{ number_format($budgetRemaining, 2) }}</span> บาท
                     </div>
-                    <div style="text-align: center; margin-top: 3px;">
-                        <div>ลงชื่อ ...................................................................</div>
-                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $financeHeadName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    <div style="text-align: center; margin-top: 4px;">
+                        <div>ลงชื่อ............................................................</div>
+                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $financeHeadName }}</span> ) &nbsp;&nbsp; ........./............/............</div>
                     </div>
-                </div>
+                </td>
+            </tr>
 
-                <!-- Box 6 -->
-                <div style="margin-bottom: 7px;">
-                    <div class="box-title">6. ความเห็นของหัวหน้างานพัสดุ</div>
-                    <div style="padding-left: 6px;">
-                        - เห็นควรดำเนินการจัดซื้อ / จัดจ้าง ด้วยวิธี<br>
-                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) วิธีเฉพาะเจาะจง</span> &nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) วิธีคัดเลือก</span> &nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อื่นๆ</span> ....................<br>
-                        <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) วิธีประกาศเชิญชวนทั่วไป</span> ......................................................
+            <!-- Row 2: Box 2 (Left) & Box 6 (Right - Tall with Committees) -->
+            <tr>
+                <!-- 2. ความเห็น รองผู้อำนวยการฝ่าย -->
+                <td style="padding: 3px 6px;">
+                    <div class="box-title">2. ความเห็น รองผู้อำนวยการฝ่าย <span id="box2-div-text" contenteditable="true" style="outline: none;">{{ str_replace('ฝ่าย', '', $divisionName) }}</span></div>
+                    <div style="padding-left: 6px; line-height: 1.2;">
+                        มีในแผนตามข้อ 1 เห็นควรอนุมัติ
                     </div>
-                    <div style="text-align: center; margin-top: 3px;">
-                        <div>ลงชื่อ ...................................................................</div>
-                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $procHeadName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    <div style="text-align: center; margin-top: 6px;">
+                        <div>ลงชื่อ............................................................</div>
+                        <div style="margin-top: 1px;">( <span id="box2-name-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorName }}</span> ) &nbsp;&nbsp; ........./............/............</div>
                     </div>
-                </div>
+                </td>
 
-                <!-- Box 7 -->
-                <div>
+                <!-- 6. ความเห็นของหัวหน้าเจ้าหน้าที่ (พัสดุ) with Committees and Loan Officer -->
+                <td rowspan="2" style="padding: 3px 6px;">
+                    <div class="box-title">6. ความเห็นของหัวหน้าเจ้าหน้าที่ เห็นควรดำเนินการจัดซื้อด้วยวิธี</div>
+                    <div style="padding-left: 4px; line-height: 1.18;">
+                        <span class="chk-box">(&nbsp;/&nbsp;) วิธีเฉพาะเจาะจง</span> &nbsp;
+                        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) วิธีคัดเลือก</span> &nbsp;
+                        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) วิธีประกาศเชิญชวนทั่วไป</span>................<br>
+                        - จัดซื้อโดยการจ่ายตรงให้กับผู้ค้าจำนวน <span class="dotted-line" style="min-width: 25px; text-align: center;" contenteditable="true">&nbsp;{{ $itemsCount }}&nbsp;</span> รายการ ดังนี้ <span contenteditable="true">................................</span><br>
+                        - จัดซื้อโดยการยืมเงินจำนวน <span class="dotted-line" style="min-width: 25px; text-align: center;" contenteditable="true">&nbsp;&nbsp;</span> รายการ ดังนี้ <span contenteditable="true">................................</span><br>
+                        โดยมอบหมายให้บุคคลที่มีรายชื่อดังต่อไปนี้ ปฏิบัติหน้าที่เป็น<br>
+                        (1) <span contenteditable="true" style="outline: none; font-weight: bold;">{{ $cleanProposerName }}</span> เป็นผู้ดำเนินการยืมเงินในครั้งนี้<br>
+                        (2) คณะกรรมการกำหนดร่างขอบเขตงานฯ <span contenteditable="true" style="outline: none;">{{ $pChair ? $pChair : '........................................................' }}</span> ประธานกรรมการ<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span contenteditable="true" style="outline: none;">{{ $pMem1 ? $pMem1 : '..................................................' }}</span> กรรมการ <span contenteditable="true" style="outline: none;">{{ $pMem2 ? $pMem2 : '..................................................' }}</span> กรรมการ<br>
+                        (3) คณะกรรมการตรวจรับพัสดุ <span contenteditable="true" style="outline: none;">{{ $iChair ? $iChair : '......................................................' }}</span> ประธานกรรมการ<br>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span contenteditable="true" style="outline: none;">{{ $iMem1 ? $iMem1 : '..................................................' }}</span> กรรมการ <span contenteditable="true" style="outline: none;">{{ $iMem2 ? $iMem2 : '..................................................' }}</span> กรรมการ
+                    </div>
+                    <div style="text-align: center; margin-top: 5px;">
+                        <div>ลงชื่อ............................................................</div>
+                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $procHeadName }}</span> ) &nbsp;&nbsp; ........./............/............</div>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Row 3: Box 3 (Left - Tall) -->
+            <tr>
+                <!-- 3. ความเห็นหัวหน้างานพัฒนายุทธศาสตร์แผนงานและงบประมาณ -->
+                <td style="padding: 3px 6px;">
+                    <div class="box-title">3. ความเห็นหัวหน้างานพัฒนายุทธศาสตร์แผนงานและงบประมาณ</div>
+                    <div style="padding-left: 4px; line-height: 1.18;">
+                        ตรวจสอบแล้ว &nbsp; <span class="chk-box">(&nbsp;/&nbsp;) มีในแผน</span> &nbsp; <span class="chk-box">(&nbsp;&nbsp;&nbsp;) ไม่มีในแผน ปรับแผนฯ</span><br>
+                        งปม.ที่ได้รับจาก สอศ. <span class="dotted-line" style="min-width: 80px;" contenteditable="true">&nbsp;</span> บาท คงเหลือ <span class="dotted-line" style="min-width: 75px;" contenteditable="true">&nbsp;</span> บาท<br>
+                        เงินจัดสรรงบโครงการ/งาน/กิจกรรม <span class="dotted-line" style="min-width: 70px;" contenteditable="true">&nbsp;{{ number_format($budgetAllocated, 2) }}</span> บาท คงเหลือ <span class="dotted-line" style="min-width: 65px;" contenteditable="true">&nbsp;{{ number_format($budgetRemaining, 2) }}</span> บาท<br>
+                        จำนวนที่ขออนุมัติจัดซื้อครั้งนี้ <span class="dotted-line" style="min-width: 100px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}</span> บาท<br>
+                        โดยใช้เงินงบประมาณ &nbsp; <span class="chk-box">(&nbsp;&nbsp;&nbsp;) รายได้สถานศึกษา</span> &nbsp; <span class="chk-box">(&nbsp;&nbsp;&nbsp;) งปม.</span>..........................<br>
+                        <span class="chk-box">(&nbsp;/&nbsp;) เงินอุดหนุน</span> <span class="dotted-line" style="min-width: 80px;" contenteditable="true">&nbsp;{{ number_format($finalProcAmount, 2) }}&nbsp;</span> &nbsp; <span class="chk-box">(&nbsp;&nbsp;&nbsp;) อื่น ๆ</span> ..........................
+                    </div>
+                    <div style="text-align: center; margin-top: 5px;">
+                        <div>ลงชื่อ............................................................</div>
+                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $planHeadName }}</span> ) &nbsp;&nbsp; ........./............/............</div>
+                    </div>
+                </td>
+            </tr>
+
+            <!-- Row 4: Box 4 (Left) & Box 7 (Right) -->
+            <tr>
+                <!-- 4. ความเห็นรองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน -->
+                <td style="padding: 3px 6px;">
+                    <div class="box-title">4. ความเห็นรองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน</div>
+                    <div style="padding-left: 6px; line-height: 1.2;">
+                        <span class="chk-box">(&nbsp;/&nbsp;) ได้ตรวจสอบแล้วมีงบประมาณแผน</span> &nbsp; <span class="chk-box">(&nbsp;/&nbsp;) เห็นควรอนุมัติ</span><br>
+                        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) เหตุผล</span>........................................................................................................
+                    </div>
+                    <div style="text-align: center; margin-top: 5px;">
+                        <div>ลงชื่อ............................................................</div>
+                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $planDeputyName }}</span> ) &nbsp;&nbsp; ........./............/............</div>
+                    </div>
+                </td>
+
+                <!-- 7. ความเห็นรองผู้อำนวยการฝ่ายบริหารทรัพยากร -->
+                <td style="padding: 3px 6px;">
                     <div class="box-title">7. ความเห็นรองผู้อำนวยการฝ่ายบริหารทรัพยากร</div>
-                    <div style="padding-left: 6px;">
-                        - มีข้อมูลครบถ้วน, มีงบประมาณเพียงพอ, เห็นควรอนุญาต/อนุมัติ
+                    <div style="padding-left: 6px; line-height: 1.2;">
+                        เรียน ผู้อำนวยการฯ<br>
+                        <span class="chk-box">(&nbsp;/&nbsp;) มีข้อมูลครบถ้วน และมีงบประมาณเพียงพอ</span><br>
+                        <span class="chk-box">(&nbsp;/&nbsp;) เห็นควรอนุมัติ</span>
                     </div>
-                    <div style="text-align: center; margin-top: 3px;">
-                        <div>ลงชื่อ ...................................................................</div>
-                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $resourceDeputyName }}</span> ) &nbsp;&nbsp; ......./......./.......</div>
+                    <div style="text-align: center; margin-top: 5px;">
+                        <div>ลงชื่อ............................................................</div>
+                        <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $resourceDeputyName }}</span> ) &nbsp;&nbsp; ........./............/............</div>
                     </div>
-                </div>
-            </td>
-        </tr>
+                </td>
+            </tr>
+        </tbody>
     </table>
 
-    <!-- Bottom Section: คำสั่งแต่งตั้งกรรมการ และ คำสั่งผู้อำนวยการ -->
-    <div style="margin-top: 4px; font-size: 11.5pt; line-height: 1.18;">
-        <strong>คำสั่ง</strong> เพื่อให้เป็นไปตามระเบียบกระทรวงการคลังว่าด้วยการจัดซื้อจัดจ้างและการบริหารพัสดุภาครัฐ พ.ศ. 2560 ข้อ 25 จึงขอแต่งตั้งบุคคลต่อไปนี้เป็นคณะกรรมการ คือ
+    <!-- Bottom Section: คำสั่งผู้อำนวยการ (Matching Image) -->
+    <div class="director-order-box">
+        <div style="font-weight: bold; font-size: 12pt; margin-bottom: 2px;">คำสั่งผู้อำนวยการ</div>
+        <div style="margin-bottom: 1px;">
+            <span class="chk-box">(&nbsp;&nbsp;&nbsp;) ทราบ</span> &nbsp;&nbsp;&nbsp;&nbsp; 
+            <span class="chk-box">(&nbsp;/&nbsp;) อนุมัติ ตามงบประมาณที่ขอจัดซื้อ และคณะกรรมการฯ รายชื่อตามเสนอข้างต้น</span>
+        </div>
+        <div style="margin-bottom: 2px;">
+            <span class="chk-box">(&nbsp;&nbsp;&nbsp;) ไม่อนุมัติเพราะ</span> ........................................................................................................................
+        </div>
+
+        <div style="text-align: center; margin-top: 4px;">
+            <div>ลงชื่อ............................................................</div>
+            <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
+            <div style="margin-top: 1px; font-weight: bold;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
+            <div style="font-size: 11pt; margin-top: 1px;">............../....................../................</div>
+        </div>
     </div>
-
-    <table class="bottom-table">
-        <tr>
-            <!-- Committees Column (Left) -->
-            <td style="width: 50%;">
-                <div style="font-weight: bold; font-size: 11.5pt;">1. คณะกรรมการซื้อ / จ้างโดยวิธีเฉพาะเจาะจง</div>
-                <div style="padding-left: 8px; font-size: 11pt;">
-                    1.1 <span contenteditable="true" style="outline: none;">{{ $pChair ? $pChair . ' (ประธานกรรมการ)' : '..........................................................................................' }}</span><br>
-                    1.2 <span contenteditable="true" style="outline: none;">{{ $pMem1 ? $pMem1 . ' (กรรมการ)' : '..........................................................................................' }}</span><br>
-                    1.3 <span contenteditable="true" style="outline: none;">{{ $pMem2 ? $pMem2 . ' (กรรมการ)' : '..........................................................................................' }}</span>
-                </div>
-
-                <div style="font-weight: bold; font-size: 11.5pt; margin-top: 2px;">2. คณะกรรมการตรวจรับพัสดุ</div>
-                <div style="padding-left: 8px; font-size: 11pt;">
-                    2.1 <span contenteditable="true" style="outline: none;">{{ $iChair ? $iChair . ' (ประธานกรรมการ)' : '..........................................................................................' }}</span><br>
-                    2.2 <span contenteditable="true" style="outline: none;">{{ $iMem1 ? $iMem1 . ' (กรรมการ)' : '..........................................................................................' }}</span><br>
-                    2.3 <span contenteditable="true" style="outline: none;">{{ $iMem2 ? $iMem2 . ' (กรรมการ)' : '..........................................................................................' }}</span>
-                </div>
-            </td>
-
-            <!-- Director Decision Column (Right) -->
-            <td style="width: 50%; padding-left: 10px;">
-                <div style="font-weight: bold; font-size: 11.5pt;">คำสั่งผู้อำนวยการ</div>
-                <div style="font-size: 11.5pt; margin-top: 1px;">
-                    <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) ทราบ</span> &nbsp;&nbsp;&nbsp;&nbsp; <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) อนุญาต/อนุมัติ</span><br>
-                    <span style="white-space: nowrap;">(&nbsp;&nbsp;&nbsp;) ไม่อนุญาต/อนุมัติเพราะ</span> ...................................................................
-                </div>
-
-                <div style="text-align: center; margin-top: 8px;">
-                    <div>ลงชื่อ .......................................................................</div>
-                    <div style="margin-top: 1px;">( <span contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
-                    <div style="font-size: 11.5pt; margin-top: 1px;">ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
-                    <div style="font-size: 11pt; margin-top: 1px;">............../............../..............</div>
-                </div>
-            </td>
-        </tr>
-    </table>
 
     <script>
         const deputiesData = @json($deputyOptions);
@@ -615,9 +636,20 @@
                 const cleanDivName = data.division.replace('ฝ่าย', '');
                 document.getElementById('box2-div-text').innerText = cleanDivName;
                 document.getElementById('division-header-text').innerText = cleanDivName;
-                document.getElementById('division-body-text').innerText = data.division;
             }
         }
+
+        // Clickable interactive checkboxes
+        document.querySelectorAll('.chk-box').forEach(el => {
+            el.addEventListener('click', function() {
+                const txt = this.innerHTML;
+                if (txt.includes('/') || txt.includes('&#x2713;') || txt.includes('✓')) {
+                    this.innerHTML = '(&nbsp;&nbsp;&nbsp;)' + txt.substring(txt.indexOf(')') + 1);
+                } else {
+                    this.innerHTML = '(&nbsp;/&nbsp;)' + txt.substring(txt.indexOf(')') + 1);
+                }
+            });
+        });
     </script>
 </body>
 </html>
