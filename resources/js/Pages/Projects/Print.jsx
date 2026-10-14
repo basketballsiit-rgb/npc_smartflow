@@ -1,7 +1,7 @@
 import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function Print({ project, strategyCategories = [] }) {
+export default function Print({ project, strategyCategories = [], resolvedHead = null }) {
     const { college_settings } = usePage().props;
     // Font size preset state: 'compact' (14px) | 'normal' (15px) | 'large' (16.5px)
     const [fontSizePreset, setFontSizePreset] = useState('normal');
@@ -266,6 +266,61 @@ export default function Print({ project, strategyCategories = [] }) {
     const sig5 = getApprovalByStep(5);
     const sig6 = getApprovalByStep(6);
 
+    const deptName = project.department?.name || '';
+    const proposerPos = project.position || project.user?.position || '';
+    const isPlanning = deptName.includes('ยุทธศาสตร์') 
+        || deptName.includes('แผนงาน') 
+        || deptName.includes('วางแผน')
+        || proposerPos.includes('ยุทธศาสตร์')
+        || proposerPos.includes('แผนงาน');
+
+    const getStep2Name = () => {
+        if (sig2?.user?.name) {
+            return toThaiNumerals(cleanPersonName(sig2.user.name));
+        }
+        if (resolvedHead?.name) {
+            return toThaiNumerals(cleanPersonName(resolvedHead.name));
+        }
+        if (project.department?.department_head_name) {
+            return toThaiNumerals(cleanPersonName(project.department.department_head_name));
+        }
+        if (isPlanning) {
+            return toThaiNumerals(cleanPersonName(college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา'));
+        }
+        return '...............................................';
+    };
+
+    const getStep2Position = () => {
+        if (sig2?.acting_position_text) {
+            return toThaiNumerals(sig2.acting_position_text);
+        }
+        if (sig2?.user?.position_level) {
+            return toThaiNumerals(sig2.user.position_level);
+        }
+        if (isPlanning) {
+            return toThaiNumerals(college_settings?.plan_head_position || 'หัวหน้างานยุทธศาสตร์และแผนงาน');
+        }
+        if (resolvedHead?.position) {
+            return toThaiNumerals(resolvedHead.position);
+        }
+        if (proposerPos && proposerPos.includes('เจ้าหน้าที่งาน')) {
+            return toThaiNumerals(proposerPos.replace(/เจ้าหน้าที่/g, 'หัวหน้า'));
+        }
+        if (deptName) {
+            if (deptName.startsWith('ฝ่าย')) {
+                return toThaiNumerals(`หัวหน้างาน${deptName.replace(/^ฝ่าย/, '')}`);
+            }
+            if (deptName.startsWith('สาขาวิชา')) {
+                return toThaiNumerals(`หัวหน้าแผนกวิชา${deptName.replace(/^สาขาวิชา/, '')}`);
+            }
+            if (deptName.startsWith('งาน')) {
+                return toThaiNumerals(`หัวหน้า${deptName}`);
+            }
+            return toThaiNumerals(`หัวหน้างาน${deptName}`);
+        }
+        return 'หัวหน้างาน/หัวหน้าแผนกวิชา';
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0">
             <Head>
@@ -484,7 +539,7 @@ export default function Print({ project, strategyCategories = [] }) {
                         </p>
                         <div className="pl-6 pt-1 space-y-0.5 text-slate-900 leading-relaxed">
                             <p><span className="font-bold">ผู้รับผิดชอบโครงการ ชื่อ-สกุล :</span> {toArabicNumerals(cleanedResponsiblePerson)}</p>
-                            <p><span className="font-bold">ตำแหน่ง :</span> {toArabicNumerals(project.position || 'หัวหน้างานส่งเสริมธุรกิจและการเป็นผู้ประกอบการ')}</p>
+                            <p><span className="font-bold">ตำแหน่ง :</span> {toArabicNumerals(project.position || project.user?.position || (deptName ? (deptName.startsWith('ฝ่าย') ? `เจ้าหน้าที่งาน${deptName.replace(/^ฝ่าย/, '')}` : (deptName.startsWith('งาน') ? `เจ้าหน้าที่${deptName}` : `เจ้าหน้าที่${deptName}`)) : 'เจ้าหน้าที่ผู้รับผิดชอบโครงการ'))}</p>
                             <p><span className="font-bold">โทรศัพท์เคลื่อนที่ :</span> {toArabicNumerals(project.phone || '080-6044450')} &nbsp;&nbsp;&nbsp;&nbsp; <span className="font-bold">E-mail :</span> {project.email || project.user?.email || 'Newchatnapa16@npc.ac.th'}</p>
                         </div>
                     </div>
@@ -940,9 +995,17 @@ export default function Print({ project, strategyCategories = [] }) {
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
                                         {project.position 
                                             ? toThaiNumerals(project.position) 
-                                            : (project.department?.name 
-                                                ? toThaiNumerals(`หัวหน้างาน${project.department.name.replace(/^งาน/, '')}`) 
-                                                : 'หัวหน้างาน................................................')}
+                                            : (project.user?.position 
+                                                ? toThaiNumerals(project.user.position) 
+                                                : (project.department?.name 
+                                                    ? toThaiNumerals(
+                                                        project.department.name.startsWith('ฝ่าย') 
+                                                            ? `เจ้าหน้าที่งาน${project.department.name.replace(/^ฝ่าย/, '')}` 
+                                                            : (project.department.name.startsWith('งาน') 
+                                                                ? `เจ้าหน้าที่${project.department.name}` 
+                                                                : `เจ้าหน้าที่${project.department.name}`)
+                                                    ) 
+                                                    : 'เจ้าหน้าที่ผู้เสนอโครงการ'))}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                         {includeSignatures && (sig1?.signed_at || sig2?.signed_at || project.created_at) 
@@ -976,20 +1039,10 @@ export default function Print({ project, strategyCategories = [] }) {
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                        ({sig2?.user?.name 
-                                            ? toThaiNumerals(cleanPersonName(sig2.user.name)) 
-                                            : (project.department?.department_head_name 
-                                                ? toThaiNumerals(cleanPersonName(project.department.department_head_name))
-                                                : '...............................................')})
+                                        ({getStep2Name()})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
-                                        {sig2?.acting_position_text
-                                            ? toThaiNumerals(sig2.acting_position_text)
-                                            : (sig2?.user?.position_level 
-                                                ? toThaiNumerals(sig2.user.position_level) 
-                                                : (project.department?.name 
-                                                    ? toThaiNumerals(`หัวหน้า${project.department.name}`) 
-                                                    : 'หัวหน้างาน/หัวหน้าแผนกวิชา'))}
+                                        {getStep2Position()}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                         {includeSignatures && sig2?.signed_at 
@@ -1026,7 +1079,7 @@ export default function Print({ project, strategyCategories = [] }) {
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                        ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : 'นายพิพัฒน์ สีมา'})
+                                        ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : toThaiNumerals(cleanPersonName(college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา'))})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
                                         {sig3?.acting_position_text

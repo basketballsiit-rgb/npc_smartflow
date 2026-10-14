@@ -1893,10 +1893,97 @@ class ProjectController extends Controller
         $project->setRelation('approvals', $latestApprovalsByStep);
         $allCategories = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->get();
 
+        $resolvedHead = $this->resolveDepartmentHead($project);
+
         return Inertia::render('Projects/Print', [
             'project' => $project,
             'strategyCategories' => $allCategories,
+            'resolvedHead' => $resolvedHead,
         ]);
+    }
+
+    /**
+     * Resolve Department Head for Step 2 Endorsement in Project Print.
+     */
+    protected function resolveDepartmentHead(Project $project): array
+    {
+        $dept = $project->department;
+        $deptName = $dept?->name ?? '';
+        $proposerPos = $project->position ?? $project->user?->position ?? '';
+        
+        $isPlanning = str_contains($deptName, 'ยุทธศาสตร์')
+            || str_contains($deptName, 'แผนงาน')
+            || str_contains($deptName, 'วางแผน')
+            || str_contains($proposerPos, 'ยุทธศาสตร์')
+            || str_contains($proposerPos, 'แผนงาน');
+
+        // 1. Check if Step 2 approval exists
+        $sig2 = $project->approvals->where('step_number', 2)->first();
+        if ($sig2 && $sig2->user) {
+            $name = $sig2->user->name;
+            $pos = $sig2->acting_position_text ?: ($sig2->user->position_level ?: ($isPlanning ? 'หัวหน้างานยุทธศาสตร์และแผนงาน' : null));
+            return [
+                'name' => $name,
+                'position' => $pos ?: ($isPlanning ? 'หัวหน้างานยุทธศาสตร์และแผนงาน' : "หัวหน้า{$deptName}"),
+            ];
+        }
+
+        // 2. Planning department
+        if ($isPlanning) {
+            $planUser = \App\Models\User::where('role_id', 3)
+                ->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')
+                ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
+                ->orWhere('position', 'like', '%หัวหน้างานวางแผน%')
+                ->first();
+
+            $planHeadName = \App\Models\SystemSetting::where('key', 'plan_head_name')->value('value') ?: ($planUser ? $planUser->name : 'นายพิพัฒน์ สีมา');
+            $planHeadPosition = \App\Models\SystemSetting::where('key', 'plan_head_position')->value('value') ?: 'หัวหน้างานยุทธศาสตร์และแผนงาน';
+
+            return [
+                'name' => $planHeadName,
+                'position' => $planHeadPosition,
+            ];
+        }
+
+        // 3. Other departments
+        $headUser = null;
+        if ($dept) {
+            $headUser = \App\Models\User::whereHas('userPositions', function($q) use ($dept) {
+                $q->where(function($sq) use ($dept) {
+                    $sq->where('department_id', $dept->id)
+                       ->orWhere('sub_department_id', $dept->id);
+                })->where(function($sq) {
+                    $sq->whereIn('duty', ['หัวหน้างาน', 'หัวหน้าสาขาวิชา'])
+                       ->orWhere('position', 'like', '%หัวหน้า%');
+                });
+            })->first();
+
+            if (!$headUser) {
+                $headUser = \App\Models\User::where('department_id', $dept->id)
+                    ->where(function($q) {
+                        $q->where('position', 'like', '%หัวหน้า%')
+                          ->orWhere('position', 'like', '%รักษาการ%');
+                    })->first();
+            }
+        }
+
+        $defaultPos = 'หัวหน้างาน/หัวหน้าแผนกวิชา';
+        if ($deptName) {
+            if (str_starts_with($deptName, 'ฝ่าย')) {
+                $defaultPos = 'หัวหน้างาน' . preg_replace('/^ฝ่าย/', '', $deptName);
+            } elseif (str_starts_with($deptName, 'สาขาวิชา')) {
+                $defaultPos = 'หัวหน้าแผนกวิชา' . preg_replace('/^สาขาวิชา/', '', $deptName);
+            } elseif (str_starts_with($deptName, 'งาน')) {
+                $defaultPos = 'หัวหน้า' . $deptName;
+            } else {
+                $defaultPos = 'หัวหน้างาน' . $deptName;
+            }
+        }
+
+        return [
+            'name' => $headUser?->name ?? null,
+            'position' => $headUser?->position ?? $defaultPos,
+        ];
     }
 
     /**

@@ -61,6 +61,8 @@ class HandleInertiaRequests extends Middleware
                 'name_en' => \App\Models\SystemSetting::where('key', 'college_name_en')->value('value') ?: 'Nan Polytechnic College',
                 'director_name' => \App\Models\SystemSetting::where('key', 'director_name')->value('value') ?: 'นายกเชษฐ์ กิ่งชนะ',
                 'director_position' => \App\Models\SystemSetting::where('key', 'director_position')->value('value') ?: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+                'plan_head_name' => \App\Models\SystemSetting::where('key', 'plan_head_name')->value('value') ?: 'นายพิพัฒน์ สีมา',
+                'plan_head_position' => \App\Models\SystemSetting::where('key', 'plan_head_position')->value('value') ?: 'หัวหน้างานยุทธศาสตร์และแผนงาน',
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),

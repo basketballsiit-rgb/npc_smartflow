@@ -280,6 +280,20 @@ class AdminController extends Controller
                     $directorUser->update(['position' => trim((string)$value)]);
                 }
             }
+
+            // Sync with Plan Head User account
+            if ($key === 'plan_head_name' && !empty($value)) {
+                $planUser = User::where('role_id', 3)->orWhere('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')->first();
+                if ($planUser) {
+                    $planUser->update(['name' => trim((string)$value)]);
+                }
+            }
+            if ($key === 'plan_head_position' && !empty($value)) {
+                $planUser = User::where('role_id', 3)->orWhere('position', 'like', '%หัวหน้างาน%แผน%')->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')->first();
+                if ($planUser) {
+                    $planUser->update(['position' => trim((string)$value)]);
+                }
+            }
         }
 
         return redirect()->back()->with('success', 'บันทึกการตั้งค่าระบบเรียบร้อยแล้ว');
