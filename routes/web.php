@@ -95,9 +95,9 @@ Route::get('/', function () {
                     $divDot = 'bg-purple-600';
                     $divGradient = 'from-purple-600 to-indigo-600';
                     $divIcon = '📊';
-                } elseif (str_contains($combined, 'กิจการ') || str_contains($combined, 'กิจกรรม') || str_contains($combined, 'แนะแนว') || str_contains($combined, 'ปกครอง')) {
+                } elseif (str_contains($combined, 'กิจการ') || str_contains($combined, 'กิจกรรม') || str_contains($combined, 'แนะแนว') || str_contains($combined, 'ปกครอง') || str_contains($combined, 'นักเรียน')) {
                     $divKey = 'student';
-                    $divName = 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา';
+                    $divName = 'ฝ่ายกิจการนักเรียนนักศึกษา';
                     $divBadge = 'bg-emerald-50 text-emerald-950 border-emerald-200 border-l-4 border-l-emerald-600 shadow-2xs';
                     $divBorder = 'border-l-emerald-600';
                     $divBg = 'bg-emerald-50/90 text-emerald-950 hover:bg-emerald-100/90 border border-emerald-200';

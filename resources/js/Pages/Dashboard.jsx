@@ -4142,7 +4142,7 @@ export default function Dashboard({
 
         const adminDept = findMain(['บริหารทรัพยากร'], 'ฝ่ายบริหารทรัพยากร', 1);
         const acadDept = findMain(['วิชาการ'], 'ฝ่ายวิชาการ', 2);
-        const studDept = findMain(['กิจการนักเรียน', 'พัฒนากิจการ'], 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', 3);
+        const studDept = findMain(['กิจการนักเรียน', 'พัฒนากิจการ'], 'ฝ่ายกิจการนักเรียนนักศึกษา', 3);
         const planDept = findMain(['ยุทธศาสตร์', 'แผนงาน'], 'ฝ่ายยุทธศาสตร์และแผนงาน', 4);
 
         return [adminDept, acadDept, studDept, planDept];
@@ -4181,7 +4181,7 @@ export default function Dashboard({
 
         // Priority 4: Exact string equality with main division names
         if (nameStr.includes('ฝ่ายยุทธศาสตร์และแผนงาน') || nameStr.includes('ยุทธศาสตร์และแผนงาน')) return planDept;
-        if (nameStr.includes('ฝ่ายพัฒนากิจการนักเรียน') || nameStr.includes('พัฒนากิจการนักเรียน นักศึกษา') || nameStr.includes('กิจการนักเรียน นักศึกษา')) return studDept;
+        if (nameStr.includes('ฝ่ายกิจการนักเรียน') || nameStr.includes('กิจการนักเรียนนักศึกษา') || nameStr.includes('กิจการนักเรียน นักศึกษา') || nameStr.includes('พัฒนากิจการนักเรียน')) return studDept;
         if (nameStr.includes('ฝ่ายบริหารทรัพยากร') || nameStr.includes('บริหารทรัพยากร')) return adminDept;
         if (nameStr.includes('ฝ่ายวิชาการ')) return acadDept;
 
@@ -8450,7 +8450,7 @@ ${itemsListText}
                     barColor: 'bg-blue-500',
                 };
             }
-            if (name?.includes('พัฒนากิจการ') || name?.includes('นักเรียน') || name?.includes('นักศึกษา')) {
+            if (name?.includes('กิจการนักเรียน') || name?.includes('พัฒนากิจการ') || name?.includes('นักเรียน') || name?.includes('นักศึกษา')) {
                 return {
                     icon: '🏆',
                     gradient: 'from-emerald-500/10 via-teal-500/10 to-emerald-500/5',
@@ -10183,9 +10183,9 @@ ${itemsListText}
             // 3. ค่าวัสดุ
             { id: '3', title: '3. ค่าวัสดุ', isMain: true },
             { id: '3.1', title: '3.1 วัสดุงานอาคาร', level: 1, parentId: '3' },
-            { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSub: true, parentId: '3' },
+            { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSub: true, parentId: '3.2' },
             { id: '3.2.1', title: 'ฝ่ายวิชาการ', level: 2, parentId: '3.2' },
-            { id: '3.2.2', title: 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา', level: 2, parentId: '3.2' },
+            { id: '3.2.2', title: 'ฝ่ายกิจการนักเรียนนักศึกษา', level: 2, parentId: '3.2' },
             { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', level: 2, parentId: '3.2' },
             { id: '3.2.4', title: 'ฝ่ายยุทธศาสตร์และแผนงาน', level: 2, parentId: '3.2' },
             { id: '3.4', title: '3.4 วัสดุเชื้อเพลิงและหล่อลื่น', level: 1, parentId: '3' },
@@ -10214,7 +10214,7 @@ ${itemsListText}
             // 6. โครงการ
             { id: '6', title: '6. โครงการ', isMain: true },
             { id: '6.1', title: '6.1 โครงการฝ่ายวิชาการ', level: 1, parentId: '6' },
-            { id: '6.2', title: '6.2 โครงการฝ่ายพัฒนากิจการนักเรียนนักศึกษา', level: 1, parentId: '6' },
+            { id: '6.2', title: '6.2 โครงการฝ่ายกิจการนักเรียนนักศึกษา', level: 1, parentId: '6' },
             { id: '6.3', title: '6.3 โครงการฝ่ายบริหารทรัพยากร', level: 1, parentId: '6' },
             { id: '6.4', title: '6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน', level: 1, parentId: '6' },
 
@@ -16022,7 +16022,7 @@ ${itemsListText}
                     <div className="overflow-hidden rounded-2xl border border-purple-200 bg-white shadow-sm">
                         <div className="border-b border-purple-100 bg-gradient-to-r from-purple-50 via-white to-purple-50/70 px-6 py-4">
                             <h3 className="text-lg font-bold text-slate-900">สรุปสถิติและงบประมาณจำแนกตาม 4 ฝ่ายหลัก และงานย่อยในสังกัด</h3>
-                            <p className="text-xs text-slate-600">บริหารจัดการครอบคลุม ฝ่ายวิชาการ, ฝ่ายกิจการนักเรียน นักศึกษา, ฝ่ายบริหารทรัพยากร และ ฝ่ายยุทธศาสตร์และแผนงาน</p>
+                            <p className="text-xs text-slate-600">บริหารจัดการครอบคลุม ฝ่ายวิชาการ, ฝ่ายกิจการนักเรียนนักศึกษา, ฝ่ายบริหารทรัพยากร และ ฝ่ายยุทธศาสตร์และแผนงาน</p>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -17525,13 +17525,25 @@ ${itemsListText}
         const divisionDefinitions = [
             { id: 'div_resources', name: 'ฝ่ายบริหารทรัพยากร', shortName: 'บริหารทรัพยากร', icon: '🏢', color: 'from-amber-500 to-orange-600', badgeClass: 'bg-amber-50/95 text-amber-950 border-amber-200/90 border-l-4 border-l-amber-500 shadow-2xs', dotColor: 'bg-amber-500', keywords: ['ทรัพยากร', 'บริหารทั่วไป', 'บุคลากร', 'การเงิน', 'พัสดุ', 'อาคาร'] },
             { id: 'div_strategy', name: 'ฝ่ายยุทธศาสตร์และแผนงาน', shortName: 'ยุทธศาสตร์และแผนงาน', icon: '📊', color: 'from-purple-600 to-indigo-700', badgeClass: 'bg-purple-50/95 text-purple-950 border-purple-200/90 border-l-4 border-l-purple-600 shadow-2xs', dotColor: 'bg-purple-600', keywords: ['แผน', 'ยุทธศาสตร์', 'ความร่วมมือ', 'วิจัย', 'ประกันคุณภาพ'] },
-            { id: 'div_student', name: 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', shortName: 'พัฒนากิจการนักเรียนฯ', icon: '🎓', color: 'from-emerald-500 to-teal-600', badgeClass: 'bg-emerald-50/95 text-emerald-950 border-emerald-200/90 border-l-4 border-l-emerald-600 shadow-2xs', dotColor: 'bg-emerald-500', keywords: ['พัฒนากิจการ', 'กิจกรรม', 'แนะแนว', 'ปกครอง', 'สวัสดิการ', 'พยาบาล'] },
+            { id: 'div_student', name: 'ฝ่ายกิจการนักเรียนนักศึกษา', shortName: 'กิจการนักเรียนนักศึกษา', icon: '🎓', color: 'from-emerald-500 to-teal-600', badgeClass: 'bg-emerald-50/95 text-emerald-950 border-emerald-200/90 border-l-4 border-l-emerald-600 shadow-2xs', dotColor: 'bg-emerald-500', keywords: ['กิจการนักเรียน', 'พัฒนากิจการ', 'กิจกรรม', 'แนะแนว', 'ปกครอง', 'สวัสดิการ', 'พยาบาล'] },
             { id: 'div_academic', name: 'ฝ่ายวิชาการ', shortName: 'ฝ่ายวิชาการ', icon: '📘', color: 'from-blue-500 to-sky-600', badgeClass: 'bg-blue-50/95 text-blue-950 border-blue-200/90 border-l-4 border-l-blue-600 shadow-2xs', dotColor: 'bg-blue-500', keywords: ['วิชาการ', 'หลักสูตร', 'วัดผล', 'แผนก', 'ช่าง', 'คอมพิวเตอร์', 'บริหารธุรกิจ', 'สามัญ', 'พาณิชยการ'] },
         ];
 
         // Helper to match a project to a main division
         const getProjectDivision = (p) => {
-            const deptName = (p.department_name || p.department?.name || p.main_division_name || '').toLowerCase();
+            // First check direct report category or main division id/name if available
+            if (p.report_category === '6.2' || p.report_category === '3.2.2' || p.main_division_id === 3) return divisionDefinitions[2];
+            if (p.report_category === '6.4' || p.report_category === '3.2.3' || p.main_division_id === 4) return divisionDefinitions[1];
+            if (p.report_category === '6.3' || p.report_category === '3.2.1' || p.main_division_id === 1) return divisionDefinitions[0];
+            if (p.report_category === '6.1' || p.report_category === '3.2.4' || p.main_division_id === 2) return divisionDefinitions[3];
+
+            const mainDivName = (p.main_division_name || '').toLowerCase();
+            if (mainDivName.includes('กิจการ') || mainDivName.includes('พัฒนากิจการ')) return divisionDefinitions[2];
+            if (mainDivName.includes('ยุทธศาสตร์') || mainDivName.includes('แผน')) return divisionDefinitions[1];
+            if (mainDivName.includes('ทรัพยากร')) return divisionDefinitions[0];
+            if (mainDivName.includes('วิชาการ')) return divisionDefinitions[3];
+
+            const deptName = (p.department_name || p.department?.name || '').toLowerCase();
             const parentName = (p.department?.parent?.name || '').toLowerCase();
             const combined = `${deptName} ${parentName}`;
 
@@ -17830,7 +17842,7 @@ ${itemsListText}
                             <span>📊</span> ฝ่ายยุทธศาสตร์และแผนงาน
                         </div>
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 border-l-4 border-l-emerald-600">
-                            <span>🎓</span> ฝ่ายพัฒนากิจการนักเรียนฯ
+                            <span>🎓</span> ฝ่ายกิจการนักเรียนนักศึกษา
                         </div>
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-950 border-l-4 border-l-blue-600">
                             <span>📘</span> ฝ่ายวิชาการ
@@ -24074,7 +24086,7 @@ return (
                                                 className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
                                             >
                                                 <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
-                                                <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียน นักศึกษา</option>
+                                                <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียนนักศึกษา</option>
                                                 <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
                                                 <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
                                             </select>
@@ -24581,7 +24593,7 @@ return (
                                                         className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
                                                     >
                                                         <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
-                                                        <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียน นักศึกษา</option>
+                                                        <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียนนักศึกษา</option>
                                                         <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
                                                         <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
                                                     </select>

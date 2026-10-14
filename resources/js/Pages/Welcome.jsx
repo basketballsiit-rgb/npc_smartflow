@@ -403,7 +403,7 @@ export default function Welcome({ publicStats, recentProjects, publicCalendarEve
                                     : 'bg-white text-slate-700 hover:bg-emerald-50/60 border border-slate-200'
                             }`}
                         >
-                            <span>🎓</span> ฝ่ายพัฒนากิจการนักเรียนฯ
+                            <span>🎓</span> ฝ่ายกิจการนักเรียนนักศึกษา
                             <span className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-mono ${selectedDivision === 'student' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-900'}`}>
                                 {eventsList.filter(e => e.division_key === 'student').length}
                             </span>
@@ -461,7 +461,7 @@ export default function Welcome({ publicStats, recentProjects, publicCalendarEve
                             <span>📊</span> ฝ่ายยุทธศาสตร์และแผนงาน
                         </div>
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 border-l-4 border-l-emerald-600">
-                            <span>🎓</span> ฝ่ายพัฒนากิจการนักเรียนฯ
+                            <span>🎓</span> ฝ่ายกิจการนักเรียนนักศึกษา
                         </div>
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-950 border-l-4 border-l-blue-600">
                             <span>📘</span> ฝ่ายวิชาการ

@@ -17,7 +17,7 @@ export default function AdminDataVisualization({ adminData, allProjectsMaster = 
     // Compute active projects by 4 main divisions
     const mainDivisions = [
         { id: 1, name: 'ฝ่ายบริหารทรัพยากร', color: 'from-blue-500 to-indigo-600', textColor: 'text-blue-700', bgBadge: 'bg-blue-50' },
-        { id: 2, name: 'ฝ่ายพัฒนากิจการนักเรียน นักศึกษา', color: 'from-amber-500 to-orange-600', textColor: 'text-amber-700', bgBadge: 'bg-amber-50' },
+        { id: 2, name: 'ฝ่ายกิจการนักเรียนนักศึกษา', color: 'from-amber-500 to-orange-600', textColor: 'text-amber-700', bgBadge: 'bg-amber-50' },
         { id: 3, name: 'ฝ่ายวิชาการ', color: 'from-emerald-500 to-teal-600', textColor: 'text-emerald-700', bgBadge: 'bg-emerald-50' },
         { id: 4, name: 'ฝ่ายยุทธศาสตร์และแผนงาน', color: 'from-purple-500 to-violet-600', textColor: 'text-purple-700', bgBadge: 'bg-purple-50' },
     ];
@@ -32,7 +32,7 @@ export default function AdminDataVisualization({ adminData, allProjectsMaster = 
             const parentName = p.department?.parent?.name || '';
             return deptName.includes(div.name) || parentName.includes(div.name) || 
                    (div.id === 1 && (deptName.includes('บริหาร') || deptName.includes('การเงิน') || deptName.includes('พัสดุ'))) ||
-                   (div.id === 2 && (deptName.includes('พัฒนากิจการ') || deptName.includes('กิจกรรม') || deptName.includes('แนะแนว'))) ||
+                   (div.id === 2 && (deptName.includes('กิจการนักเรียน') || deptName.includes('พัฒนากิจการ') || deptName.includes('กิจกรรม') || deptName.includes('แนะแนว') || deptName.includes('นักเรียน'))) ||
                    (div.id === 3 && (deptName.includes('วิชาการ') || deptName.includes('แผนก') || deptName.includes('ช่าง') || deptName.includes('คอมพิวเตอร์'))) ||
                    (div.id === 4 && (deptName.includes('แผนงาน') || deptName.includes('ความร่วมมือ') || deptName.includes('วิจัย')));
         });
