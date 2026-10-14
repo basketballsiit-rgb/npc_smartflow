@@ -117,6 +117,17 @@ class NotificationService
                 break;
         }
 
+        // รวมผู้รับมอบอำนาจ/รักษาการแทน ที่มีผลบังคับใช้อยู่ในปัจจุบัน
+        if (!empty($recipientIds)) {
+            $activeDelegates = \App\Models\RoleDelegation::currentlyActive()
+                ->whereIn('user_id', $recipientIds)
+                ->pluck('delegate_user_id')
+                ->filter(fn($id) => $id !== $project->user_id)
+                ->toArray();
+            
+            $recipientIds = array_unique(array_merge($recipientIds, $activeDelegates));
+        }
+
         if (!empty($recipientIds)) {
             self::send($recipientIds, $title, $message, $actionUrl, 'approval', '✍️', 'amber', $refId);
         }
@@ -188,13 +199,17 @@ class NotificationService
      */
     public static function syncPendingActionsForUser(User $user): void
     {
-        // 1. Projects pending approval for this user
-        if ($user->isAdmin() || $user->isExecutive() || $user->isPlanHead() || $user->isDepartmentHead()) {
+        // Check active delegations received by this user
+        $delegatedPrincipals = $user->getActiveDelegatorUsers();
+
+        // 1. Projects pending approval for this user (or for principals they act on behalf of)
+        if ($user->isAdmin() || $user->isExecutive() || $user->isPlanHead() || $user->isDepartmentHead() || $delegatedPrincipals->isNotEmpty()) {
             $pendingProjects = Project::whereIn('status', ['submitted', 'pending_approval'])->get();
 
             foreach ($pendingProjects as $project) {
                 $step = (int)$project->current_approval_step;
                 $isTarget = false;
+                $actingForName = null;
 
                 if ($user->isAdmin()) {
                     $isTarget = true;
@@ -210,6 +225,32 @@ class NotificationService
                     $isTarget = true;
                 }
 
+                // Check acting delegation
+                if (!$isTarget && $user->id !== $project->user_id) {
+                    foreach ($delegatedPrincipals as $principal) {
+                        if ($principal->id === $project->user_id) continue;
+
+                        $hasPrincipalAuth = false;
+                        if ($step === 2 && $principal->isDepartmentHead($project->department_id)) {
+                            $hasPrincipalAuth = true;
+                        } elseif ($step === 3 && ($principal->isPlanHead() || $principal->isPlanStaff())) {
+                            $hasPrincipalAuth = true;
+                        } elseif ($step === 4 && $principal->isExecutiveForDepartment($project->department_id) && ($principal->isDeputyDirector() || str_contains($principal->position ?? '', 'รองผู้อำนวยการ'))) {
+                            $hasPrincipalAuth = true;
+                        } elseif ($step === 5 && ($principal->isDeputyDirectorStrategy() || ($principal->isExecutive() && (str_contains($principal->position ?? '', 'แผน') || str_contains($principal->position ?? '', 'ยุทธศาสตร์'))))) {
+                            $hasPrincipalAuth = true;
+                        } elseif ($step === 6 && $principal->isDirector()) {
+                            $hasPrincipalAuth = true;
+                        }
+
+                        if ($hasPrincipalAuth) {
+                            $isTarget = true;
+                            $actingForName = $principal->name;
+                            break;
+                        }
+                    }
+                }
+
                 if ($isTarget) {
                     $refId = 'pending_step_' . $project->id . '_' . $step;
                     $exists = AppNotification::where('user_id', $user->id)
@@ -217,10 +258,15 @@ class NotificationService
                         ->exists();
 
                     if (!$exists) {
+                        $noteTitle = "📝 โครงการรอการพิจารณาอนุมัติ (ขั้นที่ {$step})";
+                        $noteMsg = $actingForName
+                            ? "โครงการ \"{$project->title}\" รอการลงนามอนุมัติ (ปฏิบัติหน้าที่รักษาการแทน {$actingForName})"
+                            : "โครงการ \"{$project->title}\" รอการตรวจสอบและลงนามอนุมัติจากท่าน";
+
                         AppNotification::create([
                             'user_id' => $user->id,
-                            'title' => "📝 โครงการรอการพิจารณาอนุมัติ (ขั้นที่ {$step})",
-                            'message' => "โครงการ \"{$project->title}\" รอการตรวจสอบและลงนามอนุมัติจากท่าน",
+                            'title' => $noteTitle,
+                            'message' => $noteMsg,
                             'type' => 'approval',
                             'action_url' => route('dashboard', ['tab' => 'reviews', 'project_id' => $project->id]),
                             'icon' => '✍️',

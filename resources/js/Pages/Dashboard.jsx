@@ -2509,6 +2509,7 @@ export default function Dashboard({
     const [quickSignComments, setQuickSignComments] = useState('ตรวจสอบแล้ว ถูกต้องตามระเบียบและวัตถุประสงค์ เห็นควรอนุมัติ');
     const [quickSignFundingSourceId, setQuickSignFundingSourceId] = useState('');
     const [quickSignAllocatedAmount, setQuickSignAllocatedAmount] = useState('');
+    const [quickSignActingPosition, setQuickSignActingPosition] = useState('');
     const [isSigningProject, setIsSigningProject] = useState(false);
 
     const { data: planCutData, setData: setPlanCutData, post: postPlanCut, processing: isCuttingPlanBudget, reset: resetPlanCut } = useForm({
@@ -2604,6 +2605,7 @@ export default function Dashboard({
         const payload = {
             signature_type: 'stored',
             comments: quickSignComments || 'เห็นควรอนุมัติ',
+            acting_position_text: quickSignActingPosition ? quickSignActingPosition.trim() : null,
         };
 
         if (parseInt(quickSignProject.current_approval_step || 2, 10) === 3) {
@@ -25181,6 +25183,28 @@ return (
                                                 </div>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* Acting Position (Optional / กรณีรักษาการแทน) */}
+                                    <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-xs space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <label className="font-bold text-amber-950 flex items-center gap-1.5">
+                                                <span>🏛️</span> ตำแหน่งรักษาการแทน (กรณีลงนามแทนผู้บริหาร/หัวหน้างาน):
+                                            </label>
+                                            <span className="text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full font-medium">
+                                                ระบุเมื่อรักษาการ
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={quickSignActingPosition}
+                                            onChange={(e) => setQuickSignActingPosition(e.target.value)}
+                                            placeholder="เช่น รักษาการในตำแหน่งผู้อำนวยการวิทยาลัยสารพัดช่างน่าน (หากลงนามในฐานะตนเอง ให้เว้นว่าง)"
+                                            className="w-full rounded-xl border-amber-200 px-3.5 py-1.5 text-xs text-slate-800 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                                        />
+                                        <p className="text-[10px] text-amber-600">
+                                            หากระบุ ข้อความนี้จะถูกประทับไว้ใต้ลายมือชื่อในเอกสารโครงการโดยอัตโนมัติ
+                                        </p>
                                     </div>
 
                                     {/* Comments / ความเห็นการพิจารณา */}

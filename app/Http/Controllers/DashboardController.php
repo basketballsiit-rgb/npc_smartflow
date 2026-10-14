@@ -357,7 +357,11 @@ class DashboardController extends Controller
         ];
 
         // 2. Plan Head, Plan Staff & Executive Dashboard Data
-        $isAuthorizedPlanOrExec = $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || $user->isAdmin();
+        // Check if user has direct plan/exec authority or active delegation from an authority
+        $activeDelegatedPrincipals = $user->getActiveDelegatorUsers();
+        $isDelegatedActing = $activeDelegatedPrincipals->isNotEmpty();
+        $isAuthorizedPlanOrExec = $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || $user->isAdmin()
+            || $activeDelegatedPrincipals->some(fn($p) => $p->isPlanHead() || $p->isPlanStaff() || $p->isExecutive() || $p->isAdmin());
 
         if ($isAuthorizedPlanOrExec || in_array($request->query('tab'), ['budgets', 'annual_budget_requests', 'action_plan_report', 'reviews'])) {
             $prelimQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])->latest();
@@ -371,8 +375,8 @@ class DashboardController extends Controller
                 ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals']);
 
             if (!$isAuthorizedPlanOrExec) {
-                // Regular users only see their own projects, plus Step 2 projects if they are the department head
-                $queueQuery->where(function($q) use ($user) {
+                // Regular users only see their own projects, plus Step 2 projects if they or their principal are department head
+                $queueQuery->where(function($q) use ($user, $activeDelegatedPrincipals) {
                     $q->where('user_id', $user->id);
                     if ($user->isDepartmentHead()) {
                         $q->orWhere(function($sub) use ($user) {
@@ -381,6 +385,16 @@ class DashboardController extends Controller
                                 ->where('user_id', '!=', $user->id)
                                 ->where('department_id', $user->department_id);
                         });
+                    }
+                    foreach ($activeDelegatedPrincipals as $principal) {
+                        if ($principal->isDepartmentHead()) {
+                            $q->orWhere(function($sub) use ($user, $principal) {
+                                $sub->where('current_approval_step', 2)
+                                    ->whereIn('status', ['submitted', 'pending_approval'])
+                                    ->where('user_id', '!=', $user->id)
+                                    ->where('department_id', $principal->department_id);
+                            });
+                        }
                     }
                 });
             } else {
@@ -806,13 +820,14 @@ class DashboardController extends Controller
             $data['institutionalExpenditureProjections'] = null;
         }
 
-        // Master Projects list for Admin, Plan Head, Plan Staff, Procurement, Finance & Executives
+        // Master Projects list for Admin, Plan Head, Plan Staff, Procurement, Finance & Executives (including acting delegates)
         $isPowerUser = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() 
             || $user->isProcurementHead() || $user->isProcurementStaff() 
-            || $user->isFinanceStaff() || $user->isExecutive();
+            || $user->isFinanceStaff() || $user->isExecutive()
+            || $activeDelegatedPrincipals->some(fn($p) => $p->isAdmin() || $p->isPlanHead() || $p->isPlanStaff() || $p->isProcurementHead() || $p->isProcurementStaff() || $p->isFinanceStaff() || $p->isExecutive());
 
         if ($isPowerUser || in_array($activeTab, ['operation_calendar', 'project_status', 'all_projects', 'document_tracking', 'central_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
-            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
+            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals.user', 'approvals.delegatedFromUser', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
                 ->latest();
 
             // Non-power users (e.g. general teachers/proposers) only track their own projects, or specifically selected project (unless viewing all_projects tab)
@@ -1024,6 +1039,8 @@ class DashboardController extends Controller
                                 'comments' => $a->comments,
                                 'user_name' => $a->user?->name ?? ($a->approver_name ?: '-'),
                                 'user_position' => $a->user?->position ?? '',
+                                'acting_position_text' => $a->acting_position_text,
+                                'delegated_from_user_name' => $a->delegatedFromUser?->name,
                                 'date' => $a->created_at ? $a->created_at->format('d/m/Y H:i') : '',
                             ];
                         }),

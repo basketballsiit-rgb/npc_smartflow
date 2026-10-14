@@ -6,8 +6,9 @@ import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
 import AuditTrailSection from '@/Components/AuditTrailSection';
 import TorStudioModal from '@/Components/TorStudioModal';
 
-export default function Show({ project, strategyCategories = [], fundingSources = [], allUsers = [], canApprove }) {
+export default function Show({ project, strategyCategories = [], fundingSources = [], allUsers = [], canApprove, actingDelegation = null }) {
     const { auth } = usePage().props;
+    const [actingPositionText, setActingPositionText] = useState(actingDelegation?.acting_title || '');
     const { data, setData, post, processing } = useForm({
         comments: '',
         funding_source_id: project.funding_source_id || project.budget?.funding_source_id || (fundingSources[0]?.id || 1),
@@ -516,12 +517,15 @@ ${itemsListText}
                 comments: payload.comments,
                 funding_source_id: payload.funding_source_id || data.funding_source_id,
                 allocated_amount: payload.allocated_amount || data.allocated_amount,
+                acting_position_text: actingPositionText || actingDelegation?.acting_title || null,
             }, {
                 onSuccess: () => {
                     setSignatureModalOpen(false);
                     Swal.fire({
                         title: 'ลงนามอนุมัติสำเร็จ!',
-                        text: 'บันทึกการลงนามอิเล็กทรอนิกส์และส่งต่อไปยังขั้นตอนถัดไปเรียบร้อยแล้ว',
+                        text: actingPositionText
+                            ? `บันทึกการลงนามอิเล็กทรอนิกส์ในฐานะ "${actingPositionText}" เรียบร้อยแล้ว`
+                            : 'บันทึกการลงนามอิเล็กทรอนิกส์และส่งต่อไปยังขั้นตอนถัดไปเรียบร้อยแล้ว',
                         icon: 'success',
                         confirmButtonColor: '#059669',
                     });
@@ -1301,9 +1305,19 @@ ${itemsListText}
                                         </div>
 
                                         <div className="pt-2 border-t border-slate-200/60 text-[10px] text-slate-600 space-y-0.5">
-                                            <div className="font-bold text-slate-800 truncate">
-                                                {approval?.user?.name || (item.step === 1 ? project.user?.name : item.officer)}
+                                            <div className="font-bold text-slate-800 truncate flex items-center justify-between">
+                                                <span>{approval?.user?.name || (item.step === 1 ? project.user?.name : item.officer)}</span>
+                                                {approval?.acting_position_text && (
+                                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold border border-amber-200" title="ลงนามในฐานะรักษาการแทน">
+                                                        รักษาการ
+                                                    </span>
+                                                )}
                                             </div>
+                                            {approval?.acting_position_text && (
+                                                <div className="text-[9px] text-amber-700 font-medium italic truncate">
+                                                    {approval.acting_position_text}
+                                                </div>
+                                            )}
                                             {isSigned && approval?.signed_at && (
                                                 <div className="text-slate-400 flex items-center justify-between">
                                                     <span>{new Date(approval.signed_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
@@ -1491,7 +1505,44 @@ ${itemsListText}
                                 <div className="lg:col-span-1 space-y-6">
                                 {canApprove && (
                                     <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-6 shadow-sm">
-                                        <h3 className="text-base font-bold text-rose-950 mb-3">⚡ การดำเนินการพิจารณาอนุมัติโครงการ</h3>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-base font-bold text-rose-950">⚡ การดำเนินการพิจารณาอนุมัติโครงการ</h3>
+                                            {actingDelegation && (
+                                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500 text-white flex items-center gap-1 shadow-2xs">
+                                                    <span>🏛️</span> รักษาการแทน
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {actingDelegation && (
+                                            <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1.5 shadow-2xs">
+                                                <div className="font-bold flex items-center gap-1.5 text-amber-950">
+                                                    <span>📜</span> คำสั่งมอบอำนาจ / ปฏิบัติหน้าที่รักษาการแทน
+                                                </div>
+                                                <div className="text-[11px] text-amber-800">
+                                                    ท่านกำลังลงนามแทน: <span className="font-bold">{actingDelegation.principal_name}</span> ({actingDelegation.principal_position || 'ผู้มีอำนาจตามสายงาน'})
+                                                </div>
+                                                {actingDelegation.reason && (
+                                                    <div className="text-[10px] text-amber-700">
+                                                        เหตุผล: {actingDelegation.reason} {actingDelegation.order_number ? `(คำสั่งเลขที่ ${actingDelegation.order_number})` : ''}
+                                                    </div>
+                                                )}
+                                                <div className="pt-1.5 border-t border-amber-200/60">
+                                                    <label className="block text-[11px] font-bold text-amber-900 mb-1">
+                                                        ข้อความประทับรับรองใต้ลายมือชื่อ:
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={actingPositionText}
+                                                        onChange={(e) => setActingPositionText(e.target.value)}
+                                                        className="w-full text-xs font-medium rounded-lg border-amber-300 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                                        placeholder="เช่น รักษาการในตำแหน่ง..."
+                                                    />
+                                                    <p className="text-[9px] text-amber-600 mt-0.5">ข้อความนี้จะถูกประทับไว้ใต้ลายเซ็นในเอกสารโครงการอัตโนมัติ</p>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <form className="space-y-4">
                                             <div>
                                                 <label className="block text-xs font-semibold text-rose-900">ข้อคิดเห็น / หมายเหตุการพิจารณา</label>

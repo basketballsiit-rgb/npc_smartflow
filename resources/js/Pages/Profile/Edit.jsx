@@ -4,6 +4,7 @@ import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm';
 import UpdateSignatureForm from './Partials/UpdateSignatureForm';
+import RoleDelegationSection from './Partials/RoleDelegationSection';
 
 export default function Edit({ 
     mustVerifyEmail, 
@@ -13,6 +14,9 @@ export default function Edit({
     availableMajors = [],
     availableDuties = [],
     initialPositions = [],
+    delegationsGiven = [],
+    delegationsReceived = [],
+    allCollegeUsers = [],
 }) {
     return (
         <AuthenticatedLayout
@@ -26,6 +30,15 @@ export default function Edit({
 
             <div className="py-8">
                 <div className="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
+                    {/* Role Delegations / Acting Role Section */}
+                    <div className="bg-white p-6 shadow-sm border border-purple-100 sm:rounded-2xl dark:bg-gray-800">
+                        <RoleDelegationSection
+                            delegationsGiven={delegationsGiven}
+                            delegationsReceived={delegationsReceived}
+                            allCollegeUsers={allCollegeUsers}
+                        />
+                    </div>
+
                     <div className="bg-white p-6 shadow-sm border border-purple-100 sm:rounded-2xl dark:bg-gray-800">
                         <UpdateProfileInformationForm
                             mustVerifyEmail={mustVerifyEmail}

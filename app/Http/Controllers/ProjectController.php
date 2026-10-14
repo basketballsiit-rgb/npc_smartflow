@@ -745,7 +745,7 @@ class ProjectController extends Controller
             ]);
         }
 
-        $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items', 'auditLogs.user']);
+        $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'approvals.delegatedFromUser', 'approvals.roleDelegation', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items', 'auditLogs.user']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
         
         // Deduplicate approvals and sort by step (latest record per step with signature details)
@@ -755,12 +755,17 @@ class ProjectController extends Controller
         // Load all strategy categories for display
         $allCategories = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->get();
 
-        // Determine if current user can approve this step
+        // Determine if current user can approve this step & whether it is via acting delegation
         $canApprove = false;
+        $actingDelegation = null;
         $user = auth()->user();
+        $currentStep = (int)($project->current_approval_step ?: 2);
         
         if ($project->status === 'submitted' || $project->status === 'pending_approval') {
-            $canApprove = $this->canApproveStep($user, $project, (int)($project->current_approval_step ?: 2));
+            $canApprove = $this->canApproveStep($user, $project, $currentStep);
+            if ($canApprove && !$this->hasDirectAuthorityForStep($user, $project, $currentStep)) {
+                $actingDelegation = $this->resolveActingDelegationForStep($user, $project, $currentStep);
+            }
         }
 
         return Inertia::render('Projects/Show', [
@@ -769,6 +774,16 @@ class ProjectController extends Controller
             'fundingSources' => \App\Models\FundingSource::orderBy('id', 'asc')->get(),
             'allUsers' => \App\Models\User::orderBy('name')->get(['id', 'name', 'email']),
             'canApprove' => $canApprove,
+            'actingDelegation' => $actingDelegation ? [
+                'id' => $actingDelegation->id,
+                'principal_name' => $actingDelegation->principalUser?->name,
+                'principal_position' => $actingDelegation->principalUser?->position_level ?: $actingDelegation->principalUser?->position,
+                'acting_title' => $actingDelegation->getResolvedActingTitle(),
+                'start_date' => $actingDelegation->start_date?->format('d/m/Y'),
+                'end_date' => $actingDelegation->end_date?->format('d/m/Y'),
+                'order_number' => $actingDelegation->order_number,
+                'reason' => $actingDelegation->reason,
+            ] : null,
         ]);
     }
 
@@ -1338,6 +1353,7 @@ class ProjectController extends Controller
 
     /**
      * ตรวจสอบสิทธิ์การลงนามอนุมัติตามสายงาน 6 ขั้นตอนอย่างเข้มงวด
+     * รวมถึงรองรับระบบรักษาการแทน / ผู้รับมอบอำนาจ (Acting / Delegation Role)
      */
     private function canApproveStep($user, Project $project, int $step): bool
     {
@@ -1358,6 +1374,25 @@ class ProjectController extends Controller
             return false;
         }
 
+        // 1. ตรวจสอบสิทธิ์ตามตำแหน่งของตนเองโดยตรง
+        if ($this->hasDirectAuthorityForStep($user, $project, $step)) {
+            return true;
+        }
+
+        // 2. ตรวจสอบสิทธิ์จากการเป็น "ผู้รักษาการแทน / ผู้รับมอบอำนาจ" (Delegation Role)
+        $actingDelegation = $this->resolveActingDelegationForStep($user, $project, $step);
+        if ($actingDelegation !== null) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * ตรวจสอบว่าผู้ใช้งานมีอำนาจโดยตรงในขั้นตอนนั้นๆ หรือไม่
+     */
+    private function hasDirectAuthorityForStep($user, Project $project, int $step): bool
+    {
         switch ($step) {
             case 2: // ขั้นตอนที่ 2: หัวหน้างาน / หัวหน้าแผนกวิชา (ต้นสังกัดของผู้เสนอ)
                 return $user->isDepartmentHead($project->department_id) || $user->isExecutive() || $user->isAdmin();
@@ -1380,24 +1415,73 @@ class ProjectController extends Controller
     }
 
     /**
+     * ค้นหาคำสั่งมอบอำนาจ/รักษาการแทนที่ครอบคลุมขั้นตอนและโครงการนี้ (ถ้ามี)
+     */
+    private function resolveActingDelegationForStep($user, Project $project, int $step): ?\App\Models\RoleDelegation
+    {
+        if (!$user) return null;
+
+        // ดึงรายการคำสั่งมอบอำนาจที่มอบให้ผู้ใช้นี้ ที่มีผลในปัจจุบัน
+        $activeDelegations = \App\Models\RoleDelegation::currentlyActive()
+            ->where('delegate_user_id', $user->id)
+            ->with(['principalUser'])
+            ->get();
+
+        foreach ($activeDelegations as $delegation) {
+            $principal = $delegation->principalUser;
+            if (!$principal) continue;
+
+            // ผู้เสนอโครงการไม่สามารถมอบอำนาจให้ตนเอง หรือผู้รับมอบไม่สามารถลงนามโครงการของตนเองได้
+            if ($principal->id === $project->user_id) continue;
+
+            // ตรวจสอบว่าผู้มอบอำนาจ (Principal) มีสิทธิ์ในขั้นตอนนี้หรือไม่
+            if ($this->hasDirectAuthorityForStep($principal, $project, $step)) {
+                return $delegation;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Approve the project at the current step.
      */
     public function approve(Request $request, Project $project)
     {
         $user = auth()->user();
         $isAuthorized = false;
+        $currentStep = (int)($project->current_approval_step ?: 2);
 
         if ($project->status === 'submitted' || $project->status === 'pending_approval') {
-            $isAuthorized = $this->canApproveStep($user, $project, (int)($project->current_approval_step ?: 2));
+            $isAuthorized = $this->canApproveStep($user, $project, $currentStep);
         }
 
         if (!$isAuthorized) {
-            return redirect()->back()->with('error', 'ท่านไม่มีสิทธิ์ในการพิจารณาอนุมัติโครงการในขั้นตอนนี้ (ต้องเป็นผู้มีอำนาจลงนามตามสายงานที่กำหนด)');
+            return redirect()->back()->with('error', 'ท่านไม่มีสิทธิ์ในการพิจารณาอนุมัติโครงการในขั้นตอนนี้ (ต้องเป็นผู้มีอำนาจลงนามตามสายงานที่กำหนด หรือผู้รักษาการแทนที่ได้รับมอบอำนาจ)');
         }
 
         $request->validate([
             'comments' => 'nullable|string',
         ]);
+
+        // ตรวจสอบว่าเป็นกรณีรักษาการแทน / ผู้รับมอบอำนาจหรือไม่
+        $actingDelegation = null;
+        $delegatedFromUserId = null;
+        $actingPositionText = null;
+
+        // ตรวจสอบว่าผู้ใช้มีอำนาจโดยตรงหรือไม่ หากไม่มีโดยตรง แปลว่ากำลังใช้อำนาจรักษาการแทน
+        if (!$this->hasDirectAuthorityForStep($user, $project, $currentStep) || $request->filled('acting_position_text')) {
+            $actingDelegation = $this->resolveActingDelegationForStep($user, $project, $currentStep);
+            if ($actingDelegation) {
+                $delegatedFromUserId = $actingDelegation->user_id;
+                $actingPositionText = $actingDelegation->getResolvedActingTitle();
+            }
+        }
+
+        // อนุญาตให้ Override ข้อความรักษาการจากฟอร์มได้ (ถ้าส่งมา)
+        if ($request->filled('acting_position_text')) {
+            $actingPositionText = trim($request->input('acting_position_text'));
+        }
 
         // Digital signature for current step
         $signatureType = $request->input('signature_type', 'stored');
@@ -1459,15 +1543,18 @@ class ProjectController extends Controller
             }
         }
 
-        // Record approval log with signature
+        // Record approval log with signature & acting details
         ProjectApproval::create([
             'project_id' => $project->id,
             'user_id' => auth()->id(),
+            'delegated_from_user_id' => $delegatedFromUserId,
+            'role_delegation_id' => $actingDelegation?->id,
             'step_number' => $project->current_approval_step,
             'status' => 'approved',
             'comments' => $request->input('comments', 'Approved'),
             'signature_data' => $signatureData,
             'signature_type' => $signatureType,
+            'acting_position_text' => $actingPositionText,
             'signature_hash' => $sigHash,
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
@@ -1475,11 +1562,16 @@ class ProjectController extends Controller
         ]);
 
         // Record audit trail log for step approval
+        $auditNotes = $request->input('comments', 'ลงนามอนุมัติขั้นตอนที่ ' . $project->current_approval_step);
+        if ($actingPositionText) {
+            $auditNotes .= ' (' . $actingPositionText . ')';
+        }
+
         AuditLog::record(
             action: 'APPROVE_STEP',
             model: $project,
             stepNumber: $project->current_approval_step,
-            notes: $request->input('comments', 'ลงนามอนุมัติขั้นตอนที่ ' . $project->current_approval_step)
+            notes: $auditNotes
         );
 
         if ($project->current_approval_step >= 6) {
@@ -1797,7 +1889,7 @@ class ProjectController extends Controller
      */
     public function print(Project $project)
     {
-        $project->load(['user', 'department.parent', 'approvals.user', 'budget.fundingSource']);
+        $project->load(['user', 'department.parent', 'approvals.user', 'approvals.delegatedFromUser', 'approvals.roleDelegation', 'budget.fundingSource']);
         $latestApprovalsByStep = $project->approvals->sortByDesc('id')->unique('step_number')->sortBy('step_number')->values();
         $project->setRelation('approvals', $latestApprovalsByStep);
         $allCategories = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->get();

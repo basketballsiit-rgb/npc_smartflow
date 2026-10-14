@@ -983,11 +983,13 @@ export default function Print({ project, strategyCategories = [] }) {
                                                 : '...............................................')})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
-                                        {sig2?.user?.position_level 
-                                            ? toThaiNumerals(sig2.user.position_level) 
-                                            : (project.department?.name 
-                                                ? toThaiNumerals(`หัวหน้า${project.department.name}`) 
-                                                : 'หัวหน้างาน/หัวหน้าแผนกวิชา')}
+                                        {sig2?.acting_position_text
+                                            ? toThaiNumerals(sig2.acting_position_text)
+                                            : (sig2?.user?.position_level 
+                                                ? toThaiNumerals(sig2.user.position_level) 
+                                                : (project.department?.name 
+                                                    ? toThaiNumerals(`หัวหน้า${project.department.name}`) 
+                                                    : 'หัวหน้างาน/หัวหน้าแผนกวิชา'))}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                         {includeSignatures && sig2?.signed_at 
@@ -1027,7 +1029,9 @@ export default function Print({ project, strategyCategories = [] }) {
                                         ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : 'นายพิพัฒน์ สีมา'})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                        {sig3?.user?.position_level ? toThaiNumerals(sig3.user.position_level) : 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ'}
+                                        {sig3?.acting_position_text
+                                            ? toThaiNumerals(sig3.acting_position_text)
+                                            : (sig3?.user?.position_level ? toThaiNumerals(sig3.user.position_level) : 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ')}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                         {includeSignatures && sig3?.signed_at 
@@ -1070,10 +1074,12 @@ export default function Print({ project, strategyCategories = [] }) {
                                                     : '...............................................'))})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                        {sig4?.user?.position_level 
-                                            || project.department?.deputy_director_position 
-                                            || project.department?.parent?.deputy_director_position 
-                                            || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................'))}
+                                        {sig4?.acting_position_text
+                                            ? toThaiNumerals(sig4.acting_position_text)
+                                            : (sig4?.user?.position_level 
+                                                || project.department?.deputy_director_position 
+                                                || project.department?.parent?.deputy_director_position 
+                                                || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................')))}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                         {includeSignatures && sig4?.signed_at 
@@ -1111,7 +1117,9 @@ export default function Print({ project, strategyCategories = [] }) {
                                     ({sig5?.user?.name ? toThaiNumerals(cleanPersonName(sig5.user.name)) : 'นายนิพนธ์ ร่องพืช'})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[280px] text-slate-800">
-                                    {sig5?.user?.position_level ? toThaiNumerals(sig5.user.position_level) : 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'}
+                                    {sig5?.acting_position_text
+                                        ? toThaiNumerals(sig5.acting_position_text)
+                                        : (sig5?.user?.position_level ? toThaiNumerals(sig5.user.position_level) : 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน')}
                                 </p>
                                 <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                     {includeSignatures && sig5?.signed_at 
@@ -1148,7 +1156,9 @@ export default function Print({ project, strategyCategories = [] }) {
                                     ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : (college_settings?.director_name || 'นายกเชษฐ์ กิ่งชนะ')})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal text-slate-800">
-                                    {sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : (college_settings?.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน')}
+                                    {sig6?.acting_position_text
+                                        ? toThaiNumerals(sig6.acting_position_text)
+                                        : (sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : (college_settings?.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'))}
                                 </p>
                                 <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                     {includeSignatures && sig6?.signed_at 

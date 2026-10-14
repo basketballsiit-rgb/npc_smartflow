@@ -100,6 +100,57 @@ class User extends Authenticatable
     }
 
     /**
+     * Delegations created by this user to delegate to others (ผู้มอบอำนาจ).
+     */
+    public function delegationsGiven()
+    {
+        return $this->hasMany(RoleDelegation::class, 'user_id');
+    }
+
+    /**
+     * Delegations assigned to this user from others (ผู้รับมอบอำนาจ/รักษาการ).
+     */
+    public function delegationsReceived()
+    {
+        return $this->hasMany(RoleDelegation::class, 'delegate_user_id');
+    }
+
+    /**
+     * Currently active delegations given by this user to others.
+     */
+    public function activeDelegationsGiven()
+    {
+        return $this->delegationsGiven()->currentlyActive();
+    }
+
+    /**
+     * Currently active delegations received by this user from others.
+     */
+    public function activeDelegationsReceived()
+    {
+        return $this->delegationsReceived()->currentlyActive();
+    }
+
+    /**
+     * Get list of users who have actively delegated their authority to this user.
+     */
+    public function getActiveDelegatorUsers()
+    {
+        $delegations = $this->activeDelegationsReceived()->with('principalUser')->get();
+        return $delegations->map(fn($d) => $d->principalUser)->filter()->values();
+    }
+
+    /**
+     * Find if this user is actively acting on behalf of a specific user.
+     */
+    public function getActiveDelegationFrom(int $principalUserId): ?RoleDelegation
+    {
+        return $this->activeDelegationsReceived()
+            ->where('user_id', $principalUserId)
+            ->first();
+    }
+
+    /**
      * Role-checking helper methods.
      */
     public function isAdmin(): bool

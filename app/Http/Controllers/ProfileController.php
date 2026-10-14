@@ -56,6 +56,20 @@ class ProfileController extends Controller
             ->orderBy('id', 'asc')
             ->get();
 
+        $delegationsGiven = $user->delegationsGiven()
+            ->with('delegateUser')
+            ->latest()
+            ->get();
+
+        $delegationsReceived = $user->delegationsReceived()
+            ->with('principalUser')
+            ->latest()
+            ->get();
+
+        $allCollegeUsers = \App\Models\User::where('id', '!=', $user->id)
+            ->orderBy('name', 'asc')
+            ->get(['id', 'name', 'position', 'position_level', 'department_id']);
+
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
@@ -64,6 +78,9 @@ class ProfileController extends Controller
             'availableMajors' => $availableMajors,
             'availableDuties' => $availableDuties,
             'initialPositions' => $userPositions,
+            'delegationsGiven' => $delegationsGiven,
+            'delegationsReceived' => $delegationsReceived,
+            'allCollegeUsers' => $allCollegeUsers,
         ]);
     }
 

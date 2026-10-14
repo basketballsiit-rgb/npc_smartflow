@@ -164,6 +164,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile/signature', [ProfileController::class, 'destroySignature'])->name('profile.destroy_signature');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Role Delegation (รักษาการแทน / มอบอำนาจ)
+    Route::get('/role-delegations', [\App\Http\Controllers\RoleDelegationController::class, 'index'])->name('role_delegations.index');
+    Route::post('/role-delegations', [\App\Http\Controllers\RoleDelegationController::class, 'store'])->name('role_delegations.store');
+    Route::post('/role-delegations/{delegation}/toggle', [\App\Http\Controllers\RoleDelegationController::class, 'toggle'])->name('role_delegations.toggle');
+    Route::delete('/role-delegations/{delegation}', [\App\Http\Controllers\RoleDelegationController::class, 'destroy'])->name('role_delegations.destroy');
+
     // In-App Notifications
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
