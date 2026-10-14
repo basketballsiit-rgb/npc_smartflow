@@ -587,8 +587,11 @@ class ProjectController extends Controller
         ]);
 
         if ($request->input('action') === 'approve') {
+            $fundingSourceId = (int)$request->input('funding_source_id');
+            $isSpecialOrNonBudget = in_array($fundingSourceId, [12, 13]);
+
             $request->validate([
-                'allocated_budget' => 'required|numeric|min:0',
+                'allocated_budget' => $isSpecialOrNonBudget ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
                 'funding_source_id' => 'required|exists:funding_sources,id',
                 'report_category' => 'nullable|string',
                 'committee_comment' => 'nullable|string',
@@ -605,8 +608,8 @@ class ProjectController extends Controller
                 $cat = Project::resolveCategoryForDepartment($dept, $project->report_category);
             }
 
-            $approvedAmount = (float)$request->input('allocated_budget');
-            if ((int)$request->input('funding_source_id') === 12) {
+            $approvedAmount = (float)($request->input('allocated_budget', 0));
+            if ($fundingSourceId === 12) {
                 $approvedAmount = 0.00;
             }
             $feedback = $request->input('committee_feedback') ?: $request->input('committee_comment', 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว');
@@ -614,8 +617,12 @@ class ProjectController extends Controller
 
             $project->allocated_budget = $approvedAmount;
             $project->approved_budget = $approvedAmount;
-            $project->estimated_budget = $approvedAmount;
-            $project->funding_source_id = $request->input('funding_source_id');
+            // Only update estimated_budget if allocated amount > 0 or if explicitly non-budget (ID 12).
+            // For ID 13 (งบเฉพาะโครงการ) with 0 allocated amount, keep original estimated_budget!
+            if ($approvedAmount > 0 || $fundingSourceId === 12) {
+                $project->estimated_budget = $approvedAmount;
+            }
+            $project->funding_source_id = $fundingSourceId;
             $project->report_category = $cat;
             $project->allocation_status = 'allocated';
             $project->committee_feedback = $feedback;
@@ -631,15 +638,18 @@ class ProjectController extends Controller
                 }
             }
             $project->budget_approved_at = now();
-            $project->status = 'budget_approved';
-            $project->current_approval_step = 1;
+            // Preserve status if project has already progressed past budget_approved (e.g. approved, in_progress, completed)
+            if (in_array($project->status, ['draft', 'preliminary', 'pending_approval', 'budget_approved', 'budget_rejected'])) {
+                $project->status = 'budget_approved';
+                $project->current_approval_step = 1;
+            }
             $project->save();
 
             // Create or update Budget record
             Budget::updateOrCreate(
                 ['project_id' => $project->id],
                 [
-                    'funding_source_id' => $request->input('funding_source_id'),
+                    'funding_source_id' => $fundingSourceId,
                     'allocated_amount' => $approvedAmount,
                     'encumbered_amount' => $approvedAmount,
                     'spent_amount' => 0.00,
@@ -760,9 +770,14 @@ class ProjectController extends Controller
                 if (!$project || !in_array($project->status, ['preliminary', 'draft'])) continue;
 
                 $allocAmount = (float)($project->proposed_budget ?: $project->estimated_budget);
+                if ((int)$fundingSourceId === 12) {
+                    $allocAmount = 0.00;
+                }
                 $project->allocated_budget = $allocAmount;
                 $project->approved_budget = $allocAmount;
-                $project->estimated_budget = $allocAmount;
+                if ($allocAmount > 0 || (int)$fundingSourceId === 12) {
+                    $project->estimated_budget = $allocAmount;
+                }
                 $project->allocation_status = 'allocated';
                 $project->funding_source_id = $fundingSourceId;
                 $project->committee_feedback = 'อนุมัติตามวงเงินที่เสนอขอเบื้องต้น (Batch Approval โดยคณะกรรมการ)';

@@ -3626,14 +3626,6 @@ export default function Dashboard({
             defaultCat = expectedCat;
         }
         const proposedVal = p.proposed_budget || p.estimated_budget || 0;
-        const approvedVal = p.approved_budget || p.allocated_budget || proposedVal || '';
-        let initialAction = 'approve';
-        if (p.allocation_status === 'returned_for_revision') {
-            initialAction = 'returned_for_revision';
-        } else if (p.status === 'budget_rejected' || p.allocation_status === 'rejected') {
-            initialAction = 'reject';
-        }
-
         const defaultSource = p.funding_source_id 
             || p.fundingSource?.id 
             || p.budget?.funding_source_id 
@@ -3641,6 +3633,26 @@ export default function Dashboard({
             || planHeadData?.fundingSources?.[0]?.id 
             || planHeadData?.fundingChannelProgress?.[0]?.id 
             || '1';
+
+        let approvedVal = '';
+        if (Number(defaultSource) === 12) {
+            approvedVal = '0';
+        } else if (p.allocated_budget !== null && p.allocated_budget !== undefined && p.allocated_budget !== '') {
+            approvedVal = String(p.allocated_budget);
+        } else if (p.approved_budget !== null && p.approved_budget !== undefined && p.approved_budget !== '') {
+            approvedVal = String(p.approved_budget);
+        } else if (Number(defaultSource) === 13) {
+            approvedVal = '';
+        } else {
+            approvedVal = proposedVal ? String(proposedVal) : '';
+        }
+
+        let initialAction = 'approve';
+        if (p.allocation_status === 'returned_for_revision') {
+            initialAction = 'returned_for_revision';
+        } else if (p.status === 'budget_rejected' || p.allocation_status === 'rejected') {
+            initialAction = 'reject';
+        }
 
         setCommitteeForm({
             action: initialAction,
@@ -3658,10 +3670,23 @@ export default function Dashboard({
     const handleCommitteeSubmit = (e) => {
         e.preventDefault();
         if (!selectedProjectForAllocation) return;
-        postCommitteeAllocation(route('projects.committee_allocate', selectedProjectForAllocation.id), {
+
+        let finalAllocated = committeeForm.allocated_budget;
+        if (Number(committeeForm.funding_source_id) === 12) {
+            finalAllocated = 0;
+        } else if (Number(committeeForm.funding_source_id) === 13 && (finalAllocated === '' || finalAllocated === null || finalAllocated === undefined)) {
+            finalAllocated = 0;
+        }
+
+        router.post(route('projects.committee_allocate', selectedProjectForAllocation.id), {
+            ...committeeForm,
+            allocated_budget: finalAllocated,
+        }, {
+            preserveScroll: true,
             onSuccess: () => {
+                const isUpdate = ['budget_approved', 'approved', 'in_progress', 'completed'].includes(selectedProjectForAllocation?.status);
                 const actionText = committeeForm.action === 'approve'
-                    ? 'บันทึกมติอนุมัติจัดสรรงบประมาณสำเร็จ!'
+                    ? (isUpdate ? 'บันทึกการแก้ไขการจัดสรรงบประมาณสำเร็จ!' : 'บันทึกมติอนุมัติจัดสรรงบประมาณสำเร็จ!')
                     : committeeForm.action === 'returned_for_revision'
                     ? 'ส่งกลับคำขอให้ปรับปรุงเรียบร้อยแล้ว!'
                     : 'บันทึกมติไม่อนุมัติงบประมาณเรียบร้อยแล้ว!';
@@ -3671,6 +3696,15 @@ export default function Dashboard({
                     title: `🎉 ${actionText}`,
                     text: 'ปรับปรุงสถานะและงบประมาณโครงการเรียบร้อยแล้ว',
                     icon: 'success',
+                    confirmButtonColor: '#7c3aed',
+                });
+            },
+            onError: (errs) => {
+                const firstErr = Object.values(errs || {})[0] || 'เกิดข้อผิดพลาดในการบันทึก';
+                Swal.fire({
+                    title: 'ไม่สามารถบันทึกได้',
+                    text: firstErr,
+                    icon: 'error',
                     confirmButtonColor: '#7c3aed',
                 });
             }
@@ -9192,14 +9226,25 @@ ${itemsListText}
                                             <td className="p-3.5 text-center">
                                                 <div className="flex items-center justify-center gap-1.5">
                                                     {isPlanStaffOrAdmin && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openCommitteeModal(p)}
-                                                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-[11px] shadow-sm transition hover:scale-105 active:scale-95 cursor-pointer"
-                                                            title="พิจารณาอนุมัติจัดสรรงบประมาณโครงการนี้"
-                                                        >
-                                                            <span>⚡</span> จัดสรรงบ
-                                                        </button>
+                                                        ['budget_approved', 'approved', 'in_progress', 'completed'].includes(p.status) ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openCommitteeModal(p)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] shadow-sm transition hover:scale-105 active:scale-95 cursor-pointer"
+                                                                title="แก้ไขการจัดสรรงบประมาณโครงการนี้"
+                                                            >
+                                                                <span>✏️</span> แก้ไขการจัดสรร
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => openCommitteeModal(p)}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-purple-700 hover:bg-purple-800 text-white font-bold text-[11px] shadow-sm transition hover:scale-105 active:scale-95 cursor-pointer"
+                                                                title="พิจารณาอนุมัติจัดสรรงบประมาณโครงการนี้"
+                                                            >
+                                                                <span>⚡</span> จัดสรรงบ
+                                                            </button>
+                                                        )
                                                     )}
                                                     <a
                                                         href={route('projects.print', p.id)}
@@ -17457,14 +17502,25 @@ ${itemsListText}
                                                         {/* CRUD Action Buttons */}
                                                         <td className="px-4 py-3 text-right align-top whitespace-nowrap">
                                                             <div className="flex items-center justify-end gap-1.5">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => openCommitteeModal(p)}
-                                                                    className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer"
-                                                                    title="พิจารณาอนุมัติจัดสรรงบประมาณโครงการนี้"
-                                                                >
-                                                                    พิจารณาอนุมัติ ➔
-                                                                </button>
+                                                                {['budget_approved', 'approved', 'in_progress', 'completed'].includes(p.status) ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => openCommitteeModal(p)}
+                                                                        className="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer inline-flex items-center gap-1"
+                                                                        title="แก้ไขการจัดสรรงบประมาณโครงการนี้ (เช่น ปรับเปลี่ยนยอดงบ หรือเปลี่ยนแหล่งเงิน)"
+                                                                    >
+                                                                        <span>✏️</span> แก้ไขการจัดสรร
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => openCommitteeModal(p)}
+                                                                        className="px-2.5 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs hover:scale-105 active:scale-95 transition cursor-pointer inline-flex items-center gap-1"
+                                                                        title="พิจารณาอนุมัติจัดสรรงบประมาณโครงการนี้"
+                                                                    >
+                                                                        <span>⚖️</span> พิจารณาอนุมัติ ➔
+                                                                    </button>
+                                                                )}
                                                                 <a
                                                                     href={route('projects.print', p.id)}
                                                                     target="_blank"
@@ -25834,10 +25890,15 @@ return (
                                 <div className="flex justify-between items-center border-b border-purple-100 pb-4 mb-5">
                                     <div>
                                         <h3 className="text-lg font-black text-purple-950 flex items-center gap-2">
-                                            <span>⚖️</span> พิจารณาจัดสรรงบประมาณโครงการ (Committee Decision)
+                                            <span>{['budget_approved', 'approved', 'in_progress', 'completed'].includes(selectedProjectForAllocation?.status) ? '✏️' : '⚖️'}</span>
+                                            {['budget_approved', 'approved', 'in_progress', 'completed'].includes(selectedProjectForAllocation?.status)
+                                                ? 'แก้ไขการจัดสรรงบประมาณโครงการ (Update Budget Allocation)'
+                                                : 'พิจารณาจัดสรรงบประมาณโครงการ (Committee Decision)'}
                                         </h3>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            คณะกรรมการพิจารณาอนุมัติวงเงินงบประมาณ แหล่งเงินทุน ปรับลดงบ หรือส่งกลับเพื่อแก้ไข
+                                            {['budget_approved', 'approved', 'in_progress', 'completed'].includes(selectedProjectForAllocation?.status)
+                                                ? 'ปรับปรุงวงเงินงบประมาณ แหล่งเงินทุน หรือผูกงบเฉพาะกิจโครงการที่ได้รับจัดสรรแล้ว'
+                                                : 'คณะกรรมการพิจารณาอนุมัติวงเงินงบประมาณ แหล่งเงินทุน ปรับลดงบ หรือส่งกลับเพื่อแก้ไข'}
                                         </p>
                                     </div>
                                     <button
@@ -25948,7 +26009,7 @@ return (
                                                                     ? 'text-amber-900'
                                                                     : 'text-emerald-900'
                                                             }`}>
-                                                                2. วงเงินจัดสรรจริงที่อนุมัติ *
+                                                                2. วงเงินจัดสรรจริงที่อนุมัติ {Number(committeeForm.funding_source_id) !== 12 && Number(committeeForm.funding_source_id) !== 13 ? '*' : '(ถ้ามี)'}
                                                             </label>
                                                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                                                                 Number(committeeForm.funding_source_id) === 12
@@ -25957,14 +26018,18 @@ return (
                                                                     ? 'bg-amber-200 text-amber-900'
                                                                     : 'bg-emerald-200 text-emerald-800'
                                                             }`}>
-                                                                {Number(committeeForm.funding_source_id) === 12 ? 'ไม่ใช้งบประมาณ' : 'อนุมัติจริง'}
+                                                                {Number(committeeForm.funding_source_id) === 12 
+                                                                    ? 'ไม่ใช้งบประมาณ' 
+                                                                    : Number(committeeForm.funding_source_id) === 13
+                                                                    ? 'งบเฉพาะโครงการ (ใส่ 0 หรือเว้นว่างได้)'
+                                                                    : 'อนุมัติจริง'}
                                                             </span>
                                                         </div>
                                                         <div className="relative">
                                                             <input
                                                                 type="number"
                                                                 step="0.01"
-                                                                required
+                                                                required={Number(committeeForm.funding_source_id) !== 12 && Number(committeeForm.funding_source_id) !== 13}
                                                                 disabled={Number(committeeForm.funding_source_id) === 12}
                                                                 value={Number(committeeForm.funding_source_id) === 12 ? '0' : committeeForm.allocated_budget}
                                                                 onChange={(e) => setCommitteeForm({ ...committeeForm, allocated_budget: e.target.value })}
@@ -25975,7 +26040,7 @@ return (
                                                                         ? 'border-amber-400 bg-white text-amber-950 focus:border-amber-600 focus:ring-amber-500'
                                                                         : 'border-emerald-400 bg-white text-emerald-950 focus:border-emerald-600 focus:ring-emerald-500'
                                                                 }`}
-                                                                placeholder="0.00"
+                                                                placeholder={Number(committeeForm.funding_source_id) === 13 ? "0.00 (ใส่ 0 หรือเว้นว่างได้หากยังไม่ได้รับจัดสรร)" : "0.00"}
                                                             />
                                                             <span className="absolute right-3 top-2 text-xs font-bold text-slate-400 pointer-events-none">บาท</span>
                                                         </div>
@@ -25983,6 +26048,10 @@ return (
                                                             {Number(committeeForm.funding_source_id) === 12 ? (
                                                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-bold">
                                                                     ⚪ ไม่ใช้งบประมาณ (0.00 บาท) ดำเนินการโดยไม่เบิกจ่ายงบ
+                                                                </span>
+                                                            ) : Number(committeeForm.funding_source_id) === 13 ? (
+                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900 text-[10px] font-bold leading-normal">
+                                                                    💼 งบเฉพาะโครงการ: หากยังไม่ได้รับหนังสือจัดสรร สามารถเว้นว่างหรือใส่ 0.00 เพื่ออนุมัติในหลักการและนำเข้าเล่มแผนปฏิบัติราชการประจำปีก่อนได้
                                                                 </span>
                                                             ) : diff === 0 ? (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
@@ -26233,7 +26302,11 @@ return (
                                                     : 'bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 hover:scale-[1.02]'
                                             }`}
                                         >
-                                            {committeeForm.action === 'approve' && '✅ บันทึกมติอนุมัติจัดสรรงบ'}
+                                            {committeeForm.action === 'approve' && (
+                                                ['budget_approved', 'approved', 'in_progress', 'completed'].includes(selectedProjectForAllocation?.status)
+                                                    ? '💾 บันทึกการแก้ไขการจัดสรรงบ'
+                                                    : '✅ บันทึกมติอนุมัติจัดสรรงบ'
+                                            )}
                                             {committeeForm.action === 'returned_for_revision' && '🟡 บันทึกมติส่งกลับแก้ไขคำขอ'}
                                             {committeeForm.action === 'reject' && '❌ บันทึกมติไม่อนุมัติงบ'}
                                         </button>
