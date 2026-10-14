@@ -10205,7 +10205,7 @@ ${itemsListText}
             { id: '3.2.2', title: 'ฝ่ายกิจการนักเรียนนักศึกษา', level: 2, parentId: '3.2' },
             { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', level: 2, parentId: '3.2' },
             { id: '3.2.4', title: 'ฝ่ายยุทธศาสตร์และแผนงาน', level: 2, parentId: '3.2' },
-            { id: '3.4', title: '3.4 วัสดุเชื้อเพลิงและหล่อลื่น', level: 1, parentId: '3' },
+            { id: '3.3', title: '3.3 วัสดุเชื้อเพลิงและหล่อลื่น', level: 1, parentId: '3' },
 
             // 4. วัสดุการศึกษา
             { id: '4', title: '4. วัสดุการศึกษา', isMain: true },
@@ -10270,7 +10270,7 @@ ${itemsListText}
         // 1. Populate Routine Budget Plans
         (routinePlans || []).forEach(plan => {
             let cat = plan.report_category;
-            if (cat === '3.3') cat = '3.4';
+            if (cat === '3.4') cat = '3.3';
             if (cat === '7.1' && (plan.title?.includes('สำรอง') || plan.title?.includes('สำรองจ่าย'))) cat = '8';
             if (!cat || !rowData[cat]) return;
             // หมวด 6 เป็นของโครงการจริง (Projects) ที่ได้รับการอนุมัติแล้วเท่านั้น ไม่นำงบประมาณประจำเข้ามาปะปน
@@ -10380,7 +10380,7 @@ ${itemsListText}
         // Main parents
         aggregate('1', ['1.1', '1.2', '1.3', '1.4']);
         aggregate('2', ['2.1', '2.2']);
-        aggregate('3', ['3.1', '3.2', '3.4']);
+        aggregate('3', ['3.1', '3.2', '3.3']);
         aggregate('4', ['4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8', '4.9']);
         aggregate('5', ['5.1', '5.2', '5.3', '5.4', '5.5', '5.6']);
         aggregate('6', ['6.1', '6.2', '6.3', '6.4']);
