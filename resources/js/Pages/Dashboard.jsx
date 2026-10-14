@@ -10576,6 +10576,9 @@ ${itemsListText}
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
                         }
+                        html, body, #app, .min-h-screen, .flex-1, main, .w-full, .max-w-\\[100rem\\], .space-y-6, .print-area, .action-plan-table-wrapper {
+                            overflow: visible !important;
+                        }
                         aside, nav, header, footer, .no-print, [role="navigation"], button, .no-print * {
                             display: none !important;
                         }
@@ -10613,7 +10616,7 @@ ${itemsListText}
                             width: 100% !important;
                             max-width: 100% !important;
                             min-width: 100% !important;
-                            border: 0.5pt solid black !important;
+                            border: none !important;
                             border-radius: 0 !important;
                             box-shadow: none !important;
                             padding: 0 !important;
@@ -10627,10 +10630,12 @@ ${itemsListText}
                             font-size: 7.2pt !important;
                             line-height: 1.25 !important;
                             border-collapse: collapse !important;
-                            border: 0.5pt solid black !important;
+                            border: none !important;
                         }
                         table.action-plan-table thead {
                             display: table-header-group !important;
+                            break-inside: avoid !important;
+                            page-break-inside: avoid !important;
                         }
                         table.action-plan-table tbody {
                             display: table-row-group !important;
@@ -10638,6 +10643,14 @@ ${itemsListText}
                         table.action-plan-table tr {
                             page-break-inside: avoid !important;
                             break-inside: avoid !important;
+                        }
+                        table.action-plan-table tr.print-title-row,
+                        table.action-plan-table th.document-title-cell {
+                            border: none !important;
+                            background: transparent !important;
+                            background-color: transparent !important;
+                            padding: 0 0 12px 0 !important;
+                            text-align: left !important;
                         }
                         table.action-plan-table th,
                         table.action-plan-table td {
@@ -10702,8 +10715,8 @@ ${itemsListText}
                         </button>
                     </div>
 
-                    {/* Official Document Sheet Header (Matching Image 1) */}
-                    <div className="space-y-1 print-sheet-header">
+                    {/* Official Document Sheet Header (Matching Image 1) - Screen View Only */}
+                    <div className="space-y-1 print-sheet-header no-print">
                         <div className="text-right text-[11px] text-slate-600 font-medium">
                             แผนปฏิบัติราชการ ประจำปีงบประมาณ พ.ศ.2570 วิทยาลัยสารพัดช่างน่าน
                         </div>
@@ -10737,6 +10750,25 @@ ${itemsListText}
                                 <col style={{ width: '7.6%' }} />
                             </colgroup>
                             <thead>
+                                {/* Print-Only Document Sheet Title Header (Repeats on Every Printed Page: Page 1, Page 2, ...) */}
+                                <tr className="hidden print:table-row border-none bg-transparent print-title-row">
+                                    <th colSpan={14} className="border-none bg-transparent p-0 pb-3 text-left font-normal document-title-cell">
+                                        <div className="space-y-0.5 print-sheet-header w-full">
+                                            <div className="text-right text-[8pt] text-slate-600 font-medium">
+                                                แผนปฏิบัติราชการ ประจำปีงบประมาณ พ.ศ.2570 วิทยาลัยสารพัดช่างน่าน
+                                            </div>
+                                            <div className="text-center pt-0.5 pb-2">
+                                                <h3 className="text-[13.5pt] font-bold text-slate-900 leading-tight">
+                                                    วิทยาลัยสารพัดช่างน่าน
+                                                </h3>
+                                                <h4 className="text-[10.5pt] font-semibold text-slate-800 mt-0.5">
+                                                    งบรายจ่ายตามแผนงาน/งาน/โครงการ ประจำปีงบประมาณ พ.ศ. 2570
+                                                </h4>
+                                            </div>
+                                        </div>
+                                    </th>
+                                </tr>
+
                                 {/* Header Row 1 */}
                                 <tr className="bg-slate-100 border-b border-slate-400 text-[11px] font-bold text-slate-900 text-center">
                                     <th rowSpan={4} className="py-2.5 px-2 text-center border-r border-slate-400 align-middle">
