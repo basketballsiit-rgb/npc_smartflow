@@ -1904,86 +1904,150 @@ class ProjectController extends Controller
 
     /**
      * Resolve Department Head for Step 2 Endorsement in Project Print.
+     * Strictly derives head position from proposer's position (e.g. เจ้าหน้าที่งาน... -> หัวหน้างาน...)
+     * and only returns head name if an actual user in the system holds this head position.
      */
     protected function resolveDepartmentHead(Project $project): array
     {
         $dept = $project->department;
-        $deptName = $dept?->name ?? '';
-        $proposerPos = $project->position ?? $project->user?->position ?? '';
-        
-        $isPlanning = str_contains($deptName, 'ยุทธศาสตร์')
-            || str_contains($deptName, 'แผนงาน')
-            || str_contains($deptName, 'วางแผน')
-            || str_contains($proposerPos, 'ยุทธศาสตร์')
-            || str_contains($proposerPos, 'แผนงาน');
+        $deptName = trim($dept?->name ?? '');
+        $proposerPos = trim($project->position ?? ($project->user?->position ?? ''));
 
-        // 1. Check if Step 2 approval exists (and is not teacher Chatnapa)
+        // 1. Determine Target Head Position
+        $targetHeadPosition = '';
+
+        if (!empty($proposerPos)) {
+            if (str_contains($proposerPos, 'เจ้าหน้าที่งาน')) {
+                $targetHeadPosition = preg_replace('/^.*?เจ้าหน้าที่งาน/u', 'หัวหน้างาน', $proposerPos);
+            } elseif (str_contains($proposerPos, 'เจ้าหน้าที่แผนกวิชา')) {
+                $targetHeadPosition = preg_replace('/^.*?เจ้าหน้าที่แผนกวิชา/u', 'หัวหน้าแผนกวิชา', $proposerPos);
+            } elseif (str_contains($proposerPos, 'เจ้าหน้าที่สาขาวิชา')) {
+                $targetHeadPosition = preg_replace('/^.*?เจ้าหน้าที่สาขาวิชา/u', 'หัวหน้าแผนกวิชา', $proposerPos);
+            } elseif (str_contains($proposerPos, 'เจ้าหน้าที่')) {
+                $targetHeadPosition = preg_replace('/^.*?เจ้าหน้าที่/u', 'หัวหน้า', $proposerPos);
+            } elseif (str_starts_with($proposerPos, 'หัวหน้า')) {
+                $targetHeadPosition = $proposerPos;
+            }
+        }
+
+        if (empty($targetHeadPosition) && !empty($deptName)) {
+            if (str_starts_with($deptName, 'งาน')) {
+                $targetHeadPosition = 'หัวหน้า' . $deptName;
+            } elseif (str_starts_with($deptName, 'สาขาวิชา')) {
+                $targetHeadPosition = 'หัวหน้าแผนกวิชา' . preg_replace('/^สาขาวิชา(งาน)?/u', '', $deptName);
+            } elseif (str_starts_with($deptName, 'ฝ่าย')) {
+                $targetHeadPosition = 'หัวหน้างาน' . preg_replace('/^ฝ่าย/u', '', $deptName);
+            } else {
+                $targetHeadPosition = 'หัวหน้างาน' . $deptName;
+            }
+        }
+
+        if (empty($targetHeadPosition)) {
+            $targetHeadPosition = 'หัวหน้างาน/หัวหน้าแผนกวิชา';
+        }
+
+        // Special case for Planning & Strategy
+        $normTarget = preg_replace('/\s+/u', '', $targetHeadPosition);
+        $isPlanning = str_contains($normTarget, 'พัฒนายุทธศาสตร์') 
+            || str_contains($normTarget, 'ยุทธศาสตร์และแผนงาน')
+            || (str_contains($normTarget, 'แผนงาน') && str_contains($normTarget, 'งบประมาณ'))
+            || str_contains($normTarget, 'วางแผน');
+
+        if ($isPlanning) {
+            $targetHeadPosition = 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ';
+            $normTarget = preg_replace('/\s+/u', '', $targetHeadPosition);
+        }
+
+        // 2. Check if Step 2 was already signed & approved
         $sig2 = $project->approvals->where('step_number', 2)->first();
-        if ($sig2 && $sig2->user && !str_contains($sig2->user->name, 'ฉัตรนภา')) {
+        if ($sig2 && $sig2->user && $sig2->status === 'approved' && !str_contains($sig2->user->name, 'ฉัตรนภา')) {
             $name = $sig2->user->name;
-            $pos = $sig2->acting_position_text ?: ($sig2->user->position_level ?: ($isPlanning ? 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ' : null));
+            $pos = $sig2->acting_position_text ?: ($sig2->user->position_level ?: $targetHeadPosition);
             return [
                 'name' => $name,
-                'position' => $pos ?: ($isPlanning ? 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ' : "หัวหน้า{$deptName}"),
+                'position' => $pos ?: $targetHeadPosition,
             ];
         }
 
-        // 2. Planning department
+        // 3. For Planning Department, resolve designated Planning Head
         if ($isPlanning) {
             $planHeadName = \App\Models\SystemSetting::where('key', 'plan_head_name')->value('value');
-            if (!$planHeadName || str_contains($planHeadName, 'ฉัตรนภา')) {
-                $planUser = \App\Models\User::where('role_id', 3)
-                    ->orWhere('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')
-                    ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
-                    ->first();
-                $planHeadName = ($planUser && !str_contains($planUser->name, 'ฉัตรนภา')) ? $planUser->name : 'นายพิพัฒน์ สีมา';
+            if ($planHeadName && !str_contains($planHeadName, 'ฉัตรนภา')) {
+                return [
+                    'name' => $planHeadName,
+                    'position' => $targetHeadPosition,
+                ];
             }
-            $planHeadPosition = 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ';
+            $planUser = \App\Models\User::where('role_id', 3)
+                ->orWhere('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')
+                ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
+                ->first();
+            $planHeadName = ($planUser && !str_contains($planUser->name, 'ฉัตรนภา')) ? $planUser->name : 'นายพิพัฒน์ สีมา';
 
             return [
                 'name' => $planHeadName,
-                'position' => $planHeadPosition,
+                'position' => $targetHeadPosition,
             ];
         }
 
-        // 3. Other departments
+        // 4. Search for Head User in DB matching the target position
+        $coreUnit = preg_replace('/^(หัวหน้างาน|หัวหน้าแผนกวิชา|หัวหน้าสาขาวิชา|หัวหน้า)/u', '', $normTarget);
         $headUser = null;
-        if ($dept) {
-            $headUser = \App\Models\User::whereHas('userPositions', function($q) use ($dept) {
-                $q->where(function($sq) use ($dept) {
-                    $sq->where('department_id', $dept->id)
-                       ->orWhere('sub_department_id', $dept->id);
-                })->where(function($sq) {
-                    $sq->whereIn('duty', ['หัวหน้างาน', 'หัวหน้าสาขาวิชา'])
-                       ->orWhere('position', 'like', '%หัวหน้า%');
-                });
-            })->first();
 
-            if (!$headUser) {
-                $headUser = \App\Models\User::where('department_id', $dept->id)
-                    ->where(function($q) {
-                        $q->where('position', 'like', '%หัวหน้า%')
-                          ->orWhere('position', 'like', '%รักษาการ%');
-                    })->first();
+        $allUsers = \App\Models\User::where('is_active', true)->orWhereNull('is_active')->get();
+        foreach ($allUsers as $u) {
+            if (str_contains($u->name, 'ฉัตรนภา')) continue;
+            $uPos = preg_replace('/\s+/u', '', $u->position ?? '');
+            if (empty($uPos)) continue;
+
+            // Ignore executives so a deputy director is not mistakenly picked as unit head
+            if (str_contains($uPos, 'รองผู้อำนวยการ') || (str_contains($uPos, 'ผู้อำนวยการ') && !str_contains($uPos, 'หัวหน้า'))) {
+                continue;
+            }
+
+            // Exact match
+            if ($uPos === $normTarget) {
+                $headUser = $u;
+                break;
+            }
+
+            // Match "หัวหน้า" + core unit
+            if (str_contains($uPos, 'หัวหน้า') && !empty($coreUnit) && str_contains($uPos, $coreUnit)) {
+                $headUser = $u;
+                break;
             }
         }
 
-        $defaultPos = 'หัวหน้างาน/หัวหน้าแผนกวิชา';
-        if ($deptName) {
-            if (str_starts_with($deptName, 'ฝ่าย')) {
-                $defaultPos = 'หัวหน้างาน' . preg_replace('/^ฝ่าย/', '', $deptName);
-            } elseif (str_starts_with($deptName, 'สาขาวิชา')) {
-                $defaultPos = 'หัวหน้าแผนกวิชา' . preg_replace('/^สาขาวิชา/', '', $deptName);
-            } elseif (str_starts_with($deptName, 'งาน')) {
-                $defaultPos = 'หัวหน้า' . $deptName;
-            } else {
-                $defaultPos = 'หัวหน้างาน' . $deptName;
+        // 5. Search by UserPosition relation
+        if (!$headUser) {
+            foreach (\App\Models\UserPosition::with('user')->get() as $up) {
+                if (!$up->user || str_contains($up->user->name, 'ฉัตรนภา')) continue;
+                $upPos = preg_replace('/\s+/u', '', $up->position ?? '');
+                $upDuty = preg_replace('/\s+/u', '', $up->duty ?? '');
+                if (str_contains($upPos, 'รองผู้อำนวยการ') || str_contains($upDuty, 'รองผู้อำนวยการ')) continue;
+
+                if ((str_contains($upPos, 'หัวหน้า') || str_contains($upDuty, 'หัวหน้า')) 
+                    && !empty($coreUnit) && (str_contains($upPos, $coreUnit) || str_contains($upDuty, $coreUnit))) {
+                    $headUser = $up->user;
+                    break;
+                }
+            }
+        }
+
+        // 6. Search by department_head_name on department if matched
+        if (!$headUser && $dept && !empty($dept->department_head_name)) {
+            $normDept = preg_replace('/\s+/u', '', $dept->name);
+            if (!empty($coreUnit) && str_contains($normDept, $coreUnit)) {
+                return [
+                    'name' => $dept->department_head_name,
+                    'position' => $targetHeadPosition,
+                ];
             }
         }
 
         return [
             'name' => $headUser?->name ?? null,
-            'position' => $headUser?->position ?? $defaultPos,
+            'position' => $targetHeadPosition,
         ];
     }
 

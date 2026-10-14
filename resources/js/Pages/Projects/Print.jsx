@@ -268,30 +268,32 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
 
     const deptName = project.department?.name || '';
     const proposerPos = project.position || project.user?.position || '';
-    const isPlanning = deptName.includes('ยุทธศาสตร์') 
-        || deptName.includes('แผนงาน') 
-        || deptName.includes('วางแผน')
-        || proposerPos.includes('ยุทธศาสตร์')
-        || proposerPos.includes('แผนงาน');
+    
+    // Planning / Strategy department indicator
+    const isPlanning = deptName.includes('พัฒนายุทธศาสตร์') 
+        || deptName.includes('ยุทธศาสตร์และแผนงาน')
+        || (deptName.includes('แผนงาน') && deptName.includes('งบประมาณ'))
+        || proposerPos.includes('พัฒนายุทธศาสตร์')
+        || (proposerPos.includes('แผนงาน') && proposerPos.includes('งบประมาณ'))
+        || (deptName.includes('ฝ่ายยุทธศาสตร์และแผนงาน') && !proposerPos);
 
     const getStep2Name = () => {
-        if (isPlanning) {
-            // For Strategy & Planning, head is Pipat Sima (not teacher Chatnapa)
-            const candidate = sig2?.user?.name || resolvedHead?.name || college_settings?.plan_head_name;
-            if (candidate && !candidate.includes('ฉัตรนภา')) {
-                return toThaiNumerals(cleanPersonName(candidate));
-            }
-            return 'นายพิพัฒน์ สีมา';
-        }
-        if (sig2?.user?.name) {
+        // 1. If Step 2 approval exists and approved by a user (excluding Chatnapa)
+        if (sig2?.user?.name && !sig2.user.name.includes('ฉัตรนภา')) {
             return toThaiNumerals(cleanPersonName(sig2.user.name));
         }
-        if (resolvedHead?.name) {
+        // 2. If resolved head user was found by backend matching this exact head position
+        if (resolvedHead?.name && !resolvedHead.name.includes('ฉัตรนภา')) {
             return toThaiNumerals(cleanPersonName(resolvedHead.name));
         }
-        if (project.department?.department_head_name) {
-            return toThaiNumerals(cleanPersonName(project.department.department_head_name));
+        // 3. For Planning Department specifically, fallback to designated Planning Head
+        if (isPlanning) {
+            const planCandidate = college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา';
+            if (!planCandidate.includes('ฉัตรนภา')) {
+                return toThaiNumerals(cleanPersonName(planCandidate));
+            }
         }
+        // 4. If no user in system has specified this head position yet, do NOT show any name in parentheses
         return '...............................................';
     };
 
@@ -302,24 +304,33 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         if (sig2?.user?.position_level) {
             return toThaiNumerals(sig2.user.position_level);
         }
-        if (isPlanning) {
-            return toThaiNumerals(college_settings?.plan_head_position || 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ');
-        }
         if (resolvedHead?.position) {
             return toThaiNumerals(resolvedHead.position);
         }
         if (proposerPos && proposerPos.includes('เจ้าหน้าที่งาน')) {
             return toThaiNumerals(proposerPos.replace(/เจ้าหน้าที่/g, 'หัวหน้า'));
         }
+        if (proposerPos && proposerPos.includes('เจ้าหน้าที่แผนกวิชา')) {
+            return toThaiNumerals(proposerPos.replace(/เจ้าหน้าที่/g, 'หัวหน้า'));
+        }
+        if (proposerPos && proposerPos.includes('เจ้าหน้าที่สาขาวิชา')) {
+            return toThaiNumerals(proposerPos.replace(/เจ้าหน้าที่สาขาวิชา/g, 'หัวหน้าแผนกวิชา'));
+        }
+        if (proposerPos && proposerPos.includes('เจ้าหน้าที่')) {
+            return toThaiNumerals(proposerPos.replace(/เจ้าหน้าที่/g, 'หัวหน้า'));
+        }
+        if (isPlanning) {
+            return toThaiNumerals(college_settings?.plan_head_position || 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ');
+        }
         if (deptName) {
-            if (deptName.startsWith('ฝ่าย')) {
-                return toThaiNumerals(`หัวหน้างาน${deptName.replace(/^ฝ่าย/, '')}`);
-            }
-            if (deptName.startsWith('สาขาวิชา')) {
-                return toThaiNumerals(`หัวหน้าแผนกวิชา${deptName.replace(/^สาขาวิชา/, '')}`);
-            }
             if (deptName.startsWith('งาน')) {
                 return toThaiNumerals(`หัวหน้า${deptName}`);
+            }
+            if (deptName.startsWith('สาขาวิชา')) {
+                return toThaiNumerals(`หัวหน้าแผนกวิชา${deptName.replace(/^สาขาวิชา(งาน)?/, '')}`);
+            }
+            if (deptName.startsWith('ฝ่าย')) {
+                return toThaiNumerals(`หัวหน้างาน${deptName.replace(/^ฝ่าย/, '')}`);
             }
             return toThaiNumerals(`หัวหน้างาน${deptName}`);
         }
