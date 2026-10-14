@@ -10564,35 +10564,109 @@ ${itemsListText}
                     @media print {
                         @page {
                             size: A4 landscape;
-                            margin: 5mm 6mm;
+                            margin: 4mm 5mm 4mm 5mm;
                         }
-                        body {
+                        html, body {
+                            width: 100% !important;
+                            height: auto !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
                             background: white !important;
                             color: black !important;
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
                         }
-                        aside, nav, header, footer, .no-print, [role="navigation"], button {
+                        aside, nav, header, footer, .no-print, [role="navigation"], button, .no-print * {
                             display: none !important;
                         }
-                        .print-area {
-                            position: static !important;
+                        #app, .min-h-screen, .flex-1, main, .w-full, .max-w-\\[100rem\\] {
+                            display: block !important;
                             width: 100% !important;
+                            max-width: 100% !important;
+                            min-width: 0 !important;
                             margin: 0 !important;
                             padding: 0 !important;
                             border: none !important;
                             box-shadow: none !important;
                         }
-                        table {
-                            font-size: 7pt !important;
-                            line-height: 1.15 !important;
+                        .print-area {
+                            position: static !important;
                             width: 100% !important;
+                            max-width: 100% !important;
+                            min-width: 0 !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                            background: white !important;
+                        }
+                        .action-plan-table-wrapper {
+                            overflow: visible !important;
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            min-width: 0 !important;
+                            border: none !important;
+                            box-shadow: none !important;
+                            padding: 0 !important;
+                            margin: 0 !important;
+                        }
+                        table.action-plan-table {
+                            min-width: 0 !important;
+                            width: 100% !important;
+                            max-width: 100% !important;
+                            table-layout: fixed !important;
+                            font-size: 5.5pt !important;
+                            line-height: 1.15 !important;
                             border-collapse: collapse !important;
                             border: 0.5pt solid black !important;
                         }
-                        th, td {
+                        table.action-plan-table thead {
+                            display: table-header-group !important;
+                        }
+                        table.action-plan-table tbody {
+                            display: table-row-group !important;
+                        }
+                        table.action-plan-table tr {
+                            page-break-inside: avoid !important;
+                            break-inside: avoid !important;
+                        }
+                        table.action-plan-table th,
+                        table.action-plan-table td {
                             border: 0.5pt solid black !important;
-                            padding: 2px 2px !important;
+                            padding: 1.5px 1px !important;
+                            word-break: break-word !important;
+                            box-sizing: border-box !important;
+                        }
+                        table.action-plan-table th {
+                            font-size: 5.5pt !important;
+                            font-weight: bold !important;
+                            background-color: #f1f5f9 !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                            line-height: 1.1 !important;
+                            text-align: center !important;
+                        }
+                        table.action-plan-table td {
+                            font-size: 5.5pt !important;
+                        }
+                        table.action-plan-table td.font-mono,
+                        table.action-plan-table td[class*="font-mono"] {
+                            font-family: 'Sarabun', 'TH Sarabun New', monospace, sans-serif !important;
+                            font-size: 5.2pt !important;
+                            letter-spacing: -0.25px !important;
+                            white-space: nowrap !important;
+                            padding: 1.5px 0.5px !important;
+                        }
+                        .print-sheet-header h3 {
+                            font-size: 11pt !important;
+                            margin-bottom: 2px !important;
+                        }
+                        .print-sheet-header h4 {
+                            font-size: 8.5pt !important;
+                            margin-top: 0 !important;
+                        }
+                        .print-sheet-header div {
+                            font-size: 6.5pt !important;
                         }
                     }
                 `}} />
@@ -10613,12 +10687,12 @@ ${itemsListText}
                             onClick={() => window.print()}
                             className="bg-purple-700 hover:bg-purple-800 text-white font-bold py-2.5 px-5 rounded-xl text-xs transition-all shadow-md hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer no-print"
                         >
-                            <span>🖨️</span> พิมพ์รายงาน / บันทึก PDF
+                            <span>🖨️</span> พิมพ์รายงาน / บันทึก PDF (A4 แนวนอน)
                         </button>
                     </div>
 
                     {/* Official Document Sheet Header (Matching Image 1) */}
-                    <div className="space-y-1">
+                    <div className="space-y-1 print-sheet-header">
                         <div className="text-right text-[11px] text-slate-600 font-medium">
                             แผนปฏิบัติราชการ ประจำปีงบประมาณ พ.ศ.2570 วิทยาลัยสารพัดช่างน่าน
                         </div>
@@ -10633,21 +10707,37 @@ ${itemsListText}
                     </div>
 
                     {/* 14-Column Table Container */}
-                    <div className="overflow-x-auto border border-slate-400 rounded-xl max-w-full shadow-2xs">
-                        <table className="w-full border-collapse text-[11px] text-slate-800 min-w-[1320px] table-fixed">
+                    <div className="overflow-x-auto border border-slate-400 rounded-xl max-w-full shadow-2xs action-plan-table-wrapper">
+                        <table className="w-full border-collapse text-[11px] text-slate-800 min-w-[1280px] table-fixed action-plan-table">
+                            <colgroup>
+                                <col style={{ width: '21%' }} />
+                                <col style={{ width: '7%' }} />
+                                <col style={{ width: '5.7%' }} />
+                                <col style={{ width: '5.7%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '5.7%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '5.7%' }} />
+                                <col style={{ width: '5.7%' }} />
+                                <col style={{ width: '5.7%' }} />
+                                <col style={{ width: '6%' }} />
+                                <col style={{ width: '7.8%' }} />
+                            </colgroup>
                             <thead>
                                 {/* Header Row 1 */}
                                 <tr className="bg-slate-100 border-b border-slate-400 text-[11px] font-bold text-slate-900 text-center">
-                                    <th rowSpan={4} className="py-2.5 px-2 text-center border-r border-slate-400 w-[240px] align-middle">
+                                    <th rowSpan={4} className="py-2.5 px-2 text-center border-r border-slate-400 align-middle">
                                         รายการ
                                     </th>
-                                    <th rowSpan={4} className="py-2.5 px-1 border-r border-slate-400 w-[84px] align-middle whitespace-nowrap">
+                                    <th rowSpan={4} className="py-2.5 px-1 border-r border-slate-400 align-middle whitespace-nowrap">
                                         ตั้งงบ
                                     </th>
                                     <th colSpan={11} className="py-1 px-1 border-b border-r border-slate-400 text-center font-bold">
                                         งบประมาณ
                                     </th>
-                                    <th rowSpan={4} className="py-2.5 px-1 border-slate-400 w-[98px] align-middle whitespace-nowrap">
+                                    <th rowSpan={4} className="py-2.5 px-1 border-slate-400 align-middle whitespace-nowrap">
                                         รวมค่าใช้จ่าย
                                     </th>
                                 </tr>
@@ -10657,29 +10747,29 @@ ${itemsListText}
                                     <th colSpan={4} className="py-1 px-1 border-b border-r border-slate-400">
                                         งบดำเนินงาน
                                     </th>
-                                    <th rowSpan={3} className="py-1 px-1 border-r border-slate-400 w-[64px] align-middle">
+                                    <th rowSpan={3} className="py-1 px-1 border-r border-slate-400 align-middle">
                                         ทวิศึกษา
                                     </th>
-                                    <th rowSpan={3} className="py-1 px-1 border-r border-slate-400 w-[78px] align-middle leading-tight">
+                                    <th rowSpan={3} className="py-1 px-1 border-r border-slate-400 align-middle leading-tight">
                                         อุดหนุนเพื่อ<br/>การจัดการ
                                     </th>
-                                    <th rowSpan={3} className="py-1 px-1 border-r border-slate-400 w-[70px] align-middle leading-tight">
+                                    <th rowSpan={3} className="py-1 px-1 border-r border-slate-400 align-middle leading-tight">
                                         อุดหนุน<br/>พัฒนา
                                     </th>
                                     <th colSpan={3} rowSpan={2} className="py-1 px-1 border-b border-r border-slate-400 align-middle">
                                         อุดหนุนเรียนฟรี 15 ปี
                                     </th>
-                                    <th rowSpan={3} className="py-1 px-1 border-r border-slate-400 w-[72px] align-middle">
+                                    <th rowSpan={3} className="py-1 px-1 border-r border-slate-400 align-middle">
                                         บกศ.
                                     </th>
                                 </tr>
 
                                 {/* Header Row 3 */}
                                 <tr className="bg-slate-50/80 border-b border-slate-400 text-[10px] font-bold text-slate-700 text-center">
-                                    <th rowSpan={2} className="py-1 px-1 border-r border-slate-400 w-[60px] align-middle">
+                                    <th rowSpan={2} className="py-1 px-1 border-r border-slate-400 align-middle">
                                         ปวช.
                                     </th>
-                                    <th rowSpan={2} className="py-1 px-1 border-r border-slate-400 w-[60px] align-middle">
+                                    <th rowSpan={2} className="py-1 px-1 border-r border-slate-400 align-middle">
                                         ปวส.
                                     </th>
                                     <th colSpan={2} className="py-1 px-1 border-b border-r border-slate-400">
@@ -10689,19 +10779,19 @@ ${itemsListText}
 
                                 {/* Header Row 4 */}
                                 <tr className="bg-slate-50/60 border-b-2 border-slate-400 text-[9px] font-bold text-slate-700 text-center">
-                                    <th className="py-1 px-1 border-r border-slate-400 w-[74px] leading-tight align-middle">
+                                    <th className="py-1 px-1 border-r border-slate-400 leading-tight align-middle">
                                         ตอบแทน<br/>วัสดุ ใช้สอย
                                     </th>
-                                    <th className="py-1 px-1 border-r border-slate-400 w-[74px] align-middle">
+                                    <th className="py-1 px-1 border-r border-slate-400 align-middle">
                                         ค่าสาธารณูปโภค
                                     </th>
-                                    <th className="py-1 px-1 border-r border-slate-400 w-[64px] align-middle">
+                                    <th className="py-1 px-1 border-r border-slate-400 align-middle">
                                         ค่าหนังสือ
                                     </th>
-                                    <th className="py-1 px-1 border-r border-slate-400 w-[64px] leading-tight align-middle">
+                                    <th className="py-1 px-1 border-r border-slate-400 leading-tight align-middle">
                                         อุปกรณ์<br/>การเรียน
                                     </th>
-                                    <th className="py-1 px-1 border-r border-slate-400 w-[64px] leading-tight align-middle">
+                                    <th className="py-1 px-1 border-r border-slate-400 leading-tight align-middle">
                                         เครื่องแบบ<br/>นักเรียน
                                     </th>
                                 </tr>
