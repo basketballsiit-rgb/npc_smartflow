@@ -65,12 +65,14 @@ class KeycloakController extends Controller
                 $resolvedRole = $this->resolveRole($npcjobProfile);
                 $defaultRole  = $resolvedRole ?? Role::where('name', 'teacher')->first() ?? Role::first();
 
+                $mainDeptId = $department?->parent_id ?: $department?->id;
+
                 $user = User::create([
                     'name'          => $name,
                     'email'         => $email,
                     'password'      => bcrypt(Str::random(32)),
                     'role_id'       => $defaultRole?->id,
-                    'department_id' => $department?->id,
+                    'department_id' => $mainDeptId,
                     'position'      => $this->resolvePosition($npcjobProfile),
                     'is_active'     => true,
                 ]);
@@ -85,7 +87,7 @@ class KeycloakController extends Controller
 
                 if (!$hasSmartFlowDuties) {
                     if ($department) {
-                        $updateData['department_id'] = $department->id;
+                        $updateData['department_id'] = $department->parent_id ?: $department->id;
                     }
                     $resolvedPosition = $this->resolvePosition($npcjobProfile);
                     if ($resolvedPosition) {
@@ -279,13 +281,27 @@ class KeycloakController extends Controller
      */
     private function resolveOrCreateDepartment(array $npcjobProfile): ?Department
     {
-        $departmentName = trim($npcjobProfile['department_name'] ?? '');
+        $departmentName = $npcjobProfile['department_name'] ?? '';
+        return $this->resolveOrCreateDepartmentByName($departmentName);
+    }
 
-        if (!$departmentName) return null;
+    /**
+     * ค้นหาหรือสร้าง Department จากชื่อที่ได้รับ (เช่น จาก npcjob หรือ Keycloak)
+     * รองรับทั้งการจับคู่ฝ่ายหลัก, การแปลงคำนำหน้า (แผนกวิชา <-> สาขาวิชา), 
+     * การกู้คืนจาก SoftDeletes (ป้องกัน UNIQUE constraint failed) และ try-catch กัน Error 500
+     */
+    private function resolveOrCreateDepartmentByName(?string $rawDepartmentName): ?Department
+    {
+        $departmentName = trim($rawDepartmentName ?? '');
+        if (!$departmentName) {
+            return null;
+        }
 
-        // 1. หา department ที่ชื่อตรงกันเป๊ะ
+        // 1. ค้นหาแบบตรงกันเป๊ะในตารางปกติ (active)
         $dept = Department::where('name', $departmentName)->first();
-        if ($dept) return $dept;
+        if ($dept) {
+            return $dept;
+        }
 
         // 2. ป้องกันการสร้างฝ่ายซ้ำซ้อน: แมปเข้า 4 ฝ่ายหลักเดิมที่มีในระบบ
         if (mb_strpos($departmentName, 'แผนงาน') !== false || mb_strpos($departmentName, 'ยุทธศาสตร์') !== false || mb_strpos($departmentName, 'วางแผน') !== false) {
@@ -298,8 +314,9 @@ class KeycloakController extends Controller
             if ($matched) return $matched;
         }
 
-        if (mb_strpos($departmentName, 'วิชาการ') !== false) {
-            $matched = Department::where('name', 'like', '%วิชาการ%')->first();
+        if ($departmentName === 'ฝ่ายวิชาการ' || (mb_strpos($departmentName, 'วิชาการ') !== false && mb_strpos($departmentName, 'สาขา') === false && mb_strpos($departmentName, 'แผนก') === false)) {
+            $matched = Department::where('name', 'ฝ่ายวิชาการ')->first() 
+                ?: Department::where('name', 'like', '%วิชาการ%')->whereNull('parent_id')->first();
             if ($matched) return $matched;
         }
 
@@ -308,24 +325,90 @@ class KeycloakController extends Controller
             if ($matched) return $matched;
         }
 
-        // 3. สร้าง department ใหม่ถ้าไม่มีฝ่ายหลักที่ตรงกัน
-        $code = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $departmentName), 0, 10))
-                ?: 'DEPT' . rand(100, 999);
+        // 3. จับคู่ข้ามคำนำหน้า (เช่น "แผนกวิชาเทคโนโลยีสารสนเทศ" กับ "สาขาวิชาเทคโนโลยีสารสนเทศ")
+        // ในวิทยาลัยอาชีวะ คำว่า "แผนกวิชา" กับ "สาขาวิชา" หมายถึงหน่วยงานเดียวกัน
+        $coreMajorName = preg_replace('/^(แผนกวิชา|สาขาวิชา|แผนก|สาขา|งาน)/u', '', $departmentName);
+        $coreMajorName = trim($coreMajorName);
 
-        $parentId = null;
-        if (str_contains($departmentName, 'แผนก') || str_contains($departmentName, 'สาขา') || str_contains($departmentName, 'ช่าง') || str_contains($departmentName, 'การตลาด') || str_contains($departmentName, 'สารสนเทศ')) {
-            $parentId = Department::where('name', 'like', '%วิชาการ%')->whereNull('parent_id')->value('id') ?: 2;
+        if (!empty($coreMajorName) && mb_strlen($coreMajorName) >= 3) {
+            $matchedSub = Department::where(function($q) use ($coreMajorName) {
+                $q->where('name', 'like', '%' . $coreMajorName . '%');
+            })->first();
+
+            if ($matchedSub) {
+                return $matchedSub;
+            }
         }
 
-        $dept = Department::create([
-            'name' => $departmentName,
-            'code' => $code,
-            'parent_id' => $parentId,
-        ]);
+        // 4. ตรวจสอบใน SoftDeletes (withTrashed) เพื่อกู้คืนแทนการ INSERT ซ้ำ ป้องกัน UNIQUE constraint failed
+        $trashed = Department::withTrashed()->where('name', $departmentName)->first();
+        if ($trashed) {
+            if ($trashed->trashed()) {
+                $trashed->restore();
+                Log::info("Keycloak SSO: กู้คืนฝ่ายที่เคยถูก Soft Delete: {$departmentName} (ID: {$trashed->id})");
+            }
+            return $trashed;
+        }
 
-        Log::info("สร้างฝ่ายใหม่จาก npcjob: {$departmentName} (code: {$code}, parent_id: {$parentId})");
+        if (!empty($coreMajorName) && mb_strlen($coreMajorName) >= 3) {
+            $trashedSub = Department::withTrashed()->where('name', 'like', '%' . $coreMajorName . '%')->first();
+            if ($trashedSub) {
+                if ($trashedSub->trashed()) {
+                    $trashedSub->restore();
+                    Log::info("Keycloak SSO: กู้คืนฝ่ายที่เคยถูก Soft Delete (จับคู่คำ): {$trashedSub->name} (ID: {$trashedSub->id})");
+                }
+                return $trashedSub;
+            }
+        }
 
-        return $dept;
+        // 5. หากไม่พบเลย จึงสร้าง Department ใหม่
+        $parentId = null;
+        if (str_contains($departmentName, 'แผนก') || str_contains($departmentName, 'สาขา') || str_contains($departmentName, 'ช่าง') || str_contains($departmentName, 'การตลาด') || str_contains($departmentName, 'สารสนเทศ') || str_contains($departmentName, 'การบัญชี') || str_contains($departmentName, 'สามัญ')) {
+            $parentId = Department::where('name', 'like', '%วิชาการ%')->whereNull('parent_id')->value('id') ?: 2;
+        } elseif (str_contains($departmentName, 'กิจการ') || str_contains($departmentName, 'นักเรียน') || str_contains($departmentName, 'แนะแนว') || str_contains($departmentName, 'ครูที่ปรึกษา') || str_contains($departmentName, 'สวัสดิการ') || str_contains($departmentName, 'โครงการพิเศษ')) {
+            $parentId = Department::where('name', 'like', '%กิจการ%')->whereNull('parent_id')->value('id') ?: 3;
+        } elseif (str_contains($departmentName, 'บริหาร') || str_contains($departmentName, 'พัสดุ') || str_contains($departmentName, 'การเงิน') || str_contains($departmentName, 'สารบรรณ') || str_contains($departmentName, 'อาคาร')) {
+            $parentId = Department::where('name', 'like', '%บริหารทรัพยากร%')->whereNull('parent_id')->value('id') ?: 1;
+        } elseif (str_contains($departmentName, 'แผนงาน') || str_contains($departmentName, 'ยุทธศาสตร์') || str_contains($departmentName, 'วิจัย') || str_contains($departmentName, 'ประกัน') || str_contains($departmentName, 'ศูนย์ดิจิทัล') || str_contains($departmentName, 'บ่มเพาะ')) {
+            $parentId = Department::where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%')->whereNull('parent_id')->value('id') ?: 4;
+        }
+
+        $code = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $departmentName), 0, 10));
+        if (!$code) {
+            $code = 'DEPT' . rand(100, 999);
+        }
+
+        while (Department::withTrashed()->where('code', $code)->exists()) {
+            $code = 'DEPT' . rand(100, 999);
+        }
+
+        try {
+            $dept = Department::create([
+                'name'      => $departmentName,
+                'code'      => $code,
+                'parent_id' => $parentId,
+            ]);
+            Log::info("Keycloak SSO: สร้างฝ่ายใหม่จาก npcjob: {$departmentName} (code: {$code}, parent_id: {$parentId})");
+            return $dept;
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::warning("Keycloak SSO: เกิดการชน UNIQUE constraint ขณะสร้างฝ่าย '{$departmentName}': " . $e->getMessage());
+
+            $existing = Department::withTrashed()->where('name', $departmentName)->first();
+            if ($existing) {
+                if ($existing->trashed()) {
+                    $existing->restore();
+                }
+                if ($parentId && !$existing->parent_id) {
+                    $existing->update(['parent_id' => $parentId]);
+                }
+                return $existing;
+            }
+
+            if ($parentId) {
+                return Department::find($parentId);
+            }
+            return Department::first();
+        }
     }
 
     /**
@@ -362,13 +445,17 @@ class KeycloakController extends Controller
         if (empty($allPositions)) {
             // ถ้าไม่มีข้อมูลจาก API ให้ใช้ position field เดี่ยว
             if (!empty($npcjobProfile['position'])) {
-                $dept = $this->resolveOrCreateDepartment($npcjobProfile);
+                $dept = $this->resolveOrCreateDepartmentByName($npcjobProfile['department_name'] ?? null);
+                $mainDeptId = $dept?->parent_id ?: $dept?->id;
+                $subDeptId  = $dept?->parent_id ? $dept?->id : null;
+
                 $user->userPositions()->delete();
                 $user->userPositions()->create([
-                    'position'      => $npcjobProfile['position'],
-                    'department_id' => $dept?->id,
-                    'job_level'     => $npcjobProfile['job_level'] ?? null,
-                    'is_primary'    => true,
+                    'position'          => $npcjobProfile['position'],
+                    'department_id'     => $mainDeptId,
+                    'sub_department_id' => $subDeptId,
+                    'job_level'         => $npcjobProfile['job_level'] ?? null,
+                    'is_primary'        => true,
                 ]);
             }
             return;
@@ -379,34 +466,17 @@ class KeycloakController extends Controller
 
         foreach ($allPositions as $index => $pos) {
             $deptName = $pos['job_department'] ?? null;
-            $dept     = null;
+            $dept     = $this->resolveOrCreateDepartmentByName($deptName);
 
-            if ($deptName) {
-                $dept = Department::where('name', $deptName)->first();
-                if (!$dept) {
-                    $parentId = null;
-                    if (str_contains($deptName, 'แผนก') || str_contains($deptName, 'สาขา') || str_contains($deptName, 'ช่าง') || str_contains($deptName, 'การตลาด') || str_contains($deptName, 'สารสนเทศ')) {
-                        $parentId = Department::where('name', 'like', '%วิชาการ%')->whereNull('parent_id')->value('id') ?: 2;
-                    } elseif (str_contains($deptName, 'กิจการ') || str_contains($deptName, 'นักเรียน') || str_contains($deptName, 'แนะแนว') || str_contains($deptName, 'ครูที่ปรึกษา')) {
-                        $parentId = Department::where('name', 'like', '%กิจการ%')->whereNull('parent_id')->value('id') ?: 3;
-                    } elseif (str_contains($deptName, 'บริหาร') || str_contains($deptName, 'พัสดุ') || str_contains($deptName, 'การเงิน') || str_contains($deptName, 'สารบรรณ')) {
-                        $parentId = Department::where('name', 'like', '%บริหารทรัพยากร%')->whereNull('parent_id')->value('id') ?: 1;
-                    } elseif (str_contains($deptName, 'แผนงาน') || str_contains($deptName, 'ยุทธศาสตร์') || str_contains($deptName, 'วิจัย') || str_contains($deptName, 'ประกัน')) {
-                        $parentId = Department::where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%')->whereNull('parent_id')->value('id') ?: 4;
-                    }
-                    $dept = Department::create([
-                        'name' => $deptName,
-                        'code' => strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $deptName), 0, 10)) ?: 'DEPT' . rand(100, 999),
-                        'parent_id' => $parentId,
-                    ]);
-                }
-            }
+            $mainDeptId = $dept?->parent_id ?: $dept?->id;
+            $subDeptId  = $dept?->parent_id ? $dept?->id : null;
 
             $user->userPositions()->create([
-                'position'      => $pos['title'] ?? '',
-                'department_id' => $dept?->id,
-                'job_level'     => $pos['job_level'] ?? null,
-                'is_primary'    => ($index === 0), // อันแรกคือตำแหน่งหลัก
+                'position'          => $pos['title'] ?? '',
+                'department_id'     => $mainDeptId,
+                'sub_department_id' => $subDeptId,
+                'job_level'         => $pos['job_level'] ?? null,
+                'is_primary'        => ($index === 0), // อันแรกคือตำแหน่งหลัก
             ]);
         }
 
