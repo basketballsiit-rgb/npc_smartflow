@@ -369,7 +369,7 @@ class KeycloakController extends Controller
             $parentId = Department::where('name', 'like', '%กิจการ%')->whereNull('parent_id')->value('id') ?: 3;
         } elseif (str_contains($departmentName, 'บริหาร') || str_contains($departmentName, 'พัสดุ') || str_contains($departmentName, 'การเงิน') || str_contains($departmentName, 'สารบรรณ') || str_contains($departmentName, 'อาคาร')) {
             $parentId = Department::where('name', 'like', '%บริหารทรัพยากร%')->whereNull('parent_id')->value('id') ?: 1;
-        } elseif (str_contains($departmentName, 'แผนงาน') || str_contains($departmentName, 'ยุทธศาสตร์') || str_contains($departmentName, 'วิจัย') || str_contains($departmentName, 'ประกัน') || str_contains($departmentName, 'ศูนย์ดิจิทัล') || str_contains($departmentName, 'บ่มเพาะ')) {
+        } elseif (str_contains($departmentName, 'แผนงาน') || str_contains($departmentName, 'ยุทธศาสตร์') || str_contains($departmentName, 'วิจัย') || str_contains($departmentName, 'ประกัน') || str_contains($departmentName, 'ศูนย์ดิจิทัล') || str_contains($departmentName, 'บ่มเพาะ') || str_contains($departmentName, 'ส่งเสริมธุรกิจ') || str_contains($departmentName, 'ผู้ประกอบการ') || str_contains($departmentName, 'ธุรกิจ')) {
             $parentId = Department::where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%')->whereNull('parent_id')->value('id') ?: 4;
         }
 

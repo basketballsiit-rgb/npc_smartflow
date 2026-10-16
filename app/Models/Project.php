@@ -466,7 +466,21 @@ class Project extends Model
         }
 
         // Name matching on combined department and parent division names
-        if (str_contains($combined, 'ยุทธศาสตร์') || str_contains($combined, 'แผนงาน') || str_contains($combined, 'วางแผน')) {
+        if (
+            str_contains($combined, 'ยุทธศาสตร์') || 
+            str_contains($combined, 'แผนงาน') || 
+            str_contains($combined, 'วางแผน') || 
+            str_contains($combined, 'ส่งเสริมธุรกิจ') || 
+            str_contains($combined, 'ผู้ประกอบการ') || 
+            str_contains($combined, 'ศูนย์บ่มเพาะ') || 
+            str_contains($combined, 'บ่มเพาะ') || 
+            str_contains($combined, 'วิจัย') || 
+            str_contains($combined, 'นวัตกรรม') || 
+            str_contains($combined, 'สิ่งประดิษฐ์') || 
+            str_contains($combined, 'ประกันคุณภาพ') || 
+            str_contains($combined, 'ศูนย์ดิจิทัล') || 
+            str_contains($combined, 'ประชาสัมพันธ์')
+        ) {
             return '6.4';
         }
         if (str_contains($combined, 'พัฒนากิจการ') || str_contains($combined, 'กิจการนักเรียน') || str_contains($combined, 'นักเรียน') || str_contains($combined, 'นักศึกษา') || str_contains($combined, 'กิจกรรม')) {

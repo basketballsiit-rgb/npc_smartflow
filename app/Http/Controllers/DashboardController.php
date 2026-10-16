@@ -531,6 +531,29 @@ class DashboardController extends Controller
                     ->update(['parent_id' => $acadDept->id]);
             }
 
+            $planDept = Department::whereNull('parent_id')
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');
+                })
+                ->first();
+            if ($planDept) {
+                Department::where('id', '!=', $planDept->id)
+                    ->where(function ($q) {
+                        $q->where('name', 'like', '%ส่งเสริมธุรกิจ%')
+                          ->orWhere('name', 'like', '%ผู้ประกอบการ%')
+                          ->orWhere('name', 'like', '%ศูนย์บ่มเพาะ%')
+                          ->orWhere('name', 'like', '%บ่มเพาะ%')
+                          ->orWhere('name', 'like', '%พัฒนายุทธศาสตร์%')
+                          ->orWhere('name', 'like', '%ประกันคุณภาพ%')
+                          ->orWhere('name', 'like', '%ศูนย์ดิจิทัล%')
+                          ->orWhere('name', 'like', '%วิจัย%');
+                    })
+                    ->where(function ($q) use ($planDept) {
+                        $q->whereNull('parent_id')->orWhere('parent_id', '!=', $planDept->id);
+                    })
+                    ->update(['parent_id' => $planDept->id]);
+            }
+
             $isApprovedClosure = function ($p) {
                 return in_array($p->status, ['approved', 'budget_approved', 'completed', 'in_progress']) || ($p->current_approval_step >= 6);
             };
@@ -856,13 +879,29 @@ class DashboardController extends Controller
                 ->map(function ($p) {
                     $fundingId = $p->funding_source_id ?: ($p->budget?->funding_source_id ?? null);
                     $fundingName = $p->fundingSource?->name ?: ($p->budget?->fundingSource?->name ?? 'ยังไม่จัดสรร');
-                    if ($fundingId == 7 || ($fundingName !== 'ยังไม่จัดสรร' && (str_contains($fundingName, 'สถานศึกษา') || str_contains($fundingName, 'Revenue') || str_contains($fundingName, 'บำรุงการศึกษา') || str_contains($fundingName, 'บกศ')))) {
+                    if ($fundingName !== 'ยังไม่จัดสรร' && (str_contains($fundingName, 'สถานศึกษา') || str_contains($fundingName, 'Revenue') || str_contains($fundingName, 'บำรุงการศึกษา') || str_contains($fundingName, 'บกศ'))) {
                         $fundingName = 'บกศ.';
-                        $fundingId = 7;
+                        $fundingId = 11;
                     }
                     $allocAmt = (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?? 0));
                     $dept = $p->department;
                     $parentDept = $dept?->parent;
+                    if (!$parentDept && $dept) {
+                        $resolvedCat = Project::resolveCategoryForDepartment($dept);
+                        if ($resolvedCat === '6.4') {
+                            $parentDept = Department::whereNull('parent_id')->where(function($q) {
+                                $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');
+                            })->first();
+                        } elseif ($resolvedCat === '6.2') {
+                            $parentDept = Department::whereNull('parent_id')->where(function($q) {
+                                $q->where('name', 'like', '%พัฒนากิจการ%')->orWhere('name', 'like', '%กิจการนักเรียน%');
+                            })->first();
+                        } elseif ($resolvedCat === '6.3') {
+                            $parentDept = Department::whereNull('parent_id')->where('name', 'like', '%บริหารทรัพยากร%')->first();
+                        } elseif ($resolvedCat === '6.1') {
+                            $parentDept = Department::whereNull('parent_id')->where('name', 'like', '%วิชาการ%')->first();
+                        }
+                    }
                     $mainDivId = $parentDept ? $parentDept->id : ($dept?->id ?? null);
                     $mainDivName = $parentDept ? $parentDept->name : ($dept?->name ?? 'ฝ่ายงานทั่วไป');
                     // Auto-detect disbursement_type if not explicitly set

@@ -4431,7 +4431,13 @@ export default function Dashboard({
             nameStr.includes('วางแผน') || 
             nameStr.includes('ประกันคุณภาพ') || 
             nameStr.includes('วิจัย') || 
+            nameStr.includes('นวัตกรรม') || 
+            nameStr.includes('สิ่งประดิษฐ์') || 
             nameStr.includes('บ่มเพาะ') || 
+            nameStr.includes('ศูนย์บ่มเพาะ') || 
+            nameStr.includes('ส่งเสริมธุรกิจ') || 
+            nameStr.includes('ผู้ประกอบการ') || 
+            nameStr.includes('ธุรกิจ') || 
             nameStr.includes('ดิจิทัล') || 
             nameStr.includes('ประชาสัมพันธ์')
         ) {
@@ -10376,22 +10382,35 @@ ${itemsListText}
         ];
 
         const getColumnIdBySource = (name, sourceId) => {
-            if (sourceId) {
-                const idNum = Number(sourceId);
-                if (idNum === 1) return 'pvc';
-                if (idNum === 2) return 'pvs';
-                if (idNum === 3) return 'short_remun';
-                if (idNum === 4) return 'short_util';
-                if (idNum === 5) return 'dual';
-                if (idNum === 6) return 'manage';
-                if (idNum === 7) return 'develop';
-                if (idNum === 8) return 'free15_book';
-                if (idNum === 9) return 'free15_equip';
-                if (idNum === 10) return 'free15_uniform';
-                if (idNum === 11) return 'bkso';
-            }
-            if (!name) return null;
-            const n = String(name).toLowerCase();
+            const n = String(name || '').toLowerCase();
+            const idNum = sourceId ? Number(sourceId) : null;
+
+            // Priority 1: Unambiguous name-based match for บกศ. (Local Income / School Revenue)
+            if (
+                n.includes('บกศ') || 
+                n.includes('บ.ก.ศ') || 
+                n.includes('บำรุงการศึกษา') || 
+                n.includes('สถานศึกษา') || 
+                n.includes('รายได้') || 
+                n.includes('revenue') || 
+                n.includes('local_income')
+            ) return 'bkso';
+
+            // Priority 2: Standard Funding Source ID checks
+            if (idNum === 1) return 'pvc';
+            if (idNum === 2) return 'pvs';
+            if (idNum === 3) return 'short_remun';
+            if (idNum === 4) return 'short_util';
+            if (idNum === 5) return 'dual';
+            if (idNum === 6) return 'manage';
+            if (idNum === 7) return 'develop';
+            if (idNum === 8) return 'free15_book';
+            if (idNum === 9) return 'free15_equip';
+            if (idNum === 10) return 'free15_uniform';
+            if (idNum === 11) return 'bkso';
+
+            // Priority 3: Other specific name-based checks
+            if (!name) return 'develop';
             if (n.includes('หนังสือ')) return 'free15_book';
             if (n.includes('อุปกรณ์')) return 'free15_equip';
             if (n.includes('เครื่องแบบ')) return 'free15_uniform';
@@ -10403,15 +10422,6 @@ ${itemsListText}
             if (n.includes('ทวิศึกษา') || n.includes('dual_edu') || n.includes('ทวิ')) return 'dual';
             if (n.includes('จัดการ') || n.includes('management')) return 'manage';
             if ((n.includes('พัฒนา') && !n.includes('แผนพัฒนา')) || n.includes('development')) return 'develop';
-            if (
-                n.includes('บกศ') || 
-                n.includes('บ.ก.ศ') || 
-                n.includes('บำรุงการศึกษา') || 
-                n.includes('สถานศึกษา') || 
-                n.includes('รายได้') || 
-                n.includes('revenue') || 
-                n.includes('local_income')
-            ) return 'bkso';
 
             // Fallback for custom or central project funds (e.g. Upskill / Reskill, โครงการเฉพาะกิจ) -> จัดอยู่ในคอลัมน์อุดหนุนพัฒนา
             return 'develop';
