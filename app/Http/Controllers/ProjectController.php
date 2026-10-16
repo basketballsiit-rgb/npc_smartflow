@@ -4355,13 +4355,46 @@ class ProjectController extends Controller
                 $projectId = $request->input('project_id');
                 $project = $projectId ? \App\Models\Project::with(['department', 'budget', 'fundingSource'])->find($projectId) : null;
 
+                $flattenToString = function($input) use (&$flattenToString) {
+                    if (empty($input)) return '';
+                    if (is_string($input)) return trim($input);
+                    if (is_numeric($input)) return (string)$input;
+                    if (is_array($input)) {
+                        $parts = [];
+                        if (isset($input['target_group'])) {
+                            $parts[] = 'กลุ่มเป้าหมาย: ' . $flattenToString($input['target_group']);
+                        }
+                        if (isset($input['quantity'])) {
+                            $parts[] = 'จำนวน: ' . $flattenToString($input['quantity']) . ' คน';
+                        }
+                        if (isset($input['quantitative'])) {
+                            $parts[] = 'เชิงปริมาณ: ' . $flattenToString($input['quantitative']);
+                        }
+                        if (isset($input['qualitative'])) {
+                            $parts[] = 'เชิงคุณภาพ: ' . $flattenToString($input['qualitative']);
+                        }
+                        if (isset($input['details'])) {
+                            $parts[] = $flattenToString($input['details']);
+                        }
+                        if (!empty($parts)) {
+                            return implode(' ', array_filter($parts));
+                        }
+                        foreach ($input as $val) {
+                            $res = $flattenToString($val);
+                            if ($res !== '') $parts[] = $res;
+                        }
+                        return implode(' ', $parts);
+                    }
+                    return '';
+                };
+
                 $objText = '';
                 if ($project && !empty($project->objectives)) {
                     $objs = is_array($project->objectives) ? $project->objectives : (json_decode($project->objectives, true) ?: [$project->objectives]);
-                    $objText = implode(' ', array_filter(array_map('trim', (array)$objs)));
+                    $objText = $flattenToString($objs);
                 }
                 if (empty($objText) && !empty($data['objectives'])) {
-                    $objText = is_array($data['objectives']) ? implode(' ', $data['objectives']) : $data['objectives'];
+                    $objText = $flattenToString($data['objectives']);
                 }
                 if (empty($objText)) {
                     $objText = "เพื่อส่งเสริมและพัฒนาการจัดการเรียนการสอนและยกระดับสมรรถนะวิชาชีพของผู้เรียนและบุคลากร";
@@ -4370,10 +4403,10 @@ class ProjectController extends Controller
                 $targetText = '';
                 if ($project && !empty($project->targets)) {
                     $targets = is_array($project->targets) ? $project->targets : (json_decode($project->targets, true) ?: [$project->targets]);
-                    $targetText = implode(' ', array_filter(array_map('trim', (array)$targets)));
+                    $targetText = $flattenToString($targets);
                 }
                 if (empty($targetText) && !empty($data['targets'])) {
-                    $targetText = is_array($data['targets']) ? implode(' ', $data['targets']) : $data['targets'];
+                    $targetText = $flattenToString($data['targets']);
                 }
                 if (empty($targetText)) {
                     $targetText = "นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษา วิทยาลัยสารพัดช่างน่าน จำนวนประมาณ 50-100 คน";

@@ -2555,6 +2555,60 @@ export default function Dashboard({
         });
     };
 
+    const formatAiObjectives = (raw) => {
+        if (!raw) return 'เพื่อส่งเสริมและพัฒนาการจัดการเรียนการสอนและยกระดับสมรรถนะวิชาชีพตามยุทธศาสตร์สถานศึกษา';
+        if (typeof raw === 'string') return raw;
+        if (typeof raw === 'number') return String(raw);
+        if (Array.isArray(raw)) {
+            return raw
+                .map((o, idx) => {
+                    const text = typeof o === 'string' ? o : (o?.title || o?.name || o?.text || '');
+                    return text ? `${idx + 1}. ${text}` : '';
+                })
+                .filter(Boolean)
+                .join(' ') || 'เพื่อส่งเสริมและพัฒนาการจัดการเรียนการสอนและยกระดับสมรรถนะวิชาชีพ';
+        }
+        if (typeof raw === 'object') {
+            return Object.values(raw).map(v => typeof v === 'string' ? v : (Array.isArray(v) ? v.join(', ') : '')).filter(Boolean).join(' ');
+        }
+        return String(raw);
+    };
+
+    const formatAiTargetGroup = (raw) => {
+        if (!raw) return 'นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษา วิทยาลัยสารพัดช่างน่าน';
+        if (typeof raw === 'string') return raw;
+        if (typeof raw === 'number') return String(raw);
+        if (Array.isArray(raw)) {
+            return raw
+                .map(t => typeof t === 'string' ? t : (t?.name || t?.title || t?.text || ''))
+                .filter(Boolean)
+                .join(', ') || 'นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษา วิทยาลัยสารพัดช่างน่าน';
+        }
+        if (typeof raw === 'object') {
+            const parts = [];
+            if (raw.target_group) {
+                const tg = Array.isArray(raw.target_group) ? raw.target_group.join(', ') : raw.target_group;
+                parts.push(`กลุ่มเป้าหมาย: ${tg}`);
+            }
+            if (raw.quantity) parts.push(`จำนวน: ${raw.quantity} คน`);
+            if (raw.quantitative) {
+                const q = Array.isArray(raw.quantitative) ? raw.quantitative.join(', ') : raw.quantitative;
+                parts.push(`เชิงปริมาณ: ${q}`);
+            }
+            if (raw.qualitative) {
+                const ql = Array.isArray(raw.qualitative) ? raw.qualitative.join(', ') : raw.qualitative;
+                parts.push(`เชิงคุณภาพ: ${ql}`);
+            }
+            if (raw.details) {
+                const d = Array.isArray(raw.details) ? raw.details.join(', ') : raw.details;
+                parts.push(String(d));
+            }
+            if (parts.length > 0) return parts.join(' ');
+            return Object.values(raw).map(v => typeof v === 'string' ? v : (Array.isArray(v) ? v.join(', ') : '')).filter(Boolean).join(' ');
+        }
+        return String(raw);
+    };
+
     const handleOpenAiBrief = (project) => {
         setAiBriefModalProject(project);
         setAiBriefData(null);
@@ -2570,17 +2624,23 @@ export default function Dashboard({
         })
         .then(res => {
             if (res.data && res.data.brief) {
-                setAiBriefData(res.data.brief);
+                setAiBriefData({
+                    objective: formatAiObjectives(res.data.brief.objective),
+                    target_group: formatAiTargetGroup(res.data.brief.target_group),
+                    budget_summary: typeof res.data.brief.budget_summary === 'string' ? res.data.brief.budget_summary : '',
+                    project_title: res.data.brief.project_title || project.title,
+                    department: res.data.brief.department || project.department?.name || 'ฝ่ายงานทั่วไป'
+                });
             }
         })
         .catch(() => {
-            const objs = Array.isArray(project.objectives) ? project.objectives.join(' ') : (project.objectives || 'เพื่อส่งเสริมและพัฒนาการจัดการศึกษาและการบริหารงานของสถานศึกษา');
-            const tgts = Array.isArray(project.targets) ? project.targets.join(' ') : (project.targets || 'นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษา วิทยาลัยสารพัดช่างน่าน');
+            const objs = formatAiObjectives(project.objectives);
+            const tgts = formatAiTargetGroup(project.targets);
             const bg = (project.allocated_budget || project.estimated_budget || 0);
             setAiBriefData({
                 objective: objs,
                 target_group: tgts,
-                budget_summary: `วงเงินงบประมาณ ${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(bg)} หมวดค่าตอบแทน ค่าใช้สอย และค่าวัสดุตามแผนงาน`,
+                budget_summary: `วงเงินงบประมาณ ${new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(bg)} บาท หมวดค่าตอบแทน ค่าใช้สอย และค่าวัสดุตามแผนงาน`,
                 project_title: project.title,
                 department: project.department?.name || 'ฝ่ายงานทั่วไป'
             });
@@ -27122,7 +27182,7 @@ return (
                                                 <span>🎯 วัตถุประสงค์หลักของโครงการ (Core Objectives)</span>
                                             </div>
                                             <p className="text-xs text-slate-700 leading-relaxed pl-8 font-medium">
-                                                {aiBriefData.objective || 'เพื่อพัฒนาการจัดการเรียนการสอนและยกระดับสมรรถนะวิชาชีพตามยุทธศาสตร์สถานศึกษา'}
+                                                {formatAiObjectives(aiBriefData.objective)}
                                             </p>
                                         </div>
 
@@ -27133,7 +27193,7 @@ return (
                                                 <span>👥 กลุ่มเป้าหมายและจำนวนผู้เข้าร่วม (Target Beneficiaries)</span>
                                             </div>
                                             <p className="text-xs text-slate-700 leading-relaxed pl-8 font-medium">
-                                                {aiBriefData.target_group || 'นักเรียน นักศึกษา ครู และบุคลากรทางการศึกษา วิทยาลัยสารพัดช่างน่าน'}
+                                                {formatAiTargetGroup(aiBriefData.target_group)}
                                             </p>
                                         </div>
 
@@ -27144,7 +27204,7 @@ return (
                                                 <span>💰 วงเงินงบประมาณและแหล่งเงิน (Budget & Financing)</span>
                                             </div>
                                             <p className="text-xs text-slate-800 leading-relaxed pl-8 font-mono font-bold">
-                                                {aiBriefData.budget_summary || `วงเงินงบประมาณ ฿${new Intl.NumberFormat('th-TH').format(aiBriefModalProject.allocated_budget || aiBriefModalProject.estimated_budget || 0)} บาท`}
+                                                {typeof aiBriefData.budget_summary === 'string' ? aiBriefData.budget_summary : `วงเงินงบประมาณ ฿${new Intl.NumberFormat('th-TH').format(aiBriefModalProject.allocated_budget || aiBriefModalProject.estimated_budget || 0)} บาท`}
                                             </p>
                                         </div>
 
