@@ -10788,6 +10788,12 @@ ${itemsListText}
                             padding: 0 0 12px 0 !important;
                             text-align: left !important;
                         }
+                        table.action-plan-table thead,
+                        table.action-plan-table th,
+                        table.action-plan-table td {
+                            position: static !important;
+                            box-shadow: none !important;
+                        }
                         table.action-plan-table th,
                         table.action-plan-table td {
                             border: 0.5pt solid black !important;
@@ -10867,7 +10873,7 @@ ${itemsListText}
                     </div>
 
                     {/* 14-Column Table Container */}
-                    <div className="overflow-x-auto border border-slate-400 rounded-xl max-w-full shadow-2xs action-plan-table-wrapper" style={{ width: '100%', minWidth: '100%' }}>
+                    <div className="overflow-auto border border-slate-400 rounded-xl max-w-full shadow-2xs action-plan-table-wrapper max-h-[calc(100vh-220px)] min-h-[420px] print:max-h-none print:overflow-visible relative" style={{ width: '100%', minWidth: '100%' }}>
                         <table className="w-full border-collapse text-[11px] text-slate-800 min-w-[1100px] table-fixed action-plan-table print:min-w-full print:w-full" style={{ width: '100%', minWidth: '100%', tableLayout: 'fixed' }}>
                             <colgroup>
                                 <col style={{ width: '21.4%' }} />
@@ -10885,7 +10891,7 @@ ${itemsListText}
                                 <col style={{ width: '5.8%' }} />
                                 <col style={{ width: '7.6%' }} />
                             </colgroup>
-                            <thead>
+                            <thead className="sticky top-0 z-20 bg-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.1)]">
                                 {/* Print-Only Document Sheet Title Header (Repeats on Every Printed Page: Page 1, Page 2, ...) */}
                                 <tr className="hidden print:table-row border-none bg-transparent print-title-row">
                                     <th colSpan={14} className="border-none bg-transparent p-0 pb-3 text-left font-normal document-title-cell">
@@ -10907,7 +10913,7 @@ ${itemsListText}
 
                                 {/* Header Row 1 */}
                                 <tr className="bg-slate-100 border-b border-slate-400 text-[11px] font-bold text-slate-900 text-center">
-                                    <th rowSpan={4} className="py-2.5 px-2 text-center border-r border-slate-400 align-middle">
+                                    <th rowSpan={4} className="py-2.5 px-2 text-center border-r border-slate-400 align-middle sticky left-0 z-30 bg-slate-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)]">
                                         รายการ
                                     </th>
                                     <th rowSpan={4} className="py-2.5 px-1 border-r border-slate-400 align-middle whitespace-nowrap">
@@ -10979,7 +10985,7 @@ ${itemsListText}
                             <tbody className="divide-y divide-slate-300">
                                 {/* แถว 1: ประมาณการรายรับ */}
                                 <tr className="bg-amber-50/50 border-b border-slate-400 font-bold text-[10.5px] text-slate-900">
-                                    <td className="py-2 px-2.5 text-center border-r border-slate-400 font-bold">
+                                    <td className="py-2 px-2.5 text-center border-r border-slate-400 font-bold sticky left-0 z-10 bg-[#fef9ee] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]">
                                         ประมาณการรายรับ
                                     </td>
                                     <td className="py-2 px-1.5 text-right border-r border-slate-400 font-bold font-mono">
@@ -10997,7 +11003,7 @@ ${itemsListText}
 
                                 {/* แถว 2: รับงบประมาณจัดสรรจริง (ใต้ประมาณการรายรับ) */}
                                 <tr className="bg-emerald-50/40 border-b border-slate-400 font-bold text-[10.5px] text-emerald-950">
-                                    <td className="py-2 px-2.5 text-center border-r border-slate-400 font-bold text-emerald-900">
+                                    <td className="py-2 px-2.5 text-center border-r border-slate-400 font-bold text-emerald-900 sticky left-0 z-10 bg-[#f0fdf4] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]">
                                         รับงบประมาณจัดสรรจริง
                                     </td>
                                     <td className="py-2 px-1.5 text-right border-r border-slate-400 font-bold font-mono text-emerald-900">
@@ -11021,14 +11027,17 @@ ${itemsListText}
                                     let rowBg = 'hover:bg-purple-50/30';
                                     let titleClass = 'py-1 px-2.5 text-left border-r border-slate-400';
                                     let isBold = false;
+                                    let stickyBg = 'bg-white group-hover:bg-purple-50/60';
 
                                     if (row.isMain) {
-                                        rowBg = 'bg-slate-100/70 font-bold text-slate-950 border-t border-b border-slate-400';
+                                        rowBg = 'bg-slate-100 font-bold text-slate-950 border-t border-b border-slate-400';
                                         titleClass = 'py-1.5 px-2 text-left border-r border-slate-400 font-bold';
+                                        stickyBg = 'bg-slate-100';
                                         isBold = true;
                                     } else if (row.isSub) {
-                                        rowBg = 'bg-slate-50/50 font-bold text-slate-900';
+                                        rowBg = 'bg-slate-50 font-bold text-slate-900';
                                         titleClass = 'py-1 px-2.5 text-left border-r border-slate-400 pl-4 font-bold';
+                                        stickyBg = 'bg-slate-50';
                                         isBold = true;
                                     } else if (row.level === 2) {
                                         titleClass = 'py-1 px-2.5 text-left border-r border-slate-400 pl-6 text-slate-700';
@@ -11045,8 +11054,8 @@ ${itemsListText}
                                     const totalRowExpense = budgetColumns.reduce((sum, c) => sum + (row.cols[c.id] || 0), 0) || row.planBudget;
 
                                     return (
-                                        <tr key={row.id} className={`${rowBg} border-b border-slate-300 text-[10.5px]`}>
-                                            <td className={titleClass} title={planTooltip}>
+                                        <tr key={row.id} className={`group ${rowBg} border-b border-slate-300 text-[10.5px]`}>
+                                            <td className={`${titleClass} sticky left-0 z-10 ${stickyBg} shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]`} title={planTooltip}>
                                                 <span>{row.title}</span>
                                                 {totalItemsCount > 0 && !row.isMain && (
                                                     <span className="ml-1 text-[9px] font-normal text-purple-600">({totalItemsCount})</span>
@@ -11073,7 +11082,7 @@ ${itemsListText}
 
                                 {/* Bottom Summary: รวมค่าใช้จ่าย */}
                                 <tr className="bg-slate-100 border-t-2 border-b border-slate-400 font-bold text-[10.5px] text-slate-950">
-                                    <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold">
+                                    <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold sticky left-0 z-10 bg-slate-100 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]">
                                         รวมค่าใช้จ่าย
                                     </td>
                                     <td className="py-1.5 px-1.5 text-right border-r border-slate-400 font-bold font-mono">
@@ -11091,7 +11100,7 @@ ${itemsListText}
 
                                 {/* Bottom Summary: รายจ่ายรวม (Sky/Blue Shaded) */}
                                 <tr className="bg-sky-50 border-b border-slate-400 font-bold text-[10.5px] text-sky-950">
-                                    <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold">
+                                    <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold sticky left-0 z-10 bg-[#f0f9ff] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]">
                                         รายจ่ายรวม
                                     </td>
                                     <td className="py-1.5 px-1.5 text-right border-r border-slate-400 font-bold font-mono">
@@ -11109,7 +11118,7 @@ ${itemsListText}
 
                                 {/* Bottom Summary: คงเหลือ (Amber/Peach Shaded) */}
                                 <tr className="bg-amber-50/70 border-b border-slate-400 font-bold text-[10.5px] text-amber-950">
-                                    <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold">
+                                    <td className="py-1.5 px-2.5 text-center border-r border-slate-400 font-bold sticky left-0 z-10 bg-[#fef9ee] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.15)]">
                                         คงเหลือ
                                     </td>
                                     <td className={`py-1.5 px-1.5 text-right border-r border-slate-400 font-bold font-mono ${remainingTotal < 0 ? 'text-red-600' : ''}`}>
