@@ -1660,7 +1660,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <a
-                                        href="/dashboard?tab=action_plan_report"
+                                        href={route('dashboard', { tab: 'action_plan_report' })}
                                         target="_blank"
                                         rel="noreferrer"
                                         className="text-xs font-bold px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition border border-purple-200 flex items-center gap-1"

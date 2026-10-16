@@ -76,8 +76,8 @@ class DashboardController extends Controller
         $data['allVendors'] = \App\Models\Vendor::orderBy('name', 'asc')->get();
         $data['allFundingSources'] = FundingSource::orderBy('id', 'asc')->get();
 
-        // Fetch routine budget plans based on permissions
-        if ($user->isAdmin() || $user->isPlanHead()) {
+        // Fetch routine budget plans based on permissions (Admin, Plan Head, Plan Staff, Executive, or Action Plan Report / Budget tabs)
+        if ($user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->isExecutive() || in_array($request->query('tab'), ['budgets', 'action_plan_report', 'annual_budget_requests', 'routine-budgets'])) {
             $data['routinePlans'] = \App\Models\RoutineBudgetPlan::with(['department', 'procurements.items', 'procurements.committees', 'fundingSource'])->latest()->get();
         } else {
             $deptIds = $user->getResponsibleDepartmentIds();
@@ -864,8 +864,8 @@ class DashboardController extends Controller
             $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'specialProjectBudget', 'approvals.user', 'approvals.delegatedFromUser', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
                 ->latest();
 
-            // Non-power users (e.g. general teachers/proposers) only track their own projects, or specifically selected project (unless viewing all_projects tab)
-            if (!$isPowerUser && $activeTab !== 'all_projects') {
+            // Non-power users (e.g. general teachers/proposers) only track their own projects, or specifically selected project (unless viewing all_projects or action_plan_report tab)
+            if (!$isPowerUser && !in_array($activeTab, ['all_projects', 'action_plan_report'])) {
                 $masterQuery->where(function($q) use ($user, $requestedProjectId) {
                     $q->where('user_id', $user->id);
                     if ($requestedProjectId) {

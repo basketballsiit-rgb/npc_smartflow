@@ -493,7 +493,8 @@ export default function Dashboard({
         const isAdmin = Boolean(auth.user?.is_admin || role === 'admin' || auth.user?.role?.name === 'admin');
     const isPlanHead = Boolean(role === 'plan_head' || auth.user?.is_plan_head || auth.user?.role?.name === 'plan_head');
     const isProcurementHead = Boolean(role === 'procurement_head' || auth.user?.role?.name === 'procurement_head');
-    const isExecutive = Boolean(role === 'executive' || auth.user?.role?.name === 'executive');
+    const isExecutive = Boolean(auth.user?.is_executive || role === 'executive' || auth.user?.role?.name === 'executive' || auth.user?.is_director || auth.user?.is_deputy_director);
+    const isDeputyDirectorStrategy = Boolean(auth.user?.is_deputy_director_strategy);
     const isPlanStaff = isAdmin || isPlanHead || Boolean(auth.user?.is_plan_staff || role === 'plan_staff' || auth.user?.role?.name === 'plan_staff');
     const isFinanceStaff = Boolean(isAdmin || role === 'finance_head' || auth.user?.role?.name === 'finance_head' || auth.user?.is_finance_staff);
     const isProcurementStaff = isAdmin || isProcurementHead || Boolean(auth.user?.is_procurement_staff || role === 'procurement_staff' || auth.user?.role?.name === 'procurement_staff');
@@ -9374,11 +9375,22 @@ ${itemsListText}
             <div className="space-y-8 font-sans">
                 {/* 1. Global Combined Budget Header */}
                 <div className="rounded-3xl bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-950 p-6 md:p-8 text-white shadow-lg space-y-6">
-                    <div>
-                        <span className="bg-amber-400/20 text-amber-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                            แดชบอร์ดสรุปและจัดสรรงบประมาณจริงจากส่วนกลาง
-                        </span>
-                        <h2 className="text-xl md:text-2xl font-black mt-2">สรุปงบจัดสรรจากต้นสังกัด เทียบแผนโครงการ & งบดำเนินงานประจำปี</h2>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <span className="bg-amber-400/20 text-amber-300 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                                แดชบอร์ดสรุปและจัดสรรงบประมาณจริงจากส่วนกลาง
+                            </span>
+                            <h2 className="text-xl md:text-2xl font-black mt-2">สรุปงบจัดสรรจากต้นสังกัด เทียบแผนโครงการ & งบดำเนินงานประจำปี</h2>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('action_plan_report')}
+                                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer"
+                            >
+                                <span>📊</span> รายงานแผนปฏิบัติราชการ
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 border-t border-white/10 pt-6">

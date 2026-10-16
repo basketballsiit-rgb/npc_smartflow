@@ -14,6 +14,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const userRoleName = user?.role?.name || (typeof user?.role === 'string' ? user.role : '');
     const isAdmin = Boolean(user?.is_admin || userRoleName === 'admin');
     const isExecutive = Boolean(user?.is_executive || userRoleName === 'executive');
+    const isDeputyDirectorStrategy = Boolean(user?.is_deputy_director_strategy);
     const isPlanHead = Boolean(user?.is_plan_head || userRoleName === 'plan_head');
     const isPlanStaff = Boolean(user?.is_plan_staff || userRoleName === 'plan_staff' || isPlanHead);
     const isProcurementStaff = Boolean(user?.is_procurement_staff || user?.is_procurement_head || userRoleName === 'procurement_head');
@@ -861,8 +862,8 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                         )}
 
-                        {/* 6. PLANNING HUB (เฉพาะเจ้าหน้าที่งานแผนงานและงบประมาณ และ Admin) */}
-                        {(isPlanStaff || isAdmin) && (
+                        {/* 6. PLANNING HUB (เฉพาะเจ้าหน้าที่งานแผนงาน, หัวหน้างานแผนงาน, รอง ผอ.ฝ่ายยุทธศาสตร์ฯ และ Admin) */}
+                        {(isPlanStaff || isPlanHead || isDeputyDirectorStrategy || isAdmin) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
                                 <button
