@@ -49,6 +49,7 @@ export default function Dashboard({
     const fiscalYear = systemSettings?.find(s => s.key === 'current_fiscal_year')?.value || '2569';
     const getSecureProjectShowUrl = (id) => {
         if (!id) return '#';
+        const prefix = (typeof window !== 'undefined' && window.location.pathname.startsWith('/npc_smartflow')) ? '/npc_smartflow' : '';
         try {
             let url = route('projects.show', id);
             if (typeof window !== 'undefined') {
@@ -58,16 +59,15 @@ export default function Dashboard({
                 const currentOrigin = window.location.origin;
                 const parsed = new URL(url, currentOrigin);
                 if (parsed.hostname === 'localhost' || parsed.hostname !== window.location.hostname) {
-                    const prefix = window.location.pathname.startsWith('/npc_smartflow') ? '/npc_smartflow' : '';
                     const cleanPath = parsed.pathname.startsWith('/npc_smartflow') ? parsed.pathname : `${prefix}${parsed.pathname}`;
                     url = currentOrigin + cleanPath + parsed.search + parsed.hash;
-                } else if (window.location.pathname.startsWith('/npc_smartflow') && !parsed.pathname.startsWith('/npc_smartflow')) {
-                    url = currentOrigin + '/npc_smartflow' + parsed.pathname + parsed.search + parsed.hash;
+                } else if (prefix && !parsed.pathname.startsWith('/npc_smartflow')) {
+                    url = currentOrigin + prefix + parsed.pathname + parsed.search + parsed.hash;
                 }
             }
             return url;
         } catch (e) {
-            return `/npc_smartflow/projects/${id}`;
+            return `${prefix}/projects/${id}`;
         }
     };
 
@@ -12141,10 +12141,6 @@ ${itemsListText}
                                                             href={getSecureProjectShowUrl(p.id)}
                                                             className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-purple-600/25 hover:shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
                                                             title="ตรวจสอบและลงนามโครงการ"
-                                                            onClick={(e) => {
-                                                                e.preventDefault();
-                                                                router.visit(getSecureProjectShowUrl(p.id));
-                                                            }}
                                                         >
                                                             🔍 ตรวจสอบ ➔
                                                         </Link>
