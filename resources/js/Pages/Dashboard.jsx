@@ -495,10 +495,20 @@ export default function Dashboard({
     const isPlanHead = Boolean(role === 'plan_head' || auth.user?.is_plan_head || auth.user?.role?.name === 'plan_head');
     const isProcurementHead = Boolean(role === 'procurement_head' || auth.user?.role?.name === 'procurement_head');
     const isExecutive = Boolean(auth.user?.is_executive || role === 'executive' || auth.user?.role?.name === 'executive' || auth.user?.is_director || auth.user?.is_deputy_director);
-    const isDeputyDirectorStrategy = Boolean(auth.user?.is_deputy_director_strategy);
-    const isPlanStaff = isAdmin || isPlanHead || Boolean(auth.user?.is_plan_staff || role === 'plan_staff' || auth.user?.role?.name === 'plan_staff');
+    const isDeputyDirectorStrategy = Boolean(auth.user?.is_deputy_director_strategy || (isExecutive && (auth.user?.position?.includes('ยุทธศาสตร์') || auth.user?.department?.name?.includes('ยุทธศาสตร์'))));
+    const isPlanStaff = isAdmin || isPlanHead || Boolean(auth.user?.is_plan_staff || role === 'plan_staff' || auth.user?.role?.name === 'plan_staff' || auth.user?.department?.name?.includes('แผน') || auth.user?.position?.includes('แผน') || auth.user?.department?.name?.includes('ยุทธศาสตร์') || auth.user?.position?.includes('ยุทธศาสตร์'));
     const isFinanceStaff = Boolean(isAdmin || role === 'finance_head' || auth.user?.role?.name === 'finance_head' || auth.user?.is_finance_staff);
     const isProcurementStaff = isAdmin || isProcurementHead || Boolean(auth.user?.is_procurement_staff || role === 'procurement_staff' || auth.user?.role?.name === 'procurement_staff');
+    const canFastApprove = Boolean(
+        isAdmin ||
+        isPlanStaff ||
+        isPlanHead ||
+        isExecutive ||
+        isDeputyDirectorStrategy ||
+        auth.user?.position?.includes('ยุทธศาสตร์') ||
+        auth.user?.position?.includes('แผนงาน') ||
+        auth.user?.position?.includes('รองผู้อำนวยการ')
+    );
 
     const handleRollbackProcurement = (proj, targetStatus) => {
         const isToPending = targetStatus === 'pending';
@@ -5433,7 +5443,7 @@ export default function Dashboard({
         });
     };
 
-    const handleAdminApproveProject = (project, mode) => {
+    const handleAdminApproveProject = (project, mode, customFundingId = null, customAllocated = null) => {
         const title = mode === 'full' 
             ? `✅ ยืนยันอนุมัติรวดเดียว 6 ขั้นตอนสำหรับ "${project.title}"?`
             : `⚡ อนุมัติขั้นตอนที่ ${project.current_approval_step || 1} ทันทีสำหรับ "${project.title}"?`;
@@ -5451,8 +5461,15 @@ export default function Dashboard({
             cancelButtonText: 'ยกเลิก',
         }).then((result) => {
             if (result.isConfirmed) {
-                router.post(route('projects.admin_approve', project.id), { mode: mode }, {
-                    onSuccess: () => Swal.fire('สำเร็จ!', 'อนุมัติโครงการเรียบร้อยแล้ว', 'success')
+                const payload = { mode: mode };
+                if (customFundingId) payload.funding_source_id = customFundingId;
+                if (customAllocated) payload.allocated_amount = customAllocated;
+
+                router.post(route('projects.admin_approve', project.id), payload, {
+                    onSuccess: () => {
+                        setQuickSignProject(null);
+                        Swal.fire('สำเร็จ!', 'อนุมัติโครงการ 6 ขั้นตอนเรียบร้อยแล้ว (คงชื่อเดิมตามแบบฟอร์ม เว้นช่องลงลายมือชื่อ)', 'success');
+                    }
                 });
             }
         });
@@ -11688,29 +11705,41 @@ ${itemsListText}
                                     <div className="py-1">
                                         {renderMiniStepTracker(p)}
                                     </div>
-                                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOpenAiBrief(p)}
-                                            className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold transition cursor-pointer shrink-0"
-                                            title="AI สรุปโครงการ 3 บรรทัด"
-                                        >
-                                            ✨ สรุป AI
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleOpenQuickSign(p)}
-                                            className="flex-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black shadow-xs transition cursor-pointer text-center"
-                                        >
-                                            ✍️ ลงนามด่วน
-                                        </button>
-                                        <Link
-                                            href={getSecureProjectShowUrl(p.id)}
-                                            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer shrink-0"
-                                            title="ดูเอกสารฉบับเต็ม"
-                                        >
-                                            🔍
-                                        </Link>
+                                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                                        <div className="flex items-center justify-between gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOpenAiBrief(p)}
+                                                className="px-2.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-xs font-bold transition cursor-pointer shrink-0"
+                                                title="AI สรุปโครงการ 3 บรรทัด"
+                                            >
+                                                ✨ สรุป AI
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOpenQuickSign(p)}
+                                                className="flex-1 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black shadow-xs transition cursor-pointer text-center"
+                                            >
+                                                ✍️ ลงนามด่วน
+                                            </button>
+                                            <Link
+                                                href={getSecureProjectShowUrl(p.id)}
+                                                className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer shrink-0"
+                                                title="ดูเอกสารฉบับเต็ม"
+                                            >
+                                                🔍
+                                            </Link>
+                                        </div>
+                                        {canFastApprove && p.status !== 'approved' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAdminApproveProject(p, 'full')}
+                                                className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-black shadow-xs hover:shadow-md transition cursor-pointer text-center"
+                                                title="อนุมัติรวดเดียว 6 ขั้นตอนตามมติงานยุทธศาสตร์และแผนงาน โดยคงชื่อเดิมตามแบบฟอร์ม ไม่แปะลายเซ็น"
+                                            >
+                                                <span>⚡</span> อนุมัติ 6 ขั้นตอน (คงชื่อเดิม ไม่แปะลายเซ็น)
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -12278,6 +12307,16 @@ ${itemsListText}
                                                                 title="ลงนามอนุมัติด่วนด้วยลายเซ็นดิจิทัล"
                                                             >
                                                                 <span>✍️</span> ลงนามด่วน
+                                                            </button>
+                                                        )}
+                                                        {canFastApprove && p.status !== 'approved' && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleAdminApproveProject(p, 'full')}
+                                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white text-xs font-black shadow-md shadow-emerald-600/25 transition cursor-pointer shrink-0"
+                                                                title="อนุมัติรวดเดียว 6 ขั้นตอนตามมติงานยุทธศาสตร์และแผนงาน โดยคงชื่อเดิมตามแบบฟอร์ม ไม่แปะลายเซ็น"
+                                                            >
+                                                                <span>⚡</span> 6 ขั้นตอน
                                                             </button>
                                                         )}
                                                         <Link
@@ -27567,21 +27606,53 @@ return (
                                         />
                                     </div>
 
-                                    <div className="flex justify-end gap-x-3 pt-3 border-t border-purple-100">
-                                        <button
-                                            type="button"
-                                            onClick={() => setQuickSignProject(null)}
-                                            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
-                                        >
-                                            ยกเลิก
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            disabled={isSigningProject}
-                                            className="rounded-xl px-6 py-2.5 text-xs font-black text-white bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 shadow-md shadow-amber-500/25 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                                        >
-                                            <span>✍️</span> {isSigningProject ? 'กำลังประทับลายเซ็น...' : 'ลงนามอนุมัติ (Sign & Approve)'}
-                                        </button>
+                                    {/* Helper Banner for 6-Step Approval */}
+                                    {canFastApprove && (
+                                        <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2.5 text-xs text-emerald-950 font-normal">
+                                            <span className="text-base leading-none">💡</span>
+                                            <div>
+                                                <div className="font-bold text-emerald-900">สิทธิ์พิเศษ: อนุมัติรวดเดียว 6 ขั้นตอน</div>
+                                                <p className="text-[11px] text-emerald-800 mt-0.5 leading-relaxed">
+                                                    ท่านสามารถกดปุ่มสีเขียว <strong className="font-bold">"⚡ อนุมัติ 6 ขั้นตอน"</strong> ด้านล่าง เพื่ออนุมัติโครงการสมบูรณ์ทันที โดยระบบจะผูกงบประมาณที่ระบุ คงรายชื่อและตำแหน่งตามแบบฟอร์มเดิม และเว้นว่างช่องลายมือชื่อไว้สำหรับลงนามจริง
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-3 border-t border-purple-100">
+                                        <div className="w-full sm:w-auto">
+                                            {canFastApprove && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleAdminApproveProject(
+                                                        quickSignProject, 
+                                                        'full', 
+                                                        quickSignFundingSourceId || null, 
+                                                        quickSignAllocatedAmount || null
+                                                    )}
+                                                    className="w-full sm:w-auto rounded-xl px-4 py-2.5 text-xs font-black text-white bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 shadow-md shadow-emerald-600/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                                    title="อนุมัติรวดเดียว 6 ขั้นตอนตามมติงานยุทธศาสตร์และแผนงาน โดยคงชื่อเดิมตามแบบฟอร์ม ไม่แปะลายเซ็น"
+                                                >
+                                                    <span>⚡</span> อนุมัติ 6 ขั้นตอน (คงชื่อเดิม ไม่แปะลายเซ็น)
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="w-full sm:w-auto flex justify-end gap-x-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setQuickSignProject(null)}
+                                                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                            >
+                                                ยกเลิก
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={isSigningProject}
+                                                className="rounded-xl px-5 py-2.5 text-xs font-black text-white bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 shadow-md shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                                            >
+                                                <span>✍️</span> {isSigningProject ? 'กำลังประทับลายเซ็น...' : 'ลงนามอนุมัติ (Sign & Approve)'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </form>
                             </div>
