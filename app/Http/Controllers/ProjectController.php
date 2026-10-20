@@ -1903,13 +1903,23 @@ class ProjectController extends Controller
     }
 
     /**
-     * Admin Super Approval Override: Approve current step or complete full 6-step approval.
+     * Admin / Plan Fast-Track Approval Override: Approve current step or complete full 6-step approval.
      */
     public function adminApprove(Request $request, Project $project)
     {
         $user = auth()->user();
-        if (!$user->isAdmin()) {
-            abort(403, 'เฉพาะผู้ดูแลระบบเท่านั้นที่สามารถใช้อนุมัติลัดนี้ได้');
+        $isPlanUser = $user->isPlanHead() || $user->isPlanStaff() 
+            || ($user->department && (str_contains($user->department->name, 'แผน') || str_contains($user->department->name, 'ยุทธศาสตร์')))
+            || str_contains($user->position ?? '', 'แผน')
+            || str_contains($user->position ?? '', 'ยุทธศาสตร์');
+
+        $canFastApprove = $user->isAdmin() 
+            || $isPlanUser
+            || $user->isDeputyDirectorStrategy() 
+            || $user->isExecutive();
+
+        if (!$canFastApprove) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานพัฒนายุทธศาสตร์ฯ, หัวหน้างานฯ, รองผู้อำนวยการฝ่ายยุทธศาสตร์ฯ, ผู้บริหาร และผู้ดูแลระบบเท่านั้นที่สามารถใช้อนุมัติลัดนี้ได้');
         }
 
         $mode = $request->input('mode', 'step'); // 'step' or 'full'
@@ -1917,8 +1927,8 @@ class ProjectController extends Controller
 
         if ($mode === 'full') {
             $defaultFunding = \App\Models\FundingSource::first();
-            $fundingId = $request->input('funding_source_id', $defaultFunding ? $defaultFunding->id : 1);
-            $allocated = $request->input('allocated_amount', $project->estimated_budget);
+            $fundingId = $request->input('funding_source_id', $project->funding_source_id ?: ($defaultFunding ? $defaultFunding->id : 1));
+            $allocated = $request->input('allocated_amount', $project->allocated_budget ?: $project->estimated_budget);
 
             $project->funding_source_id = $fundingId;
             $project->allocated_budget = $allocated;
@@ -1935,25 +1945,63 @@ class ProjectController extends Controller
                 ]
             );
 
-            for ($s = max(1, (int)$project->current_approval_step); $s <= 6; $s++) {
+            // Step 1: ผู้เสนอโครงการ (Proposer) - คงข้อมูลเดิมของผู้เสนอไว้
+            $existingStep1 = ProjectApproval::where('project_id', $project->id)->where('step_number', 1)->first();
+            if (!$existingStep1) {
                 ProjectApproval::create([
                     'project_id' => $project->id,
-                    'user_id' => $user->id,
-                    'step_number' => $s,
+                    'user_id' => $project->user_id,
+                    'step_number' => 1,
                     'status' => 'approved',
-                    'comments' => 'อนุมัติรวดเดียวผ่านสิทธิ์ผู้ดูแลระบบ (Admin Super Override)',
-                    'signature_data' => $adminSig,
-                    'signature_type' => 'admin',
-                    'signature_hash' => $adminSig ? hash('sha256', $user->id . '|' . $project->id . '|' . $s . '|' . now()->toIso8601String() . '|' . config('app.key')) : null,
+                    'comments' => 'ยื่นเสนอขออนุมัติโครงการ',
+                    'signature_data' => $project->user?->signature_data,
+                    'signature_type' => 'proposer',
                     'ip_address' => $request->ip(),
                     'user_agent' => $request->userAgent(),
-                    'signed_at' => now(),
+                    'signed_at' => $project->created_at ?: now(),
                 ]);
+            } else if ($existingStep1->status === 'pending') {
+                $existingStep1->status = 'approved';
+                $existingStep1->save();
+            }
+
+            // Steps 2 through 6: อนุมัติรวดเดียว 6 ขั้นตอนตามมติงานยุทธศาสตร์และแผนงาน
+            // ไม่ลงลายมือชื่อ (signature_data = null) และคงชื่อเดิมตามแบบฟอร์ม
+            for ($s = 2; $s <= 6; $s++) {
+                ProjectApproval::updateOrCreate(
+                    [
+                        'project_id' => $project->id,
+                        'step_number' => $s,
+                    ],
+                    [
+                        'user_id' => $user->id,
+                        'status' => 'approved',
+                        'comments' => 'อนุมัติโครงการ 6 ขั้นตอนตามมติงานยุทธศาสตร์และแผนงาน',
+                        'signature_data' => null,
+                        'signature_type' => 'fast_track',
+                        'signature_hash' => null,
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'signed_at' => now(),
+                    ]
+                );
             }
 
             $project->status = 'approved';
             $project->current_approval_step = 6;
             $project->approved_at = now();
+
+            // จัดเตรียมเลขที่เอกสารพัสดุในขั้นตอน DO หากยังไม่มี
+            $procurement = \App\Models\Procurement::firstOrCreate(
+                ['project_id' => $project->id],
+                ['status' => 'pending']
+            );
+            if (empty($procurement->plan_procurement_doc_number) || str_starts_with($procurement->plan_procurement_doc_number, 'PR-')) {
+                $unifiedDocNumber = \App\Services\DocumentNumberService::generateAndIncrement();
+                $procurement->plan_procurement_doc_number = $unifiedDocNumber;
+                $procurement->procurement_number = $unifiedDocNumber;
+                $procurement->save();
+            }
 
             // Digital Sealing & Verification Hash
             $project->sealed_at = now();
@@ -1965,7 +2013,7 @@ class ProjectController extends Controller
                 $project->user_id,
                 $project->approved_at?->toIso8601String(),
                 $project->sealed_at?->toIso8601String(),
-                $adminSig ? hash('sha256', (string)$adminSig) : 'ADMIN',
+                'FAST_TRACK',
                 config('app.key')
             ]);
             $project->digital_seal_hash = hash('sha256', $sealPayload);
@@ -1975,10 +2023,10 @@ class ProjectController extends Controller
                 action: 'SEALED',
                 model: $project,
                 stepNumber: 6,
-                notes: "ผู้ดูแลระบบอนุมัติโครงการสมบูรณ์ (Admin Full Override) และประทับตรารับรองดิจิทัล รหัส {$project->verification_code}"
+                notes: "อนุมัติโครงการ 6 ขั้นตอนสมบูรณ์ตามมติงานยุทธศาสตร์และแผนงาน (Fast-Track) และประทับตรารับรองดิจิทัล รหัส {$project->verification_code}"
             );
 
-            return redirect()->back()->with('message', 'ผู้ดูแลระบบอนุมัติโครงการสมบูรณ์เรียบร้อยแล้ว (Approved & Digitally Sealed)');
+            return redirect()->back()->with('message', 'อนุมัติโครงการ 6 ขั้นตอนเรียบร้อยแล้ว (คงชื่อเดิมตามแบบฟอร์ม เว้นช่องลงลายมือชื่อ)');
         }
 
         // Single step advance
@@ -2246,12 +2294,18 @@ class ProjectController extends Controller
         // 2. Check if Step 2 was already signed & approved
         $sig2 = $project->approvals->where('step_number', 2)->first();
         if ($sig2 && $sig2->user && $sig2->status === 'approved' && !str_contains($sig2->user->name, 'ฉัตรนภา')) {
-            $name = $sig2->user->name;
-            $pos = $sig2->acting_position_text ?: ($sig2->user->position_level ?: $targetHeadPosition);
-            return [
-                'name' => $name,
-                'position' => $pos ?: $targetHeadPosition,
-            ];
+            $isFastTrackOrAdmin = in_array($sig2->signature_type, ['fast_track', 'admin']) 
+                || empty($sig2->signature_data)
+                || (isset($sig2->comments) && (str_contains($sig2->comments, 'รวดเดียว') || str_contains($sig2->comments, 'Fast-Track') || str_contains($sig2->comments, 'Super Override') || str_contains($sig2->comments, 'มติงานยุทธศาสตร์')));
+
+            if (!$isFastTrackOrAdmin) {
+                $name = $sig2->user->name;
+                $pos = $sig2->acting_position_text ?: ($sig2->user->position_level ?: $targetHeadPosition);
+                return [
+                    'name' => $name,
+                    'position' => $pos ?: $targetHeadPosition,
+                ];
+            }
         }
 
         // 3. For Planning Department, resolve designated Planning Head

@@ -166,6 +166,18 @@ ${itemsListText}
         auth?.user?.position?.includes('แผน') ||
         auth?.user?.position?.includes('ผู้ดูแลระบบ')
     );
+    const canFastApprove = Boolean(
+        isPlanStaffOrAdmin ||
+        auth?.user?.is_executive ||
+        auth?.user?.is_deputy_director ||
+        auth?.user?.role === 'executive' ||
+        auth?.user?.role?.name === 'executive' ||
+        auth?.user?.role === 'deputy_director' ||
+        auth?.user?.role?.name === 'deputy_director' ||
+        auth?.user?.position?.includes('รองผู้อำนวยการ') ||
+        auth?.user?.position?.includes('ยุทธศาสตร์') ||
+        auth?.user?.position?.includes('แผนงาน')
+    );
     const isProcStaffOrAdmin = Boolean(
         auth?.user?.is_admin || 
         auth?.user?.role?.name === 'admin' || 
@@ -585,15 +597,15 @@ ${itemsListText}
 
     const handleAdminApprove = (mode) => {
         const title = mode === 'full' 
-            ? '👑 ยืนยันอนุมัติรวดเดียวสมบูรณ์ทั้ง 6 ขั้นตอน?'
+            ? '✅ ยืนยันอนุมัติรวดเดียว 6 ขั้นตอน?'
             : `⚡ ยืนยันอนุมัติขั้นตอนที่ ${project.current_approval_step || 1} ทันที?`;
 
         Swal.fire({
             title: title,
             text: mode === 'full' 
-                ? 'ระบบจะอนุมัติโครงการนี้จนเสร็จสิ้นสมบูรณ์ (Approved) และผูกงบประมาณอัตโนมัติ'
+                ? 'ระบบจะอนุมัติโครงการทั้ง 6 ขั้นตอนตามมติงานยุทธศาสตร์และแผนงาน โดยคงรายชื่อและตำแหน่งตามแบบฟอร์มเดิม และเว้นช่องลงลายมือชื่อสำหรับการลงนามจริง'
                 : 'ระบบจะอนุมัติผ่านขั้นตอนปัจจุบันและส่งต่อเข้าสู่ขั้นตอนอนุมัติถัดไปทันที',
-            icon: 'warning',
+            icon: 'question',
             showCancelButton: true,
             confirmButtonColor: mode === 'full' ? '#10b981' : '#f59e0b',
             cancelButtonColor: '#64748b',
@@ -603,7 +615,7 @@ ${itemsListText}
             if (result.isConfirmed) {
                 router.post(route('projects.admin_approve', project.id), { mode: mode }, {
                     onSuccess: () => {
-                        Swal.fire('สำเร็จ!', 'การอนุมัติลัดโดยผู้ดูแลระบบเสร็จสิ้นเรียบร้อยแล้ว', 'success');
+                        Swal.fire('สำเร็จ!', 'อนุมัติโครงการเรียบร้อยแล้ว', 'success');
                     }
                 });
             }
@@ -1627,29 +1639,29 @@ ${itemsListText}
                                     </div>
                                 )}
 
-                                {(auth?.user?.is_admin || auth?.user?.role?.name === 'admin' || auth?.user?.role === 'admin' || auth?.user?.is_executive) && project.status !== 'approved' && (
-                                    <div className="rounded-2xl border-2 border-amber-300 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 p-5 shadow-md space-y-3 font-sans">
-                                        <div className="flex items-center gap-2 text-amber-950 font-black text-sm">
-                                            <span>👑</span>
-                                            <span>แผงควบคุมอนุมัติลัด (ผู้ดูแลระบบ & ผู้บริหาร)</span>
+                                {canFastApprove && project.status !== 'approved' && (
+                                    <div className="rounded-2xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 via-teal-50 to-amber-50 p-5 shadow-md space-y-3 font-sans">
+                                        <div className="flex items-center gap-2 text-emerald-950 font-black text-sm">
+                                            <span>⚡</span>
+                                            <span>แผงควบคุมอนุมัติโครงการ (งานยุทธศาสตร์และแผนงาน / ผู้บริหาร / ผู้ดูแลระบบ)</span>
                                         </div>
-                                        <p className="text-xs text-amber-900 leading-relaxed">
-                                            ผู้ดูแลระบบสามารถกดอนุมัติข้ามขั้นตอนปัจจุบัน หรือกดอนุมัติรวดเดียวสมบูรณ์ทั้ง 6 ขั้นตอนเพื่อทดสอบระบบได้ทันที
+                                        <p className="text-xs text-emerald-900 leading-relaxed">
+                                            เจ้าหน้าที่งานยุทธศาสตร์ฯ หัวหน้างานฯ รองฝ่ายยุทธศาสตร์ฯ และผู้ดูแลระบบ สามารถกดอนุมัติรวดเดียว 6 ขั้นตอนตามมติ โดยระบบจะคงรายชื่อและตำแหน่งตามแบบฟอร์มเดิมโดยไม่ต้องลงลายมือชื่อ เพื่อความสะดวกรวดเร็วในการบริหารโครงการ
                                         </p>
                                         <div className="flex flex-col gap-2 pt-1">
                                             <button
                                                 type="button"
                                                 onClick={() => handleAdminApprove('step')}
-                                                className="w-full inline-flex justify-center items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 py-2.5 px-3 text-xs font-extrabold text-white shadow-md hover:scale-105 active:scale-95 transition-all"
+                                                className="w-full inline-flex justify-center items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 py-2.5 px-3 text-xs font-extrabold text-white shadow-md hover:scale-[1.01] active:scale-95 transition-all"
                                             >
-                                                ⚡ อนุมัติขั้นที่ {project.current_approval_step || 1} ทันที (Admin Advance)
+                                                ⚡ อนุมัติขั้นที่ {project.current_approval_step || 1} ทันที (Advance Step)
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => handleAdminApprove('full')}
-                                                className="w-full inline-flex justify-center items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 py-2.5 px-3 text-xs font-extrabold text-white shadow-md hover:scale-105 active:scale-95 transition-all"
+                                                className="w-full inline-flex justify-center items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 py-2.5 px-3 text-xs font-extrabold text-white shadow-md hover:scale-[1.01] active:scale-95 transition-all"
                                             >
-                                                👑 อนุมัติรวดเดียวสมบูรณ์ (Admin Full 6-Step)
+                                                ✅ อนุมัติรวดเดียว 6 ขั้นตอน (คงชื่อเดิมตามแบบฟอร์ม ไม่ลงลายมือชื่อ)
                                             </button>
                                         </div>
                                     </div>

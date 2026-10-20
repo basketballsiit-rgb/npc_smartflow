@@ -5435,15 +5435,15 @@ export default function Dashboard({
 
     const handleAdminApproveProject = (project, mode) => {
         const title = mode === 'full' 
-            ? `👑 อนุมัติรวดเดียวสมบูรณ์ทั้ง 6 ขั้นตอนสำหรับ "${project.title}"?`
+            ? `✅ ยืนยันอนุมัติรวดเดียว 6 ขั้นตอนสำหรับ "${project.title}"?`
             : `⚡ อนุมัติขั้นตอนที่ ${project.current_approval_step || 1} ทันทีสำหรับ "${project.title}"?`;
 
         Swal.fire({
             title: title,
             text: mode === 'full' 
-                ? 'ระบบจะอนุมัติโครงการนี้จนเสร็จสิ้นสมบูรณ์ (Approved) และผูกงบประมาณอัตโนมัติ'
+                ? 'ระบบจะอนุมัติโครงการทั้ง 6 ขั้นตอนตามมติงานยุทธศาสตร์และแผนงาน โดยคงรายชื่อและตำแหน่งตามแบบฟอร์มเดิม และเว้นช่องลงลายมือชื่อสำหรับการลงนามจริง'
                 : 'ระบบจะอนุมัติผ่านขั้นตอนปัจจุบันและส่งต่อเข้าสู่ขั้นตอนอนุมัติถัดไปทันที',
-            icon: 'warning',
+            icon: 'question',
             showCancelButton: true,
             confirmButtonColor: mode === 'full' ? '#10b981' : '#f59e0b',
             cancelButtonColor: '#64748b',
@@ -5452,7 +5452,7 @@ export default function Dashboard({
         }).then((result) => {
             if (result.isConfirmed) {
                 router.post(route('projects.admin_approve', project.id), { mode: mode }, {
-                    onSuccess: () => Swal.fire('สำเร็จ!', 'การอนุมัติลัดโดยผู้ดูแลระบบเสร็จสิ้นเรียบร้อยแล้ว', 'success')
+                    onSuccess: () => Swal.fire('สำเร็จ!', 'อนุมัติโครงการเรียบร้อยแล้ว', 'success')
                 });
             }
         });

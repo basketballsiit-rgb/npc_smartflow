@@ -266,6 +266,23 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
     const sig5 = getApprovalByStep(5);
     const sig6 = getApprovalByStep(6);
 
+    // ตรวจสอบว่าขั้นตอนดังกล่าวเกิดจากการอนุมัติรวดเดียว (Fast-Track / Admin Super Override) หรือไม่
+    const isFastTrackApproval = (sig) => {
+        if (!sig) return false;
+        if (sig.signature_type === 'fast_track' || sig.signature_type === 'admin') return true;
+        if (sig.comments && (
+            sig.comments.includes('รวดเดียว') || 
+            sig.comments.includes('Fast-Track') || 
+            sig.comments.includes('Super Override') ||
+            sig.comments.includes('มติงานยุทธศาสตร์')
+        )) return true;
+        // กรณีโครงการเดิมที่ถูกสแตมป์ชื่อผู้กดคนเดียวกันตั้งแต่ขั้นตอน 2 ถึง 6
+        if (sig.step_number >= 2 && sig2?.user_id && sig3?.user_id && sig2.user_id === sig3.user_id && (sig2.user_id === sig5?.user_id || sig2.user_id === sig6?.user_id)) {
+            return true;
+        }
+        return false;
+    };
+
     const deptName = project.department?.name || '';
     const proposerPos = project.position || project.user?.position || '';
     
@@ -278,8 +295,8 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         || (deptName.includes('ฝ่ายยุทธศาสตร์และแผนงาน') && !proposerPos);
 
     const getStep2Name = () => {
-        // 1. If Step 2 approval exists and approved by a user (excluding Chatnapa)
-        if (sig2?.user?.name && !sig2.user.name.includes('ฉัตรนภา')) {
+        // 1. If Step 2 approval exists and approved normally (not fast-track, and excluding Chatnapa)
+        if (sig2?.user?.name && !isFastTrackApproval(sig2) && !sig2.user.name.includes('ฉัตรนภา')) {
             return toThaiNumerals(cleanPersonName(sig2.user.name));
         }
         // 2. If resolved head user was found by backend matching this exact head position
@@ -298,11 +315,13 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
     };
 
     const getStep2Position = () => {
-        if (sig2?.acting_position_text) {
-            return toThaiNumerals(sig2.acting_position_text);
-        }
-        if (sig2?.user?.position_level) {
-            return toThaiNumerals(sig2.user.position_level);
+        if (!isFastTrackApproval(sig2)) {
+            if (sig2?.acting_position_text) {
+                return toThaiNumerals(sig2.acting_position_text);
+            }
+            if (sig2?.user?.position_level) {
+                return toThaiNumerals(sig2.user.position_level);
+            }
         }
         if (resolvedHead?.position) {
             return toThaiNumerals(resolvedHead.position);
@@ -990,9 +1009,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && (sig1?.signature_data || project.user?.signature_data) ? (
+                                            {includeSignatures && (isFastTrackApproval(sig1) ? project.user?.signature_data : (sig1?.signature_data || project.user?.signature_data)) ? (
                                                 <img 
-                                                    src={sig1?.signature_data || project.user?.signature_data} 
+                                                    src={isFastTrackApproval(sig1) ? project.user?.signature_data : (sig1?.signature_data || project.user?.signature_data)} 
                                                     alt="ลายมือชื่อ" 
                                                     className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                                 />
@@ -1006,7 +1025,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                        ({toThaiNumerals(sig1?.user?.name ? cleanPersonName(sig1.user.name) : (cleanedResponsiblePerson || '...............................................'))})
+                                        ({toThaiNumerals((!isFastTrackApproval(sig1) && sig1?.user?.name) ? cleanPersonName(sig1.user.name) : (cleanedResponsiblePerson || '...............................................'))})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
                                         {project.position 
@@ -1039,7 +1058,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig2?.signature_data ? (
+                                            {includeSignatures && sig2?.signature_data && !isFastTrackApproval(sig2) ? (
                                                 <img 
                                                     src={sig2.signature_data} 
                                                     alt="ลายมือชื่อ" 
@@ -1061,7 +1080,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         {getStep2Position()}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig2?.signed_at 
+                                        {includeSignatures && sig2?.signed_at && !isFastTrackApproval(sig2)
                                             ? formatThaiSignatureDate(sig2.signed_at) 
                                             : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                     </p>
@@ -1079,7 +1098,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig3?.signature_data ? (
+                                            {includeSignatures && sig3?.signature_data && !isFastTrackApproval(sig3) ? (
                                                 <img 
                                                     src={sig3.signature_data} 
                                                     alt="ลายมือชื่อ" 
@@ -1095,15 +1114,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                        ({sig3?.user?.name ? toThaiNumerals(cleanPersonName(sig3.user.name)) : toThaiNumerals(cleanPersonName(college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา'))})
+                                        ({!isFastTrackApproval(sig3) && sig3?.user?.name 
+                                            ? toThaiNumerals(cleanPersonName(sig3.user.name)) 
+                                            : toThaiNumerals(cleanPersonName(college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา'))})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                        {sig3?.acting_position_text
+                                        {!isFastTrackApproval(sig3) && sig3?.acting_position_text
                                             ? toThaiNumerals(sig3.acting_position_text)
-                                            : (sig3?.user?.position_level ? toThaiNumerals(sig3.user.position_level) : 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ')}
+                                            : (!isFastTrackApproval(sig3) && sig3?.user?.position_level 
+                                                ? toThaiNumerals(sig3.user.position_level) 
+                                                : toThaiNumerals(college_settings?.plan_head_position || 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ'))}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig3?.signed_at 
+                                        {includeSignatures && sig3?.signed_at && !isFastTrackApproval(sig3)
                                             ? formatThaiSignatureDate(sig3.signed_at) 
                                             : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                     </p>
@@ -1118,7 +1141,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig4?.signature_data ? (
+                                            {includeSignatures && sig4?.signature_data && !isFastTrackApproval(sig4) ? (
                                                 <img 
                                                     src={sig4.signature_data} 
                                                     alt="ลายมือชื่อ" 
@@ -1134,7 +1157,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                        ({sig4?.user?.name 
+                                        ({!isFastTrackApproval(sig4) && sig4?.user?.name 
                                             ? toThaiNumerals(cleanPersonName(sig4.user.name)) 
                                             : (project.department?.deputy_director_name 
                                                 ? toThaiNumerals(cleanPersonName(project.department.deputy_director_name)) 
@@ -1143,15 +1166,16 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                     : '...............................................'))})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                        {sig4?.acting_position_text
+                                        {!isFastTrackApproval(sig4) && sig4?.acting_position_text
                                             ? toThaiNumerals(sig4.acting_position_text)
-                                            : (sig4?.user?.position_level 
-                                                || project.department?.deputy_director_position 
-                                                || project.department?.parent?.deputy_director_position 
-                                                || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................')))}
+                                            : (!isFastTrackApproval(sig4) && sig4?.user?.position_level 
+                                                ? toThaiNumerals(sig4.user.position_level)
+                                                : toThaiNumerals(project.department?.deputy_director_position 
+                                                    || project.department?.parent?.deputy_director_position 
+                                                    || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................'))))}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig4?.signed_at 
+                                        {includeSignatures && sig4?.signed_at && !isFastTrackApproval(sig4)
                                             ? formatThaiSignatureDate(sig4.signed_at) 
                                             : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                     </p>
@@ -1167,7 +1191,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         ลงชื่อ
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
-                                        {includeSignatures && sig5?.signature_data ? (
+                                        {includeSignatures && sig5?.signature_data && !isFastTrackApproval(sig5) ? (
                                             <img 
                                                 src={sig5.signature_data} 
                                                 alt="ลายมือชื่อ" 
@@ -1183,15 +1207,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                     </span>
                                 </div>
                                 <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                    ({sig5?.user?.name ? toThaiNumerals(cleanPersonName(sig5.user.name)) : 'นายนิพนธ์ ร่องพืช'})
+                                    ({!isFastTrackApproval(sig5) && sig5?.user?.name 
+                                        ? toThaiNumerals(cleanPersonName(sig5.user.name)) 
+                                        : toThaiNumerals(cleanPersonName(college_settings?.plan_deputy_name || 'นายนิพนธ์ ร่องพืช'))})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[280px] text-slate-800">
-                                    {sig5?.acting_position_text
+                                    {!isFastTrackApproval(sig5) && sig5?.acting_position_text
                                         ? toThaiNumerals(sig5.acting_position_text)
-                                        : (sig5?.user?.position_level ? toThaiNumerals(sig5.user.position_level) : 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน')}
+                                        : (!isFastTrackApproval(sig5) && sig5?.user?.position_level 
+                                            ? toThaiNumerals(sig5.user.position_level) 
+                                            : toThaiNumerals(college_settings?.plan_deputy_position || 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'))}
                                 </p>
                                 <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                    {includeSignatures && sig5?.signed_at 
+                                    {includeSignatures && sig5?.signed_at && !isFastTrackApproval(sig5)
                                         ? formatThaiSignatureDate(sig5.signed_at) 
                                         : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                 </p>
@@ -1206,7 +1234,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         ลงชื่อ
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
-                                        {includeSignatures && sig6?.signature_data ? (
+                                        {includeSignatures && sig6?.signature_data && !isFastTrackApproval(sig6) ? (
                                             <img 
                                                 src={sig6.signature_data} 
                                                 alt="ลายมือชื่อ" 
@@ -1222,15 +1250,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                     </span>
                                 </div>
                                 <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                    ({sig6?.user?.name ? toThaiNumerals(cleanPersonName(sig6.user.name)) : (college_settings?.director_name || 'นายกเชษฐ์ กิ่งชนะ')})
+                                    ({!isFastTrackApproval(sig6) && sig6?.user?.name 
+                                        ? toThaiNumerals(cleanPersonName(sig6.user.name)) 
+                                        : toThaiNumerals(cleanPersonName(college_settings?.director_name || 'นายกเชษฐ์ กิ่งชนะ'))})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal text-slate-800">
-                                    {sig6?.acting_position_text
+                                    {!isFastTrackApproval(sig6) && sig6?.acting_position_text
                                         ? toThaiNumerals(sig6.acting_position_text)
-                                        : (sig6?.user?.position_level ? toThaiNumerals(sig6.user.position_level) : (college_settings?.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'))}
+                                        : (!isFastTrackApproval(sig6) && sig6?.user?.position_level 
+                                            ? toThaiNumerals(sig6.user.position_level) 
+                                            : toThaiNumerals(college_settings?.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'))}
                                 </p>
                                 <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                    {includeSignatures && sig6?.signed_at 
+                                    {includeSignatures && sig6?.signed_at && !isFastTrackApproval(sig6)
                                         ? formatThaiSignatureDate(sig6.signed_at) 
                                         : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                 </p>
