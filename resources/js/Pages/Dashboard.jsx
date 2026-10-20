@@ -462,6 +462,7 @@ export default function Dashboard({
         action: 'approve',
         allocated_budget: '',
         funding_source_id: planHeadData?.fundingSources?.[0]?.id || '',
+        funding_allocations: [],
         report_category: '6.1',
         committee_comment: 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว',
         committee_feedback: '',
@@ -3726,10 +3727,30 @@ export default function Dashboard({
             initialAction = 'reject';
         }
 
+        let initialAllocations = [];
+        if (Array.isArray(p.budgets) && p.budgets.length > 0) {
+            initialAllocations = p.budgets.map(b => ({
+                funding_source_id: b.funding_source_id,
+                allocated_amount: (b.allocated_amount !== null && b.allocated_amount !== undefined) ? String(b.allocated_amount) : ''
+            }));
+        } else {
+            initialAllocations = [{
+                funding_source_id: defaultSource,
+                allocated_amount: approvedVal
+            }];
+        }
+
+        const totalAllocated = initialAllocations.reduce((sum, item) => {
+            const sId = Number(item.funding_source_id);
+            if (sId === 12) return sum;
+            return sum + (Number(item.allocated_amount) || 0);
+        }, 0);
+
         setCommitteeForm({
             action: initialAction,
-            allocated_budget: approvedVal,
-            funding_source_id: defaultSource,
+            allocated_budget: initialAllocations.length > 1 ? String(totalAllocated) : approvedVal,
+            funding_source_id: initialAllocations[0]?.funding_source_id || defaultSource,
+            funding_allocations: initialAllocations,
             report_category: defaultCat,
             committee_comment: p.committee_comment || 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว',
             committee_feedback: p.committee_feedback || '',
@@ -3739,20 +3760,95 @@ export default function Dashboard({
         setIsCommitteeModalOpen(true);
     };
 
+    const handleAddFundingAllocation = () => {
+        const availableSources = (planHeadData?.fundingSources || []).filter(s => s.id <= 11);
+        const existingIds = (committeeForm.funding_allocations || []).map(a => Number(a.funding_source_id));
+        const nextSource = availableSources.find(s => !existingIds.includes(Number(s.id))) || availableSources[0] || { id: 1 };
+        
+        const newAllocations = [
+            ...(committeeForm.funding_allocations || []),
+            { funding_source_id: nextSource.id, allocated_amount: '' }
+        ];
+        const newTotal = newAllocations.reduce((sum, item) => {
+            const sId = Number(item.funding_source_id);
+            if (sId === 12) return sum;
+            return sum + (Number(item.allocated_amount) || 0);
+        }, 0);
+        setCommitteeForm({
+            ...committeeForm,
+            funding_allocations: newAllocations,
+            allocated_budget: String(newTotal),
+            funding_source_id: newAllocations[0]?.funding_source_id || committeeForm.funding_source_id,
+        });
+    };
+
+    const handleUpdateFundingAllocation = (index, field, value) => {
+        const newAllocations = [...(committeeForm.funding_allocations || [])];
+        if (!newAllocations[index]) return;
+        
+        newAllocations[index] = {
+            ...newAllocations[index],
+            [field]: value
+        };
+        if (field === 'funding_source_id' && Number(value) === 12) {
+            newAllocations[index].allocated_amount = '0';
+        }
+        const newTotal = newAllocations.reduce((sum, item) => {
+            const sId = Number(item.funding_source_id);
+            if (sId === 12) return sum;
+            return sum + (Number(item.allocated_amount) || 0);
+        }, 0);
+        setCommitteeForm({
+            ...committeeForm,
+            funding_allocations: newAllocations,
+            allocated_budget: String(newTotal),
+            funding_source_id: newAllocations[0]?.funding_source_id || committeeForm.funding_source_id,
+        });
+    };
+
+    const handleRemoveFundingAllocation = (index) => {
+        const newAllocations = (committeeForm.funding_allocations || []).filter((_, i) => i !== index);
+        if (newAllocations.length === 0) {
+            newAllocations.push({ funding_source_id: 1, allocated_amount: '' });
+        }
+        const newTotal = newAllocations.reduce((sum, item) => {
+            const sId = Number(item.funding_source_id);
+            if (sId === 12) return sum;
+            return sum + (Number(item.allocated_amount) || 0);
+        }, 0);
+        setCommitteeForm({
+            ...committeeForm,
+            funding_allocations: newAllocations,
+            allocated_budget: String(newTotal),
+            funding_source_id: newAllocations[0]?.funding_source_id || committeeForm.funding_source_id,
+        });
+    };
+
     const handleCommitteeSubmit = (e) => {
         e.preventDefault();
         if (!selectedProjectForAllocation) return;
 
-        let finalAllocated = committeeForm.allocated_budget;
-        if (Number(committeeForm.funding_source_id) === 12) {
-            finalAllocated = 0;
-        } else if (Number(committeeForm.funding_source_id) === 13 && (finalAllocated === '' || finalAllocated === null || finalAllocated === undefined)) {
-            finalAllocated = 0;
-        }
+        const rawAllocations = (committeeForm.funding_allocations && committeeForm.funding_allocations.length > 0)
+            ? committeeForm.funding_allocations
+            : [{ funding_source_id: committeeForm.funding_source_id, allocated_amount: committeeForm.allocated_budget }];
+
+        let finalAllocated = 0;
+        const processedAllocations = rawAllocations.map(a => {
+            const sId = Number(a.funding_source_id);
+            let amt = (sId === 12) ? 0 : Number(a.allocated_amount !== undefined ? a.allocated_amount : a.allocated_budget || 0);
+            if (isNaN(amt)) amt = 0;
+            finalAllocated += amt;
+            return {
+                funding_source_id: sId,
+                allocated_amount: amt,
+            };
+        });
 
         router.post(route('projects.committee_allocate', selectedProjectForAllocation.id), {
             ...committeeForm,
             allocated_budget: finalAllocated,
+            funding_source_id: processedAllocations[0]?.funding_source_id || committeeForm.funding_source_id,
+            funding_allocations: processedAllocations,
         }, {
             preserveScroll: true,
             onSuccess: () => {
@@ -10662,20 +10758,41 @@ ${itemsListText}
                 rowData[cat].planBudget += alloc;
                 rowData[cat].spentAmount += spent;
 
-                const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
-                const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
-                const colId = getColumnIdBySource(sourceName, sourceId);
-                if (colId && rowData[cat].cols[colId] !== undefined) {
-                    rowData[cat].cols[colId] += alloc;
-                }
+                if (Array.isArray(p.budgets) && p.budgets.length > 0) {
+                    p.budgets.forEach(b => {
+                        const bAmt = parseFloat(b.allocated_amount || 0);
+                        if (bAmt > 0) {
+                            const bSourceName = b.funding_source_name || b.funding_source?.name || b.fundingSource?.name || '';
+                            const bSourceId = b.funding_source_id;
+                            const bColId = getColumnIdBySource(bSourceName, bSourceId);
+                            if (bColId && rowData[cat].cols[bColId] !== undefined) {
+                                rowData[cat].cols[bColId] += bAmt;
+                            }
+                            rowData[cat].items.push({
+                                type: 'project',
+                                title: p.budgets.length > 1 ? `${p.title || p.name || 'โครงการ'} (${bSourceName || 'งบประมาณ'})` : (p.title || p.name || 'โครงการ'),
+                                amount: bAmt,
+                                sourceName: bSourceName || 'ไม่ระบุแหล่งเงิน',
+                                colId: bColId,
+                            });
+                        }
+                    });
+                } else {
+                    const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+                    const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
+                    const colId = getColumnIdBySource(sourceName, sourceId);
+                    if (colId && rowData[cat].cols[colId] !== undefined) {
+                        rowData[cat].cols[colId] += alloc;
+                    }
 
-                rowData[cat].items.push({
-                    type: 'project',
-                    title: p.title || p.name || 'โครงการ',
-                    amount: alloc,
-                    sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
-                    colId: colId,
-                });
+                    rowData[cat].items.push({
+                        type: 'project',
+                        title: p.title || p.name || 'โครงการ',
+                        amount: alloc,
+                        sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
+                        colId: colId,
+                    });
+                }
             }
         });
 
@@ -10722,13 +10839,27 @@ ${itemsListText}
         });
         (allProjectsMaster || []).forEach(p => {
             if (!isProjectApprovedForReport(p)) return;
-            const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
-            const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
-            const colId = getColumnIdBySource(sourceName, sourceId);
-            if (colId && estimateIncomeByCol[colId] !== undefined) {
-                const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
-                if (alloc > 0) {
-                    estimateIncomeByCol[colId] += alloc;
+            if (Array.isArray(p.budgets) && p.budgets.length > 0) {
+                p.budgets.forEach(b => {
+                    const bAmt = parseFloat(b.allocated_amount || 0);
+                    if (bAmt > 0) {
+                        const bSourceName = b.funding_source_name || b.funding_source?.name || b.fundingSource?.name || '';
+                        const bSourceId = b.funding_source_id;
+                        const bColId = getColumnIdBySource(bSourceName, bSourceId);
+                        if (bColId && estimateIncomeByCol[bColId] !== undefined) {
+                            estimateIncomeByCol[bColId] += bAmt;
+                        }
+                    }
+                });
+            } else {
+                const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+                const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
+                const colId = getColumnIdBySource(sourceName, sourceId);
+                if (colId && estimateIncomeByCol[colId] !== undefined) {
+                    const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
+                    if (alloc > 0) {
+                        estimateIncomeByCol[colId] += alloc;
+                    }
                 }
             }
         });
@@ -26517,11 +26648,108 @@ return (
                                     {/* Action: Approve & Allocate */}
                                     {committeeForm.action === 'approve' && (
                                         <div className="space-y-4 border-t border-purple-100 pt-4">
-                                            {/* 2-Box Budget Comparison */}
+                                            {/* Multi-Funding Source Allocation Section */}
+                                            <div className="space-y-3 rounded-2xl border-2 border-purple-200 bg-purple-50/30 p-4">
+                                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                                    <label className="text-xs font-black text-purple-950 flex items-center gap-1.5">
+                                                        <span>💰</span> การจัดสรรแหล่งเงินงบประมาณ (Funding Source Allocation) *
+                                                    </label>
+                                                    <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-purple-200 text-purple-900">
+                                                        {(committeeForm.funding_allocations?.length || 1) > 1 
+                                                            ? `⚡ พหุแหล่งงบประมาณ (${committeeForm.funding_allocations.length} แหล่งทุน)` 
+                                                            : '1 แหล่งงบประมาณ'}
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="space-y-2.5">
+                                                    {(committeeForm.funding_allocations && committeeForm.funding_allocations.length > 0 
+                                                        ? committeeForm.funding_allocations 
+                                                        : [{ funding_source_id: committeeForm.funding_source_id, allocated_amount: committeeForm.allocated_budget }]
+                                                    ).map((alloc, idx) => {
+                                                        const isNonBudget = Number(alloc.funding_source_id) === 12;
+                                                        const isSpecial = Number(alloc.funding_source_id) === 13;
+                                                        return (
+                                                            <div key={idx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 rounded-xl bg-white border border-purple-200 shadow-2xs hover:border-purple-400 transition">
+                                                                <div className="flex items-center gap-2 sm:w-1/2">
+                                                                    <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-900 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                                                        {idx + 1}
+                                                                    </span>
+                                                                    <select
+                                                                        value={alloc.funding_source_id}
+                                                                        onChange={(e) => handleUpdateFundingAllocation(idx, 'funding_source_id', Number(e.target.value))}
+                                                                        className="w-full rounded-xl border-purple-200 px-3 py-1.5 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500 bg-slate-50/50"
+                                                                    >
+                                                                        <optgroup label="📋 แหล่งเงิน 11 หมวดตามแผนปฏิบัติราชการ">
+                                                                            {(planHeadData?.fundingSources || [
+                                                                                { id: 1, name: 'ปวช.' },
+                                                                                { id: 2, name: 'ปวส.' },
+                                                                                { id: 3, name: 'ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)' },
+                                                                                { id: 4, name: 'ระยะสั้น (ค่าสาธารณูปโภค)' },
+                                                                                { id: 5, name: 'ทวิศึกษา' },
+                                                                                { id: 6, name: 'อุดหนุนเพื่อการจัดการ' },
+                                                                                { id: 7, name: 'อุดหนุนพัฒนา' },
+                                                                                { id: 8, name: 'อุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือ)' },
+                                                                                { id: 9, name: 'อุดหนุนเรียนฟรี 15 ปี (อุปกรณ์การเรียน)' },
+                                                                                { id: 10, name: 'อุดหนุนเรียนฟรี 15 ปี (เครื่องแบบนักเรียน)' },
+                                                                                { id: 11, name: 'บกศ.' },
+                                                                            ]).filter(s => s.id <= 11).map(s => {
+                                                                                const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
+                                                                                return <option key={s.id} value={s.id}>{displayName}</option>;
+                                                                            })}
+                                                                        </optgroup>
+                                                                        <optgroup label="⚡ แหล่งเงินพิเศษ / เฉพาะกิจ">
+                                                                            <option value={12}>⚪ ไม่ใช้งบประมาณ (Non-budgeted / 0.00 บาท)</option>
+                                                                            <option value={13}>💼 งบเฉพาะโครงการ (จัดสรรเฉพาะกิจจากส่วนกลาง)</option>
+                                                                        </optgroup>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div className="relative flex-1">
+                                                                    <input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        disabled={isNonBudget}
+                                                                        value={isNonBudget ? '0' : alloc.allocated_amount}
+                                                                        onChange={(e) => handleUpdateFundingAllocation(idx, 'allocated_amount', e.target.value)}
+                                                                        className={`w-full rounded-xl px-3 py-1.5 text-xs font-black shadow-inner ${
+                                                                            isNonBudget
+                                                                                ? 'border-slate-300 bg-slate-200/60 text-slate-500 cursor-not-allowed'
+                                                                                : isSpecial
+                                                                                ? 'border-amber-300 bg-amber-50/30 text-amber-950 focus:border-amber-600 focus:ring-amber-500'
+                                                                                : 'border-emerald-300 bg-white text-emerald-950 focus:border-emerald-600 focus:ring-emerald-500'
+                                                                        }`}
+                                                                        placeholder={isSpecial ? "0.00 (ใส่ 0 หรือเว้นว่างได้)" : "0.00"}
+                                                                    />
+                                                                    <span className="absolute right-3 top-2 text-[10px] font-bold text-slate-400 pointer-events-none">บาท</span>
+                                                                </div>
+
+                                                                {(committeeForm.funding_allocations?.length || 1) > 1 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveFundingAllocation(idx)}
+                                                                        className="shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition cursor-pointer"
+                                                                        title="ลบแหล่งเงินนี้"
+                                                                    >
+                                                                        ✕
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+
+                                                {/* Add another funding source button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddFundingAllocation}
+                                                    className="w-full py-2 px-3 rounded-xl border-2 border-dashed border-purple-300 bg-white hover:bg-purple-50 text-purple-700 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                                                >
+                                                    <span>➕</span> เพิ่มแหล่งเงินทุนอีกประเภท (โครงการใช้หลายงบประมาณ เช่น ปวช. + งบดำเนินงาน + ระยะสั้น)
+                                                </button>
+                                            </div>
+
+                                            {/* 2-Box Budget Comparison & Total Summary */}
                                             <div className="space-y-2">
-                                                <label className="block text-slate-900 font-bold text-xs">
-                                                    การพิจารณาวงเงินงบประมาณ (Proposed vs Approved Budget)
-                                                </label>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                                                     {/* Box 1: Proposed Budget (Read-only) */}
                                                     <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5">
@@ -26537,67 +26765,19 @@ return (
                                                         </p>
                                                     </div>
 
-                                                    {/* Box 2: Approved Budget (Editable) */}
-                                                    <div className={`rounded-2xl border-2 p-3.5 transition ${
-                                                        Number(committeeForm.funding_source_id) === 12
-                                                            ? 'border-slate-300 bg-slate-100/70'
-                                                            : Number(committeeForm.funding_source_id) === 13
-                                                            ? 'border-amber-400 bg-amber-50/50 focus-within:ring-2 focus-within:ring-amber-400'
-                                                            : 'border-emerald-300 bg-emerald-50/40 focus-within:ring-2 focus-within:ring-emerald-400'
-                                                    }`}>
+                                                    {/* Box 2: Total Approved Budget (Computed from allocations) */}
+                                                    <div className="rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 p-3.5">
                                                         <div className="flex items-center justify-between mb-1">
-                                                            <label className={`text-[11px] font-bold ${
-                                                                Number(committeeForm.funding_source_id) === 12
-                                                                    ? 'text-slate-700'
-                                                                    : Number(committeeForm.funding_source_id) === 13
-                                                                    ? 'text-amber-900'
-                                                                    : 'text-emerald-900'
-                                                            }`}>
-                                                                2. วงเงินจัดสรรจริงที่อนุมัติ {Number(committeeForm.funding_source_id) !== 12 && Number(committeeForm.funding_source_id) !== 13 ? '*' : '(ถ้ามี)'}
-                                                            </label>
-                                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                                                                Number(committeeForm.funding_source_id) === 12
-                                                                    ? 'bg-slate-300 text-slate-800'
-                                                                    : Number(committeeForm.funding_source_id) === 13
-                                                                    ? 'bg-amber-200 text-amber-900'
-                                                                    : 'bg-emerald-200 text-emerald-800'
-                                                            }`}>
-                                                                {Number(committeeForm.funding_source_id) === 12 
-                                                                    ? 'ไม่ใช้งบประมาณ' 
-                                                                    : Number(committeeForm.funding_source_id) === 13
-                                                                    ? 'งบเฉพาะโครงการ (ใส่ 0 หรือเว้นว่างได้)'
-                                                                    : 'อนุมัติจริง'}
+                                                            <span className="text-[11px] font-bold text-emerald-900">2. รวมวงเงินจัดสรรจริงที่อนุมัติ</span>
+                                                            <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-200 text-emerald-800">
+                                                                อนุมัติจริงรวม
                                                             </span>
                                                         </div>
-                                                        <div className="relative">
-                                                            <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                required={Number(committeeForm.funding_source_id) !== 12 && Number(committeeForm.funding_source_id) !== 13}
-                                                                disabled={Number(committeeForm.funding_source_id) === 12}
-                                                                value={Number(committeeForm.funding_source_id) === 12 ? '0' : committeeForm.allocated_budget}
-                                                                onChange={(e) => setCommitteeForm({ ...committeeForm, allocated_budget: e.target.value })}
-                                                                className={`w-full rounded-xl px-3 py-1.5 text-base font-black shadow-inner ${
-                                                                    Number(committeeForm.funding_source_id) === 12
-                                                                        ? 'border-slate-300 bg-slate-200/60 text-slate-500 cursor-not-allowed'
-                                                                        : Number(committeeForm.funding_source_id) === 13
-                                                                        ? 'border-amber-400 bg-white text-amber-950 focus:border-amber-600 focus:ring-amber-500'
-                                                                        : 'border-emerald-400 bg-white text-emerald-950 focus:border-emerald-600 focus:ring-emerald-500'
-                                                                }`}
-                                                                placeholder={Number(committeeForm.funding_source_id) === 13 ? "0.00 (ใส่ 0 หรือเว้นว่างได้หากยังไม่ได้รับจัดสรร)" : "0.00"}
-                                                            />
-                                                            <span className="absolute right-3 top-2 text-xs font-bold text-slate-400 pointer-events-none">บาท</span>
+                                                        <div className="text-base sm:text-lg font-black text-emerald-950">
+                                                            {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(approvedVal)}
                                                         </div>
                                                         <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                                                            {Number(committeeForm.funding_source_id) === 12 ? (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-slate-200 text-slate-700 text-[10px] font-bold">
-                                                                    ⚪ ไม่ใช้งบประมาณ (0.00 บาท) ดำเนินการโดยไม่เบิกจ่ายงบ
-                                                                </span>
-                                                            ) : Number(committeeForm.funding_source_id) === 13 ? (
-                                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900 text-[10px] font-bold leading-normal">
-                                                                    💼 งบเฉพาะโครงการ: หากยังไม่ได้รับหนังสือจัดสรร สามารถเว้นว่างหรือใส่ 0.00 เพื่ออนุมัติในหลักการและนำเข้าเล่มแผนปฏิบัติราชการประจำปีก่อนได้
-                                                                </span>
-                                                            ) : diff === 0 ? (
+                                                            {diff === 0 ? (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                                                                     ✓ อนุมัติเต็มตามที่ขอ (100%)
                                                                 </span>
@@ -26615,6 +26795,26 @@ return (
                                                 </div>
                                             </div>
 
+                                            {/* Breakdown Pills if multiple funding sources */}
+                                            {(committeeForm.funding_allocations?.length || 1) > 1 && (
+                                                <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-3 space-y-1.5">
+                                                    <span className="text-[11px] font-bold text-purple-900 block">📊 สรุปสัดส่วนการใช้งบประมาณรายหมวด:</span>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {committeeForm.funding_allocations.map((a, idx) => {
+                                                            const s = (planHeadData?.fundingSources || []).find(f => Number(f.id) === Number(a.funding_source_id));
+                                                            const sName = (s?.name?.includes('สถานศึกษา') || s?.name?.includes('Revenue') || s?.name?.includes('บำรุงการศึกษา') || s?.name?.includes('บกศ')) ? 'บกศ.' : (s?.name || (Number(a.funding_source_id) === 12 ? 'ไม่ใช้งบ' : Number(a.funding_source_id) === 13 ? 'งบเฉพาะโครงการ' : `แหล่งเงิน ${a.funding_source_id}`));
+                                                            const amt = Number(a.allocated_amount || 0);
+                                                            return (
+                                                                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-purple-200 text-xs font-bold text-purple-950 shadow-2xs">
+                                                                    <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+                                                                    {sName}: <strong className="text-purple-800">{new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amt)}</strong>
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
                                             {/* Reason for adjustment (highlighted if adjusted) */}
                                             <div>
                                                 <label className="block mb-1 text-slate-800 font-bold">
@@ -26630,68 +26830,25 @@ return (
                                                 />
                                             </div>
 
-                                            {/* Funding Source & Category */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                                                <div>
-                                                    <label className="block mb-1 text-purple-900 font-bold">
-                                                        แหล่งเงินงบประมาณ *
-                                                    </label>
-                                                    <select
-                                                        value={committeeForm.funding_source_id}
-                                                        onChange={(e) => {
-                                                            const val = Number(e.target.value);
-                                                            if (val === 12) {
-                                                                setCommitteeForm({ ...committeeForm, funding_source_id: val, allocated_budget: '0' });
-                                                            } else {
-                                                                setCommitteeForm({ ...committeeForm, funding_source_id: val });
-                                                            }
-                                                        }}
-                                                        className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
-                                                    >
-                                                        <optgroup label="📋 แหล่งเงิน 11 หมวดตามแผนปฏิบัติราชการ">
-                                                            {(planHeadData?.fundingSources || [
-                                                                { id: 1, name: 'ปวช.' },
-                                                                { id: 2, name: 'ปวส.' },
-                                                                { id: 3, name: 'ระยะสั้น (ตอบแทน วัสดุ ใช้สอย)' },
-                                                                { id: 4, name: 'ระยะสั้น (ค่าสาธารณูปโภค)' },
-                                                                { id: 5, name: 'ทวิศึกษา' },
-                                                                { id: 6, name: 'อุดหนุนเพื่อการจัดการ' },
-                                                                { id: 7, name: 'อุดหนุนพัฒนา' },
-                                                                { id: 8, name: 'อุดหนุนเรียนฟรี 15 ปี (ค่าหนังสือ)' },
-                                                                { id: 9, name: 'อุดหนุนเรียนฟรี 15 ปี (อุปกรณ์การเรียน)' },
-                                                                { id: 10, name: 'อุดหนุนเรียนฟรี 15 ปี (เครื่องแบบนักเรียน)' },
-                                                                { id: 11, name: 'บกศ.' },
-                                                            ]).filter(s => s.id <= 11).map(s => {
-                                                                const displayName = (s.name?.includes('สถานศึกษา') || s.name?.includes('Revenue') || s.name?.includes('บำรุงการศึกษา') || s.name?.includes('บกศ')) ? 'บกศ.' : s.name;
-                                                                return <option key={s.id} value={s.id}>{displayName}</option>;
-                                                            })}
-                                                        </optgroup>
-                                                        <optgroup label="⚡ แหล่งเงินพิเศษ / เฉพาะกิจ">
-                                                            <option value={12}>⚪ ไม่ใช้งบประมาณ (Non-budgeted / 0.00 บาท)</option>
-                                                            <option value={13}>💼 งบเฉพาะโครงการ (จัดสรรเฉพาะกิจจากส่วนกลาง)</option>
-                                                        </optgroup>
-                                                    </select>
-                                                </div>
-
-                                                <div>
-                                                    <label className="block mb-1 text-purple-900 font-bold">
-                                                        หมวดรายงานแผนปฏิบัติราชการ (Section 6) *
-                                                    </label>
-                                                    <select
-                                                        value={committeeForm.report_category}
-                                                        onChange={(e) => setCommitteeForm({ ...committeeForm, report_category: e.target.value })}
-                                                        className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
-                                                    >
-                                                        <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
-                                                        <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียนนักศึกษา</option>
-                                                        <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
-                                                        <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
-                                                    </select>
-                                                </div>
+                                            {/* Category (Section 6) */}
+                                            <div>
+                                                <label className="block mb-1 text-purple-900 font-bold">
+                                                    หมวดรายงานแผนปฏิบัติราชการ (Section 6) *
+                                                </label>
+                                                <select
+                                                    value={committeeForm.report_category}
+                                                    onChange={(e) => setCommitteeForm({ ...committeeForm, report_category: e.target.value })}
+                                                    className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs font-semibold focus:border-purple-500 focus:ring-purple-500"
+                                                >
+                                                    <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
+                                                    <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียนนักศึกษา</option>
+                                                    <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
+                                                    <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
+                                                </select>
                                             </div>
 
-                                            {/* Optional Special Budget Linkage when funding_source_id === 13 */}
-                                            {Number(committeeForm.funding_source_id) === 13 && (
+                                            {/* Optional Special Budget Linkage when any funding_source_id === 13 */}
+                                            {((committeeForm.funding_allocations || []).some(a => Number(a.funding_source_id) === 13) || Number(committeeForm.funding_source_id) === 13) && (
                                                 <div className="rounded-2xl border-2 border-amber-300 bg-amber-50/70 p-4 space-y-3">
                                                     <div className="flex items-center justify-between flex-wrap gap-2">
                                                         <label className="text-xs font-bold text-amber-950 flex items-center gap-1.5">

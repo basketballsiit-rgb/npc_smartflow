@@ -375,7 +375,7 @@ class DashboardController extends Controller
             || $activeDelegatedPrincipals->some(fn($p) => $p->isPlanHead() || $p->isPlanStaff() || $p->isExecutive() || $p->isAdmin());
 
         if ($isAuthorizedPlanOrExec || in_array($request->query('tab'), ['budgets', 'annual_budget_requests', 'action_plan_report', 'reviews'])) {
-            $prelimQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals'])->latest();
+            $prelimQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'approvals'])->latest();
             
             // For regular users (proposers/teachers), only load their own preliminary proposals
             if (!$isAuthorizedPlanOrExec) {
@@ -383,7 +383,7 @@ class DashboardController extends Controller
             }
 
             $queueQuery = Project::whereIn('status', ['pending_approval', 'submitted', 'draft', 'rejected'])
-                ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'approvals']);
+                ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'approvals']);
 
             if (!$isAuthorizedPlanOrExec) {
                 // Regular users only see their own projects, plus Step 2 projects if they or their principal are department head
@@ -718,7 +718,7 @@ class DashboardController extends Controller
                 $allIds = array_merge([$mainDept->id], $childIds);
 
                 $divProjects = Project::whereIn('department_id', $allIds)
-                    ->with(['department', 'user', 'budget', 'fundingSource'])
+                    ->with(['department', 'user', 'budget', 'budgets.fundingSource', 'fundingSource'])
                     ->latest()
                     ->get();
 
@@ -861,7 +861,7 @@ class DashboardController extends Controller
             || $activeDelegatedPrincipals->some(fn($p) => $p->isAdmin() || $p->isPlanHead() || $p->isPlanStaff() || $p->isProcurementHead() || $p->isProcurementStaff() || $p->isFinanceStaff() || $p->isExecutive());
 
         if ($isPowerUser || in_array($activeTab, ['operation_calendar', 'project_status', 'all_projects', 'document_tracking', 'central_budgets', 'special_project_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
-            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'specialProjectBudget', 'approvals.user', 'approvals.delegatedFromUser', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
+            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'specialProjectBudget', 'approvals.user', 'approvals.delegatedFromUser', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
                 ->latest();
 
             // Non-power users (e.g. general teachers/proposers) only track their own projects, or specifically selected project (unless viewing all_projects or action_plan_report tab)
@@ -882,6 +882,16 @@ class DashboardController extends Controller
                     if ($fundingName !== 'ยังไม่จัดสรร' && (str_contains($fundingName, 'สถานศึกษา') || str_contains($fundingName, 'Revenue') || str_contains($fundingName, 'บำรุงการศึกษา') || str_contains($fundingName, 'บกศ'))) {
                         $fundingName = 'บกศ.';
                         $fundingId = 11;
+                    }
+                    if ($p->budgets && $p->budgets->count() > 1) {
+                        $fundingName = $p->budgets->map(function ($b) {
+                            $name = $b->fundingSource?->name ?? 'ไม่ระบุ';
+                            if (str_contains($name, 'สถานศึกษา') || str_contains($name, 'Revenue') || str_contains($name, 'บำรุงการศึกษา') || str_contains($name, 'บกศ')) {
+                                $name = 'บกศ.';
+                            }
+                            $amt = number_format((float)$b->allocated_amount);
+                            return "{$name} (฿{$amt})";
+                        })->implode(' + ');
                     }
                     $allocAmt = (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?? 0));
                     $dept = $p->department;
@@ -1027,6 +1037,20 @@ class DashboardController extends Controller
                         'main_division_name' => $mainDivName,
                         'funding_source_name' => $fundingName,
                         'funding_source_id' => $fundingId,
+                        'budgets' => $p->budgets ? $p->budgets->map(function ($b) {
+                            $bName = $b->fundingSource?->name ?? 'ไม่ระบุ';
+                            if (str_contains($bName, 'สถานศึกษา') || str_contains($bName, 'Revenue') || str_contains($bName, 'บำรุงการศึกษา') || str_contains($bName, 'บกศ')) {
+                                $bName = 'บกศ.';
+                            }
+                            return [
+                                'id' => $b->id,
+                                'funding_source_id' => $b->funding_source_id,
+                                'funding_source_name' => $bName,
+                                'allocated_amount' => (float)$b->allocated_amount,
+                                'encumbered_amount' => (float)$b->encumbered_amount,
+                                'spent_amount' => (float)$b->spent_amount,
+                            ];
+                        })->values()->toArray() : [],
                         'spent_amount' => (float)($p->budget?->spent_amount ?? 0),
                         'execution_status' => $p->execution_status,
                         'activities' => $p->activities ?? [],

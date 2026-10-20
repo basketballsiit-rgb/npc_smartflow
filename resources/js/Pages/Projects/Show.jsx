@@ -1892,17 +1892,38 @@ ${itemsListText}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="bg-purple-50/50 p-4 rounded-xl border border-purple-100 flex flex-col justify-between">
                                     <div>
-                                        <span className="text-xs font-bold uppercase text-purple-800">แหล่งเงินงบประมาณ</span>
-                                        <p className="text-base font-black text-purple-950 mt-1">
-                                            {(() => {
-                                                const fsId = project.funding_source_id || project.budget?.funding_source_id || project.funding_source?.id || project.budget?.funding_source?.id;
-                                                const fsFromList = fundingSources.find(f => String(f.id) === String(fsId));
-                                                const fn = project.funding_source_name || project.funding_source?.name || project.budget?.funding_source?.name || project.fundingSource?.name || project.budget?.fundingSource?.name || fsFromList?.name;
-                                                if (!fn) return 'ยังไม่ระบุแหล่งเงินทุน';
-                                                if (fn.includes('สถานศึกษา') || fn.includes('Revenue') || fn.includes('บำรุงการศึกษา') || fn.includes('บกศ')) return 'เงินรายได้สถานศึกษา (บกศ.)';
-                                                return fn;
-                                            })()}
-                                        </p>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs font-bold uppercase text-purple-800">แหล่งเงินงบประมาณ</span>
+                                            {project.budgets && project.budgets.length > 1 && (
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-200 text-purple-900">
+                                                    พหุแหล่งงบประมาณ ({project.budgets.length} หมวด)
+                                                </span>
+                                            )}
+                                        </div>
+                                        {project.budgets && project.budgets.length > 1 ? (
+                                            <div className="space-y-1.5 mt-1.5">
+                                                {project.budgets.map(b => (
+                                                    <div key={b.id || b.funding_source_id} className="flex items-center justify-between text-xs font-semibold bg-white/80 border border-purple-200/70 px-2.5 py-1 rounded-lg">
+                                                        <span className="text-purple-950 flex items-center gap-1.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-purple-600"></span>
+                                                            {b.funding_source?.name || b.funding_source_name || (fundingSources.find(f => String(f.id) === String(b.funding_source_id))?.name) || 'งบประมาณ'}:
+                                                        </span>
+                                                        <strong className="text-emerald-700 font-bold">{formatCurrency(b.allocated_amount)}</strong>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-base font-black text-purple-950 mt-1">
+                                                {(() => {
+                                                    const fsId = project.funding_source_id || project.budget?.funding_source_id || project.funding_source?.id || project.budget?.funding_source?.id;
+                                                    const fsFromList = fundingSources.find(f => String(f.id) === String(fsId));
+                                                    const fn = project.funding_source_name || project.funding_source?.name || project.budget?.funding_source?.name || project.fundingSource?.name || project.budget?.fundingSource?.name || fsFromList?.name;
+                                                    if (!fn) return 'ยังไม่ระบุแหล่งเงินทุน';
+                                                    if (fn.includes('สถานศึกษา') || fn.includes('Revenue') || fn.includes('บำรุงการศึกษา') || fn.includes('บกศ')) return 'เงินรายได้สถานศึกษา (บกศ.)';
+                                                    return fn;
+                                                })()}
+                                            </p>
+                                        )}
                                     </div>
                                     {isPlanStaffOrAdmin && (
                                         <div className="pt-2">

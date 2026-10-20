@@ -124,6 +124,17 @@ class Project extends Model
      */
     public function getFundingSourceNameAttribute(): ?string
     {
+        if ($this->relationLoaded('budgets') && $this->budgets->count() > 1) {
+            return $this->budgets->map(function ($b) {
+                $name = $b->fundingSource?->name ?? 'ไม่ระบุ';
+                if (str_contains($name, 'สถานศึกษา') || str_contains($name, 'Revenue') || str_contains($name, 'บำรุงการศึกษา') || str_contains($name, 'บกศ')) {
+                    $name = 'บกศ.';
+                }
+                $amt = number_format((float)$b->allocated_amount);
+                return "{$name} (฿{$amt})";
+            })->implode(' + ');
+        }
+
         return $this->fundingSource?->name
             ?: $this->budget?->fundingSource?->name
             ?: null;

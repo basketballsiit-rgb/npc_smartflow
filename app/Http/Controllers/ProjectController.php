@@ -587,20 +587,75 @@ class ProjectController extends Controller
         ]);
 
         if ($request->input('action') === 'approve') {
-            $fundingSourceId = (int)$request->input('funding_source_id');
-            $isSpecialOrNonBudget = in_array($fundingSourceId, [12, 13]);
+            $fundingAllocations = $request->input('funding_allocations');
+            $hasMultipleAllocations = is_array($fundingAllocations) && count($fundingAllocations) > 0;
 
-            $request->validate([
-                'allocated_budget' => $isSpecialOrNonBudget ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
-                'funding_source_id' => 'required|exists:funding_sources,id',
-                'report_category' => 'nullable|string',
-                'committee_comment' => 'nullable|string',
-                'committee_feedback' => 'nullable|string',
-                'budget_adjustment_reason' => 'nullable|string',
-            ], [
-                'allocated_budget.required' => 'กรุณาระบุวงเงินที่จัดสรรจริง',
-                'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
-            ]);
+            if ($hasMultipleAllocations) {
+                $request->validate([
+                    'funding_allocations' => 'required|array|min:1',
+                    'funding_allocations.*.funding_source_id' => 'required|exists:funding_sources,id',
+                    'funding_allocations.*.allocated_amount' => 'nullable|numeric|min:0',
+                    'report_category' => 'nullable|string',
+                    'committee_comment' => 'nullable|string',
+                    'committee_feedback' => 'nullable|string',
+                    'budget_adjustment_reason' => 'nullable|string',
+                ], [
+                    'funding_allocations.*.funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุนให้ครบทุกรายการ',
+                ]);
+
+                $primaryFundingSourceId = (int)$fundingAllocations[0]['funding_source_id'];
+                $totalApprovedAmount = 0.00;
+                $processedAllocations = [];
+
+                foreach ($fundingAllocations as $alloc) {
+                    $srcId = (int)$alloc['funding_source_id'];
+                    $amt = $srcId === 12 ? 0.00 : (float)($alloc['allocated_amount'] ?? 0);
+                    $totalApprovedAmount += $amt;
+                    $processedAllocations[] = [
+                        'funding_source_id' => $srcId,
+                        'allocated_amount' => $amt,
+                    ];
+                }
+
+                $fundingSourceId = $primaryFundingSourceId;
+                $approvedAmount = $totalApprovedAmount;
+            } else {
+                $fundingSourceId = (int)$request->input('funding_source_id');
+                $isSpecialOrNonBudget = in_array($fundingSourceId, [12, 13]);
+
+                $request->validate([
+                    'allocated_budget' => $isSpecialOrNonBudget ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+                    'funding_source_id' => 'required|exists:funding_sources,id',
+                    'report_category' => 'nullable|string',
+                    'committee_comment' => 'nullable|string',
+                    'committee_feedback' => 'nullable|string',
+                    'budget_adjustment_reason' => 'nullable|string',
+                ], [
+                    'allocated_budget.required' => 'กรุณาระบุวงเงินที่จัดสรรจริง',
+                    'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
+                ]);
+
+                $approvedAmount = (float)($request->input('allocated_budget', 0));
+                if ($fundingSourceId === 12) {
+                    $approvedAmount = 0.00;
+                }
+                $processedAllocations = [
+                    [
+                        'funding_source_id' => $fundingSourceId,
+                        'allocated_amount' => $approvedAmount,
+                    ]
+                ];
+            }
+
+            // Aggregate if same funding source is chosen multiple times
+            $aggregatedAllocations = [];
+            foreach ($processedAllocations as $alloc) {
+                $sId = $alloc['funding_source_id'];
+                if (!isset($aggregatedAllocations[$sId])) {
+                    $aggregatedAllocations[$sId] = 0.00;
+                }
+                $aggregatedAllocations[$sId] += $alloc['allocated_amount'];
+            }
 
             $dept = $project->department ?: Department::with('parent')->find($project->department_id);
             $cat = $request->input('report_category');
@@ -608,10 +663,6 @@ class ProjectController extends Controller
                 $cat = Project::resolveCategoryForDepartment($dept, $project->report_category);
             }
 
-            $approvedAmount = (float)($request->input('allocated_budget', 0));
-            if ($fundingSourceId === 12) {
-                $approvedAmount = 0.00;
-            }
             $feedback = $request->input('committee_feedback') ?: $request->input('committee_comment', 'คณะกรรมการอนุมัติจัดสรรงบประมาณเรียบร้อยแล้ว');
             $adjReason = $request->input('budget_adjustment_reason');
 
@@ -645,17 +696,34 @@ class ProjectController extends Controller
             }
             $project->save();
 
-            // Create or update Budget record
-            Budget::updateOrCreate(
-                ['project_id' => $project->id],
-                [
-                    'funding_source_id' => $fundingSourceId,
-                    'allocated_amount' => $approvedAmount,
-                    'encumbered_amount' => $approvedAmount,
-                    'spent_amount' => 0.00,
-                    'is_advance_payment' => false,
-                ]
-            );
+            // Synchronize Budget records for this project
+            $existingBudgets = Budget::where('project_id', $project->id)->get();
+            $keptBudgetIds = [];
+
+            foreach ($aggregatedAllocations as $srcId => $amt) {
+                $budget = $existingBudgets->firstWhere('funding_source_id', $srcId);
+                if ($budget) {
+                    $budget->allocated_amount = $amt;
+                    $budget->encumbered_amount = $amt;
+                    $budget->save();
+                    $keptBudgetIds[] = $budget->id;
+                } else {
+                    $newBudget = Budget::create([
+                        'project_id' => $project->id,
+                        'funding_source_id' => $srcId,
+                        'allocated_amount' => $amt,
+                        'encumbered_amount' => $amt,
+                        'spent_amount' => 0.00,
+                        'is_advance_payment' => false,
+                    ]);
+                    $keptBudgetIds[] = $newBudget->id;
+                }
+            }
+
+            // Remove any old budget records that are no longer part of this allocation
+            Budget::where('project_id', $project->id)
+                ->whereNotIn('id', $keptBudgetIds)
+                ->delete();
 
             ProjectApproval::updateOrCreate(
                 [
@@ -931,7 +999,7 @@ class ProjectController extends Controller
             ]);
         }
 
-        $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'approvals.delegatedFromUser', 'approvals.roleDelegation', 'fundingSource', 'budget.fundingSource', 'procurement.committees', 'procurement.items', 'auditLogs.user']);
+        $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'approvals.delegatedFromUser', 'approvals.roleDelegation', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'procurement.committees', 'procurement.items', 'auditLogs.user']);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
         
         // Deduplicate approvals and sort by step (latest record per step with signature details)
