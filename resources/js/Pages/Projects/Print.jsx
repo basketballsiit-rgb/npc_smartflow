@@ -286,35 +286,66 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
     const deptName = project.department?.name || '';
     const proposerPos = project.position || project.user?.position || '';
     
-    // Planning / Strategy department indicator
-    const isPlanning = deptName.includes('พัฒนายุทธศาสตร์') 
-        || deptName.includes('ยุทธศาสตร์และแผนงาน')
+    // Check if proposer is already the Head of Unit / Department (กรณีหัวหน้างานเสนอโครงการเอง)
+    const isHeadProposer = Boolean(
+        (proposerPos && proposerPos.includes('หัวหน้า')) ||
+        ['หัวหน้างาน', 'หัวหน้าสาขาวิชา', 'หัวหน้าแผนกวิชา'].includes(project.proposer_duty) ||
+        (sig2?.comments && sig2.comments.includes('ผู้เสนอเป็นหัวหน้างาน')) ||
+        (sig2?.user_id && project.user_id && sig2.user_id === project.user_id)
+    );
+
+    // Planning / Strategy department indicator - ONLY for actual Planning unit, NOT entire division
+    const isPlanning = (
+        deptName.includes('พัฒนายุทธศาสตร์') 
         || (deptName.includes('แผนงาน') && deptName.includes('งบประมาณ'))
-        || proposerPos.includes('พัฒนายุทธศาสตร์')
-        || (proposerPos.includes('แผนงาน') && proposerPos.includes('งบประมาณ'))
-        || (deptName.includes('ฝ่ายยุทธศาสตร์และแผนงาน') && !proposerPos);
+        || deptName === 'งานวางแผนและงบประมาณ'
+        || deptName === 'งานพัฒนายุทธศาสตร์และแผนงาน'
+    ) && !deptName.includes('ส่งเสริมธุรกิจ') && !deptName.includes('วิจัย') && !deptName.includes('ประกันคุณภาพ')
+      && !proposerPos.includes('ส่งเสริมธุรกิจ');
 
     const getStep2Name = () => {
-        // 1. If Step 2 approval exists and approved normally (not fast-track, and excluding Chatnapa)
-        if (sig2?.user?.name && !isFastTrackApproval(sig2) && !sig2.user.name.includes('ฉัตรนภา')) {
+        // 0. If the proposer is the Head of Department/Unit themselves (หัวหน้างานเสนอเอง)
+        if (isHeadProposer) {
+            return toThaiNumerals(cleanPersonName(cleanedResponsiblePerson || sig1?.user?.name || project.user?.name || '...............................................'));
+        }
+        // 1. If Step 2 approval exists and approved normally (not fast-track)
+        if (sig2?.user?.name && !isFastTrackApproval(sig2)) {
             return toThaiNumerals(cleanPersonName(sig2.user.name));
         }
         // 2. If resolved head user was found by backend matching this exact head position
-        if (resolvedHead?.name && !resolvedHead.name.includes('ฉัตรนภา')) {
+        if (resolvedHead?.name) {
             return toThaiNumerals(cleanPersonName(resolvedHead.name));
         }
         // 3. For Planning Department specifically, fallback to designated Planning Head
         if (isPlanning) {
             const planCandidate = college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา';
-            if (!planCandidate.includes('ฉัตรนภา')) {
-                return toThaiNumerals(cleanPersonName(planCandidate));
-            }
+            return toThaiNumerals(cleanPersonName(planCandidate));
         }
         // 4. If no user in system has specified this head position yet, do NOT show any name in parentheses
         return '...............................................';
     };
 
     const getStep2Position = () => {
+        // 0. If the proposer is the Head of Department/Unit themselves (หัวหน้างานเสนอเอง)
+        if (isHeadProposer) {
+            if (proposerPos && proposerPos.includes('หัวหน้า')) {
+                return toThaiNumerals(proposerPos);
+            }
+            if (deptName) {
+                if (deptName.startsWith('งาน')) {
+                    return toThaiNumerals(`หัวหน้า${deptName}`);
+                }
+                if (deptName.startsWith('สาขาวิชา')) {
+                    return toThaiNumerals(`หัวหน้าแผนกวิชา${deptName.replace(/^สาขาวิชา(งาน)?/, '')}`);
+                }
+                if (deptName.startsWith('ฝ่าย')) {
+                    return toThaiNumerals(`หัวหน้างาน${deptName.replace(/^ฝ่าย/, '')}`);
+                }
+                return toThaiNumerals(`หัวหน้างาน${deptName}`);
+            }
+            return 'หัวหน้างาน/หัวหน้าแผนกวิชา';
+        }
+
         if (!isFastTrackApproval(sig2)) {
             if (sig2?.acting_position_text) {
                 return toThaiNumerals(sig2.acting_position_text);

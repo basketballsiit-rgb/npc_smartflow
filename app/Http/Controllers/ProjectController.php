@@ -1965,9 +1965,17 @@ class ProjectController extends Controller
                 $existingStep1->save();
             }
 
+            // ตรวจสอบว่าขั้นตอนที่ 2 เป็นกรณีที่หัวหน้างานเสนอเองและได้ลงนามเห็นชอบไว้แล้วหรือไม่
+            $existingStep2 = ProjectApproval::where('project_id', $project->id)->where('step_number', 2)->first();
+            $isStep2ByProposer = $existingStep2 && (
+                $existingStep2->user_id === $project->user_id ||
+                ($existingStep2->comments && str_contains($existingStep2->comments, 'ผู้เสนอเป็นหัวหน้างาน'))
+            );
+
             // Steps 2 through 6: อนุมัติรวดเดียว 6 ขั้นตอนตามมติงานยุทธศาสตร์และแผนงาน
-            // ไม่ลงลายมือชื่อ (signature_data = null) และคงชื่อเดิมตามแบบฟอร์ม
-            for ($s = 2; $s <= 6; $s++) {
+            // หากขั้นตอนที่ 2 เป็นหัวหน้างานลงนามเห็นชอบโครงการตนเองไว้แล้ว ให้คงเดิมไว้ และเริ่มอนุมัติตั้งแต่ขั้นที่ 3 เป็นต้นไป
+            $startStep = $isStep2ByProposer ? 3 : 2;
+            for ($s = $startStep; $s <= 6; $s++) {
                 ProjectApproval::updateOrCreate(
                     [
                         'project_id' => $project->id,
@@ -2246,6 +2254,38 @@ class ProjectController extends Controller
         $deptName = trim($dept?->name ?? '');
         $proposerPos = trim($project->position ?? ($project->user?->position ?? ''));
 
+        // 0. Case: Proposer is already the Head of Department/Unit themselves (หัวหน้างานเสนอเอง)
+        $isHeadProposer = false;
+        if (!empty($proposerPos) && str_contains($proposerPos, 'หัวหน้า')) {
+            $isHeadProposer = true;
+        } elseif (in_array($project->proposer_duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา', 'หัวหน้าแผนกวิชา'])) {
+            $isHeadProposer = true;
+        } elseif ($project->user_position_id && ($up = \App\Models\UserPosition::find($project->user_position_id))) {
+            $isHeadProposer = in_array($up->duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา', 'หัวหน้าแผนกวิชา']) || str_contains($up->position ?? '', 'หัวหน้า');
+        } elseif ($project->user && $project->user->isDepartmentHead($project->department_id)) {
+            $isHeadProposer = true;
+        }
+
+        if ($isHeadProposer) {
+            $headName = $project->responsible_person ?: ($project->user?->name ?: '');
+            $headPos = $proposerPos;
+            if (empty($headPos) || !str_starts_with($headPos, 'หัวหน้า')) {
+                if (!empty($deptName)) {
+                    $headPos = str_starts_with($deptName, 'งาน') 
+                        ? 'หัวหน้า' . $deptName 
+                        : (str_starts_with($deptName, 'สาขาวิชา') 
+                            ? 'หัวหน้าแผนกวิชา' . preg_replace('/^สาขาวิชา(งาน)?/u', '', $deptName) 
+                            : 'หัวหน้างาน' . $deptName);
+                } else {
+                    $headPos = 'หัวหน้างาน/หัวหน้าแผนกวิชา';
+                }
+            }
+            return [
+                'name' => $headName,
+                'position' => $headPos,
+            ];
+        }
+
         // 1. Determine Target Head Position
         $targetHeadPosition = '';
 
@@ -2279,12 +2319,14 @@ class ProjectController extends Controller
             $targetHeadPosition = 'หัวหน้างาน/หัวหน้าแผนกวิชา';
         }
 
-        // Special case for Planning & Strategy
+        // Special case for Planning & Strategy Work (ONLY for actual Planning unit, NOT entire division)
         $normTarget = preg_replace('/\s+/u', '', $targetHeadPosition);
-        $isPlanning = str_contains($normTarget, 'พัฒนายุทธศาสตร์') 
-            || str_contains($normTarget, 'ยุทธศาสตร์และแผนงาน')
+        $isPlanning = (str_contains($normTarget, 'พัฒนายุทธศาสตร์') 
             || (str_contains($normTarget, 'แผนงาน') && str_contains($normTarget, 'งบประมาณ'))
-            || str_contains($normTarget, 'วางแผน');
+            || str_contains($normTarget, 'วางแผน'))
+            && !str_contains($normTarget, 'ส่งเสริมธุรกิจ')
+            && !str_contains($normTarget, 'วิจัย')
+            && !str_contains($normTarget, 'ประกันคุณภาพ');
 
         if ($isPlanning) {
             $targetHeadPosition = 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ';
@@ -2293,7 +2335,7 @@ class ProjectController extends Controller
 
         // 2. Check if Step 2 was already signed & approved
         $sig2 = $project->approvals->where('step_number', 2)->first();
-        if ($sig2 && $sig2->user && $sig2->status === 'approved' && !str_contains($sig2->user->name, 'ฉัตรนภา')) {
+        if ($sig2 && $sig2->user && $sig2->status === 'approved') {
             $isFastTrackOrAdmin = in_array($sig2->signature_type, ['fast_track', 'admin']) 
                 || empty($sig2->signature_data)
                 || (isset($sig2->comments) && (str_contains($sig2->comments, 'รวดเดียว') || str_contains($sig2->comments, 'Fast-Track') || str_contains($sig2->comments, 'Super Override') || str_contains($sig2->comments, 'มติงานยุทธศาสตร์')));
@@ -2311,7 +2353,7 @@ class ProjectController extends Controller
         // 3. For Planning Department, resolve designated Planning Head
         if ($isPlanning) {
             $planHeadName = \App\Models\SystemSetting::where('key', 'plan_head_name')->value('value');
-            if ($planHeadName && !str_contains($planHeadName, 'ฉัตรนภา')) {
+            if ($planHeadName) {
                 return [
                     'name' => $planHeadName,
                     'position' => $targetHeadPosition,
@@ -2321,7 +2363,7 @@ class ProjectController extends Controller
                 ->orWhere('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')
                 ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
                 ->first();
-            $planHeadName = ($planUser && !str_contains($planUser->name, 'ฉัตรนภา')) ? $planUser->name : 'นายพิพัฒน์ สีมา';
+            $planHeadName = $planUser ? $planUser->name : 'นายพิพัฒน์ สีมา';
 
             return [
                 'name' => $planHeadName,
@@ -2335,7 +2377,6 @@ class ProjectController extends Controller
 
         $allUsers = \App\Models\User::where('is_active', true)->orWhereNull('is_active')->get();
         foreach ($allUsers as $u) {
-            if (str_contains($u->name, 'ฉัตรนภา')) continue;
             $uPos = preg_replace('/\s+/u', '', $u->position ?? '');
             if (empty($uPos)) continue;
 
@@ -2360,7 +2401,7 @@ class ProjectController extends Controller
         // 5. Search by UserPosition relation
         if (!$headUser) {
             foreach (\App\Models\UserPosition::with('user')->get() as $up) {
-                if (!$up->user || str_contains($up->user->name, 'ฉัตรนภา')) continue;
+                if (!$up->user) continue;
                 $upPos = preg_replace('/\s+/u', '', $up->position ?? '');
                 $upDuty = preg_replace('/\s+/u', '', $up->duty ?? '');
                 if (str_contains($upPos, 'รองผู้อำนวยการ') || str_contains($upDuty, 'รองผู้อำนวยการ')) continue;
