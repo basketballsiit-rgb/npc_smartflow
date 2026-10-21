@@ -78,6 +78,10 @@ export default function QuickCreate({
         position: project?.position || (defaultPosition ? defaultPosition.formatted_title : (auth.user.position || 'ครูผู้สอน')),
         phone: project?.phone || '',
         email: project?.email || auth.user.email || '',
+        location: project?.location || 'ณ วิทยาลัยสารพัดช่างน่าน',
+        start_date: project?.start_date ? (typeof project.start_date === 'string' ? project.start_date.split('T')[0] : '') : '',
+        end_date: project?.end_date ? (typeof project.end_date === 'string' ? project.end_date.split('T')[0] : '') : '',
+        operation_period_text: project?.operation_period_text || '',
         background_rationale: project?.background_rationale || '',
 
         // Optional Detailed Fields
@@ -618,6 +622,61 @@ export default function QuickCreate({
                                         className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs"
                                         placeholder="ระบุเหตุผลความจำเป็นสั้นๆ เพื่อประกอบการพิจารณาจัดสรรงบประมาณ..."
                                     ></textarea>
+                                </div>
+
+                                {/* กำหนดการและสถานที่ดำเนินงาน (สำหรับแสดงบนปฏิทินปฏิบัติงานวิทยาลัย) */}
+                                <div className="pt-4 border-t border-purple-100 space-y-3 bg-purple-50/50 p-4 rounded-xl border">
+                                    <div>
+                                        <label className="block text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                                            <span>📅</span> กำหนดการและสถานที่ดำเนินงาน (สำหรับแสดงบนปฏิทินปฏิบัติงานวิทยาลัย)
+                                        </label>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                            * หากทราบวันเวลาที่ชัดเจน สามารถระบุวันที่เริ่มต้น-สิ้นสุด หรือช่วงเวลาดำเนินงานได้ทันที 
+                                            หากยังไม่สามารถกำหนดได้ชัดเจน ให้เว้นว่างไว้ ระบบจะแสดงสถานะเป็น &quot;ตามแผนปฏิบัติราชการประจำปี&quot; ให้อัตโนมัติ
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">สถานที่ดำเนินการ</label>
+                                        <input
+                                            type="text"
+                                            value={data.location || ''}
+                                            onChange={(e) => setData('location', e.target.value)}
+                                            placeholder="เช่น ณ วิทยาลัยสารพัดช่างน่าน หรือ ระบุสถานที่..."
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 bg-white"
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div>
+                                            <span className="block text-[11px] font-bold text-slate-700 mb-1">วันที่เริ่มต้นโครงการ (หากระบุได้)</span>
+                                            <input
+                                                type="date"
+                                                value={data.start_date || ''}
+                                                onChange={(e) => setData('start_date', e.target.value)}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 font-medium bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <span className="block text-[11px] font-bold text-slate-700 mb-1">วันที่สิ้นสุดโครงการ (หากระบุได้)</span>
+                                            <input
+                                                type="date"
+                                                value={data.end_date || ''}
+                                                onChange={(e) => setData('end_date', e.target.value)}
+                                                className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 font-medium bg-white"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className="block text-[11px] font-bold text-slate-700 mb-1">หรือระบุเป็นช่วงเวลา / สัปดาห์ / เดือน / ไตรมาส (ข้อความ)</span>
+                                        <input
+                                            type="text"
+                                            value={data.operation_period_text || ''}
+                                            onChange={(e) => setData('operation_period_text', e.target.value)}
+                                            className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs focus:border-purple-500 bg-white"
+                                            placeholder="เช่น สัปดาห์ที่ 2 ของเดือนพฤศจิกายน 2569 หรือ ไตรมาสที่ 1 (ต.ค. - ธ.ค. 2569)..."
+                                        />
+                                    </div>
                                 </div>
                             </div>
 

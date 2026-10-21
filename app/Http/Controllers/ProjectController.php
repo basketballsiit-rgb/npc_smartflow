@@ -235,6 +235,10 @@ class ProjectController extends Controller
             'position' => 'nullable|string',
             'phone' => 'nullable|string',
             'email' => 'nullable|string',
+            'location' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'operation_period_text' => 'nullable|string|max:255',
             'background_rationale' => 'nullable|string',
             'mission' => 'nullable|string',
             'goal' => 'nullable|string',
@@ -306,6 +310,10 @@ class ProjectController extends Controller
         $project->position = $posTitle;
         $project->phone = $validated['phone'] ?? '';
         $project->email = $validated['email'] ?? $user->email;
+        $project->location = !empty($validated['location']) ? $validated['location'] : 'ณ วิทยาลัยสารพัดช่างน่าน';
+        $project->start_date = !empty($validated['start_date']) ? $validated['start_date'] : null;
+        $project->end_date = !empty($validated['end_date']) ? $validated['end_date'] : null;
+        $project->operation_period_text = !empty($validated['operation_period_text']) ? $validated['operation_period_text'] : null;
         $project->background_rationale = $validated['background_rationale'] ?? 'เสนอคำขอรับการจัดสรรงบประมาณโครงการเบื้องต้น';
         $project->mission = $validated['mission'] ?? '';
         $project->goal = $validated['goal'] ?? '';
@@ -374,6 +382,10 @@ class ProjectController extends Controller
             'position' => 'nullable|string',
             'phone' => 'nullable|string',
             'email' => 'nullable|string',
+            'location' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'operation_period_text' => 'nullable|string|max:255',
             'background_rationale' => 'nullable|string',
             'mission' => 'nullable|string',
             'goal' => 'nullable|string',
@@ -439,6 +451,18 @@ class ProjectController extends Controller
         $project->position = $posTitle;
         $project->phone = $validated['phone'] ?? $project->phone;
         $project->email = $validated['email'] ?? $user->email;
+        if ($request->has('location')) {
+            $project->location = !empty($validated['location']) ? $validated['location'] : 'ณ วิทยาลัยสารพัดช่างน่าน';
+        }
+        if ($request->has('start_date')) {
+            $project->start_date = !empty($validated['start_date']) ? $validated['start_date'] : null;
+        }
+        if ($request->has('end_date')) {
+            $project->end_date = !empty($validated['end_date']) ? $validated['end_date'] : null;
+        }
+        if ($request->has('operation_period_text')) {
+            $project->operation_period_text = !empty($validated['operation_period_text']) ? $validated['operation_period_text'] : null;
+        }
         $project->background_rationale = $validated['background_rationale'] ?? $project->background_rationale;
         $project->mission = $validated['mission'] ?? $project->mission;
         $project->goal = $validated['goal'] ?? $project->goal;
@@ -495,6 +519,10 @@ class ProjectController extends Controller
             'report_category' => 'nullable|string',
             'responsible_person' => 'nullable|string',
             'committee_comment' => 'nullable|string',
+            'location' => 'nullable|string',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'operation_period_text' => 'nullable|string|max:255',
         ], [
             'title.required' => 'กรุณาระบุชื่อโครงการ',
             'academic_year.required' => 'กรุณาระบุปีงบประมาณ พ.ศ.',
@@ -536,6 +564,10 @@ class ProjectController extends Controller
         $project->iqa_strategy_ids = [$defaultIqaId];
         $project->ovec_strategy_ids = [$defaultOvecId];
         $project->responsible_person = $validated['responsible_person'] ?? $user->name;
+        $project->location = !empty($validated['location']) ? $validated['location'] : 'ณ วิทยาลัยสารพัดช่างน่าน';
+        $project->start_date = !empty($validated['start_date']) ? $validated['start_date'] : null;
+        $project->end_date = !empty($validated['end_date']) ? $validated['end_date'] : null;
+        $project->operation_period_text = !empty($validated['operation_period_text']) ? $validated['operation_period_text'] : null;
         $project->committee_comment = $validated['committee_comment'] ?? 'จัดสรรงบประมาณโดยตรงผ่านงานแผนงาน';
         $project->budget_approved_at = now();
         $project->status = 'budget_approved';

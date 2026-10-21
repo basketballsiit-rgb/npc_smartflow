@@ -442,6 +442,10 @@ export default function Dashboard({
         funding_source_id: planHeadData?.fundingSources?.[0]?.id || '',
         report_category: '6.1',
         responsible_person: '',
+        location: 'ณ วิทยาลัยสารพัดช่างน่าน',
+        start_date: '',
+        end_date: '',
+        operation_period_text: '',
         committee_comment: 'จัดสรรงบประมาณโดยตรงผ่านงานแผนงาน',
     });
 
@@ -19168,6 +19172,46 @@ ${itemsListText}
             return divisionDefinitions[3]; // Default to Academic
         };
 
+        const deriveQuarterText = (actionPlan) => {
+            if (!Array.isArray(actionPlan) || actionPlan.length === 0) return null;
+            const quarters = new Set();
+            actionPlan.forEach(step => {
+                if (step.q1) quarters.add(1);
+                if (step.q2) quarters.add(2);
+                if (step.q3) quarters.add(3);
+                if (step.q4) quarters.add(4);
+            });
+            if (quarters.size === 0) return null;
+            const sorted = Array.from(quarters).sort();
+            const qNames = {
+                1: 'ไตรมาส 1 (ต.ค. - ธ.ค.)',
+                2: 'ไตรมาส 2 (ม.ค. - มี.ค.)',
+                3: 'ไตรมาส 3 (เม.ย. - มิ.ย.)',
+                4: 'ไตรมาส 4 (ก.ค. - ก.ย.)',
+            };
+            if (sorted.length === 4) return 'ตลอดปีงบประมาณ (ไตรมาส 1 - 4)';
+            return sorted.map(q => qNames[q]).join(', ');
+        };
+
+        const parseDateSafe = (d) => {
+            if (!d) return null;
+            if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+            if (typeof d === 'string') {
+                const cleaned = d.split('T')[0];
+                const parts = cleaned.split('-');
+                if (parts.length === 3) {
+                    const y = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10) - 1;
+                    const day = parseInt(parts[2], 10);
+                    const parsed = new Date(y, m, day);
+                    return isNaN(parsed.getTime()) ? null : parsed;
+                }
+                const dt = new Date(d);
+                return isNaN(dt.getTime()) ? null : dt;
+            }
+            return null;
+        };
+
         // Extract Calendar Events from projects (including parent project timeline and activity item dates)
         const calendarEvents = [];
         allProjects.forEach(p => {
@@ -19185,8 +19229,13 @@ ${itemsListText}
                 if (!match) return;
             }
 
+            const pStart = parseDateSafe(p.start_date);
+            const pEnd = parseDateSafe(p.end_date);
+            const quarterText = deriveQuarterText(p.action_plan);
+            const effectivePeriodText = p.operation_period_text || quarterText || 'ตามแผนปฏิบัติราชการประจำปี';
+
             // 1. Direct Project Timeline
-            if (p.start_date || p.end_date) {
+            if (pStart || pEnd) {
                 calendarEvents.push({
                     id: `proj-${p.id}`,
                     projectId: p.id,
@@ -19195,9 +19244,9 @@ ${itemsListText}
                     title: p.title,
                     subtitle: `โครงการหลัก • ${p.proposer_name || p.user?.name || 'ไม่ระบุผู้เสนอ'}`,
                     location: p.location || 'วิทยาลัยสารพัดช่างน่าน',
-                    startDate: p.start_date ? new Date(p.start_date) : (p.end_date ? new Date(p.end_date) : null),
-                    endDate: p.end_date ? new Date(p.end_date) : (p.start_date ? new Date(p.start_date) : null),
-                    periodText: p.operation_period_text || '',
+                    startDate: pStart || pEnd,
+                    endDate: pEnd || pStart,
+                    periodText: p.operation_period_text || quarterText || '',
                     division: div,
                     budget: parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0,
                     status: p.status,
@@ -19208,8 +19257,8 @@ ${itemsListText}
             // 2. Sub-Activities Timeline
             if (Array.isArray(p.activities) && p.activities.length > 0) {
                 p.activities.forEach((act, actIdx) => {
-                    if (act.activity_date) {
-                        const actDate = new Date(act.activity_date);
+                    const actDate = parseDateSafe(act.activity_date);
+                    if (actDate) {
                         calendarEvents.push({
                             id: `act-${p.id}-${actIdx}`,
                             projectId: p.id,
@@ -19233,18 +19282,18 @@ ${itemsListText}
             }
 
             // 3. Fallback for projects with period text or quarters but no exact date (For Agenda/Overview view)
-            if (!p.start_date && !p.end_date && (!p.activities || !p.activities.some(a => a.activity_date))) {
+            if (!pStart && !pEnd && (!p.activities || !p.activities.some(a => a.activity_date))) {
                 calendarEvents.push({
                     id: `proj-fallback-${p.id}`,
                     projectId: p.id,
                     project: p,
                     type: 'project_general',
                     title: p.title,
-                    subtitle: `แผนงานตามไตรมาส • ${p.proposer_name || 'ไม่ระบุ'}`,
+                    subtitle: `${p.operation_period_text || quarterText ? 'กำหนดการดำเนินงาน' : 'แผนงานตามไตรมาส'} • ${p.proposer_name || p.user?.name || 'ไม่ระบุ'}`,
                     location: p.location || 'วิทยาลัยสารพัดช่างน่าน',
                     startDate: null,
                     endDate: null,
-                    periodText: p.operation_period_text || 'ตามแผนปฏิบัติราชการประจำปี',
+                    periodText: effectivePeriodText,
                     division: div,
                     budget: parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0,
                     status: p.status,
@@ -19567,8 +19616,8 @@ ${itemsListText}
                             <div className="divide-y divide-slate-100">
                                 {calendarEvents.map(ev => {
                                     const dateText = ev.startDate 
-                                        ? `${ev.startDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}${ev.endDate && ev.endDate.getTime() !== ev.startDate.getTime() ? ' - ' + ev.endDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : ''}`
-                                        : (ev.periodText || 'ตามแผนปฏิบัติการประจำปี');
+                                        ? `${ev.startDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })}${ev.endDate && ev.endDate.getTime() !== ev.startDate.getTime() ? ' - ' + ev.endDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' }) : ''}${ev.periodText ? ' (' + ev.periodText + ')' : ''}`
+                                        : (ev.periodText || 'ตามแผนปฏิบัติราชการประจำปี');
 
                                     return (
                                         <div
@@ -19644,12 +19693,26 @@ ${itemsListText}
 
                             <div className="space-y-2.5 text-xs text-slate-700">
                                 <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5">
-                                    <div className="flex justify-between">
-                                        <span className="text-slate-500">📅 กำหนดการ:</span>
-                                        <span className="font-bold text-indigo-700">
-                                            {selectedCalendarEvent.startDate 
-                                                ? `${selectedCalendarEvent.startDate.toLocaleDateString('th-TH', { dateStyle: 'long' })}${selectedCalendarEvent.endDate && selectedCalendarEvent.endDate.getTime() !== selectedCalendarEvent.startDate.getTime() ? ' ถึง ' + selectedCalendarEvent.endDate.toLocaleDateString('th-TH', { dateStyle: 'long' }) : ''}`
-                                                : (selectedCalendarEvent.periodText || 'ตามแผนปฏิบัติการ')}
+                                    <div className="flex justify-between items-start gap-2">
+                                        <span className="text-slate-500 shrink-0">📅 กำหนดการ:</span>
+                                        <span className="font-bold text-indigo-700 text-right">
+                                            {selectedCalendarEvent.startDate ? (
+                                                <div>
+                                                    <span>
+                                                        {selectedCalendarEvent.startDate.toLocaleDateString('th-TH', { dateStyle: 'long' })}
+                                                        {selectedCalendarEvent.endDate && selectedCalendarEvent.endDate.getTime() !== selectedCalendarEvent.startDate.getTime()
+                                                            ? ` ถึง ${selectedCalendarEvent.endDate.toLocaleDateString('th-TH', { dateStyle: 'long' })}`
+                                                            : ''}
+                                                    </span>
+                                                    {selectedCalendarEvent.periodText && (
+                                                        <span className="block text-[11px] text-slate-500 font-normal mt-0.5">
+                                                            ({selectedCalendarEvent.periodText})
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                selectedCalendarEvent.periodText || 'ตามแผนปฏิบัติราชการประจำปี'
+                                            )}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
@@ -26303,6 +26366,51 @@ return (
                                             className="w-full rounded-xl border-purple-200 px-3.5 py-2 text-xs"
                                             placeholder="เช่น นายสมชาย ใจดี"
                                         />
+                                    </div>
+
+                                    <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 space-y-2.5">
+                                        <label className="block text-xs font-bold text-purple-950 flex items-center gap-1">
+                                            <span>📅</span> กำหนดการและสถานที่ดำเนินงาน (สำหรับปฏิทินปฏิบัติงาน)
+                                        </label>
+                                        <div>
+                                            <input
+                                                type="text"
+                                                value={directAllocateForm.location}
+                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, location: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 px-3 py-1.5 text-xs bg-white"
+                                                placeholder="สถานที่ดำเนินการ เช่น ณ วิทยาลัยสารพัดช่างน่าน"
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            <div>
+                                                <span className="block text-[10px] font-bold text-slate-600 mb-0.5">วันที่เริ่มต้น</span>
+                                                <input
+                                                    type="date"
+                                                    value={directAllocateForm.start_date}
+                                                    onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, start_date: e.target.value })}
+                                                    className="w-full rounded-xl border-purple-200 px-3 py-1.5 text-xs bg-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <span className="block text-[10px] font-bold text-slate-600 mb-0.5">วันที่สิ้นสุด</span>
+                                                <input
+                                                    type="date"
+                                                    value={directAllocateForm.end_date}
+                                                    onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, end_date: e.target.value })}
+                                                    className="w-full rounded-xl border-purple-200 px-3 py-1.5 text-xs bg-white"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-slate-600 mb-0.5">หรือระบุเป็นข้อความช่วงเวลา / ไตรมาส</span>
+                                            <input
+                                                type="text"
+                                                value={directAllocateForm.operation_period_text}
+                                                onChange={(e) => setDirectAllocateForm({ ...directAllocateForm, operation_period_text: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 px-3 py-1.5 text-xs bg-white"
+                                                placeholder="เช่น พฤศจิกายน 2569 หรือ ไตรมาส 1 (เว้นว่างได้)"
+                                            />
+                                        </div>
                                     </div>
 
                                     <div>
