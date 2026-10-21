@@ -387,6 +387,66 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         return 'หัวหน้างาน/หัวหน้าแผนกวิชา';
     };
 
+    const resourceDeputySig = project.approvals?.find(a => 
+        (a.status === 'approved' || a.status === 'submitted') && 
+        a.step_number !== 4 &&
+        (a.acting_position_text?.includes('บริหารทรัพยากร') || a.user?.position?.includes('บริหารทรัพยากร') || a.user?.name?.includes('จักรพงศ์'))
+    ) || project.approvals?.find(a => 
+        (a.status === 'approved' || a.status === 'submitted') && 
+        (a.acting_position_text?.includes('บริหารทรัพยากร') || a.user?.position?.includes('บริหารทรัพยากร') || a.user?.name?.includes('จักรพงศ์'))
+    );
+
+    const getRelatedDeputyName = () => {
+        // 1. If Step 4 approval exists and approved normally (not fast-track)
+        if (sig4?.user?.name && !isFastTrackApproval(sig4)) {
+            return toThaiNumerals(cleanPersonName(sig4.user.name));
+        }
+        // 2. Direct department deputy setting
+        if (project.department?.deputy_director_name) {
+            return toThaiNumerals(cleanPersonName(project.department.deputy_director_name));
+        }
+        if (project.department?.parent?.deputy_director_name) {
+            return toThaiNumerals(cleanPersonName(project.department.parent.deputy_director_name));
+        }
+        // 3. Fallback matching division
+        const parentName = project.department?.parent?.name || '';
+        const curDeptName = project.department?.name || '';
+        const combined = `${parentName} ${curDeptName}`;
+        if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
+            return toThaiNumerals(cleanPersonName(college_settings?.plan_deputy_name || 'นายนิพนธ์ ร่องพืช'));
+        }
+        if (combined.includes('บริหารทรัพยากร')) {
+            return toThaiNumerals(cleanPersonName(college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา'));
+        }
+        return '...............................................';
+    };
+
+    const getRelatedDeputyPosition = () => {
+        if (!isFastTrackApproval(sig4)) {
+            if (sig4?.acting_position_text) {
+                return toThaiNumerals(sig4.acting_position_text);
+            }
+            if (sig4?.user?.position_level) {
+                return toThaiNumerals(sig4.user.position_level);
+            }
+        }
+        if (project.department?.deputy_director_position) {
+            return toThaiNumerals(project.department.deputy_director_position);
+        }
+        if (project.department?.parent?.deputy_director_position) {
+            return toThaiNumerals(project.department.parent.deputy_director_position);
+        }
+        const parentName = project.department?.parent?.name || '';
+        const curDeptName = project.department?.name || '';
+        if (parentName) {
+            return toThaiNumerals(parentName.startsWith('ฝ่าย') ? `รองผู้อำนวยการ${parentName}` : `รองผู้อำนวยการฝ่าย${parentName}`);
+        }
+        if (curDeptName.startsWith('ฝ่าย')) {
+            return toThaiNumerals(`รองผู้อำนวยการ${curDeptName}`);
+        }
+        return 'รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง';
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0">
             <Head>
@@ -1030,9 +1090,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                     </p>
                     
                     <div className="space-y-10 text-xs sm:text-sm">
-                        {/* Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: หัวหน้างาน/หัวหน้าแผนกวิชา (ขวา) */}
+                        {/* Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงานดังกล่าว (ขวา) */}
                         <div className="grid grid-cols-2 gap-x-8">
-                            {/* ซ้าย: ผู้เสนอโครงการ (Step 1) */}
+                            {/* ซ้าย: ผู้เสนอโครงการ (ตามสิทธิ์ของผู้เสนอ) */}
                             <div className="flex justify-center">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
@@ -1074,14 +1134,14 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                     : 'เจ้าหน้าที่ผู้เสนอโครงการ'))}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && (sig1?.signed_at || sig2?.signed_at || project.created_at) 
-                                            ? formatThaiSignatureDate(sig1?.signed_at || sig2?.signed_at || project.created_at) 
+                                        {includeSignatures && (sig1?.signed_at || project.created_at) 
+                                            ? formatThaiSignatureDate(sig1?.signed_at || project.created_at) 
                                             : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                     </p>
                                 </div>
                             </div>
 
-                            {/* ขวา: ผู้เห็นชอบโครงการ (Step 2: หัวหน้างาน / หัวหน้าแผนกวิชา) */}
+                            {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงานดังกล่าว) */}
                             <div className="flex justify-center">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
@@ -1089,9 +1149,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig2?.signature_data && !isFastTrackApproval(sig2) ? (
+                                            {includeSignatures && sig4?.signature_data && !isFastTrackApproval(sig4) ? (
                                                 <img 
-                                                    src={sig2.signature_data} 
+                                                    src={sig4.signature_data} 
                                                     alt="ลายมือชื่อ" 
                                                     className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                                 />
@@ -1105,23 +1165,23 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                        ({getStep2Name()})
+                                        ({getRelatedDeputyName()})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal max-w-[260px] text-slate-800">
-                                        {getStep2Position()}
+                                        {getRelatedDeputyPosition()}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig2?.signed_at && !isFastTrackApproval(sig2)
-                                            ? formatThaiSignatureDate(sig2.signed_at) 
+                                        {includeSignatures && sig4?.signed_at && !isFastTrackApproval(sig4)
+                                            ? formatThaiSignatureDate(sig4.signed_at) 
                                             : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Row 2: ผู้ตรวจสอบโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง (ขวา) */}
+                        {/* Row 2: ผู้ตรวจสอบโครงการ: หัวหน้างานพัฒนายุทธศาสตร์ฯ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายยุทธศาสตร์ฯ (ขวา) */}
                         <div className="grid grid-cols-2 gap-x-8">
-                            {/* ซ้าย: ผู้ตรวจสอบโครงการ (Step 3: นายพิพัฒน์ สีมา) */}
+                            {/* ซ้าย: ผู้ตรวจสอบโครงการ (หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ) */}
                             <div className="flex justify-center">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
@@ -1164,7 +1224,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                 </div>
                             </div>
 
-                            {/* ขวา: ผู้เห็นชอบโครงการ (Step 4: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง) */}
+                            {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน) */}
                             <div className="flex justify-center">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
@@ -1172,9 +1232,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig4?.signature_data && !isFastTrackApproval(sig4) ? (
+                                            {includeSignatures && sig5?.signature_data && !isFastTrackApproval(sig5) ? (
                                                 <img 
-                                                    src={sig4.signature_data} 
+                                                    src={sig5.signature_data} 
                                                     alt="ลายมือชื่อ" 
                                                     className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                                 />
@@ -1188,33 +1248,27 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                        ({!isFastTrackApproval(sig4) && sig4?.user?.name 
-                                            ? toThaiNumerals(cleanPersonName(sig4.user.name)) 
-                                            : (project.department?.deputy_director_name 
-                                                ? toThaiNumerals(cleanPersonName(project.department.deputy_director_name)) 
-                                                : (project.department?.parent?.deputy_director_name 
-                                                    ? toThaiNumerals(cleanPersonName(project.department.parent.deputy_director_name)) 
-                                                    : '...............................................'))})
+                                        ({!isFastTrackApproval(sig5) && sig5?.user?.name 
+                                            ? toThaiNumerals(cleanPersonName(sig5.user.name)) 
+                                            : toThaiNumerals(cleanPersonName(college_settings?.plan_deputy_name || 'นายนิพนธ์ ร่องพืช'))})
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                        {!isFastTrackApproval(sig4) && sig4?.acting_position_text
-                                            ? toThaiNumerals(sig4.acting_position_text)
-                                            : (!isFastTrackApproval(sig4) && sig4?.user?.position_level 
-                                                ? toThaiNumerals(sig4.user.position_level)
-                                                : toThaiNumerals(project.department?.deputy_director_position 
-                                                    || project.department?.parent?.deputy_director_position 
-                                                    || (project.department?.parent?.name ? `รองผู้อำนวยการ${project.department.parent.name}` : (project.department?.name ? `รองผู้อำนวยการ${project.department.name}` : 'รองผู้อำนวยการฝ่าย................................................'))))}
+                                        {!isFastTrackApproval(sig5) && sig5?.acting_position_text
+                                            ? toThaiNumerals(sig5.acting_position_text)
+                                            : (!isFastTrackApproval(sig5) && sig5?.user?.position_level 
+                                                ? toThaiNumerals(sig5.user.position_level) 
+                                                : toThaiNumerals(college_settings?.plan_deputy_position || 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'))}
                                     </p>
                                     <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig4?.signed_at && !isFastTrackApproval(sig4)
-                                            ? formatThaiSignatureDate(sig4.signed_at) 
+                                        {includeSignatures && sig5?.signed_at && !isFastTrackApproval(sig5)
+                                            ? formatThaiSignatureDate(sig5.signed_at) 
                                             : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Row 3: ผู้เห็นชอบโครงการ (Step 5: นายนิพนธ์ ร่องพืช / รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน - ตรงกลาง) */}
+                        {/* Row 3: ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายบริหารทรัพยากร (ตรงกลาง) */}
                         <div className="flex justify-center">
                             <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                 <div className="relative flex items-center justify-center">
@@ -1222,9 +1276,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         ลงชื่อ
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
-                                        {includeSignatures && sig5?.signature_data && !isFastTrackApproval(sig5) ? (
+                                        {includeSignatures && resourceDeputySig?.signature_data && !isFastTrackApproval(resourceDeputySig) ? (
                                             <img 
-                                                src={sig5.signature_data} 
+                                                src={resourceDeputySig.signature_data} 
                                                 alt="ลายมือชื่อ" 
                                                 className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                             />
@@ -1238,26 +1292,26 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                     </span>
                                 </div>
                                 <p className="font-bold pt-1.5 text-xs sm:text-[13px] whitespace-nowrap">
-                                    ({!isFastTrackApproval(sig5) && sig5?.user?.name 
-                                        ? toThaiNumerals(cleanPersonName(sig5.user.name)) 
-                                        : toThaiNumerals(cleanPersonName(college_settings?.plan_deputy_name || 'นายนิพนธ์ ร่องพืช'))})
+                                    ({!isFastTrackApproval(resourceDeputySig) && resourceDeputySig?.user?.name 
+                                        ? toThaiNumerals(cleanPersonName(resourceDeputySig.user.name)) 
+                                        : toThaiNumerals(cleanPersonName(college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา'))})
                                 </p>
                                 <p className="text-[11px] sm:text-[11.5px] leading-relaxed pt-0.5 font-normal max-w-[280px] text-slate-800">
-                                    {!isFastTrackApproval(sig5) && sig5?.acting_position_text
-                                        ? toThaiNumerals(sig5.acting_position_text)
-                                        : (!isFastTrackApproval(sig5) && sig5?.user?.position_level 
-                                            ? toThaiNumerals(sig5.user.position_level) 
-                                            : toThaiNumerals(college_settings?.plan_deputy_position || 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'))}
+                                    {!isFastTrackApproval(resourceDeputySig) && resourceDeputySig?.acting_position_text
+                                        ? toThaiNumerals(resourceDeputySig.acting_position_text)
+                                        : (!isFastTrackApproval(resourceDeputySig) && resourceDeputySig?.user?.position_level 
+                                            ? toThaiNumerals(resourceDeputySig.user.position_level) 
+                                            : toThaiNumerals(college_settings?.resource_deputy_position || 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร'))}
                                 </p>
                                 <p className="text-[10px] sm:text-[11px] leading-relaxed pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                    {includeSignatures && sig5?.signed_at && !isFastTrackApproval(sig5)
-                                        ? formatThaiSignatureDate(sig5.signed_at) 
+                                    {includeSignatures && resourceDeputySig?.signed_at && !isFastTrackApproval(resourceDeputySig)
+                                        ? formatThaiSignatureDate(resourceDeputySig.signed_at) 
                                         : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
                                 </p>
                             </div>
                         </div>
 
-                        {/* Row 4: ผู้อนุมัติโครงการ (Step 6: นายกเชษฐ์ กิ่งชนะ / ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน - ตรงกลาง) */}
+                        {/* Row 4: ผู้อนุมัติโครงการ: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน (ตรงกลาง) */}
                         <div className="flex justify-center">
                             <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                 <div className="relative flex items-center justify-center">
