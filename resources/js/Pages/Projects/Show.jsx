@@ -7,7 +7,7 @@ import AuditTrailSection from '@/Components/AuditTrailSection';
 import TorStudioModal from '@/Components/TorStudioModal';
 
 export default function Show({ project, strategyCategories = [], fundingSources = [], allUsers = [], canApprove, actingDelegation = null }) {
-    const { auth } = usePage().props;
+    const { auth, college_settings } = usePage().props;
     const [actingPositionText, setActingPositionText] = useState(actingDelegation?.acting_title || '');
     const { data, setData, post, processing } = useForm({
         comments: '',
@@ -1255,8 +1255,8 @@ ${itemsListText}
                                 { step: 1, title: '1. ผู้เสนอโครงการ', role: 'ครูผู้สอน / ผู้รับผิดชอบโครงการ', officer: project.user?.name },
                                 { step: 2, title: '2. หัวหน้าแผนก/สาขาวิชา/งาน', role: 'หัวหน้าแผนก/สาขาที่สังกัด', officer: 'หัวหน้าแผนกวิชา / หัวหน้างาน' },
                                 { step: 3, title: '3. งานแผนงานและงบประมาณ', role: 'ตรวจสอบความสอดคล้อง & จัดสรรงบ', officer: 'หัวหน้างานพัฒนายุทธศาสตร์แผนงานและงบประมาณ' },
-                                { step: 4, title: '4. รองผู้อำนวยการฝ่าย', role: 'รองผู้อำนวยการฝ่ายประจำแผนก', officer: project.department?.deputy_director_name || project.department?.parent?.deputy_director_name || 'รองผู้อำนวยการฝ่ายประจำแผนก' },
-                                { step: 5, title: '5. รองฝ่ายยุทธศาสตร์และแผนงาน', role: 'กลั่นกรองงบประมาณและแผนปฏิบัติราชการ', officer: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน' },
+                                { step: 4, title: '4. รองผู้อำนวยการฝ่าย', role: 'รองผู้อำนวยการฝ่ายประจำแผนก', officer: project.department?.deputy_director_name || project.department?.parent?.deputy_director_name || ((project.department?.parent?.name?.includes('วิชาการ') || project.department?.name?.includes('วิชาการ')) ? (college_settings?.academic_deputy_name || 'นายนิพนธ์ ร่องพืช') : 'รองผู้อำนวยการฝ่ายประจำแผนก') },
+                                { step: 5, title: '5. รองฝ่ายยุทธศาสตร์และแผนงาน', role: 'กลั่นกรองงบประมาณและแผนปฏิบัติราชการ', officer: college_settings?.plan_deputy_name || 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน' },
                                 { step: 6, title: '6. ผู้อำนวยการวิทยาลัย', role: 'อนุมัติโครงการขั้นสุดท้าย', officer: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน' },
                             ].map(item => {
                                 const approval = project.approvals?.find(a => a.step_number === item.step);

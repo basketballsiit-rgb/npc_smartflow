@@ -3372,6 +3372,16 @@ export default function Dashboard({
     const initialSettingsObj = {
         director_name: 'นายกเชษฐ์ กิ่งชนะ',
         director_position: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+        academic_deputy_name: 'นายนิพนธ์ ร่องพืช',
+        academic_deputy_position: 'รองผู้อำนวยการฝ่ายวิชาการ',
+        resource_deputy_name: 'นายจักรพงศ์ พรหมสกุลปัญญา',
+        resource_deputy_position: 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
+        student_affairs_deputy_name: 'นายวิทยา ปันโน',
+        student_affairs_deputy_position: 'ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
+        plan_deputy_name: '',
+        plan_deputy_position: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
+        plan_head_name: 'นายพิพัฒน์ สีมา',
+        plan_head_position: 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ',
     };
     (systemSettings || []).forEach(s => {
         initialSettingsObj[s.key] = s.type === 'boolean' ? (s.value === 'true') : s.value;
@@ -6387,6 +6397,140 @@ export default function Dashboard({
                                         <p className="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
                                             💡 ค่าเริ่มต้น: "ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน" (กรณีรักษาการ สามารถระบุเป็น "รักษาการในตำแหน่งผู้อำนวยการวิทยาลัยสารพัดช่างน่าน" ได้)
                                         </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* รองผู้อำนวยการ 4 ฝ่ายหลัก (Deputy Directors Config) */}
+                        <div className="space-y-4 border-t border-purple-100 pt-6">
+                            <div>
+                                <h4 className="text-sm font-bold text-purple-900 border-l-4 border-purple-600 pl-3">
+                                    การตั้งค่าผู้บริหารระดับรองผู้อำนวยการ 4 ฝ่ายหลัก (Deputy Directors)
+                                </h4>
+                                <p className="text-xs text-slate-500 mt-1 pl-4 leading-relaxed">
+                                    กำหนดชื่อและตำแหน่งอย่างเป็นทางการของรองผู้อำนวยการแต่ละฝ่าย เพื่อใช้แสดงผลในแบบเสนอขออนุมัติโครงการ (ข้อ 12), เอกสารพัสดุ และเล่มรายงานสรุปผล
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                {/* 1. ฝ่ายวิชาการ */}
+                                <div className="bg-sky-50/60 p-3.5 rounded-2xl border border-sky-100 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-base">📘</span>
+                                        <span className="text-xs font-black text-sky-950 uppercase tracking-wide">1. ฝ่ายวิชาการ</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ชื่อ-นามสกุล รองผู้อำนวยการฝ่ายวิชาการ</label>
+                                            <input
+                                                type="text"
+                                                value={settingsForm.academic_deputy_name || ''}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, academic_deputy_name: e.target.value })}
+                                                className="w-full rounded-xl border-sky-200 px-3 py-2 text-xs font-bold text-slate-900 focus:border-sky-500 focus:ring-sky-500 bg-white"
+                                                placeholder="เช่น นายนิพนธ์ ร่องพืช"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ตำแหน่ง / ตำแหน่งรักษาการ</label>
+                                            <input
+                                                type="text"
+                                                value={settingsForm.academic_deputy_position || 'รองผู้อำนวยการฝ่ายวิชาการ'}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, academic_deputy_position: e.target.value })}
+                                                className="w-full rounded-xl border-sky-200 px-3 py-2 text-xs font-medium text-slate-800 focus:border-sky-500 focus:ring-sky-500 bg-white"
+                                                placeholder="เช่น รองผู้อำนวยการฝ่ายวิชาการ"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 2. ฝ่ายบริหารทรัพยากร */}
+                                <div className="bg-emerald-50/60 p-3.5 rounded-2xl border border-emerald-100 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-base">🏢</span>
+                                        <span className="text-xs font-black text-emerald-950 uppercase tracking-wide">2. ฝ่ายบริหารทรัพยากร</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ชื่อ-นามสกุล รองผู้อำนวยการฝ่ายบริหารทรัพยากร</label>
+                                            <input
+                                                type="text"
+                                                value={settingsForm.resource_deputy_name || ''}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, resource_deputy_name: e.target.value })}
+                                                className="w-full rounded-xl border-emerald-200 px-3 py-2 text-xs font-bold text-slate-900 focus:border-emerald-500 focus:ring-emerald-500 bg-white"
+                                                placeholder="เช่น นายจักรพงศ์ พรหมสกุลปัญญา"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ตำแหน่ง / ตำแหน่งรักษาการ</label>
+                                            <input
+                                                type="text"
+                                                value={settingsForm.resource_deputy_position || 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร'}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, resource_deputy_position: e.target.value })}
+                                                className="w-full rounded-xl border-emerald-200 px-3 py-2 text-xs font-medium text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 bg-white"
+                                                placeholder="เช่น รองผู้อำนวยการฝ่ายบริหารทรัพยากร"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 3. ฝ่ายกิจการนักเรียนนักศึกษา */}
+                                <div className="bg-amber-50/60 p-3.5 rounded-2xl border border-amber-100 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-base">🎓</span>
+                                        <span className="text-xs font-black text-amber-950 uppercase tracking-wide">3. ฝ่ายกิจการนักเรียนนักศึกษา</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ชื่อ-นามสกุล ผู้ดำรงตำแหน่ง</label>
+                                            <input
+                                                type="text"
+                                                value={settingsForm.student_affairs_deputy_name || ''}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, student_affairs_deputy_name: e.target.value })}
+                                                className="w-full rounded-xl border-amber-200 px-3 py-2 text-xs font-bold text-slate-900 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                                                placeholder="เช่น นายวิทยา ปันโน"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ตำแหน่ง / ตำแหน่งปฏิบัติหน้าที่</label>
+                                            <input
+                                                type="text"
+                                                value={settingsForm.student_affairs_deputy_position || 'ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา'}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, student_affairs_deputy_position: e.target.value })}
+                                                className="w-full rounded-xl border-amber-200 px-3 py-2 text-xs font-medium text-slate-800 focus:border-amber-500 focus:ring-amber-500 bg-white"
+                                                placeholder="เช่น ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* 4. ฝ่ายยุทธศาสตร์และแผนงาน */}
+                                <div className="bg-purple-50/60 p-3.5 rounded-2xl border border-purple-100 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-base">📊</span>
+                                        <span className="text-xs font-black text-purple-950 uppercase tracking-wide">4. ฝ่ายยุทธศาสตร์และแผนงาน</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ชื่อ-นามสกุล รองผู้อำนวยการฝ่ายยุทธศาสตร์ฯ (เว้นว่างได้ถ้าไม่มี)</label>
+                                            <input
+                                                type="text"
+                                                value={settingsForm.plan_deputy_name || ''}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, plan_deputy_name: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 px-3 py-2 text-xs font-bold text-slate-900 focus:border-purple-500 focus:ring-purple-500 bg-white"
+                                                placeholder="เว้นว่างได้หากตำแหน่งว่างอยู่"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ตำแหน่ง</label>
+                                            <input
+                                                type="text"
+                                                value={settingsForm.plan_deputy_position || 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'}
+                                                onChange={(e) => setSettingsForm({ ...settingsForm, plan_deputy_position: e.target.value })}
+                                                className="w-full rounded-xl border-purple-200 px-3 py-2 text-xs font-medium text-slate-800 focus:border-purple-500 focus:ring-purple-500 bg-white"
+                                                placeholder="เช่น รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

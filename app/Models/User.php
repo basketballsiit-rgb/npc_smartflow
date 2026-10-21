@@ -392,7 +392,7 @@ class User extends Authenticatable
     }
 
     /**
-     * รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน (Step 5 - นายนิพนธ์ ร่องพืช)
+     * รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน (Step 5)
      */
     public function isDeputyDirectorStrategy(): bool
     {

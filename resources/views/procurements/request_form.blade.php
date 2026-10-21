@@ -283,22 +283,22 @@
         'academic' => [
             'division' => 'ฝ่ายวิชาการ',
             'title' => 'รองผู้อำนวยการฝ่ายวิชาการ',
-            'name' => 'นายนิพนธ์ ร่องพืช',
+            'name' => \App\Models\SystemSetting::where('key', 'academic_deputy_name')->value('value') ?: 'นายนิพนธ์ ร่องพืช',
         ],
         'student_affairs' => [
             'division' => 'ฝ่ายกิจการนักเรียนนักศึกษา',
             'title' => 'รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
-            'name' => 'นายสุทธิชัย ศรีวิชัย',
+            'name' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_name')->value('value') ?: 'นายวิทยา ปันโน',
         ],
         'resources' => [
             'division' => 'ฝ่ายบริหารทรัพยากร',
             'title' => 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
-            'name' => 'นายจักรพงศ์ พรหมสกุลปัญญา',
+            'name' => \App\Models\SystemSetting::where('key', 'resource_deputy_name')->value('value') ?: 'นายจักรพงศ์ พรหมสกุลปัญญา',
         ],
         'planning' => [
             'division' => 'ฝ่ายยุทธศาสตร์และแผนงาน',
             'title' => 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
-            'name' => 'นายนิพนธ์ ร่องพืช',
+            'name' => \App\Models\SystemSetting::where('key', 'plan_deputy_name')->value('value') ?: '',
         ],
     ];
 

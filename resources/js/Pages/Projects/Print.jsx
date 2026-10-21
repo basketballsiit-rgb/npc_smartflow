@@ -395,16 +395,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
 
     const resourceDeputySig = project.approvals?.find(a => 
         (a.status === 'approved' || a.status === 'submitted') && 
-        a.step_number !== 4 &&
-        (a.acting_position_text?.includes('บริหารทรัพยากร') || a.user?.position?.includes('บริหารทรัพยากร') || a.user?.name?.includes('จักรพงศ์'))
-    ) || project.approvals?.find(a => 
-        (a.status === 'approved' || a.status === 'submitted') && 
-        (a.acting_position_text?.includes('บริหารทรัพยากร') || a.user?.position?.includes('บริหารทรัพยากร') || a.user?.name?.includes('จักรพงศ์'))
+        a.step_number > 1 &&
+        a.step_number !== 6 &&
+        a.user_id !== project.user_id &&
+        (
+            a.user?.name?.includes('จักรพงศ์') ||
+            a.acting_position_text?.includes('บริหารทรัพยากร') ||
+            (a.user?.position?.includes('รองผู้อำนวยการ') && a.user?.position?.includes('บริหารทรัพยากร'))
+        )
     );
 
     const getRelatedDeputyName = () => {
-        // 1. If Step 4 approval exists and approved normally (not fast-track)
-        if (sig4?.user?.name && !isFastTrackApproval(sig4)) {
+        // 1. If Step 4 approval exists and approved normally (not fast-track) and not proposer
+        if (sig4?.user?.name && !isFastTrackApproval(sig4) && sig4.user_id !== project.user_id) {
             return toThaiNumerals(cleanPersonName(sig4.user.name));
         }
         // 2. Direct department deputy setting
@@ -418,17 +421,23 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         const parentName = project.department?.parent?.name || '';
         const curDeptName = project.department?.name || '';
         const combined = `${parentName} ${curDeptName}`;
-        if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
-            return toThaiNumerals(cleanPersonName(college_settings?.plan_deputy_name || 'นายนิพนธ์ ร่องพืช'));
+        if (combined.includes('วิชาการ')) {
+            return toThaiNumerals(cleanPersonName(college_settings?.academic_deputy_name || 'นายนิพนธ์ ร่องพืช'));
         }
         if (combined.includes('บริหารทรัพยากร')) {
             return toThaiNumerals(cleanPersonName(college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา'));
+        }
+        if (combined.includes('กิจการนักเรียน') || combined.includes('พัฒนากิจการ')) {
+            return toThaiNumerals(cleanPersonName(college_settings?.student_affairs_deputy_name || 'นายวิทยา ปันโน'));
+        }
+        if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
+            return college_settings?.plan_deputy_name ? toThaiNumerals(cleanPersonName(college_settings.plan_deputy_name)) : '...............................................';
         }
         return '...............................................';
     };
 
     const getRelatedDeputyPosition = () => {
-        if (!isFastTrackApproval(sig4)) {
+        if (!isFastTrackApproval(sig4) && sig4?.user_id !== project.user_id) {
             if (sig4?.acting_position_text) {
                 return toThaiNumerals(sig4.acting_position_text);
             }
@@ -1256,9 +1265,11 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 whitespace-nowrap">
-                                        ({!isFastTrackApproval(sig5) && sig5?.user?.name 
+                                        ({!isFastTrackApproval(sig5) && sig5?.user?.name && sig5.user_id !== project.user_id
                                             ? toThaiNumerals(cleanPersonName(sig5.user.name)) 
-                                            : toThaiNumerals(cleanPersonName(college_settings?.plan_deputy_name || 'นายนิพนธ์ ร่องพืช'))})
+                                            : (college_settings?.plan_deputy_name 
+                                                ? toThaiNumerals(cleanPersonName(college_settings.plan_deputy_name)) 
+                                                : '...............................................')})
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
                                         {!isFastTrackApproval(sig5) && sig5?.acting_position_text

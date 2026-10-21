@@ -1719,7 +1719,7 @@ class ProjectController extends Controller
             case 4: // ขั้นตอนที่ 4: รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง (ฝ่ายต้นสังกัดของผู้เสนอ)
                 return $user->isDeputyDirectorForDepartment($project->department_id) || $user->isDeputyDirector() || $user->isExecutive() || $user->isAdmin();
 
-            case 5: // ขั้นตอนที่ 5: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน (นายนิพนธ์ ร่องพืช)
+            case 5: // ขั้นตอนที่ 5: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน
                 return $user->isDeputyDirectorStrategy() || $user->isExecutive() || $user->isAdmin();
 
             case 6: // ขั้นตอนที่ 6: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน (นายกเชษฐ์ กิ่งชนะ)
