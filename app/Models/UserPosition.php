@@ -72,24 +72,15 @@ class UserPosition extends Model
 
         if (in_array($duty, ['หัวหน้าสาขาวิชา', 'ครูผู้สอน'])) {
             $majorName = $this->major ?: ($subDept ? str_replace('สาขาวิชา', '', $subDept->name) : '');
-            $title = "{$duty} - สาขาวิชา{$majorName}";
-            if ($deptName) {
-                $title .= " ({$deptName})";
-            }
-            return $title;
+            return "{$duty} - สาขาวิชา{$majorName}";
         }
 
         if (in_array($duty, ['หัวหน้างาน', 'เจ้าหน้าที่'])) {
             $workName = $subDept ? $subDept->name : '';
             if ($workName) {
-                $title = "{$duty}{$workName}";
-            } else {
-                $title = "{$duty}";
+                return "{$duty}{$workName}";
             }
-            if ($deptName) {
-                $title .= " ({$deptName})";
-            }
-            return $title;
+            return "{$duty}";
         }
 
         return !empty($this->position) ? $this->position : ($duty ?: 'บุคลากร');

@@ -1124,7 +1124,7 @@ ${itemsListText}
                             </div>
                             <h1 className="text-xl font-black text-purple-950 mt-2">{project.title}</h1>
                             <p className="text-xs text-slate-500 mt-1">
-                                <span className="font-bold text-slate-700">ผู้เสนอโครงการ:</span> {project.responsible_person || project.user?.name} {project.position ? `(${project.position})` : ''} | <span className="font-bold text-slate-700">ปีการศึกษา พ.ศ.:</span> {project.academic_year} | <span className="font-bold text-purple-800">งบประมาณเสนอขอ:</span> {formatCurrency(project.estimated_budget)}
+                                <span className="font-bold text-slate-700">ผู้เสนอโครงการ:</span> {project.responsible_person || project.user?.name} {project.position ? `(${project.position.replace(/\s*\([^)]*ฝ่าย[^)]*\)/g, '').trim()})` : ''} | <span className="font-bold text-slate-700">ปีการศึกษา พ.ศ.:</span> {project.academic_year} | <span className="font-bold text-purple-800">งบประมาณเสนอขอ:</span> {formatCurrency(project.estimated_budget)}
                             </p>
                         </div>
                         <div className="flex items-center gap-x-3">

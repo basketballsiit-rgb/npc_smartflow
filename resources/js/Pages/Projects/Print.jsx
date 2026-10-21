@@ -259,6 +259,12 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         }
     };
 
+    const cleanPositionText = (pos) => {
+        if (!pos) return '';
+        // Remove parenthesized division names like (ฝ่ายวิชาการ), (ฝ่าย...)
+        return pos.replace(/\s*\([^)]*ฝ่าย[^)]*\)/g, '').replace(/\s*\(ฝ่ายวิชาการ\)/g, '').trim();
+    };
+
     const sig1 = getApprovalByStep(1);
     const sig2 = getApprovalByStep(2);
     const sig3 = getApprovalByStep(3);
@@ -284,7 +290,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
     };
 
     const deptName = project.department?.name || '';
-    const proposerPos = project.position || project.user?.position || '';
+    const proposerPos = cleanPositionText(project.position || project.user?.position || '');
     
     // Check if proposer is already the Head of Unit / Department (กรณีหัวหน้างานเสนอโครงการเอง)
     const isHeadProposer = Boolean(
@@ -665,7 +671,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                         </p>
                         <div className="pl-6 pt-1 space-y-0.5 text-slate-900 leading-relaxed">
                             <p><span className="font-bold">ผู้รับผิดชอบโครงการ ชื่อ-สกุล :</span> {toArabicNumerals(cleanedResponsiblePerson)}</p>
-                            <p><span className="font-bold">ตำแหน่ง :</span> {toArabicNumerals(project.position || project.user?.position || (deptName ? (deptName.startsWith('ฝ่าย') ? `เจ้าหน้าที่งาน${deptName.replace(/^ฝ่าย/, '')}` : (deptName.startsWith('งาน') ? `เจ้าหน้าที่${deptName}` : `เจ้าหน้าที่${deptName}`)) : 'เจ้าหน้าที่ผู้รับผิดชอบโครงการ'))}</p>
+                            <p><span className="font-bold">ตำแหน่ง :</span> {toArabicNumerals(cleanPositionText(project.position || project.user?.position || (deptName ? (deptName.startsWith('ฝ่าย') ? `เจ้าหน้าที่งาน${deptName.replace(/^ฝ่าย/, '')}` : (deptName.startsWith('งาน') ? `เจ้าหน้าที่${deptName}` : `เจ้าหน้าที่${deptName}`)) : 'เจ้าหน้าที่ผู้รับผิดชอบโครงการ')))}</p>
                             <p><span className="font-bold">โทรศัพท์เคลื่อนที่ :</span> {toArabicNumerals(project.phone || project.user?.phone || '-')} &nbsp;&nbsp;&nbsp;&nbsp; <span className="font-bold">E-mail :</span> {project.email || project.user?.email || '-'}</p>
                         </div>
                     </div>
@@ -1120,16 +1126,18 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal max-w-[280px] text-slate-800">
                                         {project.position 
-                                            ? toThaiNumerals(project.position) 
+                                            ? toThaiNumerals(cleanPositionText(project.position)) 
                                             : (project.user?.position 
-                                                ? toThaiNumerals(project.user.position) 
+                                                ? toThaiNumerals(cleanPositionText(project.user.position)) 
                                                 : (project.department?.name 
                                                     ? toThaiNumerals(
-                                                        project.department.name.startsWith('ฝ่าย') 
-                                                            ? `เจ้าหน้าที่งาน${project.department.name.replace(/^ฝ่าย/, '')}` 
-                                                            : (project.department.name.startsWith('งาน') 
-                                                                ? `เจ้าหน้าที่${project.department.name}` 
-                                                                : `เจ้าหน้าที่${project.department.name}`)
+                                                        cleanPositionText(
+                                                            project.department.name.startsWith('ฝ่าย') 
+                                                                ? `เจ้าหน้าที่งาน${project.department.name.replace(/^ฝ่าย/, '')}` 
+                                                                : (project.department.name.startsWith('งาน') 
+                                                                    ? `เจ้าหน้าที่${project.department.name}` 
+                                                                    : `เจ้าหน้าที่${project.department.name}`)
+                                                        )
                                                     ) 
                                                     : 'เจ้าหน้าที่ผู้เสนอโครงการ'))}
                                     </p>
