@@ -69,8 +69,14 @@ class HandleInertiaRequests extends Middleware
                 'resource_deputy_position' => \App\Models\SystemSetting::where('key', 'resource_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
                 'student_affairs_deputy_name' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_name')->value('value') ?: 'นายวิทยา ปันโน',
                 'student_affairs_deputy_position' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_position')->value('value') ?: 'ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
-                'plan_deputy_name' => \App\Models\SystemSetting::where('key', 'plan_deputy_name')->value('value') ?: '',
-                'plan_deputy_position' => \App\Models\SystemSetting::where('key', 'plan_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
+                'plan_deputy_name' => \App\Models\SystemSetting::where('key', 'plan_deputy_name')->value('value') 
+                    ?: (\App\Models\Department::whereNull('parent_id')->where(function($q) {
+                            $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');
+                        })->value('deputy_director_name') ?: 'นายนิพนธ์ ร่องพืช'),
+                'plan_deputy_position' => \App\Models\SystemSetting::where('key', 'plan_deputy_position')->value('value') 
+                    ?: (\App\Models\Department::whereNull('parent_id')->where(function($q) {
+                            $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');
+                        })->value('deputy_director_position') ?: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'),
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),
@@ -128,9 +134,9 @@ class HandleInertiaRequests extends Middleware
                     }),
                 ] : null,
             ],
-            'departments_data' => \Illuminate\Support\Facades\Cache::remember('shared_departments_data', 3600, function() {
+            'departments_data' => \Illuminate\Support\Facades\Cache::remember('shared_departments_data_v2', 3600, function() {
                 return [
-                    'divisions' => \App\Models\Department::whereNull('parent_id')->orderBy('id', 'asc')->get(['id', 'name', 'code']),
+                    'divisions' => \App\Models\Department::whereNull('parent_id')->orderBy('id', 'asc')->get(['id', 'name', 'code', 'deputy_director_name', 'deputy_director_position']),
                     'sub_departments' => \App\Models\Department::whereNotNull('parent_id')->orderBy('parent_id', 'asc')->orderBy('id', 'asc')->get(['id', 'name', 'code', 'parent_id']),
                     'available_majors' => [
                         'ช่างยนต์',

@@ -2,7 +2,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function Print({ project, strategyCategories = [], resolvedHead = null }) {
-    const { college_settings } = usePage().props;
+    const { college_settings, departments_data } = usePage().props;
     // Font size preset state: 'compact' (14px) | 'normal' (15px) | 'large' (16.5px)
     const [fontSizePreset, setFontSizePreset] = useState('normal');
 
@@ -431,9 +431,50 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
             return toThaiNumerals(cleanPersonName(college_settings?.student_affairs_deputy_name || 'นายวิทยา ปันโน'));
         }
         if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
-            return college_settings?.plan_deputy_name ? toThaiNumerals(cleanPersonName(college_settings.plan_deputy_name)) : '...............................................';
+            return getPlanDeputyName();
         }
         return '...............................................';
+    };
+
+    const getPlanDeputyName = () => {
+        // 1. If Step 5 approval exists and approved normally (not fast-track) and not proposer
+        if (sig5?.user?.name && !isFastTrackApproval(sig5) && sig5.user_id !== project.user_id) {
+            return toThaiNumerals(cleanPersonName(sig5.user.name));
+        }
+        // 2. From strategy department in departments_data (ส่วนของรองฝ่าย)
+        const planDept = departments_data?.divisions?.find(d => 
+            d.name?.includes('ยุทธศาสตร์') || d.name?.includes('แผนงาน')
+        );
+        if (planDept?.deputy_director_name) {
+            return toThaiNumerals(cleanPersonName(planDept.deputy_director_name));
+        }
+        // 3. From college_settings
+        if (college_settings?.plan_deputy_name) {
+            return toThaiNumerals(cleanPersonName(college_settings.plan_deputy_name));
+        }
+        // 4. Fallback
+        return toThaiNumerals('นายนิพนธ์ ร่องพืช');
+    };
+
+    const getPlanDeputyPosition = () => {
+        if (!isFastTrackApproval(sig5) && sig5?.user_id !== project.user_id) {
+            if (sig5?.acting_position_text) {
+                return toThaiNumerals(sig5.acting_position_text);
+            }
+            if (sig5?.user?.position_level) {
+                return toThaiNumerals(sig5.user.position_level);
+            }
+        }
+        const planDept = departments_data?.divisions?.find(d => 
+            d.name?.includes('ยุทธศาสตร์') || d.name?.includes('แผนงาน')
+        );
+        if (planDept?.deputy_director_position) {
+            return toThaiNumerals(planDept.deputy_director_position);
+        }
+        if (college_settings?.plan_deputy_position) {
+            return toThaiNumerals(college_settings.plan_deputy_position);
+        }
+        return 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน';
     };
 
     const getRelatedDeputyPosition = () => {
@@ -1265,18 +1306,10 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                     </div>
                                     <p className="font-bold pt-1.5 whitespace-nowrap">
-                                        ({!isFastTrackApproval(sig5) && sig5?.user?.name && sig5.user_id !== project.user_id
-                                            ? toThaiNumerals(cleanPersonName(sig5.user.name)) 
-                                            : (college_settings?.plan_deputy_name 
-                                                ? toThaiNumerals(cleanPersonName(college_settings.plan_deputy_name)) 
-                                                : '...............................................')})
+                                        ({getPlanDeputyName()})
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                        {!isFastTrackApproval(sig5) && sig5?.acting_position_text
-                                            ? toThaiNumerals(sig5.acting_position_text)
-                                            : (!isFastTrackApproval(sig5) && sig5?.user?.position_level 
-                                                ? toThaiNumerals(sig5.user.position_level) 
-                                                : toThaiNumerals(college_settings?.plan_deputy_position || 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'))}
+                                        {getPlanDeputyPosition()}
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                         {includeSignatures && sig5?.signed_at && !isFastTrackApproval(sig5)

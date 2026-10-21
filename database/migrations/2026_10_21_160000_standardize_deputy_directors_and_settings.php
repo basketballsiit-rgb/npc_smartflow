@@ -29,7 +29,7 @@ return new class extends Migration
                 'deputy_director_position' => 'ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
             ],
             'ฝ่ายยุทธศาสตร์และแผนงาน' => [
-                'deputy_director_name' => null,
+                'deputy_director_name' => 'นายนิพนธ์ ร่องพืช',
                 'deputy_director_position' => 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
             ],
         ];
@@ -53,7 +53,7 @@ return new class extends Migration
             'resource_deputy_position' => 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
             'student_affairs_deputy_name' => 'นายวิทยา ปันโน',
             'student_affairs_deputy_position' => 'ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
-            'plan_deputy_name' => '',
+            'plan_deputy_name' => 'นายนิพนธ์ ร่องพืช',
             'plan_deputy_position' => 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
             'plan_head_name' => 'นายพิพัฒน์ สีมา',
             'plan_head_position' => 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ',
