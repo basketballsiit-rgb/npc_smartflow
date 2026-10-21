@@ -95,6 +95,7 @@ class HandleInertiaRequests extends Middleware
                     'is_plan_staff'      => $user->isPlanStaff(),
                     'is_procurement_head'=> $user->isProcurementHead(),
                     'is_procurement_staff'=> $user->isProcurementStaff(),
+                    'is_finance_head'    => $user->isFinanceHead(),
                     'is_finance_staff'   => $user->isFinanceStaff(),
                     'is_executive'       => $user->isExecutive(),
                     'is_director'        => $user->isDirector(),

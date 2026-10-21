@@ -18,7 +18,8 @@ export default function AuthenticatedLayout({ header, children }) {
     const isPlanHead = Boolean(user?.is_plan_head || userRoleName === 'plan_head');
     const isPlanStaff = Boolean(user?.is_plan_staff || userRoleName === 'plan_staff' || isPlanHead);
     const isProcurementStaff = Boolean(user?.is_procurement_staff || user?.is_procurement_head || userRoleName === 'procurement_head');
-    const isFinanceStaff = Boolean(user?.is_finance_staff || userRoleName === 'finance_head' || userRoleName === 'finance_staff');
+    const isFinanceHead = Boolean(user?.is_finance_head || userRoleName === 'finance_head' || user?.position?.includes('หัวหน้างานการเงิน'));
+    const isFinanceStaff = Boolean(user?.is_finance_staff || isFinanceHead || userRoleName === 'finance_head' || userRoleName === 'finance_staff');
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
         const saved = localStorage.getItem('sidebar-open');
@@ -301,6 +302,7 @@ export default function AuthenticatedLayout({ header, children }) {
         if (isPlanHead || userRoleName === 'plan_head') return 'หัวหน้างานแผนงานและงบประมาณ';
         if (isPlanStaff || userRoleName === 'plan_staff') return 'งานแผนงานและงบประมาณ';
         if (isProcurementStaff) return 'เจ้าหน้าที่งานพัสดุ';
+        if (isFinanceHead || userRoleName === 'finance_head') return 'หัวหน้างานการเงิน';
         if (isFinanceStaff) return 'เจ้าหน้าที่งานการเงิน';
 
         const primaryPos = user?.all_positions?.find(p => p.is_primary);
@@ -507,7 +509,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         </Link>
                         
                         {/* 1. PROJECT LIFECYCLE MENUS (สำหรับผู้เสนอโครงการ ครู และผู้ลงนามทุกฝ่าย) */}
-                        {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
                                 <button
@@ -568,10 +569,8 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
                             )}
                         </div>
-                        )}
 
                         {/* 2. 5-CHAPTER PROJECT DOCUMENTATION (การจัดทำเอกสารรายงานโครงการ 5 บท) */}
-                        {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
                                 <button
@@ -677,10 +676,8 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
                             )}
                         </div>
-                        )}
 
                         {/* 3. PROCUREMENT & LOAN (สำหรับผู้ขอซื้อ/ยืมเงิน ครู และสาขาวิชา) */}
-                        {(!isFinanceStaff || isAdmin || isPlanStaff) && (
                         <div className="pt-2 space-y-1">
                             {isSidebarOpen ? (
                                 <button
@@ -732,7 +729,6 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
                             )}
                         </div>
-                        )}
 
                         {/* 4. PROCUREMENT HUB (เฉพาะเจ้าหน้าที่งานพัสดุ และ Admin) */}
                         {(isProcurementStaff || isAdmin) && (
@@ -821,6 +817,15 @@ export default function AuthenticatedLayout({ header, children }) {
 
                             {(!isSidebarOpen || openSections.finance_hub) && (
                             <div className="pl-2.5 border-l-2 border-emerald-400/30 ml-2 space-y-1 animate-in fade-in duration-150">
+                                <Link
+                                    href={route('projects.quick_create')}
+                                    className={getSubLinkClass(route().current('projects.quick_create'))}
+                                    title="ยื่นเสนอโครงการเบื้องต้น (งานการเงิน)"
+                                >
+                                    <span className={getPrefixClass(route().current('projects.quick_create'), 'text-emerald-300')}>└─</span>
+                                    <span className="text-sm">💡</span>
+                                    {isSidebarOpen && <span>ยื่นเสนอโครงการ (งานการเงิน)</span>}
+                                </Link>
                                 <Link
                                     href={route('dashboard', { tab: 'central_budgets' })}
                                     className={getSubLinkClass(url.includes('tab=central_budgets'))}
@@ -1265,64 +1270,58 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </Link>
 
                                 {/* 1. วงจรชีวิตโครงการ */}
-                                {(!isFinanceStaff || isAdmin || isPlanStaff) && (
-                                    <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-amber-300 uppercase px-2">1. งานเสนอ & วงจรโครงการ</div>
-                                        <Link href={route('projects.quick_create')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>💡</span> เสนอโครงการเบื้องต้น
-                                        </Link>
-                                        <Link href={route('projects.create')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>➕</span> จัดทำโครงการฉบับเต็ม
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>✍️</span> คิวลงนามอนุมัติ
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'proposals' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📋</span> ติดตามสถานะโครงการ (Proposals)
-                                        </Link>
-                                    </div>
-                                )}
+                                <div className="space-y-1 pt-1 border-t border-white/10">
+                                    <div className="text-[10px] font-bold text-amber-300 uppercase px-2">1. งานเสนอ & วงจรโครงการ</div>
+                                    <Link href={route('projects.quick_create')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>💡</span> เสนอโครงการเบื้องต้น
+                                    </Link>
+                                    <Link href={route('projects.create')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>➕</span> จัดทำโครงการฉบับเต็ม
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'reviews' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>✍️</span> คิวลงนามอนุมัติ
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'proposals' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📋</span> ติดตามสถานะโครงการ (Proposals)
+                                    </Link>
+                                </div>
 
                                 {/* 2. รายงานโครงการ 5 บท */}
-                                {(!isFinanceStaff || isAdmin || isPlanStaff) && (
-                                    <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">2. รายงานโครงการ 5 บท</div>
-                                        <Link href={route('dashboard', { tab: 'proposals', chapter: 1 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📘</span> บทที่ 1: บทนำ & ข้อมูลโครงการ
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'proposals', chapter: 2 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📗</span> บทที่ 2: งานวิจัย & นโยบาย (AI)
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'proposals', chapter: 3 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📙</span> บทที่ 3: วิธีดำเนินงาน & พัสดุ
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'proposals', chapter: 4 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📕</span> บทที่ 4: ผลดำเนินงาน & ประเมิน
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'proposals', filter: 'reporting', chapter: 5 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📓</span> บทที่ 5: สรุปผล & พิมพ์เล่ม 5 บท
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'appendix' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📎</span> ภาคผนวก: เอกสารแนบ & ภาพกิจกรรม
-                                        </Link>
-                                    </div>
-                                )}
+                                <div className="space-y-1 pt-1 border-t border-white/10">
+                                    <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">2. รายงานโครงการ 5 บท</div>
+                                    <Link href={route('dashboard', { tab: 'proposals', chapter: 1 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📘</span> บทที่ 1: บทนำ & ข้อมูลโครงการ
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'proposals', chapter: 2 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📗</span> บทที่ 2: งานวิจัย & นโยบาย (AI)
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'proposals', chapter: 3 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📙</span> บทที่ 3: วิธีดำเนินงาน & พัสดุ
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'proposals', chapter: 4 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📕</span> บทที่ 4: ผลดำเนินงาน & ประเมิน
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'proposals', filter: 'reporting', chapter: 5 })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📓</span> บทที่ 5: สรุปผล & พิมพ์เล่ม 5 บท
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'appendix' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📎</span> ภาคผนวก: เอกสารแนบ & ภาพกิจกรรม
+                                    </Link>
+                                </div>
 
                                 {/* 3. จัดซื้อ & สัญญายืมเงิน */}
-                                {(!isFinanceStaff || isAdmin || isPlanStaff) && (
-                                    <div className="space-y-1 pt-1 border-t border-white/10">
-                                        <div className="text-[10px] font-bold text-sky-300 uppercase px-2">3. จัดซื้อจัดจ้าง & สัญญายืมเงิน</div>
-                                        <Link href={route('dashboard', { tab: 'document_tracking', from: 'loan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📋</span> จัดซื้อ & สัญญายืม (Kanban)
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'clearings', from: 'loan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>📝</span> สัญญายืมเงิน กค.101 (ของฉัน)
-                                        </Link>
-                                        <Link href={route('dashboard', { tab: 'clearings', action: 'new', from: 'loan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
-                                            <span>🧾</span> ส่งใบเสร็จเคลียร์เงินยืม / เบิกจ่าย
-                                        </Link>
-                                    </div>
-                                )}
+                                <div className="space-y-1 pt-1 border-t border-white/10">
+                                    <div className="text-[10px] font-bold text-sky-300 uppercase px-2">3. จัดซื้อจัดจ้าง & สัญญายืมเงิน</div>
+                                    <Link href={route('dashboard', { tab: 'document_tracking', from: 'loan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📋</span> จัดซื้อ & สัญญายืม (Kanban)
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'clearings', from: 'loan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>📝</span> สัญญายืมเงิน กค.101 (ของฉัน)
+                                    </Link>
+                                    <Link href={route('dashboard', { tab: 'clearings', action: 'new', from: 'loan' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                        <span>🧾</span> ส่งใบเสร็จเคลียร์เงินยืม / เบิกจ่าย
+                                    </Link>
+                                </div>
 
                                 {/* 4. พัสดุ */}
                                 {(isProcurementStaff || isAdmin) && (
@@ -1347,6 +1346,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {(isFinanceStaff || isAdmin) && (
                                     <div className="space-y-1 pt-1 border-t border-white/10">
                                         <div className="text-[10px] font-bold text-emerald-300 uppercase px-2">5. งานการเงิน</div>
+                                        <Link href={route('projects.quick_create')} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
+                                            <span>💡</span> ยื่นเสนอโครงการ (งานการเงิน)
+                                        </Link>
                                         <Link href={route('dashboard', { tab: 'central_budgets' })} onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg hover:bg-white/10">
                                             <span>🏛️</span> จัดสรรงบส่วนกลาง
                                         </Link>

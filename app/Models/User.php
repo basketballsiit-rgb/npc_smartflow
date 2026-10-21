@@ -304,7 +304,13 @@ class User extends Authenticatable
 
     public function isFinanceHead(): bool
     {
-        return $this->isFinanceStaff();
+        if ($this->isAdmin()) return true;
+        if ($this->role?->name === 'finance_head') return true;
+        return $this->userPositions()
+            ->where(function($q) {
+                $q->where('position', 'like', '%หัวหน้างานการเงิน%')
+                  ->orWhere('position', 'like', '%หัวหน้างานการบัญชี%');
+            })->exists() || str_contains($this->position ?? '', 'หัวหน้างานการเงิน');
     }
 
     public function isFinanceStaff(): bool
