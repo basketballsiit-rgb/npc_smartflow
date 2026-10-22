@@ -1846,17 +1846,11 @@ class ProjectController extends Controller
                 ]
             );
 
-            // Pre-assign or lock unified planning document number for the project's procurement lifecycle
-            $procurement = \App\Models\Procurement::firstOrCreate(
+            // Ensure procurement record exists in pending status (document numbers will be generated upon planning budget cut)
+            \App\Models\Procurement::firstOrCreate(
                 ['project_id' => $project->id],
                 ['status' => 'pending']
             );
-            if (empty($procurement->plan_procurement_doc_number) || str_starts_with($procurement->plan_procurement_doc_number, 'PR-')) {
-                $unifiedDocNumber = \App\Services\DocumentNumberService::generateAndIncrement();
-                $procurement->plan_procurement_doc_number = $unifiedDocNumber;
-                $procurement->procurement_number = $unifiedDocNumber;
-                $procurement->save();
-            }
         }
 
         // Record approval log with signature & acting details
@@ -2031,17 +2025,11 @@ class ProjectController extends Controller
             $project->current_approval_step = 6;
             $project->approved_at = now();
 
-            // จัดเตรียมเลขที่เอกสารพัสดุในขั้นตอน DO หากยังไม่มี
-            $procurement = \App\Models\Procurement::firstOrCreate(
+            // Ensure procurement record exists in pending status (document numbers will be generated upon planning budget cut)
+            \App\Models\Procurement::firstOrCreate(
                 ['project_id' => $project->id],
                 ['status' => 'pending']
             );
-            if (empty($procurement->plan_procurement_doc_number) || str_starts_with($procurement->plan_procurement_doc_number, 'PR-')) {
-                $unifiedDocNumber = \App\Services\DocumentNumberService::generateAndIncrement();
-                $procurement->plan_procurement_doc_number = $unifiedDocNumber;
-                $procurement->procurement_number = $unifiedDocNumber;
-                $procurement->save();
-            }
 
             // Digital Sealing & Verification Hash
             $project->sealed_at = now();
@@ -2090,17 +2078,11 @@ class ProjectController extends Controller
                 ]
             );
 
-            // Pre-assign or lock unified planning document number for the project's procurement lifecycle
-            $procurement = \App\Models\Procurement::firstOrCreate(
+            // Ensure procurement record exists in pending status (document numbers will be generated upon planning budget cut)
+            \App\Models\Procurement::firstOrCreate(
                 ['project_id' => $project->id],
                 ['status' => 'pending']
             );
-            if (empty($procurement->plan_procurement_doc_number) || str_starts_with($procurement->plan_procurement_doc_number, 'PR-')) {
-                $unifiedDocNumber = \App\Services\DocumentNumberService::generateAndIncrement();
-                $procurement->plan_procurement_doc_number = $unifiedDocNumber;
-                $procurement->procurement_number = $unifiedDocNumber;
-                $procurement->save();
-            }
         }
 
         ProjectApproval::create([

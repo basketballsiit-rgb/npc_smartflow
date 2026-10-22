@@ -39,14 +39,6 @@ class ProcurementController extends Controller
                 'status' => 'pending'
             ]
         );
-        if (empty($procurement->procurement_number) || str_starts_with($procurement->procurement_number, 'PR-')) {
-            $docNum = $procurement->plan_procurement_doc_number ?: $procurement->plan_loan_doc_number ?: \App\Services\DocumentNumberService::generateAndIncrement();
-            $procurement->procurement_number = $docNum;
-            if (empty($procurement->plan_procurement_doc_number)) {
-                $procurement->plan_procurement_doc_number = $docNum;
-            }
-            $procurement->save();
-        }
 
         // Sync committees pivot table
         $syncData = [];
@@ -118,14 +110,6 @@ class ProcurementController extends Controller
                 'status' => 'pending'
             ]
         );
-        if (empty($procurement->procurement_number) || str_starts_with($procurement->procurement_number, 'PR-')) {
-            $docNum = $procurement->plan_procurement_doc_number ?: $procurement->plan_loan_doc_number ?: \App\Services\DocumentNumberService::generateAndIncrement();
-            $procurement->procurement_number = $docNum;
-            if (empty($procurement->plan_procurement_doc_number)) {
-                $procurement->plan_procurement_doc_number = $docNum;
-            }
-            $procurement->save();
-        }
 
         if ($request->has('tor_specifications')) {
             $procurement->tor_specifications = $request->input('tor_specifications');
@@ -223,20 +207,18 @@ class ProcurementController extends Controller
             ]
         );
 
-        // Enforce unified single document number determined by Planning
+        // Single document number determined by Planning
         $docNumber = $procurement->plan_procurement_doc_number ?: $procurement->plan_loan_doc_number;
 
         if (!$docNumber && $request->filled('procurement_number') && !str_starts_with($request->input('procurement_number'), 'PR-')) {
             $docNumber = trim($request->input('procurement_number'));
         }
 
-        if (!$docNumber) {
-            $docNumber = \App\Services\DocumentNumberService::generateAndIncrement();
-        }
-
-        $procurement->procurement_number = $docNumber;
-        if (empty($procurement->plan_procurement_doc_number)) {
-            $procurement->plan_procurement_doc_number = $docNumber;
+        if ($docNumber) {
+            $procurement->procurement_number = $docNumber;
+            if (empty($procurement->plan_procurement_doc_number)) {
+                $procurement->plan_procurement_doc_number = $docNumber;
+            }
         }
 
         $procurement->memo_date = $request->filled('memo_date') ? $request->input('memo_date') : now();

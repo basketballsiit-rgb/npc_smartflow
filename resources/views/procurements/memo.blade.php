@@ -531,7 +531,7 @@
         </tr>
         <tr>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 8px;">ที่</td>
-            <td><span contenteditable="true" style="outline: none;">{{ $procurement->plan_procurement_doc_number ?: ($procurement->procurement_number ?: '........../2570') }}</span></td>
+            <td><span contenteditable="true" style="outline: none;">{{ (!empty($procurement->plan_procurement_cut_at) && !empty($procurement->plan_procurement_doc_number)) ? $procurement->plan_procurement_doc_number : '........../' . ($project->academic_year ?: '2570') }}</span></td>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; text-align: right; padding-right: 8px;">วันที่</td>
             <td><span contenteditable="true" style="outline: none;">{{ $day }}</span> เดือน <span contenteditable="true" style="outline: none;">{{ $month }}</span> พ.ศ. <span contenteditable="true" style="outline: none;">{{ $year }}</span></td>
         </tr>
