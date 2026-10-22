@@ -25,8 +25,8 @@ return new class extends Migration
                 'deputy_director_position' => 'รองผู้อำนวยการฝ่ายวิชาการ',
             ],
             'ฝ่ายกิจการนักเรียนนักศึกษา' => [
-                'deputy_director_name' => 'นายวิทยา ปันโน',
-                'deputy_director_position' => 'ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
+                'deputy_director_name' => 'นายนิพนธ์ ร่องพืช',
+                'deputy_director_position' => 'รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
             ],
             'ฝ่ายยุทธศาสตร์และแผนงาน' => [
                 'deputy_director_name' => 'นายนิพนธ์ ร่องพืช',
@@ -51,12 +51,16 @@ return new class extends Migration
             'academic_deputy_position' => 'รองผู้อำนวยการฝ่ายวิชาการ',
             'resource_deputy_name' => 'นายจักรพงศ์ พรหมสกุลปัญญา',
             'resource_deputy_position' => 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
-            'student_affairs_deputy_name' => 'นายวิทยา ปันโน',
-            'student_affairs_deputy_position' => 'ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
+            'student_affairs_deputy_name' => 'นายนิพนธ์ ร่องพืช',
+            'student_affairs_deputy_position' => 'รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
             'plan_deputy_name' => 'นายนิพนธ์ ร่องพืช',
             'plan_deputy_position' => 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
             'plan_head_name' => 'นายพิพัฒน์ สีมา',
             'plan_head_position' => 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ',
+            'finance_head_name' => 'นางสาวดวงดาว ไชยเขียว',
+            'finance_head_position' => 'หัวหน้างานการเงิน',
+            'procurement_head_name' => 'นายกิตติศักดิ์ ขัดเงางาม',
+            'procurement_head_position' => 'หัวหน้างานพัสดุ',
         ];
 
         foreach ($settings as $key => $val) {

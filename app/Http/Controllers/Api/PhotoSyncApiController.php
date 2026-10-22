@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Project;
+use App\Models\AppNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 
 class PhotoSyncApiController extends Controller
 {
@@ -112,10 +114,85 @@ class PhotoSyncApiController extends Controller
         $data = $request->all();
         Log::info('PhotoSync Webhook Received:', $data);
 
+        // Notify project owner in SmartFlow
+        $projectCode = $data['projectCode'] ?? '';
+        $albumTitle = $data['albumTitle'] ?? 'ภาพกิจกรรม';
+        $photoCount = $data['photoCount'] ?? 0;
+
+        if ($projectCode) {
+            $parts = explode('-', $projectCode);
+            $idCandidate = end($parts);
+            $projectId = intval($idCandidate);
+
+            $project = Project::find($projectId);
+            if ($project && $project->user_id) {
+                try {
+                    AppNotification::create([
+                        'user_id' => $project->user_id,
+                        'title' => '📷 ได้รับภาพกิจกรรมจาก PhotoSync',
+                        'message' => "อัลบั้ม \"{$albumTitle}\" ({$photoCount} ภาพ) เชื่อมโยงเข้าสู่โครงการเรียบร้อยแล้ว พร้อมนำไปใส่เล่มรายงาน 5 บท",
+                        'type' => 'photosync',
+                        'action_url' => "/projects/{$project->id}/report",
+                        'icon' => 'camera',
+                        'color' => 'emerald',
+                        'reference_id' => $project->id,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Failed to create AppNotification for PhotoSync webhook: ' . $e->getMessage());
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Webhook received successfully',
+            'message' => 'Webhook received and processed successfully',
             'timestamp' => now()->toIso8601String(),
         ]);
+    }
+
+    /**
+     * GET /api/v1/projects/{id}/photosync-status
+     * Check photos available from PhotoSync for a specific SmartFlow project
+     */
+    public function checkPhotoSyncStatus($id)
+    {
+        $project = Project::find($id);
+        if (!$project) {
+            return response()->json(['success' => false, 'error' => 'Project not found'], 404);
+        }
+
+        $shortYear = substr((string)($project->academic_year ?: 2569), -2);
+        $paddedId = str_pad((string)$project->id, 3, '0', STR_PAD_LEFT);
+        $projectCode = "PRJ-{$shortYear}-{$paddedId}";
+
+        $photosyncUrl = env('PHOTOSYNC_API_URL', 'https://service.npc.ac.th/npc_photosync/api/v1');
+        $apiKey = env('PHOTOSYNC_API_KEY', 'photosync-secure-rest-api-key-for-smartflow-reports');
+
+        try {
+            $response = Http::withHeaders([
+                'x-photosync-api-key' => $apiKey,
+            ])->timeout(8)->get("{$photosyncUrl}/media/by-project/{$projectCode}");
+
+            if ($response->ok()) {
+                return response()->json([
+                    'success' => true,
+                    'projectCode' => $projectCode,
+                    'data' => $response->json('data'),
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'projectCode' => $projectCode,
+                'status' => $response->status(),
+                'error' => 'Could not fetch media from PhotoSync',
+            ], $response->status());
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'projectCode' => $projectCode,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

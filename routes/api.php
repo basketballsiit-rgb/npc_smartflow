@@ -23,5 +23,6 @@ Route::prefix('v1')->group(function () {
 
     // PhotoSync Integration Routes
     Route::get('/projects', [PhotoSyncApiController::class, 'getProjects']);
+    Route::get('/projects/{id}/photosync-status', [PhotoSyncApiController::class, 'checkPhotoSyncStatus']);
     Route::post('/webhooks/photosync', [PhotoSyncApiController::class, 'receivePhotoSyncWebhook']);
 });

@@ -67,8 +67,12 @@ class HandleInertiaRequests extends Middleware
                 'academic_deputy_position' => \App\Models\SystemSetting::where('key', 'academic_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายวิชาการ',
                 'resource_deputy_name' => \App\Models\SystemSetting::where('key', 'resource_deputy_name')->value('value') ?: 'นายจักรพงศ์ พรหมสกุลปัญญา',
                 'resource_deputy_position' => \App\Models\SystemSetting::where('key', 'resource_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
-                'student_affairs_deputy_name' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_name')->value('value') ?: 'นายวิทยา ปันโน',
-                'student_affairs_deputy_position' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_position')->value('value') ?: 'ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
+                'student_affairs_deputy_name' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_name')->value('value') ?: 'นายนิพนธ์ ร่องพืช',
+                'student_affairs_deputy_position' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
+                'finance_head_name' => \App\Models\SystemSetting::where('key', 'finance_head_name')->value('value') ?: 'นางสาวดวงดาว ไชยเขียว',
+                'finance_head_position' => \App\Models\SystemSetting::where('key', 'finance_head_position')->value('value') ?: 'หัวหน้างานการเงิน',
+                'procurement_head_name' => \App\Models\SystemSetting::where('key', 'procurement_head_name')->value('value') ?: 'นายกิตติศักดิ์ ขัดเงางาม',
+                'procurement_head_position' => \App\Models\SystemSetting::where('key', 'procurement_head_position')->value('value') ?: 'หัวหน้างานพัสดุ',
                 'plan_deputy_name' => \App\Models\SystemSetting::where('key', 'plan_deputy_name')->value('value') 
                     ?: (\App\Models\Department::whereNull('parent_id')->where(function($q) {
                             $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');

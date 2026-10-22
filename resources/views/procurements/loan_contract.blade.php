@@ -241,14 +241,17 @@
     $deptName = $project->department ? $project->department->name : ($project->user?->department?->name ?? 'วิทยาลัยสารพัดช่างน่าน');
 
     // 2. Financial Head
-    $financeUser = \App\Models\User::where('position', 'like', '%การเงิน%')
-        ->orWhere('position', 'like', '%หัวหน้างานการเงิน%')
-        ->first();
-    $financeHeadName = $financeUser ? cleanPersonName($financeUser->name) : 'นางสาวดวงดาว ไชยเขียว';
+    $financeHeadName = \App\Models\SystemSetting::where('key', 'finance_head_name')->value('value');
+    if (!$financeHeadName) {
+        $financeUser = \App\Models\User::where('position', 'like', '%หัวหน้างานการเงิน%')
+            ->orWhere('name', 'like', '%ดวงดาว%')
+            ->first();
+        $financeHeadName = $financeUser ? cleanPersonName($financeUser->name) : 'นางสาวดวงดาว ไชยเขียว';
+    }
 
     // 3. Deputy Resources
-    $deputyResUser = \App\Models\User::where('position', 'like', '%บริหารทรัพยากร%')->first();
-    $deputyResName = $deputyResUser ? cleanPersonName($deputyResUser->name) : 'นายจักรพงศ์ พรหมสกุลปัญญา';
+    $deputyResName = \App\Models\SystemSetting::where('key', 'resource_deputy_name')->value('value')
+        ?: (\App\Models\Department::whereNull('parent_id')->where('name', 'ฝ่ายบริหารทรัพยากร')->value('deputy_director_name') ?: 'นายจักรพงศ์ พรหมสกุลปัญญา');
 
     // 4. College Director
     $directorUser = \App\Models\User::where('position', 'like', '%ผู้อำนวยการวิทยาลัย%')

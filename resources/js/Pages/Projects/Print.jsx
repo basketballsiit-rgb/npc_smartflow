@@ -428,7 +428,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
             return toThaiNumerals(cleanPersonName(college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา'));
         }
         if (combined.includes('กิจการนักเรียน') || combined.includes('พัฒนากิจการ')) {
-            return toThaiNumerals(cleanPersonName(college_settings?.student_affairs_deputy_name || 'นายวิทยา ปันโน'));
+            return toThaiNumerals(cleanPersonName(college_settings?.student_affairs_deputy_name || 'นายนิพนธ์ ร่องพืช'));
         }
         if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
             return getPlanDeputyName();
