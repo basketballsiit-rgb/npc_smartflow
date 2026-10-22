@@ -152,18 +152,41 @@ class PhotoSyncApiController extends Controller
 
     /**
      * GET /api/v1/projects/{id}/photosync-status
-     * Check photos available from PhotoSync for a specific SmartFlow project
+     * Check photos available from PhotoSync for a specific SmartFlow project (accepts ID or projectCode)
      */
     public function checkPhotoSyncStatus($id)
     {
-        $project = Project::find($id);
-        if (!$project) {
-            return response()->json(['success' => false, 'error' => 'Project not found'], 404);
+        $project = null;
+        $projectCode = null;
+
+        if (is_numeric($id)) {
+            $project = Project::find($id);
+            if ($project) {
+                $shortYear = substr((string)($project->academic_year ?: 2569), -2);
+                $paddedId = str_pad((string)$project->id, 3, '0', STR_PAD_LEFT);
+                $projectCode = "PRJ-{$shortYear}-{$paddedId}";
+            }
         }
 
-        $shortYear = substr((string)($project->academic_year ?: 2569), -2);
-        $paddedId = str_pad((string)$project->id, 3, '0', STR_PAD_LEFT);
-        $projectCode = "PRJ-{$shortYear}-{$paddedId}";
+        // Support direct project code e.g. PRJ-69-001 or ID parsing
+        if (!$projectCode) {
+            $cleaned = trim(str_replace(['{', '}', '%7B', '%7D'], '', (string)$id));
+            if (preg_match('/PRJ-\d+-(\d+)/i', $cleaned, $matches)) {
+                $projectCode = strtoupper($cleaned);
+                $project = Project::find(intval($matches[1]));
+            } else if (is_numeric($cleaned)) {
+                $project = Project::find(intval($cleaned));
+                if ($project) {
+                    $shortYear = substr((string)($project->academic_year ?: 2569), -2);
+                    $paddedId = str_pad((string)$project->id, 3, '0', STR_PAD_LEFT);
+                    $projectCode = "PRJ-{$shortYear}-{$paddedId}";
+                } else {
+                    $projectCode = "PRJ-69-" . str_pad($cleaned, 3, '0', STR_PAD_LEFT);
+                }
+            } else {
+                $projectCode = strtoupper($cleaned);
+            }
+        }
 
         $photosyncUrl = env('PHOTOSYNC_API_URL', 'https://service.npc.ac.th/npc_photosync/api/v1');
         $apiKey = env('PHOTOSYNC_API_KEY', 'photosync-secure-rest-api-key-for-smartflow-reports');
@@ -177,7 +200,13 @@ class PhotoSyncApiController extends Controller
                 return response()->json([
                     'success' => true,
                     'projectCode' => $projectCode,
-                    'data' => $response->json('data'),
+                    'projectName' => $project ? $project->title : $response->json('data.project.projectName'),
+                    'smartflowProject' => $project ? [
+                        'id' => $project->id,
+                        'title' => $project->title,
+                        'academic_year' => $project->academic_year,
+                    ] : null,
+                    'photosyncData' => $response->json('data'),
                 ]);
             }
 
@@ -185,7 +214,7 @@ class PhotoSyncApiController extends Controller
                 'success' => false,
                 'projectCode' => $projectCode,
                 'status' => $response->status(),
-                'error' => 'Could not fetch media from PhotoSync',
+                'error' => 'Could not fetch media from PhotoSync. Project might not have linked albums yet.',
             ], $response->status());
         } catch (\Exception $e) {
             return response()->json([
