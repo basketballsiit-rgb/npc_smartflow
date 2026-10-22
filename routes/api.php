@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\TravelLoanApiController;
+use App\Http\Controllers\Api\PhotoSyncApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,4 +20,8 @@ Route::prefix('v1')->group(function () {
     // User Line ID Sync Routes from npc_hr
     Route::post('/users/sync-line-user', [TravelLoanApiController::class, 'syncLineUser']);
     Route::post('/users/bulk-sync-line-users', [TravelLoanApiController::class, 'bulkSyncLineUsers']);
+
+    // PhotoSync Integration Routes
+    Route::get('/projects', [PhotoSyncApiController::class, 'getProjects']);
+    Route::post('/webhooks/photosync', [PhotoSyncApiController::class, 'receivePhotoSyncWebhook']);
 });
