@@ -21285,7 +21285,7 @@ return (
                                                 )}
                                             </td>
 
-                                            {/* คอลัมน์ที่ 4: ชุดจัดซื้อ (โชว์แค่ตัวเลขยอดรวม/แยกชุด ขนาดเล็กลง พออ่านได้ กดเพื่อเปิดดูเอกสารและรายการ) */}
+                                            {/* คอลัมน์ที่ 4: ชุดจัดซื้อ (โชว์เฉพาะยอดรวมของชุดจัดซื้อ กดเพื่อเปิดดูเอกสารและรายการชุดจัดซื้อ) */}
                                             <td className="px-3 py-2.5 align-top text-right whitespace-nowrap">
                                                 {(() => {
                                                     if (!item.hasProcComponent || item.totalProcAmount <= 0) {
@@ -21296,45 +21296,12 @@ return (
                                                         );
                                                     }
 
-                                                    const validSets = (item.procSets || []).filter(s => s.amount > 0);
-
-                                                    if (validSets.length > 1) {
-                                                        return (
-                                                            <div className="flex flex-col items-end gap-1">
-                                                                {validSets.map((set, sIdx) => (
-                                                                    <button
-                                                                        key={sIdx}
-                                                                        type="button"
-                                                                        onClick={() => setSelectedFinanceDocDetails({ ...item, focusedProcSet: set })}
-                                                                        className="inline-flex items-center gap-1 py-0.5 px-2 rounded-md bg-purple-50/90 hover:bg-purple-100 border border-purple-300 text-purple-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
-                                                                        title={`คลิกยอดเงิน ${set.label} เพื่อดูเอกสารและรายการ`}
-                                                                    >
-                                                                        <span className="text-[10px] text-purple-800 font-bold">{set.shortLabel}:</span>
-                                                                        <span className="text-xs font-bold text-purple-950 font-mono underline decoration-purple-400 group-hover:text-purple-700">
-                                                                            ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(set.amount)}
-                                                                        </span>
-                                                                    </button>
-                                                                ))}
-                                                                {item.totalProcAmount > 0 && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => setSelectedFinanceDocDetails(item)}
-                                                                        className="text-[10px] font-mono font-bold text-slate-500 hover:text-purple-800 underline decoration-dotted cursor-pointer"
-                                                                        title="คลิกเพื่อดูภาพรวมชุดจัดซื้อทั้งหมด"
-                                                                    >
-                                                                        (รวม: ฿{new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(item.totalProcAmount)})
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    }
-
                                                     if (item.isRoutineProcurement) {
                                                         return (
                                                             <a
                                                                 href={route('routine_procurements.download_document', [item.procurement_id, 'request_form'])}
                                                                 target="_blank"
-                                                                className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-teal-50/90 hover:bg-teal-100 border border-teal-300 text-teal-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
+                                                                className="inline-flex flex-col items-end py-1 px-2.5 rounded-xl bg-teal-50/90 hover:bg-teal-100 border border-teal-300 text-teal-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
                                                                 title="คลิกที่ตัวเลขเพื่อเปิดดูชุดจัดซื้อจัดจ้าง (แบบขออนุมัติ)"
                                                             >
                                                                 <span className="text-xs sm:text-sm font-bold text-teal-950 font-mono underline decoration-teal-400 group-hover:text-teal-700">
@@ -21351,7 +21318,7 @@ return (
                                                         <button
                                                             type="button"
                                                             onClick={() => setSelectedFinanceDocDetails(item)}
-                                                            className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-purple-50/90 hover:bg-purple-100 border border-purple-300 text-purple-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
+                                                            className="inline-flex flex-col items-end py-1 px-2.5 rounded-xl bg-purple-50/90 hover:bg-purple-100 border border-purple-300 text-purple-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
                                                             title="คลิกที่ตัวเลขเพื่อดูรายละเอียดเอกสารและรายการชุดจัดซื้อ"
                                                         >
                                                             <span className="text-xs sm:text-sm font-bold text-purple-950 font-mono underline decoration-purple-400 group-hover:text-purple-700">
