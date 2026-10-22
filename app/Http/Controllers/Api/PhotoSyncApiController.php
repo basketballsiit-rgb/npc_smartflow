@@ -43,6 +43,22 @@ class PhotoSyncApiController extends Controller
 
         $query = Project::with(['department.parent']);
 
+        // กรองเฉพาะโครงการที่ได้รับการอนุมัติแล้วเท่านั้น (Approved Projects Only)
+        if ($request->query('status') === 'all' || $request->boolean('include_all')) {
+            // ไม่กรองสถานะหากส่งพารามิเตอร์มาเจาะจง
+        } elseif ($request->has('status') && !empty($request->query('status'))) {
+            $query->where('status', $request->query('status'));
+        } else {
+            // ค่าเริ่มต้น: ดึงเฉพาะโครงการที่ได้รับการอนุมัติเรียบร้อยแล้วเท่านั้น
+            $query->where(function ($q) {
+                $q->whereIn('status', ['approved', 'in_progress', 'evaluating', 'completed'])
+                  ->orWhere(function ($sub) {
+                      $sub->where('current_approval_step', '>=', 6)
+                          ->whereNotIn('status', ['draft', 'submitted', 'pending_approval', 'rejected', 'cancelled']);
+                  });
+            });
+        }
+
         if ($request->has('academicYear') && !empty($request->query('academicYear'))) {
             $query->where('academic_year', $request->query('academicYear'));
         }
