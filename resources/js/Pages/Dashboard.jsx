@@ -20482,8 +20482,40 @@ ${itemsListText}
             if (isStrictFinanceUser) {
                 return p.hasLoanAtFinance || p.hasProcAtFinance;
             }
+            if (isPlanView) {
+                // งานแผนงาน (เมนูตัดยอดงบ ผง.): แสดงเฉพาะโครงการ/รายการที่ได้ดำเนินการตัดไปแล้วเท่านั้น ทั้งในระบบและนอกระบบ
+                const isCut = Boolean(
+                    p.plan_procurement_cut_at || 
+                    p.plan_loan_cut_at || 
+                    p.plan_cut_at || 
+                    p.plan_procurement_doc_number || 
+                    p.plan_loan_doc_number || 
+                    p.plan_doc_number ||
+                    p.isProcPlanCut || 
+                    p.isLoanPlanCut || 
+                    p.isProcReceived || 
+                    p.isProcForwardedToFin || 
+                    p.isProcDisbursed || 
+                    p.isLoanFinReceived || 
+                    p.isLoanCleared ||
+                    p.procurement?.plan_procurement_cut_at ||
+                    p.procurement?.plan_loan_cut_at ||
+                    p.procurement?.plan_procurement_doc_number ||
+                    p.procurement?.plan_loan_doc_number ||
+                    p.procurement?.status === 'plan_cut' ||
+                    p.procurement?.loan_status === 'plan_cut' ||
+                    (p.rawLoan && (p.rawLoan.loan_status === 'plan_cut' || p.rawLoan.loan_status === 'finance_received' || p.rawLoan.loan_status === 'cleared' || p.rawLoan.plan_cut_at || p.rawLoan.plan_doc_number))
+                );
+                return isCut;
+            }
             return true;
         });
+
+        // Plan Specific Metrics (Cut Budget Items)
+        const countPlanProcCut = trackingList.filter(p => p.hasProcComponent && (p.isProcPlanCut || p.plan_procurement_cut_at || p.plan_procurement_doc_number || p.isProcReceived || p.isProcForwardedToFin || p.isProcDisbursed)).length;
+        const countPlanLoanCut = trackingList.filter(p => p.hasLoanComponent && (p.isLoanPlanCut || p.plan_loan_cut_at || p.plan_loan_doc_number || p.isLoanFinReceived || p.isLoanCleared)).length;
+        const countPlanRoutineCut = trackingList.filter(p => p.isRoutineProcurement || p.isNonProject).length;
+        const countPlanProjectCut = trackingList.filter(p => !p.isRoutineProcurement && !p.isNonProject && !p.isTravelLoan).length;
 
         // Finance Specific Metrics
         const countFinPendingReceive = trackingList.filter(p => p.hasLoanAtFinance && !p.isLoanFinReceived && !p.isLoanCleared).length;
@@ -20517,6 +20549,10 @@ ${itemsListText}
 
         // Action Required Items (Pending immediate action by current staff role)
         const actionRequiredTrackingItems = trackingList.filter(p => {
+            if (isPlanView) {
+                // In Plan Cut Register view, all items in trackingList are already cut as requested by user.
+                return false;
+            }
             if (isProcurementView) {
                 return p.hasProcComponent && (
                     p.procCategory === 'at_procurement' ||
@@ -20547,6 +20583,11 @@ ${itemsListText}
                 if (docTrackingFilter === 'fin_pending_loan' && !(p.isLoanFinReceived && !p.isLoanCleared)) return false;
                 if (docTrackingFilter === 'fin_proc_pay' && !(p.hasProcAtFinance && !p.isProcDisbursed)) return false;
                 if (docTrackingFilter === 'fin_completed' && !p.isAllFinCompleted) return false;
+            } else if (isPlanView) {
+                if (docTrackingFilter === 'in_system' && (p.isRoutineProcurement || p.isNonProject || p.isTravelLoan)) return false;
+                if (docTrackingFilter === 'routine_external' && !(p.isRoutineProcurement || p.isNonProject)) return false;
+                if (docTrackingFilter === 'procurement' && !(p.hasProcComponent && (p.isProcPlanCut || p.plan_procurement_cut_at || p.plan_procurement_doc_number || p.isProcReceived || p.isProcForwardedToFin || p.isProcDisbursed))) return false;
+                if (docTrackingFilter === 'loan' && !(p.hasLoanComponent && (p.isLoanPlanCut || p.plan_loan_cut_at || p.plan_loan_doc_number || p.isLoanFinReceived || p.isLoanCleared))) return false;
             } else {
                 if (docTrackingFilter === 'at_plan' && !(
                     p.hasLoanComponent && p.loanCategory === 'at_plan'
@@ -20737,16 +20778,18 @@ return (
                                 <span>📍</span> Real-time Document & Loan Tracking Center
                             </div>
                             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                                <span>{isStrictFinanceUser ? '💳' : (isProcurementView ? '📦' : '📍')}</span> {isStrictFinanceUser ? 'ศูนย์เอกสารและการเงิน (สัญญายืมเงิน & จัดซื้อรอเบิกจ่าย)' : (isProcurementView ? 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง (งานพัสดุ)' : (isPowerTrackingUser ? 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน' : 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน (โครงการของฉัน)'))}
+                                <span>{isStrictFinanceUser ? '💳' : (isProcurementView ? '📦' : (isPlanView ? '✂️' : '📍'))}</span> {isStrictFinanceUser ? 'ศูนย์เอกสารและการเงิน (สัญญายืมเงิน & จัดซื้อรอเบิกจ่าย)' : (isProcurementView ? 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง (งานพัสดุ)' : (isPlanView ? 'ทะเบียนตัดยอดงบประมาณ ผง. (จัดซื้อจัดจ้าง / สัญญายืมเงิน / งบดำเนินงาน)' : (isPowerTrackingUser ? 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน' : 'ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน (โครงการของฉัน)')))}
                             </h2>
                             <p className="text-xs sm:text-sm text-purple-200 max-w-2xl leading-relaxed">
                                 {isStrictFinanceUser
                                     ? 'แสดงเฉพาะเอกสารและสัญญาที่วิ่งเข้าสู่งานการเงิน เพื่อลงรับ โอนเงินยืมทดรองราชการ หรือเบิกจ่ายตามชุดจัดซื้อจัดจ้าง 4 ฉบับ'
                                     : (isProcurementView
                                         ? 'ติดตามเฉพาะชุดเอกสารจัดซื้อจัดจ้าง (PR/PO/ขออนุมัติซื้อจ้าง) ที่ต้องดำเนินการโดยงานพัสดุ เอกสารสัญญายืมเงินจะวิ่งตรงไปยังงานการเงินโดยไม่ผ่านงานพัสดุ'
-                                        : (isPowerTrackingUser
-                                            ? 'ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค. 101) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน'
-                                            : 'ติดตามสถานะและตำแหน่งเอกสารของโครงการที่คุณเสนอขออนุมัติ ทราบทันทีว่าสัญญายืมเงินหรือจัดซื้อจัดจ้างอยู่ที่ขั้นตอนหรือโต๊ะงานใด ป้องกันเอกสารตกค้าง'))}
+                                        : (isPlanView
+                                            ? 'ทะเบียนประวัติและรายการที่งานแผนงานได้ดำเนินการตัดยอดงบประมาณเรียบร้อยแล้ว ทั้งโครงการในระบบ สัญญายืมเงิน และงบประมาณภายนอกระบบ/งบดำเนินงาน (สาธารณูปโภค เงินเดือน ฯลฯ)'
+                                            : (isPowerTrackingUser
+                                                ? 'ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค. 101) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน'
+                                                : 'ติดตามสถานะและตำแหน่งเอกสารของโครงการที่คุณเสนอขออนุมัติ ทราบทันทีว่าสัญญายืมเงินหรือจัดซื้อจัดจ้างอยู่ที่ขั้นตอนหรือโต๊ะงานใด ป้องกันเอกสารตกค้าง')))}
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
@@ -20755,9 +20798,9 @@ return (
                                     type="button"
                                     onClick={handleOpenExternalCutModal}
                                     className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 px-3.5 py-2 text-xs font-black text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-emerald-300/40"
-                                    title="สิทธิ์งานแผนงาน/Admin: บันทึกตัดยอดชุดจัดซื้อจัดจ้าง / สัญญายืมเงินกระดาษจากภายนอกระบบ ทั้งแบบไม่อิงโครงการ และ อิงโครงการ"
+                                    title="สิทธิ์งานแผนงาน/Admin: บันทึกตัดยอดชุดจัดซื้อจัดจ้าง / สัญญายืมเงิน ทั้งแบบไม่อิงโครงการ (สาธารณูปโภค/เงินเดือน) และ อิงโครงการในระบบ"
                                 >
-                                    <span>✂️</span> ตัดยอดภายนอกระบบ (จัดซื้อ/ยืมเงิน)
+                                    <span>✂️</span> บันทึกตัดยอดงบประมาณ (ในระบบ / นอกระบบ)
                                 </button>
                             )}
                             {isPlanStaff && (
@@ -20800,7 +20843,11 @@ return (
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
                             <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
-                                {isProcurementView ? 'ชุดเอกสารจัดซื้อจัดจ้างทั้งหมด' : (isPowerTrackingUser ? 'จำนวนรายการทั้งหมด' : 'จำนวนโครงการที่เสนอ')}
+                                {isPlanView 
+                                    ? 'รายการที่ตัดยอดงบแล้วทั้งหมด' 
+                                    : (isProcurementView 
+                                        ? 'ชุดเอกสารจัดซื้อจัดจ้างทั้งหมด' 
+                                        : (isPowerTrackingUser ? 'จำนวนรายการทั้งหมด' : 'จำนวนโครงการที่เสนอ'))}
                             </span>
                             <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
                                 {isPowerTrackingUser ? trackingList.length : (teacherData?.proposalsCount || 0)} รายการ
@@ -20808,22 +20855,26 @@ return (
                         </div>
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
                             <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
-                                {isProcurementView ? 'รายการจัดซื้อที่ผ่านอนุมัติ/มีงบ' : (isPowerTrackingUser ? 'รายการที่ผ่านการอนุมัติ/มีงบ' : 'โครงการที่ผ่านอนุมัติงบ')}
+                                {isPlanView
+                                    ? 'ตัดยอดชุดจัดซื้อ / สัญญายืมเงิน'
+                                    : (isProcurementView ? 'รายการจัดซื้อที่ผ่านอนุมัติ/มีงบ' : (isPowerTrackingUser ? 'รายการที่ผ่านการอนุมัติ/มีงบ' : 'โครงการที่ผ่านอนุมัติงบ'))}
                             </span>
                             <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
-                                {isPowerTrackingUser 
-                                    ? trackingList.filter(p => (parseFloat(p.totalProcAmount) || parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0) > 0).length
-                                    : (teacherData?.approvedCount || 0)} รายการ
+                                {isPlanView
+                                    ? `${countPlanProcCut} จัดซื้อ / ${countPlanLoanCut} ยืมเงิน`
+                                    : (isPowerTrackingUser 
+                                        ? trackingList.filter(p => (parseFloat(p.totalProcAmount) || parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0) > 0).length
+                                        : (teacherData?.approvedCount || 0) + ' รายการ')}
                             </p>
                         </div>
                         <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-5 shadow-xs">
                             <span className="text-xs font-bold uppercase tracking-wider text-purple-700">
-                                {isProcurementView ? 'วงเงินงบจัดซื้อจัดจ้างรวม' : 'วงเงินงบประมาณรวม'}
+                                {isPlanView ? 'วงเงินงบประมาณที่ตัดยอดแล้วรวม' : (isProcurementView ? 'วงเงินงบจัดซื้อจัดจ้างรวม' : 'วงเงินงบประมาณรวม')}
                             </span>
                             <p className="mt-1.5 text-2xl sm:text-3xl font-black text-purple-950">
                                 {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(
                                     isPowerTrackingUser 
-                                        ? trackingList.reduce((sum, p) => sum + (parseFloat(p.totalProcAmount) || (isProcurementView ? 0 : (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0))), 0)
+                                        ? trackingList.reduce((sum, p) => sum + (parseFloat(p.totalProcAmount) || (isProcurementView ? 0 : (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || parseFloat(p.loanAmount) || 0))), 0)
                                         : (teacherData?.totalBudget || 0)
                                 )}
                             </p>
@@ -21039,6 +21090,26 @@ return (
                                     className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
                                         docTrackingFilter === tab.id
                                             ? 'bg-purple-700 text-white shadow-xs scale-102 ring-2 ring-purple-400/50'
+                                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))
+                        ) : isPlanView ? (
+                            [
+                                { id: 'all', label: `ตัดยอดแล้วทั้งหมด (${trackingList.length})` },
+                                { id: 'in_system', label: `📁 โครงการในระบบ (${countPlanProjectCut})` },
+                                { id: 'routine_external', label: `🏢 นอกระบบ/งบประจำ/สาธารณูปโภค (${countPlanRoutineCut})` },
+                                { id: 'procurement', label: `📦 ชุดจัดซื้อ (${countPlanProcCut})` },
+                                { id: 'loan', label: `✈️ สัญญายืมเงิน (${countPlanLoanCut})` },
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setDocTrackingFilter(tab.id)}
+                                    className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                                        docTrackingFilter === tab.id
+                                            ? 'bg-amber-600 text-white shadow-xs scale-102 ring-2 ring-amber-400/50'
                                             : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                                     }`}
                                 >
@@ -21416,6 +21487,11 @@ return (
                                                                 >
                                                                     <span>📊</span> แผนตัดยอดงบ
                                                                 </button>
+                                                            )}
+                                                            {(item.plan_procurement_cut_at || item.plan_loan_cut_at) && (
+                                                                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-[11px]">
+                                                                    <span>✓</span> ตัดยอดแล้ว
+                                                                </div>
                                                             )}
                                                         </>
                                                     )}
