@@ -59,7 +59,7 @@
             line-height: 1.25;
         }
 
-        /* ตารางรายละเอียดคุณลักษณะเฉพาะของพัสดุตามภาพที่ 1 */
+        /* ตารางรายละเอียดคุณลักษณะเฉพาะของพัสดุตามแบบฟอร์ม */
         .tor-table {
             width: 100%;
             border-collapse: collapse;
@@ -269,52 +269,12 @@
         }
     }
 
-    // 1. Proposer & Staff (ผู้เสนอ / เจ้าหน้าที่ในงาน หรือเกี่ยวข้องในงาน)
+    // 1. Proposer & Department Details
     $cleanProposerName = cleanPersonName($project->responsible_person ?: ($project->user?->name ?? '..........................................................'));
-    $defaultStaffName = $cleanProposerName;
-    $defaultStaffPosition = $project->position ?: ($project->user?->position ?? 'เจ้าหน้าที่ผู้รับผิดชอบงาน');
 
-    // 2. Department & Sub-department Resolution
     $actualDept = $project->department;
-    $userPos = null;
-    if ($project->user_position_id) {
-        $userPos = \App\Models\UserPosition::with(['department', 'subDepartment'])->find($project->user_position_id);
-    } elseif ($project->user) {
-        $userPos = \App\Models\UserPosition::with(['department', 'subDepartment'])
-            ->where('user_id', $project->user_id)
-            ->where('is_primary', true)
-            ->first() 
-            ?: \App\Models\UserPosition::with(['department', 'subDepartment'])
-                ->where('user_id', $project->user_id)
-                ->first();
-    }
-
-    $subDept = null;
-    if ($userPos && $userPos->subDepartment) {
-        $subDept = $userPos->subDepartment;
-    } elseif ($actualDept && $actualDept->parent_id) {
-        $subDept = $actualDept;
-    } else {
-        $posStr = ($project->position ?? '') . ' ' . ($project->user?->position ?? '');
-        if (!empty($posStr)) {
-            $matchedSub = \App\Models\Department::whereNotNull('parent_id')->get()->first(function($d) use ($posStr) {
-                $core = preg_replace('/^(งาน|สาขาวิชา(งาน)?|แผนกวิชา)/u', '', $d->name);
-                return !empty($core) && str_contains($posStr, $core);
-            });
-            if ($matchedSub) {
-                $subDept = $matchedSub;
-            }
-        }
-    }
-
-    if ($subDept) {
-        $deptName = $subDept->name;
-        $divisionDept = $subDept->parent ?: $actualDept;
-    } else {
-        $deptName = $actualDept ? $actualDept->name : ($project->user?->department?->name ?? 'พัฒนาหลักสูตรและการจัดการเรียนรู้');
-        $divisionDept = ($actualDept && $actualDept->parent) ? $actualDept->parent : $actualDept;
-    }
-
+    $deptName = $actualDept ? $actualDept->name : ($project->user?->department?->name ?? 'พัฒนาหลักสูตรและการจัดการเรียนรู้');
+    $divisionDept = ($actualDept && $actualDept->parent) ? $actualDept->parent : $actualDept;
     $divisionName = $divisionDept ? $divisionDept->name : 'ฝ่ายวิชาการ';
     if (!str_starts_with($divisionName, 'ฝ่าย')) {
         $divisionName = 'ฝ่าย' . $divisionName;
@@ -325,116 +285,23 @@
         $deptDisplayName = 'งาน' . $deptDisplayName;
     }
 
-    if (empty($defaultStaffPosition) || $defaultStaffPosition === '..........................................................') {
-        $defaultStaffPosition = 'เจ้าหน้าที่' . $deptDisplayName;
-    }
+    // 2. คณะกรรมการกำหนดรายละเอียดคุณลักษณะเฉพาะ (ประธานกรรมการ, กรรมการ, กรรมการ)
+    $procComm = $purchasingCommittee ?? ($procurement ? $procurement->purchasingCommittee()->get() : collect());
+    $chairUser = $procComm->firstWhere('pivot.role', 'chairperson');
+    $memberUsers = $procComm->where('pivot.role', 'member')->values();
 
-    // Resolve Head of Dept / Sub-unit (หัวหน้างาน / หัวหน้าแผนก)
-    $headOfDeptName = null;
-    $sig2 = $project->approvals?->where('step_number', 2)->first();
-    if ($sig2 && $sig2->user && $sig2->status === 'approved') {
-        $isFastTrack = in_array($sig2->signature_type, ['fast_track', 'admin']) 
-            || (isset($sig2->comments) && (str_contains($sig2->comments, 'รวดเดียว') || str_contains($sig2->comments, 'Fast-Track') || str_contains($sig2->comments, 'Super Override')));
-        if (!$isFastTrack && $sig2->user->name && $sig2->user_id !== $project->user_id) {
-            $headOfDeptName = cleanPersonName($sig2->user->name);
-        }
-    }
+    $chairName = $chairUser ? cleanPersonName($chairUser->name) : $cleanProposerName;
+    $chairPosition = $chairUser?->position ?: ($project->position ?: ($project->user?->position ?: 'ครู'));
 
-    $posCombined = ($project->position ?? '') . ' ' . ($project->user?->position ?? '');
-    if (!$headOfDeptName && (str_contains($posCombined, 'หัวหน้า') || in_array($project->proposer_duty, ['หัวหน้างาน', 'หัวหน้าสาขาวิชา', 'หัวหน้าแผนกวิชา']))) {
-        $headOfDeptName = $cleanProposerName;
-    }
+    $member1User = $memberUsers->get(0);
+    $member1Name = $member1User ? cleanPersonName($member1User->name) : '..........................................................';
+    $member1Position = $member1User?->position ?: 'ครู';
 
-    if (!$headOfDeptName && $subDept) {
-        $headUp = \App\Models\UserPosition::with('user')
-            ->where(function($q) use ($subDept) {
-                $q->where('sub_department_id', $subDept->id)
-                  ->orWhere('department_id', $subDept->id);
-            })
-            ->whereIn('duty', ['หัวหน้างาน', 'หัวหน้าแผนกวิชา', 'หัวหน้าสาขาวิชา'])
-            ->first();
-        if ($headUp && $headUp->user) {
-            $headOfDeptName = cleanPersonName($headUp->user->name);
-        }
-    }
+    $member2User = $memberUsers->get(1);
+    $member2Name = $member2User ? cleanPersonName($member2User->name) : '..........................................................';
+    $member2Position = $member2User?->position ?: 'ครู';
 
-    if (!$headOfDeptName && $subDept) {
-        $coreSub = preg_replace('/^(งาน|สาขาวิชา(งาน)?|แผนกวิชา)/u', '', $subDept->name);
-        if (!empty($coreSub)) {
-            $matchedHead = \App\Models\User::where('position', 'like', "%หัวหน้า%{$coreSub}%")
-                ->where('position', 'not like', '%รองผู้อำนวยการ%')
-                ->where('position', 'not like', '%เจ้าหน้าที่%')
-                ->first();
-            if ($matchedHead) {
-                $headOfDeptName = cleanPersonName($matchedHead->name);
-            }
-        }
-    }
-
-    $headOfDeptName = $headOfDeptName ?: $cleanProposerName;
-    $headOfDeptTitle = 'หัวหน้า' . (str_starts_with($deptName, 'งาน') || str_starts_with($deptName, 'แผนก') || str_starts_with($deptName, 'ฝ่าย') ? $deptName : $deptDisplayName);
-
-    // 3. Deputy Director options (รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงาน)
-    $deputyOptions = [
-        'academic' => [
-            'key' => 'academic',
-            'division' => 'ฝ่ายวิชาการ',
-            'title' => 'รองผู้อำนวยการฝ่ายวิชาการ',
-            'name' => \App\Models\SystemSetting::where('key', 'academic_deputy_name')->value('value') 
-                ?: (\App\Models\Department::whereNull('parent_id')->where('name', 'ฝ่ายวิชาการ')->value('deputy_director_name') ?: 'นายนิพนธ์ ร่องพืช'),
-        ],
-        'student_affairs' => [
-            'key' => 'student_affairs',
-            'division' => 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา',
-            'title' => 'รองผู้อำนวยการฝ่ายพัฒนากิจการนักเรียนนักศึกษา',
-            'name' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_name')->value('value') 
-                ?: (\App\Models\Department::whereNull('parent_id')->where('name', 'like', '%กิจการ%')->value('deputy_director_name') ?: 'นายนิพนธ์ ร่องพืช'),
-        ],
-        'resources' => [
-            'key' => 'resources',
-            'division' => 'ฝ่ายบริหารทรัพยากร',
-            'title' => 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
-            'name' => \App\Models\SystemSetting::where('key', 'resource_deputy_name')->value('value') 
-                ?: (\App\Models\Department::whereNull('parent_id')->where('name', 'ฝ่ายบริหารทรัพยากร')->value('deputy_director_name') ?: 'นายจักรพงศ์ พรหมสกุลปัญญา'),
-        ],
-        'planning' => [
-            'key' => 'planning',
-            'division' => 'ฝ่ายยุทธศาสตร์และแผนงาน',
-            'title' => 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
-            'name' => \App\Models\SystemSetting::where('key', 'plan_deputy_name')->value('value') 
-                ?: (\App\Models\Department::whereNull('parent_id')->where(function($q) {
-                        $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');
-                    })->value('deputy_director_name') ?: 'นายนิพนธ์ ร่องพืช'),
-        ],
-    ];
-
-    foreach ($deputyOptions as $k => $opt) {
-        $foundUser = \App\Models\User::where('position', 'like', "%{$opt['title']}%")
-            ->orWhere(function($q) use ($opt) {
-                $q->where('position', 'like', '%รองผู้อำนวยการ%')
-                  ->where('position', 'like', "%{$opt['division']}%");
-            })
-            ->first();
-        if ($foundUser) {
-            $deputyOptions[$k]['name'] = cleanPersonName($foundUser->name);
-        }
-    }
-
-    $initialDeputyKey = 'academic';
-    if (str_contains($divisionName, 'บริหาร') || str_contains($divisionName, 'ทรัพยากร')) {
-        $initialDeputyKey = 'resources';
-    } elseif (str_contains($divisionName, 'กิจการ') || str_contains($divisionName, 'พัฒนา')) {
-        $initialDeputyKey = 'student_affairs';
-    } elseif (str_contains($divisionName, 'แผน') || str_contains($divisionName, 'ร่วมมือ') || str_contains($divisionName, 'ยุทธศาสตร์')) {
-        $initialDeputyKey = 'planning';
-    } elseif (str_contains($divisionName, 'วิชาการ')) {
-        $initialDeputyKey = 'academic';
-    }
-
-    $deputyDirectorName = $deputyOptions[$initialDeputyKey]['name'];
-    $deputyDirectorTitle = $deputyOptions[$initialDeputyKey]['title'];
-
-    // 4. College Director (ผู้อำนวยการสถานศึกษา)
+    // 3. ผู้อำนวยการ วิทยาลัยสารพัดช่างน่าน
     $directorUser = \App\Models\User::where('position', 'like', '%ผู้อำนวยการวิทยาลัย%')
         ->orWhere('position', 'like', '%ผู้อำนวยการ%')
         ->where('position', 'not like', '%รองผู้อำนวยการ%')
@@ -442,7 +309,7 @@
     $directorSetting = \App\Models\SystemSetting::where('key', 'director_name')->first();
     $directorName = $directorSetting ? cleanPersonName($directorSetting->value) : ($directorUser ? cleanPersonName($directorUser->name) : 'นายกเชษฐ์ กิ่งชนะ');
 
-    // All Staff Users for Selection Dropdown
+    // All Staff Users for Committee Dropdown Selection
     $allStaffUsers = \App\Models\User::where('is_active', true)->orderBy('name')->get(['id', 'name', 'position', 'department_id']);
 
     // Items and Amounts
@@ -470,10 +337,7 @@
             <div style="font-weight: bold; color: #1e293b; font-size: 14pt;">
                 📋 ขอบเขตและรายละเอียดคุณลักษณะเฉพาะ (TOR)
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <button type="button" onclick="toggleSignatureOrder()" style="padding: 5px 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-family: inherit; font-size: 11pt; font-weight: bold; cursor: pointer;">
-                    🔄 สลับลำดับลายเซ็น
-                </button>
+            <div>
                 <button onclick="window.print()" style="padding: 6px 18px; background-color: #7c3aed; color: #ffffff; border: none; border-radius: 8px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 8px rgba(124,58,237,0.25);">
                     <span>🖨️</span> สั่งพิมพ์แบบฟอร์ม TOR
                 </button>
@@ -481,53 +345,80 @@
         </div>
 
         <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px;">
-            <!-- 1. เลือกรองฝ่ายที่เกี่ยวข้อง -->
+            <!-- 1. เลือกประธานกรรมการ -->
             <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="deputy-select" style="font-weight: bold; color: #1e293b; font-size: 12.5pt;">
-                    👔 1. รองฝ่ายที่เกี่ยวข้อง:
+                <label for="chair-select" style="font-weight: bold; color: #1e293b; font-size: 12pt;">
+                    👑 1. ประธานกรรมการ:
                 </label>
-                <select id="deputy-select" onchange="changeDeputy(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #7c3aed; font-family: inherit; font-size: 12pt; font-weight: bold; color: #4c1d95; background-color: #ffffff; cursor: pointer; outline: none; max-width: 250px;">
-                    @foreach($deputyOptions as $key => $opt)
-                        <option value="{{ $key }}" {{ ($initialDeputyKey === $key) ? 'selected' : '' }}>
-                            {{ $opt['division'] }} — ({{ $opt['name'] }})
-                        </option>
-                    @endforeach
-                    <option value="custom">✏️ กำหนดเอง...</option>
-                </select>
-            </div>
-
-            <!-- 2. เลือกงาน/แผนกวิชา (หัวหน้างาน) -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="unit-select" style="font-weight: bold; color: #1e293b; font-size: 12.5pt;">
-                    🏢 2. หัวหน้างาน/แผนก:
-                </label>
-                <select id="unit-select" onchange="changeUnit(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #0284c7; font-family: inherit; font-size: 12pt; font-weight: bold; color: #0369a1; background-color: #ffffff; cursor: pointer; max-width: 240px;">
-                    @foreach($allSubDepts as $sd)
-                        <option value="{{ $sd->name }}" data-parent="{{ $sd->parent?->name }}" {{ ($deptName === $sd->name) ? 'selected' : '' }}>
-                            {{ $sd->name }} ({{ $sd->parent?->name ?: 'ฝ่ายทั่วไป' }})
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- 3. เจ้าหน้าที่ในงาน หรือเกี่ยวข้องในงาน (ทำเป็นตัวเลือก) -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="staff-select" style="font-weight: bold; color: #1e293b; font-size: 12.5pt;">
-                    👤 3. เจ้าหน้าที่ในงาน/ผู้เกี่ยวข้อง:
-                </label>
-                <select id="staff-select" onchange="changeStaff(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #059669; font-family: inherit; font-size: 12pt; font-weight: bold; color: #065f46; background-color: #ffffff; cursor: pointer; max-width: 260px;">
-                    <option value="default" data-name="{{ $defaultStaffName }}" data-pos="{{ $defaultStaffPosition }}">
-                        {{ $defaultStaffName }} ({{ $defaultStaffPosition }})
+                <select id="chair-select" onchange="changeChair(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #7c3aed; font-family: inherit; font-size: 11.5pt; font-weight: bold; color: #4c1d95; background-color: #ffffff; cursor: pointer; outline: none; max-width: 210px;">
+                    <option value="default" data-name="{{ $chairName }}" data-pos="{{ $chairPosition }}">
+                        {{ $chairName }} ({{ $chairPosition }})
                     </option>
                     @foreach($allStaffUsers as $staff)
                         @php $sClean = cleanPersonName($staff->name); @endphp
-                        @if($sClean !== $defaultStaffName)
-                            <option value="{{ $staff->id }}" data-name="{{ $sClean }}" data-pos="{{ $staff->position ?: ('เจ้าหน้าที่' . $deptDisplayName) }}">
-                                {{ $sClean }} ({{ $staff->position ?: 'เจ้าหน้าที่' }})
+                        @if($sClean !== $chairName)
+                            <option value="{{ $staff->id }}" data-name="{{ $sClean }}" data-pos="{{ $staff->position ?: 'ครู' }}">
+                                {{ $sClean }} ({{ $staff->position ?: 'ครู' }})
                             </option>
                         @endif
                     @endforeach
                     <option value="custom">✏️ กำหนดชื่อเอง...</option>
+                </select>
+            </div>
+
+            <!-- 2. เลือกกรรมการ คนที่ 1 -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="member1-select" style="font-weight: bold; color: #1e293b; font-size: 12pt;">
+                    👤 2. กรรมการ (1):
+                </label>
+                <select id="member1-select" onchange="changeMember1(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #0284c7; font-family: inherit; font-size: 11.5pt; font-weight: bold; color: #0369a1; background-color: #ffffff; cursor: pointer; outline: none; max-width: 210px;">
+                    <option value="default" data-name="{{ $member1Name }}" data-pos="{{ $member1Position }}">
+                        {{ $member1Name }} ({{ $member1Position }})
+                    </option>
+                    @foreach($allStaffUsers as $staff)
+                        @php $sClean = cleanPersonName($staff->name); @endphp
+                        @if($sClean !== $member1Name)
+                            <option value="{{ $staff->id }}" data-name="{{ $sClean }}" data-pos="{{ $staff->position ?: 'ครู' }}">
+                                {{ $sClean }} ({{ $staff->position ?: 'ครู' }})
+                            </option>
+                        @endif
+                    @endforeach
+                    <option value="custom">✏️ กำหนดชื่อเอง...</option>
+                </select>
+            </div>
+
+            <!-- 3. เลือกกรรมการ คนที่ 2 -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="member2-select" style="font-weight: bold; color: #1e293b; font-size: 12pt;">
+                    👤 3. กรรมการ (2):
+                </label>
+                <select id="member2-select" onchange="changeMember2(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #059669; font-family: inherit; font-size: 11.5pt; font-weight: bold; color: #065f46; background-color: #ffffff; cursor: pointer; outline: none; max-width: 210px;">
+                    <option value="default" data-name="{{ $member2Name }}" data-pos="{{ $member2Position }}">
+                        {{ $member2Name }} ({{ $member2Position }})
+                    </option>
+                    @foreach($allStaffUsers as $staff)
+                        @php $sClean = cleanPersonName($staff->name); @endphp
+                        @if($sClean !== $member2Name)
+                            <option value="{{ $staff->id }}" data-name="{{ $sClean }}" data-pos="{{ $staff->position ?: 'ครู' }}">
+                                {{ $sClean }} ({{ $staff->position ?: 'ครู' }})
+                            </option>
+                        @endif
+                    @endforeach
+                    <option value="custom">✏️ กำหนดชื่อเอง...</option>
+                </select>
+            </div>
+
+            <!-- เลือกงาน/แผนกวิชา -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="unit-select" style="font-weight: bold; color: #1e293b; font-size: 12pt;">
+                    🏢 งาน/แผนก:
+                </label>
+                <select id="unit-select" onchange="changeUnit(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #64748b; font-family: inherit; font-size: 11.5pt; font-weight: bold; color: #334155; background-color: #ffffff; cursor: pointer; max-width: 200px;">
+                    @foreach($allSubDepts as $sd)
+                        <option value="{{ $sd->name }}" {{ ($deptName === $sd->name) ? 'selected' : '' }}>
+                            {{ $sd->name }}
+                        </option>
+                    @endforeach
                 </select>
             </div>
         </div>
@@ -693,29 +584,30 @@
 
         <!-- SIGNATURES (การลงลายมือชื่อ 4 ตำแหน่ง) -->
         <div class="signatures-container" id="signatures-wrapper">
-            <!-- 1. เจ้าหน้าที่ในงาน หรือเกี่ยวข้องในงาน (ทำเป็นตัวเลือก) -->
-            <div class="signature-row" id="sig-row-staff">
-                <div>(ลงชื่อ) <span class="sig-dots"></span> เจ้าหน้าที่ในงาน / ผู้กำหนดรายละเอียดคุณลักษณะเฉพาะ</div>
-                <div style="padding-left: 2.2cm;">( <span id="staff-name-text" contenteditable="true" style="outline: none;">{{ $defaultStaffName }}</span> )</div>
-                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="staff-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $defaultStaffPosition }}</div>
+            <!-- 1. ประธานกรรมการ -->
+            <div class="signature-row" id="sig-row-chair">
+                <div>(ลงชื่อ) <span class="sig-dots"></span> ประธานกรรมการ</div>
+                <div style="padding-left: 2.2cm;">( <span id="chair-name-text" contenteditable="true" style="outline: none;">{{ $chairName }}</span> )</div>
+                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="chair-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $chairPosition }}</div>
             </div>
 
-            <!-- 2. หัวหน้างาน / หัวหน้าแผนก -->
-            <div class="signature-row" id="sig-row-head">
-                <div>(ลงชื่อ) <span class="sig-dots"></span> <span id="tor-head-title">{{ $headOfDeptTitle }}</span></div>
-                <div style="padding-left: 2.2cm;">( <span id="tor-head-name" contenteditable="true" style="outline: none;">{{ $headOfDeptName }}</span> )</div>
-                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="tor-head-pos" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $headOfDeptTitle }}</div>
+            <!-- 2. กรรมการ -->
+            <div class="signature-row" id="sig-row-member1">
+                <div>(ลงชื่อ) <span class="sig-dots"></span> กรรมการ</div>
+                <div style="padding-left: 2.2cm;">( <span id="member1-name-text" contenteditable="true" style="outline: none;">{{ $member1Name }}</span> )</div>
+                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="member1-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $member1Position }}</div>
             </div>
 
-            <!-- 3. รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงาน -->
-            <div class="signature-row" id="sig-row-deputy">
-                <div>(ลงชื่อ) <span class="sig-dots"></span> <span id="deputy-title-text">{{ $deputyDirectorTitle }}</span></div>
-                <div style="padding-left: 2.2cm;">( <span id="deputy-name-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorName }}</span> )</div>
-                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="deputy-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $deputyDirectorTitle }}</div>
+            <!-- 3. กรรมการ -->
+            <div class="signature-row" id="sig-row-member2">
+                <div>(ลงชื่อ) <span class="sig-dots"></span> กรรมการ</div>
+                <div style="padding-left: 2.2cm;">( <span id="member2-name-text" contenteditable="true" style="outline: none;">{{ $member2Name }}</span> )</div>
+                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="member2-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $member2Position }}</div>
             </div>
 
-            <!-- 4. ผู้อำนวยการสถานศึกษา (วิทยาลัยสารพัดช่างน่าน) -->
-            <div class="signature-row" id="sig-row-director">
+            <!-- 4. ผู้อำนวยการ วิทยาลัยสารพัดช่างน่าน -->
+            <div class="signature-row" id="sig-row-director" style="margin-top: 25px;">
+                <div style="margin-bottom: 6px; font-weight: bold;">(ความเห็น / การอนุมัติ)</div>
                 <div>(ลงชื่อ) <span class="sig-dots"></span> ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
                 <div style="padding-left: 2.2cm;">( <span id="director-name-text" contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
                 <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;">ตำแหน่ง ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
@@ -725,32 +617,64 @@
 
     <!-- Client-Side Switcher & Dynamic Table Script -->
     <script>
-        const deputyData = @json($deputyOptions);
-
-        function changeStaff(val) {
+        function changeChair(val) {
             if (val === 'custom') {
-                const customName = prompt("กรุณาระบุชื่อ-นามสกุล เจ้าหน้าที่ในงาน/ผู้เกี่ยวข้อง:", "");
+                const customName = prompt("กรุณาระบุชื่อ-นามสกุล ประธานกรรมการ:", "");
                 if (!customName) return;
-                const customPos = prompt("กรุณาระบุตำแหน่ง:", "เจ้าหน้าที่...");
-                document.getElementById('staff-name-text').innerText = customName;
-                document.getElementById('staff-pos-text').innerText = 'ตำแหน่ง ' + (customPos || 'เจ้าหน้าที่');
+                const customPos = prompt("กรุณาระบุตำแหน่ง:", "ครู");
+                document.getElementById('chair-name-text').innerText = customName;
+                document.getElementById('chair-pos-text').innerText = 'ตำแหน่ง ' + (customPos || 'ครู');
                 return;
             }
-            const sel = document.getElementById('staff-select');
+            const sel = document.getElementById('chair-select');
             const opt = sel.options[sel.selectedIndex];
             if (opt) {
                 const name = opt.getAttribute('data-name');
                 const pos = opt.getAttribute('data-pos');
-                if (name) document.getElementById('staff-name-text').innerText = name;
-                if (pos) document.getElementById('staff-pos-text').innerText = 'ตำแหน่ง ' + pos;
+                if (name) document.getElementById('chair-name-text').innerText = name;
+                if (pos) document.getElementById('chair-pos-text').innerText = 'ตำแหน่ง ' + (pos || 'ครู');
+            }
+        }
+
+        function changeMember1(val) {
+            if (val === 'custom') {
+                const customName = prompt("กรุณาระบุชื่อ-นามสกุล กรรมการ (คนที่ 1):", "");
+                if (!customName) return;
+                const customPos = prompt("กรุณาระบุตำแหน่ง:", "ครู");
+                document.getElementById('member1-name-text').innerText = customName;
+                document.getElementById('member1-pos-text').innerText = 'ตำแหน่ง ' + (customPos || 'ครู');
+                return;
+            }
+            const sel = document.getElementById('member1-select');
+            const opt = sel.options[sel.selectedIndex];
+            if (opt) {
+                const name = opt.getAttribute('data-name');
+                const pos = opt.getAttribute('data-pos');
+                if (name) document.getElementById('member1-name-text').innerText = name;
+                if (pos) document.getElementById('member1-pos-text').innerText = 'ตำแหน่ง ' + (pos || 'ครู');
+            }
+        }
+
+        function changeMember2(val) {
+            if (val === 'custom') {
+                const customName = prompt("กรุณาระบุชื่อ-นามสกุล กรรมการ (คนที่ 2):", "");
+                if (!customName) return;
+                const customPos = prompt("กรุณาระบุตำแหน่ง:", "ครู");
+                document.getElementById('member2-name-text').innerText = customName;
+                document.getElementById('member2-pos-text').innerText = 'ตำแหน่ง ' + (customPos || 'ครู');
+                return;
+            }
+            const sel = document.getElementById('member2-select');
+            const opt = sel.options[sel.selectedIndex];
+            if (opt) {
+                const name = opt.getAttribute('data-name');
+                const pos = opt.getAttribute('data-pos');
+                if (name) document.getElementById('member2-name-text').innerText = name;
+                if (pos) document.getElementById('member2-pos-text').innerText = 'ตำแหน่ง ' + (pos || 'ครู');
             }
         }
 
         function changeUnit(unitName) {
-            const select = document.getElementById('unit-select');
-            const selectedOpt = select.options[select.selectedIndex];
-            const parentDiv = selectedOpt ? selectedOpt.getAttribute('data-parent') : '';
-
             let display = unitName;
             if (!display.startsWith('งาน') && !display.startsWith('แผนก') && !display.startsWith('ฝ่าย') && !display.startsWith('สาขาวิชา')) {
                 display = 'งาน' + display;
@@ -760,82 +684,6 @@
             if (h1) h1.innerText = display;
             const h2 = document.getElementById('tor-dept-header2');
             if (h2) h2.innerText = display;
-
-            const ht = document.getElementById('tor-head-title');
-            const hp = document.getElementById('tor-head-pos');
-            let newTitle = '';
-            if (display.startsWith('งาน') || display.startsWith('แผนก') || display.startsWith('ฝ่าย')) {
-                newTitle = 'หัวหน้า' + display;
-            } else if (display.startsWith('สาขาวิชา')) {
-                newTitle = 'หัวหน้าแผนกวิชา' + display.replace(/^สาขาวิชา(งาน)?/, '');
-            } else {
-                newTitle = 'หัวหน้างาน' + display;
-            }
-            if (ht) ht.innerText = newTitle;
-            if (hp) hp.innerText = 'ตำแหน่ง ' + newTitle;
-
-            if (parentDiv) {
-                if (parentDiv.includes('บริหาร') || parentDiv.includes('ทรัพยากร')) {
-                    const sel = document.getElementById('deputy-select');
-                    if (sel) { sel.value = 'resources'; changeDeputy('resources'); }
-                } else if (parentDiv.includes('กิจการ') || parentDiv.includes('พัฒนา')) {
-                    const sel = document.getElementById('deputy-select');
-                    if (sel) { sel.value = 'student_affairs'; changeDeputy('student_affairs'); }
-                } else if (parentDiv.includes('แผน') || parentDiv.includes('ยุทธศาสตร์')) {
-                    const sel = document.getElementById('deputy-select');
-                    if (sel) { sel.value = 'planning'; changeDeputy('planning'); }
-                } else if (parentDiv.includes('วิชาการ')) {
-                    const sel = document.getElementById('deputy-select');
-                    if (sel) { sel.value = 'academic'; changeDeputy('academic'); }
-                }
-            }
-        }
-
-        function changeDeputy(val) {
-            if (val === 'custom') {
-                const customTitle = prompt("กรุณาระบุตำแหน่งรองผู้อำนวยการฝ่าย:", "รองผู้อำนวยการฝ่าย...");
-                if (!customTitle) return;
-                const customName = prompt("กรุณาระบุชื่อ-นามสกุล:", "");
-                if (!customName) return;
-
-                document.getElementById('deputy-title-text').innerText = customTitle;
-                document.getElementById('deputy-name-text').innerText = customName;
-                document.getElementById('deputy-pos-text').innerText = 'ตำแหน่ง ' + customTitle;
-                return;
-            }
-
-            if (deputyData[val]) {
-                document.getElementById('deputy-title-text').innerText = deputyData[val].title;
-                document.getElementById('deputy-name-text').innerText = deputyData[val].name;
-                document.getElementById('deputy-pos-text').innerText = 'ตำแหน่ง ' + deputyData[val].title;
-            }
-        }
-
-        let isOrderFlipped = false;
-        function toggleSignatureOrder() {
-            const wrapper = document.getElementById('signatures-wrapper');
-            const staff = document.getElementById('sig-row-staff');
-            const head = document.getElementById('sig-row-head');
-            const deputy = document.getElementById('sig-row-deputy');
-            const director = document.getElementById('sig-row-director');
-
-            if (!isOrderFlipped) {
-                // ลำดับ: รองฝ่าย -> หัวหน้างาน -> เจ้าหน้าที่ -> ผอ.
-                wrapper.innerHTML = '';
-                wrapper.appendChild(deputy);
-                wrapper.appendChild(head);
-                wrapper.appendChild(staff);
-                wrapper.appendChild(director);
-                isOrderFlipped = true;
-            } else {
-                // ลำดับ: เจ้าหน้าที่ -> หัวหน้างาน -> รองฝ่าย -> ผอ.
-                wrapper.innerHTML = '';
-                wrapper.appendChild(staff);
-                wrapper.appendChild(head);
-                wrapper.appendChild(deputy);
-                wrapper.appendChild(director);
-                isOrderFlipped = false;
-            }
         }
 
         function addTorRow() {
