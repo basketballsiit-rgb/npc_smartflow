@@ -21414,10 +21414,10 @@ return (
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleOpenPlanCutModal(item.rawLoan)}
-                                                                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-black text-xs hover:bg-emerald-100 transition cursor-pointer shadow-2xs"
-                                                                    title="ดูรายละเอียดการตัดยอดงบ"
+                                                                    className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs hover:bg-emerald-100 transition cursor-pointer shadow-2xs"
+                                                                    title="คลิกเพื่อดูรายละเอียดการตัดยอดงบ"
                                                                 >
-                                                                    <span>✓</span> ดูตัดยอดแล้ว
+                                                                    <span>✓</span> ตัดยอดแล้ว
                                                                 </button>
                                                             ) : (
                                                                 <button
