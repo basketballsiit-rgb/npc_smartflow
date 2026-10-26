@@ -86,6 +86,9 @@
             margin-bottom: 22px;
             page-break-inside: avoid;
         }
+        .sig-pos-line {
+            display: none !important;
+        }
         .sig-dots {
             display: inline-block;
             border-bottom: 1px dotted #000;
@@ -344,13 +347,13 @@
             </div>
         </div>
 
-        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px;">
             <!-- 1. เลือกประธานกรรมการ -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="chair-select" style="font-weight: bold; color: #1e293b; font-size: 12pt;">
+            <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 6px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <label for="chair-select" style="font-weight: bold; color: #1e293b; font-size: 13.5pt; white-space: nowrap;">
                     👑 1. ประธานกรรมการ:
                 </label>
-                <select id="chair-select" onchange="changeChair(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #7c3aed; font-family: inherit; font-size: 11.5pt; font-weight: bold; color: #4c1d95; background-color: #ffffff; cursor: pointer; outline: none; max-width: 210px;">
+                <select id="chair-select" onchange="changeChair(this.value)" style="padding: 6px 10px; border-radius: 8px; border: 2px solid #7c3aed; font-family: inherit; font-size: 13pt; font-weight: bold; color: #4c1d95; background-color: #fdf4ff; cursor: pointer; outline: none; min-width: 220px; max-width: 280px;">
                     <option value="default" data-name="{{ $chairName }}" data-pos="{{ $chairPosition }}">
                         {{ $chairName }} ({{ $chairPosition }})
                     </option>
@@ -367,11 +370,11 @@
             </div>
 
             <!-- 2. เลือกกรรมการ คนที่ 1 -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="member1-select" style="font-weight: bold; color: #1e293b; font-size: 12pt;">
+            <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 6px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <label for="member1-select" style="font-weight: bold; color: #1e293b; font-size: 13.5pt; white-space: nowrap;">
                     👤 2. กรรมการ (1):
                 </label>
-                <select id="member1-select" onchange="changeMember1(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #0284c7; font-family: inherit; font-size: 11.5pt; font-weight: bold; color: #0369a1; background-color: #ffffff; cursor: pointer; outline: none; max-width: 210px;">
+                <select id="member1-select" onchange="changeMember1(this.value)" style="padding: 6px 10px; border-radius: 8px; border: 2px solid #0284c7; font-family: inherit; font-size: 13pt; font-weight: bold; color: #0369a1; background-color: #f0f9ff; cursor: pointer; outline: none; min-width: 220px; max-width: 280px;">
                     <option value="default" data-name="{{ $member1Name }}" data-pos="{{ $member1Position }}">
                         {{ $member1Name }} ({{ $member1Position }})
                     </option>
@@ -388,11 +391,11 @@
             </div>
 
             <!-- 3. เลือกกรรมการ คนที่ 2 -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="member2-select" style="font-weight: bold; color: #1e293b; font-size: 12pt;">
+            <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 6px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <label for="member2-select" style="font-weight: bold; color: #1e293b; font-size: 13.5pt; white-space: nowrap;">
                     👤 3. กรรมการ (2):
                 </label>
-                <select id="member2-select" onchange="changeMember2(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #059669; font-family: inherit; font-size: 11.5pt; font-weight: bold; color: #065f46; background-color: #ffffff; cursor: pointer; outline: none; max-width: 210px;">
+                <select id="member2-select" onchange="changeMember2(this.value)" style="padding: 6px 10px; border-radius: 8px; border: 2px solid #059669; font-family: inherit; font-size: 13pt; font-weight: bold; color: #065f46; background-color: #ecfdf5; cursor: pointer; outline: none; min-width: 220px; max-width: 280px;">
                     <option value="default" data-name="{{ $member2Name }}" data-pos="{{ $member2Position }}">
                         {{ $member2Name }} ({{ $member2Position }})
                     </option>
@@ -409,11 +412,11 @@
             </div>
 
             <!-- เลือกงาน/แผนกวิชา -->
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="unit-select" style="font-weight: bold; color: #1e293b; font-size: 12pt;">
+            <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 6px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <label for="unit-select" style="font-weight: bold; color: #1e293b; font-size: 13.5pt; white-space: nowrap;">
                     🏢 งาน/แผนก:
                 </label>
-                <select id="unit-select" onchange="changeUnit(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #64748b; font-family: inherit; font-size: 11.5pt; font-weight: bold; color: #334155; background-color: #ffffff; cursor: pointer; max-width: 200px;">
+                <select id="unit-select" onchange="changeUnit(this.value)" style="padding: 6px 10px; border-radius: 8px; border: 2px solid #64748b; font-family: inherit; font-size: 13pt; font-weight: bold; color: #334155; background-color: #f8fafc; cursor: pointer; min-width: 180px; max-width: 240px;">
                     @foreach($allSubDepts as $sd)
                         <option value="{{ $sd->name }}" {{ ($deptName === $sd->name) ? 'selected' : '' }}>
                             {{ $sd->name }}
@@ -588,21 +591,21 @@
             <div class="signature-row" id="sig-row-chair">
                 <div>(ลงชื่อ) <span class="sig-dots"></span> ประธานกรรมการ</div>
                 <div style="padding-left: 2.2cm;">( <span id="chair-name-text" contenteditable="true" style="outline: none;">{{ $chairName }}</span> )</div>
-                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="chair-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $chairPosition }}</div>
+                <div class="sig-pos-line" id="chair-pos-text" style="display: none;">ตำแหน่ง {{ $chairPosition }}</div>
             </div>
 
             <!-- 2. กรรมการ -->
             <div class="signature-row" id="sig-row-member1">
                 <div>(ลงชื่อ) <span class="sig-dots"></span> กรรมการ</div>
                 <div style="padding-left: 2.2cm;">( <span id="member1-name-text" contenteditable="true" style="outline: none;">{{ $member1Name }}</span> )</div>
-                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="member1-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $member1Position }}</div>
+                <div class="sig-pos-line" id="member1-pos-text" style="display: none;">ตำแหน่ง {{ $member1Position }}</div>
             </div>
 
             <!-- 3. กรรมการ -->
             <div class="signature-row" id="sig-row-member2">
                 <div>(ลงชื่อ) <span class="sig-dots"></span> กรรมการ</div>
                 <div style="padding-left: 2.2cm;">( <span id="member2-name-text" contenteditable="true" style="outline: none;">{{ $member2Name }}</span> )</div>
-                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="member2-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $member2Position }}</div>
+                <div class="sig-pos-line" id="member2-pos-text" style="display: none;">ตำแหน่ง {{ $member2Position }}</div>
             </div>
 
             <!-- 4. ผู้อำนวยการ วิทยาลัยสารพัดช่างน่าน -->
@@ -610,7 +613,7 @@
                 <div style="margin-bottom: 6px; font-weight: bold;">(ความเห็น / การอนุมัติ)</div>
                 <div>(ลงชื่อ) <span class="sig-dots"></span> ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
                 <div style="padding-left: 2.2cm;">( <span id="director-name-text" contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
-                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;">ตำแหน่ง ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
+                <div class="sig-pos-line" id="director-pos-text" style="display: none;">ตำแหน่ง ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
             </div>
         </div>
     </div>
