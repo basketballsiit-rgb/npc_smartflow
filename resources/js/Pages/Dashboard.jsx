@@ -2879,7 +2879,10 @@ export default function Dashboard({
     // Central Budgets & Categories States for Finance / Plan
     const [centralBudgetYearFilter, setCentralBudgetYearFilter] = useState('all');
     const [centralBudgetSearch, setCentralBudgetSearch] = useState('');
-    const [centralBudgetSubTab, setCentralBudgetSubTab] = useState('categories'); // 'categories', 'allocations', 'projects'
+    const [centralBudgetSubTab, setCentralBudgetSubTab] = useState('categories'); // 'categories', 'allocations', 'travel_loans', 'projects'
+    const [centralBudgetCategoryFilter, setCentralBudgetCategoryFilter] = useState('all');
+    const [centralBudgetStatusFilter, setCentralBudgetStatusFilter] = useState('all');
+    const [centralBudgetDeptFilter, setCentralBudgetDeptFilter] = useState('all');
     const [selectedCategoryForModal, setSelectedCategoryForModal] = useState(null);
     const [expandedCategoryIds, setExpandedCategoryIds] = useState([]);
     const [selectedDetailItem, setSelectedDetailItem] = useState(null);
@@ -13833,12 +13836,38 @@ ${itemsListText}
         // Extract available fiscal years
         const fiscalYears = Array.from(new Set([
             ...categories.map(c => String(c.fiscal_year || '')),
-            ...allocs.map(a => String(a.fiscal_year || ''))
+            ...allocs.map(a => String(a.fiscal_year || '')),
+            ...allProjects.map(p => String(p.fiscal_year || p.year || '')),
+            ...travelLoansList.map(tl => String(tl.fiscal_year || ''))
         ])).filter(Boolean).sort().reverse();
 
-        // Filter Categories
+        // Available Categories list
+        const availableCategories = categories.map(c => ({
+            id: String(c.id),
+            name: formatBudgetCategoryName(c.name),
+            fullName: c.name,
+            code: c.code,
+            fiscal_year: c.fiscal_year
+        }));
+
+        // Available Departments list
+        const availableDepartments = Array.from(new Set([
+            ...allProjects.map(p => p.department?.name || p.department_name),
+            ...travelLoansList.map(tl => tl.borrower_department)
+        ])).filter(Boolean).sort();
+
+        // 1. Filter Categories
         const filteredCategories = categories.filter(c => {
             if (centralBudgetYearFilter !== 'all' && String(c.fiscal_year) !== String(centralBudgetYearFilter)) {
+                return false;
+            }
+            if (centralBudgetCategoryFilter !== 'all' && String(c.id) !== String(centralBudgetCategoryFilter)) {
+                return false;
+            }
+            if (centralBudgetStatusFilter === 'spent' && parseFloat(c.spent || 0) <= 0) {
+                return false;
+            }
+            if (centralBudgetStatusFilter === 'unspent' && parseFloat(c.spent || 0) > 0) {
                 return false;
             }
             if (centralBudgetSearch.trim()) {
@@ -13851,10 +13880,18 @@ ${itemsListText}
             return true;
         });
 
-        // Filter Central Allocations
+        // 2. Filter Central Allocations
         const filteredAllocations = allocs.filter(a => {
             if (centralBudgetYearFilter !== 'all' && String(a.fiscal_year) !== String(centralBudgetYearFilter)) {
                 return false;
+            }
+            if (centralBudgetCategoryFilter !== 'all') {
+                const cat = categories.find(c => String(c.id) === String(centralBudgetCategoryFilter));
+                const catMatches = (a.funding_source_id && String(a.funding_source_id) === String(centralBudgetCategoryFilter)) ||
+                                   (a.funding_source && String(a.funding_source.id) === String(centralBudgetCategoryFilter)) ||
+                                   (cat && cat.code && (a.budget_code === cat.code || (a.title && a.title.includes(cat.code)))) ||
+                                   (cat && a.funding_source?.name === cat.name);
+                if (!catMatches) return false;
             }
             if (centralBudgetSearch.trim()) {
                 const q = centralBudgetSearch.toLowerCase();
@@ -13862,65 +13899,106 @@ ${itemsListText}
                 const doc = (a.document_number || '').toLowerCase();
                 const sourceName = (a.funding_source?.name || '').toLowerCase();
                 const desc = (a.description || '').toLowerCase();
-                return title.includes(q) || doc.includes(q) || sourceName.includes(q) || desc.includes(q);
+                const code = (a.budget_code || '').toLowerCase();
+                return title.includes(q) || doc.includes(q) || sourceName.includes(q) || desc.includes(q) || code.includes(q);
             }
             return true;
         });
 
-        // Filter Projects by Category
-        const filteredProjects = allProjects.filter(p => {
-            const fundingName = (p.funding_source_name || p.fundingSource?.name || '').toLowerCase();
-            const title = (p.title || '').toLowerCase();
-            const proposer = (p.proposer_name || p.user?.name || '').toLowerCase();
-            const dept = (p.department_name || p.department?.name || '').toLowerCase();
+        // 3. Filter Travel Loans (npc_eleve)
+        const filteredTravelLoans = travelLoansList.filter(tl => {
+            if (centralBudgetYearFilter !== 'all') {
+                const tlYear = tl.fiscal_year ? String(tl.fiscal_year) : '';
+                const dateStr = tl.doc_date || tl.start_date || tl.created_at || '';
+                const matchesYear = tlYear === String(centralBudgetYearFilter) || dateStr.includes(String(centralBudgetYearFilter));
+                if (tlYear && !matchesYear) return false;
+            }
+            if (centralBudgetCategoryFilter !== 'all') {
+                const cat = categories.find(c => String(c.id) === String(centralBudgetCategoryFilter));
+                const matchesCat = (tl.funding_source_id && String(tl.funding_source_id) === String(centralBudgetCategoryFilter)) ||
+                                   (cat && tl.funding_source_name && (tl.funding_source_name === cat.name || (cat.code && tl.funding_source_name.includes(cat.code))));
+                if (!matchesCat) return false;
+            }
+            if (centralBudgetDeptFilter !== 'all') {
+                const tlDept = tl.borrower_department || '';
+                if (tlDept !== centralBudgetDeptFilter) return false;
+            }
+            if (centralBudgetStatusFilter !== 'all') {
+                const isSpent = Boolean(tl.finance_disbursed_at || tl.loan_status === 'disbursed' || tl.loan_status === 'cleared' || (parseFloat(tl.finance_disbursed_amount || 0) > 0));
+                const isCompleted = tl.loan_status === 'cleared' || Boolean(tl.cleared_at);
+                const isApproved = Boolean(tl.approved_at || tl.loan_status === 'plan_cut' || tl.loan_status === 'approved' || tl.loan_status === 'finance_received');
+                if (centralBudgetStatusFilter === 'spent' && !isSpent) return false;
+                if (centralBudgetStatusFilter === 'unspent' && isSpent) return false;
+                if (centralBudgetStatusFilter === 'completed' && !isCompleted) return false;
+                if (centralBudgetStatusFilter === 'approved' && !isApproved && !isCompleted) return false;
+            }
             if (centralBudgetSearch.trim()) {
                 const q = centralBudgetSearch.toLowerCase();
-                return fundingName.includes(q) || title.includes(q) || proposer.includes(q) || dept.includes(q);
+                const subj = (tl.subject || '').toLowerCase();
+                const borrower = (tl.borrower_name || '').toLowerCase();
+                const contract = (tl.contract_no || '').toLowerCase();
+                const dest = (tl.destination || '').toLowerCase();
+                const dept = (tl.borrower_department || '').toLowerCase();
+                const planDoc = (tl.plan_doc_number || '').toLowerCase();
+                const finDoc = (tl.finance_doc_number || '').toLowerCase();
+                const fundName = (tl.funding_source_name || '').toLowerCase();
+                return subj.includes(q) || borrower.includes(q) || contract.includes(q) || dest.includes(q) || dept.includes(q) || planDoc.includes(q) || finDoc.includes(q) || fundName.includes(q);
+            }
+            return true;
+        });
+
+        // 4. Filter Projects by Year, Category, Dept, Status, and Search
+        const filteredProjects = allProjects.filter(p => {
+            if (centralBudgetYearFilter !== 'all') {
+                const pYear = String(p.fiscal_year || p.year || '');
+                if (pYear && pYear !== String(centralBudgetYearFilter)) return false;
+            }
+            if (centralBudgetCategoryFilter !== 'all') {
+                const cat = categories.find(c => String(c.id) === String(centralBudgetCategoryFilter));
+                const matchesCat = (p.funding_source_id && String(p.funding_source_id) === String(centralBudgetCategoryFilter)) ||
+                                   (p.fundingSource && String(p.fundingSource.id) === String(centralBudgetCategoryFilter)) ||
+                                   (cat && p.funding_source_name && (p.funding_source_name === cat.name || (cat.code && p.funding_source_name.includes(cat.code))));
+                if (!matchesCat) return false;
+            }
+            if (centralBudgetDeptFilter !== 'all') {
+                const deptName = p.department?.name || p.department_name || '';
+                if (deptName !== centralBudgetDeptFilter) return false;
+            }
+            if (centralBudgetStatusFilter !== 'all') {
+                const spentAmt = parseFloat(p.spent_amount || 0);
+                if (centralBudgetStatusFilter === 'spent' && spentAmt <= 0) return false;
+                if (centralBudgetStatusFilter === 'unspent' && spentAmt > 0) return false;
+                if (centralBudgetStatusFilter === 'completed' && p.status !== 'completed') return false;
+                if (centralBudgetStatusFilter === 'approved' && p.status !== 'approved' && p.status !== 'completed') return false;
+            }
+            if (centralBudgetSearch.trim()) {
+                const q = centralBudgetSearch.toLowerCase();
+                const fundingName = (p.funding_source_name || p.fundingSource?.name || '').toLowerCase();
+                const title = (p.title || '').toLowerCase();
+                const proposer = (p.proposer_name || p.user?.name || '').toLowerCase();
+                const dept = (p.department_name || p.department?.name || '').toLowerCase();
+                const procNum = (p.procurement_number || '').toLowerCase();
+                const finNum = (p.finance_doc_number || '').toLowerCase();
+                return fundingName.includes(q) || title.includes(q) || proposer.includes(q) || dept.includes(q) || procNum.includes(q) || finNum.includes(q);
             }
             return true;
         });
 
         const fmt = (val) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(val || 0);
 
-        // Document KPI calculations for Finance
-        // 1. Projects with procurement or advance at finance
-        const finProcDocs = allProjects.filter(p => {
-            const ps = p.procurement_status || p.procurement?.status;
-            return ps === 'forwarded_to_finance' || ps === 'completed' || ps === 'disbursed' || p.finance_doc_number || p.procurement?.finance_disbursed_at;
-        });
-        const completedFinProcDocs = finProcDocs.filter(p => {
-            const ps = p.procurement_status || p.procurement?.status;
-            return ps === 'completed' || ps === 'disbursed' || p.procurement?.finance_disbursed_at;
-        });
-        const spentFinProc = completedFinProcDocs.reduce((sum, p) => {
-            const amt = parseFloat(p.finance_disbursed_amount) || parseFloat(p.procurement?.finance_disbursed_amount) || parseFloat(p.spent_amount) || 0;
-            return sum + amt;
-        }, 0);
+        const hasActiveFilters = centralBudgetYearFilter !== 'all' || 
+                                centralBudgetCategoryFilter !== 'all' || 
+                                centralBudgetDeptFilter !== 'all' || 
+                                centralBudgetStatusFilter !== 'all' || 
+                                centralBudgetSearch.trim() !== '';
 
-        // 2. Travel Loans at finance
-        const finLoanDocs = (Array.isArray(allTravelLoans) ? allTravelLoans : []).filter(l => {
-            return l.finance_doc_number || l.finance_received_at || l.cleared_at || ['plan_cut', 'finance_received', 'cleared'].includes(l.loan_status || l.status);
-        });
-        const completedFinLoanDocs = finLoanDocs.filter(l => (l.loan_status || l.status) === 'cleared' || l.cleared_at);
-        const spentFinLoan = completedFinLoanDocs.reduce((sum, l) => {
-            const amt = parseFloat(l.finance_disbursed_amount) || parseFloat(l.cleared_amount) || parseFloat(l.approved_amount) || parseFloat(l.loan_amount) || 0;
-            return sum + amt;
-        }, 0);
-
-        // 3. Expense Clearings & direct claims at finance
-        const finClearingDocs = (Array.isArray(expenseClearings) ? expenseClearings : []).filter(c => {
-            return c.finance_doc_number || ['plan_approved', 'finance_completed'].includes(c.status);
-        });
-        const completedFinClearingDocs = finClearingDocs.filter(c => c.status === 'finance_completed');
-        const spentFinClearing = completedFinClearingDocs.reduce((sum, c) => {
-            const amt = parseFloat(c.actual_spent_amount) || parseFloat(c.net_clearing_amount) || 0;
-            return sum + amt;
-        }, 0);
-
-        const totalFinDocs = finProcDocs.length + finLoanDocs.length + finClearingDocs.length;
-        const completedFinDocs = completedFinProcDocs.length + completedFinLoanDocs.length + completedFinClearingDocs.length;
-        const pendingFinDocs = Math.max(0, totalFinDocs - completedFinDocs);
-        const totalFinSpent = spentFinProc + spentFinLoan + spentFinClearing;
+        const clearAllFilters = () => {
+            setCentralBudgetYearFilter('all');
+            setCentralBudgetCategoryFilter('all');
+            setCentralBudgetDeptFilter('all');
+            setCentralBudgetStatusFilter('all');
+            setCentralBudgetSearch('');
+        };
 
         return (
             <div className="space-y-6 font-sans">
@@ -13940,18 +14018,6 @@ ${itemsListText}
                         </div>
                     </div>
                 </div>
-
-                {/* Document Status KPI Cards (งานการเงิน) */}
-                {renderDocumentKpiCards({
-                    totalDocs: totalFinDocs,
-                    pendingDocs: pendingFinDocs,
-                    completedDocs: completedFinDocs,
-                    totalSpent: totalFinSpent,
-                    title: "เอกสารการเงินทั้งหมด",
-                    pendingLabel: "รอดำเนินการ",
-                    completedLabel: "เสร็จ",
-                    spentSublabel: "รวมยอดชุดจัดซื้อจัดจ้าง & สัญญายืมเงินที่ปิดยอดแล้ว"
-                })}
 
                 {/* 2. Primary KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -14025,9 +14091,9 @@ ${itemsListText}
                 </div>
 
                 {/* 3. Search and Navigation Bar */}
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
                     {/* View Switcher Tabs */}
-                    <div className="flex flex-wrap items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-100 pb-3">
                         <button
                             type="button"
                             onClick={() => setCentralBudgetSubTab('categories')}
@@ -14037,7 +14103,7 @@ ${itemsListText}
                                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                             }`}
                         >
-                            📊 หมวดหมู่งบประมาณ & ยอดคงเหลือ ({categories.length})
+                            📊 หมวดหมู่งบประมาณ & ยอดคงเหลือ ({filteredCategories.length})
                         </button>
                         <button
                             type="button"
@@ -14048,7 +14114,7 @@ ${itemsListText}
                                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                             }`}
                         >
-                            📥 ประวัติหนังสือแจ้งจัดสรรจากส่วนกลาง ({allocs.length})
+                            📥 ประวัติหนังสือแจ้งจัดสรรจากส่วนกลาง ({filteredAllocations.length})
                         </button>
                         <button
                             type="button"
@@ -14059,7 +14125,7 @@ ${itemsListText}
                                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                             }`}
                         >
-                            ✈️ สัญญายืมเงินไปราชการ (npc_eleve) ({travelLoansList.length})
+                            ✈️ สัญญายืมเงินไปราชการ (npc_eleve) ({filteredTravelLoans.length})
                         </button>
                         <button
                             type="button"
@@ -14074,8 +14140,8 @@ ${itemsListText}
                         </button>
                     </div>
 
-                    {/* Filter controls */}
-                    <div className="flex items-center gap-2">
+                    {/* Filter controls Bar */}
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
                         {/* Year Selector */}
                         {fiscalYears.length > 0 && (
                             <select
@@ -14085,22 +14151,75 @@ ${itemsListText}
                             >
                                 <option value="all">ทุกปีงบประมาณ</option>
                                 {fiscalYears.map(yr => (
-                                    <option key={yr} value={yr}>ปีงบประมาณ {yr}</option>
+                                    <option key={yr} value={yr}>ปีงบ {yr}</option>
                                 ))}
                             </select>
                         )}
 
+                        {/* Category Selector */}
+                        <select
+                            value={centralBudgetCategoryFilter}
+                            onChange={(e) => setCentralBudgetCategoryFilter(e.target.value)}
+                            className="text-xs font-bold py-2 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 max-w-[200px]"
+                        >
+                            <option value="all">ทุกหมวดงบประมาณ ({availableCategories.length})</option>
+                            {availableCategories.map(cat => (
+                                <option key={cat.id} value={cat.id}>
+                                    {cat.name} {cat.code ? `(${cat.code})` : ''}
+                                </option>
+                            ))}
+                        </select>
+
+                        {/* Department Selector */}
+                        {availableDepartments.length > 0 && (
+                            <select
+                                value={centralBudgetDeptFilter}
+                                onChange={(e) => setCentralBudgetDeptFilter(e.target.value)}
+                                className="text-xs font-bold py-2 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-emerald-500 focus:border-emerald-500 max-w-[170px]"
+                            >
+                                <option value="all">ทุกฝ่าย/แผนก</option>
+                                {availableDepartments.map(dept => (
+                                    <option key={dept} value={dept}>{dept}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        {/* Status Selector */}
+                        <select
+                            value={centralBudgetStatusFilter}
+                            onChange={(e) => setCentralBudgetStatusFilter(e.target.value)}
+                            className="text-xs font-bold py-2 px-3 rounded-xl border border-slate-200 bg-white text-slate-700 focus:ring-emerald-500 focus:border-emerald-500"
+                        >
+                            <option value="all">ทุกสถานะเบิกจ่าย</option>
+                            <option value="spent">💸 มีการเบิกจ่ายแล้ว (Spent)</option>
+                            <option value="unspent">💰 ยังไม่เบิกจ่าย (Unspent)</option>
+                            <option value="approved">✅ อนุมัติแล้ว (Approved)</option>
+                            <option value="completed">🏁 ปิดยอด/เสร็จสิ้น (Completed)</option>
+                        </select>
+
                         {/* Search Box */}
-                        <div className="relative min-w-[200px]">
+                        <div className="relative min-w-[200px] flex-1">
                             <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 text-xs">🔍</span>
                             <input
                                 type="text"
                                 value={centralBudgetSearch}
                                 onChange={(e) => setCentralBudgetSearch(e.target.value)}
-                                placeholder="ค้นหาหมวดเงิน, หนังสือ, วัตถุประสงค์..."
+                                placeholder="ค้นหาหมวดเงิน, โครงการ, ผู้ยืม, วัตถุประสงค์..."
                                 className="w-full pl-8 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-emerald-500 focus:border-emerald-500"
                             />
                         </div>
+
+                        {/* Clear Filters Button */}
+                        {hasActiveFilters && (
+                            <button
+                                type="button"
+                                onClick={clearAllFilters}
+                                className="px-3 py-2 rounded-xl text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-colors cursor-pointer whitespace-nowrap"
+                                title="ล้างเงื่อนไขการกรองทั้งหมด"
+                            >
+                                ✕ ล้างตัวกรอง
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -14283,6 +14402,19 @@ ${itemsListText}
                                                                         <span className="flex items-center gap-1.5">
                                                                             <span>📁</span> รายการการใช้จ่าย & โครงการ ({catProjects.length} รายการ)
                                                                         </span>
+                                                                        {catProjects.length > 0 && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => {
+                                                                                    setCentralBudgetCategoryFilter(String(cat.id));
+                                                                                    setCentralBudgetSubTab('projects');
+                                                                                }}
+                                                                                className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                                                                            >
+                                                                                <span>ดูในแท็บโครงการทั้งหมด ({catProjects.length})</span>
+                                                                                <span>➔</span>
+                                                                            </button>
+                                                                        )}
                                                                     </div>
 
                                                                     {catProjects.length === 0 ? (
@@ -14571,10 +14703,174 @@ ${itemsListText}
                     </div>
                 )}
 
-                {/* 6. Sub-View 3: Projects by Category Table */}
+                {/* 5. Sub-View 3: Travel Loans Table (npc_eleve) */}
+                {centralBudgetSubTab === 'travel_loans' && (
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+                        <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <h3 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                                    <span>✈️</span> รายการสัญญายืมเงินไปราชการ (เชื่อมโยงจากระบบ npc_eleve)
+                                </h3>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                    ติดตามยอดการตัดงบประมาณ วงเงินยืม และสถานะการโอนเงิน/เคลียร์เงินของงานการเงิน
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-600">
+                                <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                    พบ {filteredTravelLoans.length} รายการ
+                                </span>
+                                <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-800 border border-purple-200 font-mono">
+                                    รวม {fmt(filteredTravelLoans.reduce((sum, tl) => sum + (parseFloat(tl.total_loan_amount || tl.loan_amount || 0)), 0))}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                                        <th className="px-4 py-3 whitespace-nowrap min-w-[140px]">เลขที่สัญญา / วันที่</th>
+                                        <th className="px-4 py-3 min-w-[200px]">ผู้ยืม & ฝ่าย/แผนก</th>
+                                        <th className="px-4 py-3 min-w-[260px]">วัตถุประสงค์ & สถานที่ไปราชการ</th>
+                                        <th className="px-4 py-3 whitespace-nowrap min-w-[150px]">หมวดงบ / เลขคุมแผน</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[120px]">วงเงินยืม</th>
+                                        <th className="px-4 py-3 text-right whitespace-nowrap min-w-[120px]">โอนจ่ายจริง</th>
+                                        <th className="px-4 py-3 text-center whitespace-nowrap w-[120px]">สถานะสัญญา</th>
+                                        <th className="px-4 py-3 text-center whitespace-nowrap w-[90px]">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-xs">
+                                    {filteredTravelLoans.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="8" className="px-6 py-12 text-center text-slate-400">
+                                                <div className="text-3xl mb-2">📭</div>
+                                                <p className="font-bold">ไม่พบข้อมูลสัญญายืมเงินไปราชการตามเงื่อนไขที่เลือก</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredTravelLoans.map((tl, tlIdx) => {
+                                            const loanAmt = parseFloat(tl.total_loan_amount || tl.loan_amount || 0);
+                                            const disbursedAmt = parseFloat(tl.finance_disbursed_amount || 0);
+                                            const isDisbursed = Boolean(tl.finance_disbursed_at || disbursedAmt > 0);
+                                            const isCleared = tl.loan_status === 'cleared' || Boolean(tl.cleared_at);
+
+                                            return (
+                                                <tr key={tl.id || tlIdx} className="hover:bg-slate-50/80 transition-colors">
+                                                    {/* เลขที่สัญญา / วันที่ */}
+                                                    <td className="px-4 py-3.5 align-top whitespace-nowrap">
+                                                        <div className="space-y-1">
+                                                            <span className="font-mono font-bold text-xs text-purple-900 bg-purple-50 px-2 py-0.5 rounded border border-purple-200 inline-block">
+                                                                {tl.contract_no || 'ยังไม่มีเลขสัญญา'}
+                                                            </span>
+                                                            <div className="text-[11px] text-slate-500 font-mono">
+                                                                📅 {tl.doc_date || tl.created_at?.slice(0, 10) || '-'}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* ผู้ยืม & ฝ่าย/แผนก */}
+                                                    <td className="px-4 py-3.5 align-top">
+                                                        <div className="space-y-0.5">
+                                                            <div className="font-bold text-slate-900">
+                                                                👤 {tl.borrower_name || '-'}
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-500">
+                                                                🏢 {tl.borrower_department || '-'}
+                                                            </div>
+                                                            {tl.borrower_position && (
+                                                                <div className="text-[10px] text-slate-400">
+                                                                    {tl.borrower_position}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* วัตถุประสงค์ & สถานที่ */}
+                                                    <td className="px-4 py-3.5 align-top">
+                                                        <div className="space-y-1">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setSelectedTravelLoanDetail(tl)}
+                                                                className="font-bold text-slate-900 hover:text-emerald-700 text-left line-clamp-2 cursor-pointer group"
+                                                            >
+                                                                <span>{tl.subject || 'ไม่มีระบุวัตถุประสงค์'}</span>
+                                                                <span className="text-emerald-600 opacity-80 group-hover:opacity-100 transition-opacity ml-1">🔍</span>
+                                                            </button>
+                                                            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                                                                {tl.destination && (
+                                                                    <span>📍 {tl.destination}</span>
+                                                                )}
+                                                                {tl.total_days && (
+                                                                    <span className="px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 text-[10px] font-bold">
+                                                                        {tl.total_days} วัน
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+
+                                                    {/* หมวดงบ / เลขคุมแผน */}
+                                                    <td className="px-4 py-3.5 align-top whitespace-nowrap">
+                                                        <div className="space-y-1">
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
+                                                                💰 {formatBudgetCategoryName(tl.funding_source_name) || 'ยังไม่ระบุหมวด'}
+                                                            </span>
+                                                            {tl.plan_doc_number && (
+                                                                <div className="text-[10px] font-mono text-purple-700">
+                                                                    คุมแผน: {tl.plan_doc_number}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+
+                                                    {/* วงเงินยืม */}
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-slate-800">
+                                                        {fmt(loanAmt)}
+                                                    </td>
+
+                                                    {/* โอนจ่ายจริง */}
+                                                    <td className="px-4 py-3.5 align-top text-right whitespace-nowrap font-mono font-bold text-emerald-700">
+                                                        {isDisbursed ? fmt(disbursedAmt > 0 ? disbursedAmt : loanAmt) : <span className="text-slate-400 font-normal">-</span>}
+                                                    </td>
+
+                                                    {/* สถานะสัญญา */}
+                                                    <td className="px-4 py-3.5 align-top text-center whitespace-nowrap">
+                                                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold inline-block ${
+                                                            isCleared ? 'bg-teal-100 text-teal-900 border border-teal-200' :
+                                                            isDisbursed ? 'bg-emerald-100 text-emerald-900 border border-emerald-200' :
+                                                            tl.loan_status === 'plan_cut' ? 'bg-blue-100 text-blue-900 border border-blue-200' :
+                                                            'bg-amber-100 text-amber-900 border border-amber-200'
+                                                        }`}>
+                                                            {isCleared ? 'เคลียร์เงินคืนแล้ว' :
+                                                             isDisbursed ? 'โอนจ่ายเงินแล้ว' :
+                                                             tl.loan_status === 'plan_cut' ? 'แผนงานตัดยอดแล้ว' : 'รอดำเนินการ'}
+                                                        </span>
+                                                    </td>
+
+                                                    {/* ปุ่มดูรายละเอียด */}
+                                                    <td className="px-4 py-3.5 align-middle text-center whitespace-nowrap">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedTravelLoanDetail(tl)}
+                                                            className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-200 transition-colors cursor-pointer"
+                                                        >
+                                                            ดูสัญญา
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* 6. Sub-View 4: Projects by Category Table */}
                 {centralBudgetSubTab === 'projects' && (
                     <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-                        <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200 flex items-center justify-between">
+                        <div className="px-6 py-4 bg-slate-50/70 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div>
                                 <h3 className="font-extrabold text-slate-900 text-sm sm:text-base flex items-center gap-2">
                                     <span>📁</span> รายการโครงการและการใช้จ่ายงบประมาณจำแนกตามหมวดเงิน
@@ -14583,24 +14879,81 @@ ${itemsListText}
                                     ตรวจสอบยอดเงินจัดสรรและยอดจ่ายจริงในแต่ละโครงการ เพื่อเปรียบเทียบกับวงเงินของหมวดงบประมาณ
                                 </p>
                             </div>
+                            {/* Summary Stat Badges */}
+                            <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                                <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-900 border border-purple-200">
+                                    พบ {filteredProjects.length} โครงการ
+                                </span>
+                                <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 font-mono">
+                                    จัดสรร {fmt(filteredProjects.reduce((sum, p) => sum + (parseFloat(p.allocated_budget || p.allocated_amount || p.estimated_budget || 0)), 0))}
+                                </span>
+                                <span className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-900 border border-rose-200 font-mono">
+                                    จ่ายจริง {fmt(filteredProjects.reduce((sum, p) => sum + (parseFloat(p.spent_amount || 0)), 0))}
+                                </span>
+                                <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 font-mono">
+                                    คงเหลือ {fmt(filteredProjects.reduce((sum, p) => sum + ((parseFloat(p.allocated_budget || p.allocated_amount || p.estimated_budget || 0)) - (parseFloat(p.spent_amount || 0))), 0))}
+                                </span>
+                            </div>
                         </div>
+
+                        {/* Quick Category Filter Pills */}
+                        {availableCategories.length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 bg-slate-100/70 border-b border-slate-200 text-xs">
+                                <span className="font-bold text-slate-500 mr-1">หมวดงบ:</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setCentralBudgetCategoryFilter('all')}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                        centralBudgetCategoryFilter === 'all'
+                                            ? 'bg-purple-700 text-white shadow-2xs'
+                                            : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'
+                                    }`}
+                                >
+                                    ทั้งหมด ({allProjects.length})
+                                </button>
+                                {availableCategories.map(cat => {
+                                    const count = allProjects.filter(p => {
+                                        if (p.funding_source_id && String(p.funding_source_id) === String(cat.id)) return true;
+                                        if (p.fundingSource && String(p.fundingSource.id) === String(cat.id)) return true;
+                                        if (cat.name && p.funding_source_name === cat.name) return true;
+                                        return false;
+                                    }).length;
+                                    const isSelected = String(centralBudgetCategoryFilter) === String(cat.id);
+                                    return (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => setCentralBudgetCategoryFilter(isSelected ? 'all' : String(cat.id))}
+                                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-purple-700 text-white shadow-2xs'
+                                                    : 'bg-white text-slate-700 hover:bg-slate-200 border border-slate-200'
+                                            }`}
+                                        >
+                                            {cat.name} ({count})
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                                        <th className="px-4 py-3 min-w-[240px]">ชื่อโครงการ & ผู้รับผิดชอบ</th>
+                                        <th className="px-4 py-3 min-w-[260px]">ชื่อโครงการ & ผู้รับผิดชอบ</th>
                                         <th className="px-4 py-3 whitespace-nowrap min-w-[140px]">หมวดหมู่งบประมาณ</th>
                                         <th className="px-4 py-3 text-right whitespace-nowrap min-w-[120px]">งบที่ได้รับจัดสรร</th>
                                         <th className="px-4 py-3 text-right whitespace-nowrap min-w-[120px]">เบิกจ่ายจริง (Spent)</th>
                                         <th className="px-4 py-3 text-right whitespace-nowrap min-w-[120px]">คงเหลือ</th>
                                         <th className="px-4 py-3 text-center whitespace-nowrap w-[110px]">สถานะโครงการ</th>
+                                        <th className="px-4 py-3 text-center whitespace-nowrap w-[80px]">รายละเอียด</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-xs">
                                     {filteredProjects.length === 0 ? (
                                         <tr>
-                                            <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
+                                            <td colSpan="7" className="px-6 py-12 text-center text-slate-400">
                                                 <div className="text-3xl mb-2">📭</div>
                                                 <p className="font-bold">ไม่พบโครงการตามเงื่อนไขที่เลือก</p>
                                             </td>
@@ -14615,16 +14968,27 @@ ${itemsListText}
                                                 <tr key={proj.id} className="hover:bg-purple-50/20 transition-colors">
                                                     <td className="px-4 py-3.5 align-top">
                                                         <div className="space-y-1">
-                                                            <Link
-                                                                href={route('projects.show', proj.id)}
-                                                                className="font-bold text-purple-950 hover:text-purple-700 text-xs sm:text-sm line-clamp-2"
-                                                            >
-                                                                {proj.title}
-                                                            </Link>
+                                                            <div className="flex items-start gap-1.5">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setSelectedProjectQuickView(proj)}
+                                                                    className="font-bold text-purple-950 hover:text-purple-700 text-xs sm:text-sm line-clamp-2 text-left cursor-pointer group"
+                                                                    title="คลิกเพื่อดูสรุปยอดและการใช้จ่าย"
+                                                                >
+                                                                    <span>{proj.title}</span>
+                                                                    <span className="text-purple-600 opacity-80 group-hover:opacity-100 transition-opacity ml-1">🔍</span>
+                                                                </button>
+                                                            </div>
                                                             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-500">
                                                                 <span>👤 {proj.user?.name || proj.proposer_name || '-'}</span>
                                                                 <span>•</span>
                                                                 <span>🏢 {proj.department?.name || proj.department_name || '-'}</span>
+                                                                {proj.procurement_number && (
+                                                                    <>
+                                                                        <span>•</span>
+                                                                        <span className="font-mono text-blue-700 font-bold">📦 {proj.procurement_number}</span>
+                                                                    </>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </td>
@@ -14656,6 +15020,16 @@ ${itemsListText}
                                                             {proj.status === 'completed' ? 'ปิดโครงการแล้ว' :
                                                              proj.status === 'approved' ? 'อนุมัติแล้ว' : proj.status}
                                                         </span>
+                                                    </td>
+
+                                                    <td className="px-4 py-3.5 align-middle text-center whitespace-nowrap">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setSelectedProjectQuickView(proj)}
+                                                            className="px-2.5 py-1 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors cursor-pointer"
+                                                        >
+                                                            ดูข้อมูล
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             );
