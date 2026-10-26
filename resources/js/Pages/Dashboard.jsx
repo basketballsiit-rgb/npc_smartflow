@@ -21496,9 +21496,82 @@ return (
                                                                     );
                                                                 } else {
                                                                     return (
-                                                                        <div className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs w-full shadow-2xs">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                const today = new Date().toISOString().split('T')[0];
+                                                                                const defaultDoc = item.plan_procurement_doc_number || item.plan_loan_doc_number || item.procurement?.plan_procurement_doc_number || item.procurement?.plan_loan_doc_number || ('ผง. ' + item.id + '/' + (new Date().getFullYear() + 543));
+                                                                                const rawDate = item.plan_procurement_cut_at || item.plan_loan_cut_at || item.plan_cut_at || today;
+                                                                                const cutDate = rawDate ? new Date(rawDate).toISOString().split('T')[0] : today;
+
+                                                                                let currentTarget = 'all';
+                                                                                if (item.hasProcComponent && !item.hasLoanComponent) currentTarget = 'procurement';
+                                                                                else if (!item.hasProcComponent && item.hasLoanComponent) currentTarget = 'loan';
+                                                                                else if (item.isProcPlanCut && !item.isLoanPlanCut) currentTarget = 'procurement';
+                                                                                else if (!item.isProcPlanCut && item.isLoanPlanCut) currentTarget = 'loan';
+
+                                                                                const isRoutine = Boolean(item.isRoutineProcurement);
+
+                                                                                Swal.fire({
+                                                                                    title: '📊 รายละเอียดการตัดยอดงบประมาณ',
+                                                                                    html: `
+                                                                                        <div class="text-left text-xs text-slate-700 space-y-3 font-sans">
+                                                                                            <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                                                                                                <div class="text-emerald-800 font-bold text-sm mb-1">✓ ตัดยอดงบประมาณเรียบร้อยแล้ว</div>
+                                                                                                <p class="text-slate-600 leading-relaxed">
+                                                                                                    โครงการ/รายการ: <strong>"${item.title}"</strong><br/>
+                                                                                                    วงเงินงบประมาณ: <strong class="text-emerald-700">฿${new Intl.NumberFormat('th-TH').format(item.allocated_budget || item.estimated_budget || item.totalProcAmount || 0)}</strong>
+                                                                                                </p>
+                                                                                            </div>
+                                                                                            <div>
+                                                                                                <label class="block font-bold mb-1 text-slate-800">ส่วนงานที่ตัดยอด:</label>
+                                                                                                <select id="swal-plan-target" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold">
+                                                                                                    <option value="all" ${currentTarget === 'all' ? 'selected' : ''}>ตัดยอดทั้ง 2 ส่วน (ส่งพัสดุ + ส่งการเงิน)</option>
+                                                                                                    <option value="procurement" ${currentTarget === 'procurement' ? 'selected' : ''}>เฉพาะชุดจัดซื้อจัดจ้าง ➔ ส่งต่อพัสดุ</option>
+                                                                                                    <option value="loan" ${currentTarget === 'loan' ? 'selected' : ''}>เฉพาะสัญญายืมเงิน ➔ ส่งต่อการเงิน</option>
+                                                                                                </select>
+                                                                                            </div>
+                                                                                            <div>
+                                                                                                <label class="block font-bold mb-1 text-slate-800">เลขที่หนังสือตัดยอดแผนงาน (เลข ผง.):</label>
+                                                                                                <input id="swal-plan-doc" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-900" value="${defaultDoc}" />
+                                                                                            </div>
+                                                                                            <div>
+                                                                                                <label class="block font-bold mb-1 text-slate-800">วันที่ตัดยอดงบประมาณ:</label>
+                                                                                                <input id="swal-plan-date" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs" value="${cutDate}" />
+                                                                                            </div>
+                                                                                            <div class="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-200">
+                                                                                                💡 ท่านสามารถตรวจสอบข้อมูล หรือแก้ไขเลขที่หนังสือ/วันที่ตัดยอด แล้วกด "บันทึกการแก้ไข"
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    `,
+                                                                                    showCancelButton: true,
+                                                                                    confirmButtonText: '💾 บันทึกการแก้ไข',
+                                                                                    cancelButtonText: 'ปิดหน้าต่าง',
+                                                                                    confirmButtonColor: '#059669',
+                                                                                    cancelButtonColor: '#64748b',
+                                                                                    preConfirm: () => ({
+                                                                                        target: document.getElementById('swal-plan-target').value,
+                                                                                        plan_doc_number: document.getElementById('swal-plan-doc').value,
+                                                                                        cut_date: document.getElementById('swal-plan-date').value
+                                                                                    })
+                                                                                }).then((res) => {
+                                                                                    if (res.isConfirmed) {
+                                                                                        if (isRoutine) {
+                                                                                            Swal.fire('ข้อมูล', 'รายการนี้ได้รับการบันทึกข้อมูลเรียบร้อยแล้ว', 'info');
+                                                                                        } else {
+                                                                                            router.post(route('procurements.plan_cut_budget', item.id), res.value, {
+                                                                                                preserveScroll: true,
+                                                                                                onSuccess: () => Swal.fire('สำเร็จ!', 'บันทึกแก้ไขข้อมูลการตัดยอดงบประมาณเรียบร้อยแล้ว', 'success')
+                                                                                            });
+                                                                                        }
+                                                                                    }
+                                                                                });
+                                                                            }}
+                                                                            className="w-full inline-flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-xs hover:bg-emerald-100 transition cursor-pointer shadow-2xs"
+                                                                            title="คลิกเพื่อดูหรือแก้ไขข้อมูลการตัดยอดงบประมาณ"
+                                                                        >
                                                                             <span>✓</span> ตัดยอดแล้ว
-                                                                        </div>
+                                                                        </button>
                                                                     );
                                                                 }
                                                             })()}

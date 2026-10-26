@@ -273,12 +273,12 @@ class ProcurementController extends Controller
             $docNumber = DocumentNumberService::generateAndIncrement();
         }
 
-        $now = now();
+        $cutDateTime = !empty($validated['cut_date']) ? \Carbon\Carbon::parse($validated['cut_date']) : now();
         $target = $validated['target'];
 
         // Assign the single unified document number to both procurement and loan tracking fields
         if ($target === 'all' || $target === 'procurement') {
-            $procurement->plan_procurement_cut_at = $now;
+            $procurement->plan_procurement_cut_at = $cutDateTime;
             $procurement->plan_procurement_doc_number = $docNumber;
             // Also assign as default procurement_number if empty so it carries through to e-GP & PR forms
             if (empty($procurement->procurement_number) || str_starts_with($procurement->procurement_number, 'PR-')) {
@@ -290,7 +290,7 @@ class ProcurementController extends Controller
         }
 
         if ($target === 'all' || $target === 'loan') {
-            $procurement->plan_loan_cut_at = $now;
+            $procurement->plan_loan_cut_at = $cutDateTime;
             $procurement->plan_loan_doc_number = $docNumber;
             if ($procurement->loan_status === 'pending' || empty($procurement->loan_status)) {
                 $procurement->loan_status = 'plan_cut';
