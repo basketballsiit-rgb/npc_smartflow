@@ -232,7 +232,7 @@ export default function Welcome({ publicStats, recentProjects, publicCalendarEve
                         </div>
                         <h3 className="text-lg font-bold text-slate-900">2. DO (ดำเนินงาน)</h3>
                         <p className="text-xs text-slate-600 leading-relaxed">
-                            งานวางแผนทำการผูกพันงบประมาณอัตโนมัติ งานพัสดุแต่งตั้งคณะกรรมการจัดซื้อจัดจ้างและออกเอกสารพัสดุ 4 ฉบับล่วงหน้า (บันทึก, ใบเสนอซื้อ, ราคากลาง, TOR)
+                            งานวางแผนทำการผูกพันงบประมาณอัตโนมัติ งานพัสดุแต่งตั้งคณะกรรมการจัดซื้อจัดจ้างและออกเอกสารพัสดุ 3 ฉบับล่วงหน้า (บันทึกข้อความ, ราคากลาง, TOR)
                         </p>
                     </div>
 

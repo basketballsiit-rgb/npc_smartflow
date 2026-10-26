@@ -2429,7 +2429,7 @@ export default function Edit({ project, strategyCategories = [], iqaStrategies =
                                                 />
                                                 <div className="space-y-1">
                                                     <span className="text-xs font-black text-indigo-950 flex items-center gap-1">
-                                                        <span>📦</span> ชุดจัดซื้อจัดจ้าง (4 ฉบับ)
+                                                        <span>📦</span> ชุดจัดซื้อจัดจ้าง (3 ฉบับ)
                                                     </span>
                                                     <p className="text-[11px] text-slate-600 leading-relaxed">
                                                         จัดซื้อวัสดุ ครุภัณฑ์ จ้างทำของ หรือจ้างเหมาบริการ

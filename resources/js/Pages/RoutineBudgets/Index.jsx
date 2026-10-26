@@ -1362,13 +1362,6 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                                     📝 พิมพ์บันทึกข้อความ
                                                 </a>
                                                 <a
-                                                    href={route('routine_procurements.download_document', { procurement: proc.id, type: 'request_form' })}
-                                                    target="_blank"
-                                                    className="bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all"
-                                                >
-                                                    📄 ใบขอซื้อ/จ้าง
-                                                </a>
-                                                <a
                                                     href={route('routine_procurements.download_document', { procurement: proc.id, type: 'estimation' })}
                                                     target="_blank"
                                                     className="bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all"

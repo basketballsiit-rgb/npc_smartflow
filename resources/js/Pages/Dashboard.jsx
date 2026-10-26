@@ -6650,7 +6650,7 @@ export default function Dashboard({
                                             <span className="p-2 rounded-xl bg-purple-600 text-white text-xs shadow-xs">📦</span>
                                             <div>
                                                 <h5 className="font-extrabold text-sm text-purple-950">เลขคุมชุดจัดซื้อจัดจ้าง</h5>
-                                                <p className="text-[11px] text-purple-700">ใช้ลงรับเอกสารชุดจัดซื้อจัดจ้าง 4 ฉบับ และส่งต่อไปยังงานพัสดุ</p>
+                                                <p className="text-[11px] text-purple-700">ใช้ลงรับเอกสารชุดจัดซื้อจัดจ้าง 3 ฉบับ และส่งต่อไปยังงานพัสดุ</p>
                                             </div>
                                         </div>
                                         <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
@@ -10403,13 +10403,6 @@ ${itemsListText}
                                                     className="bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all"
                                                 >
                                                     📝 พิมพ์บันทึกข้อความ
-                                                </a>
-                                                <a
-                                                    href={route('routine_procurements.download_document', { procurement: proc.id, type: 'request_form' })}
-                                                    target="_blank"
-                                                    className="bg-white hover:bg-purple-50 text-purple-900 border border-purple-200 text-[10px] font-bold py-1.5 px-3 rounded-lg transition-all"
-                                                >
-                                                    📄 ใบขอซื้อ/จ้าง
                                                 </a>
                                                 <a
                                                     href={route('routine_procurements.download_document', { procurement: proc.id, type: 'estimation' })}
@@ -20159,7 +20152,7 @@ ${itemsListText}
                 }
 
                 // ==========================================
-                // 2. Compute Procurement Package (ชุดจัดซื้อจัดจ้าง 4 ฉบับ) Status & Location
+                // 2. Compute Procurement Package (ชุดจัดซื้อจัดจ้าง 3 ฉบับ) Status & Location
                 // ==========================================
                 if (hasProcComponent) {
                     procLocation = 'อยู่ที่งานแผนงาน';
@@ -20655,7 +20648,7 @@ ${itemsListText}
                         optionsHtml += `<option value="proc_set_${sIdx}" data-amount="${s.amount}" data-ref="เบิกจ่ายจัดซื้อ ${s.shortLabel} KTB">↳ ${s.label} ➔ ฿${fmt(s.amount)}</option>`;
                     });
                 } else {
-                    optionsHtml += `<option value="procurement" data-amount="${procAmt}" data-ref="เบิกจ่ายจัดซื้อ KTB" ${!loanPending ? 'selected' : ''}>ชุดจัดซื้อจัดจ้าง (4 ฉบับ / PR) ➔ ฿${fmt(procAmt)}</option>`;
+                    optionsHtml += `<option value="procurement" data-amount="${procAmt}" data-ref="เบิกจ่ายจัดซื้อ KTB" ${!loanPending ? 'selected' : ''}>ชุดจัดซื้อจัดจ้าง (3 ฉบับ / PR) ➔ ฿${fmt(procAmt)}</option>`;
                 }
             }
 
@@ -20784,7 +20777,7 @@ return (
                             </h2>
                             <p className="text-xs sm:text-sm text-purple-200 max-w-2xl leading-relaxed">
                                 {isStrictFinanceUser
-                                    ? 'แสดงเฉพาะเอกสารและสัญญาที่วิ่งเข้าสู่งานการเงิน เพื่อลงรับ โอนเงินยืมทดรองราชการ หรือเบิกจ่ายตามชุดจัดซื้อจัดจ้าง 4 ฉบับ'
+                                    ? 'แสดงเฉพาะเอกสารและสัญญาที่วิ่งเข้าสู่งานการเงิน เพื่อลงรับ โอนเงินยืมทดรองราชการ หรือเบิกจ่ายตามชุดจัดซื้อจัดจ้าง 3 ฉบับ'
                                     : (isProcurementView
                                         ? 'ติดตามเฉพาะชุดเอกสารจัดซื้อจัดจ้าง (PR/PO/ขออนุมัติซื้อจ้าง) ที่ต้องดำเนินการโดยงานพัสดุ เอกสารสัญญายืมเงินจะวิ่งตรงไปยังงานการเงินโดยไม่ผ่านงานพัสดุ'
                                         : (isPlanView
@@ -21012,7 +21005,7 @@ return (
                                                                     <label class="block font-bold mb-1 text-slate-800">เลือกรายการที่ต้องการตัดยอด:</label>
                                                                     <select id="swal-plan-target-urgent" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold">
                                                                         <option value="all" selected>ตัดยอดทั้ง 2 ส่วน (ส่งพัสดุ + ส่งการเงิน)</option>
-                                                                        <option value="procurement">เฉพาะชุดจัดซื้อจัดจ้าง (4 ฉบับ) ➔ ส่งต่อพัสดุ</option>
+                                                                        <option value="procurement">เฉพาะชุดจัดซื้อจัดจ้าง (3 ฉบับ) ➔ ส่งต่อพัสดุ</option>
                                                                         <option value="loan">เฉพาะสัญญายืมเงิน (กค. 101) ➔ ส่งต่อการเงิน</option>
                                                                     </select>
                                                                 </div>
@@ -21324,7 +21317,7 @@ return (
                                                         </button>
                                                     ) : item.isRoutineProcurement ? (
                                                         <a
-                                                            href={route('routine_procurements.download_document', [item.procurement_id, 'request_form'])}
+                                                            href={route('routine_procurements.download_document', [item.procurement_id, 'memo'])}
                                                             target="_blank"
                                                             className="inline-flex flex-col items-end py-1 px-2 rounded-lg bg-emerald-50/90 hover:bg-emerald-100 border border-emerald-300 text-emerald-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
                                                             title="คลิกที่ตัวเลขเพื่อเปิดดูเอกสารงบดำเนินงาน"
@@ -21372,7 +21365,7 @@ return (
                                                     if (item.isRoutineProcurement) {
                                                         return (
                                                             <a
-                                                                href={route('routine_procurements.download_document', [item.procurement_id, 'request_form'])}
+                                                                href={route('routine_procurements.download_document', [item.procurement_id, 'memo'])}
                                                                 target="_blank"
                                                                 className="inline-flex flex-col items-end py-1 px-2.5 rounded-xl bg-teal-50/90 hover:bg-teal-100 border border-teal-300 text-teal-950 transition-all hover:scale-102 shadow-2xs group cursor-pointer"
                                                                 title="คลิกที่ตัวเลขเพื่อเปิดดูชุดจัดซื้อจัดจ้าง (แบบขออนุมัติ)"
@@ -21457,7 +21450,7 @@ return (
                                                                                                 <label class="block font-bold mb-1 text-slate-800">เลือกรายการที่ต้องการตัดยอด:</label>
                                                                                                 <select id="swal-plan-target" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white font-semibold">
                                                                                                     <option value="all" selected>ตัดยอดทั้ง 2 ส่วน (ส่งพัสดุ + ส่งการเงิน)</option>
-                                                                                                    <option value="procurement">เฉพาะชุดจัดซื้อจัดจ้าง (4 ฉบับ) ➔ ส่งต่อพัสดุ</option>
+                                                                                                    <option value="procurement">เฉพาะชุดจัดซื้อจัดจ้าง (3 ฉบับ) ➔ ส่งต่อพัสดุ</option>
                                                                                                     <option value="loan">เฉพาะสัญญายืมเงิน (กค. 101) ➔ ส่งต่อการเงิน</option>
                                                                                                 </select>
                                                                                             </div>
@@ -21547,13 +21540,12 @@ return (
 
                                                                                             <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
                                                                                                 <div class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                                                                                                    <span>🖨️</span> เอกสารจัดซื้อจัดจ้าง (4 ฉบับ):
+                                                                                                    <span>🖨️</span> เอกสารจัดซื้อจัดจ้าง (3 ฉบับ):
                                                                                                 </div>
-                                                                                                <div class="grid grid-cols-2 gap-1.5">
-                                                                                                    <a href="${route('procurements.download_document', [procId, 'memo'])}" target="_blank" class="px-2.5 py-1.5 text-center bg-white border border-slate-200 rounded-lg text-slate-800 hover:bg-purple-50 hover:text-purple-700 font-medium text-xs shadow-2xs">1. บันทึกข้อความ</a>
-                                                                                                    <a href="${route('procurements.download_document', [procId, 'request_form'])}" target="_blank" class="px-2.5 py-1.5 text-center bg-white border border-slate-200 rounded-lg text-slate-800 hover:bg-purple-50 hover:text-purple-700 font-medium text-xs shadow-2xs">2. ใบขอซื้อ/จ้าง</a>
-                                                                                                    <a href="${route('procurements.download_document', [procId, 'estimation'])}" target="_blank" class="px-2.5 py-1.5 text-center bg-white border border-slate-200 rounded-lg text-slate-800 hover:bg-purple-50 hover:text-purple-700 font-medium text-xs shadow-2xs">3. ตารางสืบราคา</a>
-                                                                                                    <a href="${route('procurements.download_document', [procId, 'tor'])}" target="_blank" class="px-2.5 py-1.5 text-center bg-white border border-slate-200 rounded-lg text-slate-800 hover:bg-purple-50 hover:text-purple-700 font-medium text-xs shadow-2xs">4. คุณลักษณะ (TOR)</a>
+                                                                                                <div class="grid grid-cols-3 gap-1.5">
+                                                                                                    <a href="${route('procurements.download_document', [procId, 'memo'])}" target="_blank" class="px-2 py-1.5 text-center bg-white border border-slate-200 rounded-lg text-slate-800 hover:bg-purple-50 hover:text-purple-700 font-medium text-xs shadow-2xs">1. บันทึกข้อความ</a>
+                                                                                                    <a href="${route('procurements.download_document', [procId, 'estimation'])}" target="_blank" class="px-2 py-1.5 text-center bg-white border border-slate-200 rounded-lg text-slate-800 hover:bg-purple-50 hover:text-purple-700 font-medium text-xs shadow-2xs">2. ตารางสืบราคา</a>
+                                                                                                    <a href="${route('procurements.download_document', [procId, 'tor'])}" target="_blank" class="px-2 py-1.5 text-center bg-white border border-slate-200 rounded-lg text-slate-800 hover:bg-purple-50 hover:text-purple-700 font-medium text-xs shadow-2xs">3. คุณลักษณะ (TOR)</a>
                                                                                                 </div>
                                                                                             </div>
 
@@ -22055,7 +22047,7 @@ return (
                                                     .replace('{YEAR_SHORT}', String((new Date().getFullYear() + 543) % 100).padStart(2, '0'))}
                                             </div>
                                             <p className="text-[10px] text-slate-600 mt-1.5">
-                                                หมายเลขนี้จะถูกใช้เป็น <strong>เลขคุมชุดจัดซื้อจัดจ้าง</strong> 4 ฉบับ และส่งต่อไปยังงานพัสดุ
+                                                หมายเลขนี้จะถูกใช้เป็น <strong>เลขคุมชุดจัดซื้อจัดจ้าง</strong> 3 ฉบับ และส่งต่อไปยังงานพัสดุ
                                             </p>
                                         </div>
                                     </>
@@ -22729,7 +22721,7 @@ return (
                                 <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-2.5">
                                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-extrabold text-purple-950 text-sm">📦 ชุดจัดซื้อจัดจ้าง (4 ฉบับ)</span>
+                                            <span className="font-extrabold text-purple-950 text-sm">📦 ชุดจัดซื้อจัดจ้าง (3 ฉบับ)</span>
                                             <span className={`px-2.5 py-0.5 rounded-lg text-xs font-bold ${selectedFinanceDocDetails.procBadgeClass}`}>
                                                 {selectedFinanceDocDetails.procStatusText}
                                             </span>
@@ -22745,12 +22737,11 @@ return (
                                         )}
                                     </div>
                                     <div className="pt-2 border-t border-purple-200/70 flex flex-wrap items-center gap-2">
-                                        <span className="text-xs text-purple-950 font-black">🖨️ พิมพ์เอกสารชุดจัดซื้อ (4 ฉบับ):</span>
+                                        <span className="text-xs text-purple-950 font-black">🖨️ พิมพ์เอกสารชุดจัดซื้อ (3 ฉบับ):</span>
                                         <div className="flex flex-wrap items-center gap-1.5">
                                             <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'memo'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">1. บันทึกข้อความ</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'request_form'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">2. ใบขอซื้อ/จ้าง</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'estimation'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">3. ตารางสืบราคา</a>
-                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'tor'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">4. TOR / รายละเอียด</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'estimation'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">2. ตารางสืบราคา</a>
+                                            <a href={route('procurements.download_document', [selectedFinanceDocDetails.id, 'tor'])} target="_blank" className="text-xs font-bold text-purple-900 hover:text-purple-950 underline bg-white hover:bg-purple-100 px-2.5 py-1 rounded-lg border border-purple-300 transition shadow-2xs">3. TOR / รายละเอียด</a>
                                         </div>
                                     </div>
                                 </div>

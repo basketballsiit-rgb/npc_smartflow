@@ -402,13 +402,13 @@ ${itemsListText}
                             <input type="radio" name="swal_disb_type" value="loan" ${disbType === 'loan' ? 'checked' : ''} class="text-amber-600 focus:ring-amber-500" />
                             <div>
                                 <div class="font-bold text-slate-800 text-xs">💵 สัญญายืมเงินทดรองราชการ (แบบ กค. 101)</div>
-                                <div class="text-[10px] text-slate-500">สำหรับค่าตอบแทนวิทยากร ค่าอาหาร ค่าเดินทาง (ไม่ต้องทำชุดพัสดุ 4 ฉบับ)</div>
+                                <div class="text-[10px] text-slate-500">สำหรับค่าตอบแทนวิทยากร ค่าอาหาร ค่าเดินทาง (ไม่ต้องทำชุดพัสดุ 3 ฉบับ)</div>
                             </div>
                         </label>
                         <label class="flex items-center gap-2 p-2.5 rounded-xl border border-purple-200 bg-purple-50/50 cursor-pointer hover:bg-purple-100/50">
                             <input type="radio" name="swal_disb_type" value="procurement" ${disbType === 'procurement' ? 'checked' : ''} class="text-purple-600 focus:ring-purple-500" />
                             <div>
-                                <div class="font-bold text-slate-800 text-xs">📦 จัดซื้อจัดจ้างพัสดุ (ชุดจัดซื้อ 4 ฉบับ)</div>
+                                <div class="font-bold text-slate-800 text-xs">📦 จัดซื้อจัดจ้างพัสดุ (ชุดจัดซื้อ 3 ฉบับ)</div>
                                 <div class="text-[10px] text-slate-500">สำหรับจัดซื้อวัสดุ/ครุภัณฑ์/จ้างเหมา ตาม พ.ร.บ. จัดซื้อจัดจ้างฯ</div>
                             </div>
                         </label>
@@ -775,7 +775,7 @@ ${itemsListText}
             }
             return {
                 title: '📦 อยู่ที่: งานพัสดุ (โครงการอนุมัติแล้ว — รอเจ้าหน้าที่พัสดุลงรับชุดจัดซื้อจัดจ้าง)',
-                desc: 'โครงการผ่านการลงนามอนุมัติสมบูรณ์แล้ว ผู้ดำเนินโครงการและงานพัสดุสามารถจัดทำเอกสารจัดซื้อจัดจ้าง 4 ฉบับและสัญญายืมเงินในแท็บที่ 2 เพื่อให้พัสดุลงรับเรื่อง',
+                desc: 'โครงการผ่านการลงนามอนุมัติสมบูรณ์แล้ว ผู้ดำเนินโครงการและงานพัสดุสามารถจัดทำเอกสารจัดซื้อจัดจ้าง 3 ฉบับและสัญญายืมเงินในแท็บที่ 2 เพื่อให้พัสดุลงรับเรื่อง',
                 color: 'bg-amber-50 border-amber-300 text-amber-950',
                 icon: '📥',
                 roleName: 'เจ้าหน้าที่งานพัสดุ'
@@ -947,13 +947,13 @@ ${itemsListText}
             };
         }
 
-        // 2. Procurement Package Tracking (ชุดเอกสารจัดซื้อจัดจ้าง 4 ฉบับ & PO)
+        // 2. Procurement Package Tracking (ชุดเอกสารจัดซื้อจัดจ้าง 3 ฉบับ & PO)
         let procInfo = {
             location: 'ผู้เสนอโครงการ',
             holder: project.user?.name || 'ครูผู้รับผิดชอบโครงการ',
             statusText: '📝 รอการอนุมัติโครงการ',
             badgeClass: 'bg-slate-100 text-slate-700 border border-slate-300',
-            actionDesc: 'เอกสารขอซื้อขอจ้าง 4 ฉบับ จะเปิดให้ดำเนินการในแท็บที่ 2 เมื่อโครงการได้รับการอนุมัติ',
+            actionDesc: 'เอกสารขอซื้อขอจ้าง 3 ฉบับ จะเปิดให้ดำเนินการในแท็บที่ 2 เมื่อโครงการได้รับการอนุมัติ',
         };
 
         if (status === 'approved') {
@@ -963,7 +963,7 @@ ${itemsListText}
                     holder: 'เจ้าหน้าที่งานการเงิน',
                     statusText: '💰 ส่งงานการเงินแล้ว (รอเบิกจ่ายงบ)',
                     badgeClass: 'bg-emerald-100 text-emerald-950 border border-emerald-400 font-bold',
-                    actionDesc: 'งานพัสดุได้ลงรับ ตรวจสอบเอกสาร 4 ฉบับครบถ้วน และส่งมอบให้งานการเงินตั้งเบิกแล้ว',
+                    actionDesc: 'งานพัสดุได้ลงรับ ตรวจสอบเอกสาร 3 ฉบับครบถ้วน และส่งมอบให้งานการเงินตั้งเบิกแล้ว',
                 };
             } else if (procStatus === 'received' || procStatus === 'processing') {
                 procInfo = {
@@ -1375,7 +1375,7 @@ ${itemsListText}
                                         โครงการได้รับการอนุมัติแล้ว: พร้อมเข้าสู่กระบวนการจัดซื้อจัดจ้าง & ดำเนินการ (Do Phase)
                                     </h4>
                                     <p className="text-xs text-emerald-900 mt-0.5">
-                                        ผู้เสนอโครงการและงานพัสดุสามารถจัดทำเอกสารจัดซื้อจัดจ้าง 4 ฉบับ ทำสัญญายืมเงิน และออกคำสั่งแต่งตั้งกรรมการใน แท็บที่ 2 ได้ทันที
+                                        ผู้เสนอโครงการและงานพัสดุสามารถจัดทำเอกสารจัดซื้อจัดจ้าง 3 ฉบับ ทำสัญญายืมเงิน และออกคำสั่งแต่งตั้งกรรมการใน แท็บที่ 2 ได้ทันที
                                     </p>
                                 </div>
                             </div>
@@ -1684,7 +1684,7 @@ ${itemsListText}
                                         แท็บที่ 2 ยังไม่เปิดให้ดำเนินการจัดซื้อจัดจ้าง (Do Phase)
                                     </h3>
                                     <p className="text-xs text-slate-600 leading-relaxed">
-                                        ตามระเบียบพัสดุและการเงินภาครัฐ โครงการจะต้องผ่านการพิจารณาอนุมัติตามสายงาน 6 ขั้นตอนใน <strong>แท็บที่ 1 (Plan)</strong> จนกระทั่งได้รับสถานะ <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg inline-block">✅ อนุมัติแล้ว</span> ก่อน จึงจะสามารถบันทึกข้อมูลพัสดุ ออกคำสั่งแต่งตั้งกรรมการ และพิมพ์เอกสารจัดซื้อจัดจ้าง 4 ฉบับได้ครับ
+                                        ตามระเบียบพัสดุและการเงินภาครัฐ โครงการจะต้องผ่านการพิจารณาอนุมัติตามสายงาน 6 ขั้นตอนใน <strong>แท็บที่ 1 (Plan)</strong> จนกระทั่งได้รับสถานะ <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg inline-block">✅ อนุมัติแล้ว</span> ก่อน จึงจะสามารถบันทึกข้อมูลพัสดุ ออกคำสั่งแต่งตั้งกรรมการ และพิมพ์เอกสารจัดซื้อจัดจ้าง 3 ฉบับได้ครับ
                                     </p>
                                 </div>
                                 <div className="pt-2">
@@ -1793,8 +1793,8 @@ ${itemsListText}
                                         {disbType === 'loan' 
                                             ? 'โครงการนี้เบิกจ่ายในลักษณะสัญญายืมเงินทดรองราชการ (แบบ กค. 101) เพื่อเป็นค่าใช้จ่ายในการดำเนินงาน' 
                                             : disbType === 'procurement' 
-                                            ? 'ระบุรายการวัสดุอุปกรณ์ แต่งตั้งคณะกรรมการพัสดุ และพิมพ์เอกสารจัดซื้อจัดจ้าง 4 ฉบับตามระเบียบ' 
-                                            : 'บริหารจัดการรายการจัดซื้อจัดจ้างพัสดุ 4 ฉบับ และสัญญายืมเงินราชการ (กค. 101)'}
+                                            ? 'ระบุรายการวัสดุอุปกรณ์ แต่งตั้งคณะกรรมการพัสดุ และพิมพ์เอกสารจัดซื้อจัดจ้าง 3 ฉบับตามระเบียบ' 
+                                            : 'บริหารจัดการรายการจัดซื้อจัดจ้างพัสดุ 3 ฉบับ และสัญญายืมเงินราชการ (กค. 101)'}
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
@@ -2368,10 +2368,10 @@ ${itemsListText}
                                     {disbType === 'loan' 
                                         ? '💵 สัญญายืมเงินราชการ แบบ กค. 101 (พิมพ์/สร้างอัตโนมัติ)' 
                                         : disbType === 'procurement' 
-                                        ? '📄 เอกสารจัดซื้อจัดจ้าง 4 ฉบับ (พิมพ์/สร้างอัตโนมัติ)' 
+                                        ? '📄 เอกสารจัดซื้อจัดจ้าง 3 ฉบับ (พิมพ์/สร้างอัตโนมัติ)' 
                                         : '📄 เอกสารจัดซื้อจัดจ้าง & สัญญายืมเงินราชการ (พิมพ์/สร้างอัตโนมัติ)'}
                                 </h4>
-                                <div className={`grid gap-3 ${disbType === 'loan' ? 'grid-cols-1 sm:grid-cols-2 max-w-md' : disbType === 'procurement' ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-5'}`}>
+                                <div className={`grid gap-3 ${disbType === 'loan' ? 'grid-cols-1 sm:grid-cols-2 max-w-md' : disbType === 'procurement' ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
                                     {disbType !== 'procurement' && (
                                         <a href={route('procurements.download_document', [project.id, 'loan_contract'])} target="_blank" className="p-3.5 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-300 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                             <div className="text-lg mb-1">💵</div>
@@ -2386,19 +2386,14 @@ ${itemsListText}
                                                 <div className="text-xs font-bold text-purple-900">1. บันทึกข้อความ</div>
                                                 <div className="text-[10px] text-purple-600">ขออนุมัติจัดซื้อจัดจ้าง</div>
                                             </a>
-                                            <a href={route('procurements.download_document', [project.id, 'request_form'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
-                                                <div className="text-lg mb-1">🛒</div>
-                                                <div className="text-xs font-bold text-purple-900">2. รายงานขอซื้อ/ขอจ้าง</div>
-                                                <div className="text-[10px] text-purple-600">แบบฟอร์ม 7 ส่วน + กรรมการ</div>
-                                            </a>
                                             <a href={route('procurements.download_document', [project.id, 'estimation'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                                 <div className="text-lg mb-1">📊</div>
-                                                <div className="text-xs font-bold text-purple-900">3. ประมาณการรายละเอียด</div>
+                                                <div className="text-xs font-bold text-purple-900">2. ประมาณการรายละเอียด</div>
                                                 <div className="text-[10px] text-purple-600">ตารางประมาณการ/ราคากลาง</div>
                                             </a>
                                             <a href={route('procurements.download_document', [project.id, 'tor'])} target="_blank" className="p-3.5 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl text-center shadow-2xs hover:shadow-md hover:scale-105 transition-all">
                                                 <div className="text-lg mb-1">📜</div>
-                                                <div className="text-xs font-bold text-purple-900">4. ขอบเขตงาน (TOR)</div>
+                                                <div className="text-xs font-bold text-purple-900">3. ขอบเขตงาน (TOR)</div>
                                                 <div className="text-[10px] text-purple-600">คุณลักษณะเฉพาะ 10 ข้อ</div>
                                             </a>
                                         </>
