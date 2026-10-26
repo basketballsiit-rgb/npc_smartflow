@@ -702,7 +702,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     href={route('dashboard', { tab: 'document_tracking', from: 'loan' })}
                                     className={getSubLinkClass(url.includes('tab=document_tracking') && !url.includes('from=finance'))}
-                                    title="กระดานจัดทำชุดจัดซื้อจัดจ้าง 3 ฉบับจากโครงการ"
+                                    title="กระดานจัดทำชุดจัดซื้อจัดจ้าง 4 ฉบับจากโครงการ"
                                 >
                                     <span className={getPrefixClass(url.includes('tab=document_tracking') && !url.includes('from=finance'))}>└─</span>
                                     <span className="text-sm">📋</span>

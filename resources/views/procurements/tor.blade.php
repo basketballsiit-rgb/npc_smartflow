@@ -272,12 +272,59 @@
         }
     }
 
-    // 1. Proposer & Department Details
+    // 1. Proposer & Department Details (ดึงจากบันทึกข้อความ เอกสารหมายเลข 1 โดยตรง)
     $cleanProposerName = cleanPersonName($project->responsible_person ?: ($project->user?->name ?? '..........................................................'));
 
     $actualDept = $project->department;
-    $deptName = $actualDept ? $actualDept->name : ($project->user?->department?->name ?? 'พัฒนาหลักสูตรและการจัดการเรียนรู้');
-    $divisionDept = ($actualDept && $actualDept->parent) ? $actualDept->parent : $actualDept;
+    $userPos = null;
+    if ($project->responsible_person) {
+        $userPos = \App\Models\UserPosition::with(['department', 'subDepartment'])
+            ->whereHas('user', function($q) use ($project) {
+                $q->where('name', 'like', '%' . cleanPersonName($project->responsible_person) . '%');
+            })
+            ->where('is_primary', true)
+            ->first() 
+            ?: \App\Models\UserPosition::with(['department', 'subDepartment'])
+                ->whereHas('user', function($q) use ($project) {
+                    $q->where('name', 'like', '%' . cleanPersonName($project->responsible_person) . '%');
+                })
+                ->first();
+    } elseif ($project->user) {
+        $userPos = \App\Models\UserPosition::with(['department', 'subDepartment'])
+            ->where('user_id', $project->user_id)
+            ->where('is_primary', true)
+            ->first() 
+            ?: \App\Models\UserPosition::with(['department', 'subDepartment'])
+                ->where('user_id', $project->user_id)
+                ->first();
+    }
+
+    $subDept = null;
+    if ($userPos && $userPos->subDepartment) {
+        $subDept = $userPos->subDepartment;
+    } elseif ($actualDept && $actualDept->parent_id) {
+        $subDept = $actualDept;
+    } else {
+        $posStr = ($project->position ?? '') . ' ' . ($project->user?->position ?? '');
+        if (!empty($posStr)) {
+            $matchedSub = \App\Models\Department::whereNotNull('parent_id')->get()->first(function($d) use ($posStr) {
+                $core = preg_replace('/^(งาน|สาขาวิชา(งาน)?|แผนกวิชา)/u', '', $d->name);
+                return !empty($core) && str_contains($posStr, $core);
+            });
+            if ($matchedSub) {
+                $subDept = $matchedSub;
+            }
+        }
+    }
+
+    if ($subDept) {
+        $deptName = $subDept->name;
+        $divisionDept = $subDept->parent ?: $actualDept;
+    } else {
+        $deptName = $actualDept ? $actualDept->name : 'วิทยาลัยสารพัดช่างน่าน';
+        $divisionDept = ($actualDept && $actualDept->parent) ? $actualDept->parent : $actualDept;
+    }
+
     $divisionName = $divisionDept ? $divisionDept->name : 'ฝ่ายวิชาการ';
     if (!str_starts_with($divisionName, 'ฝ่าย')) {
         $divisionName = 'ฝ่าย' . $divisionName;
@@ -491,14 +538,14 @@
                     </select>
                 </div>
 
-                <!-- เลือกงาน/แผนกวิชา -->
-                <div style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 6px 10px; border-radius: 10px; border: 1.5px solid #cbd5e1;">
-                    <label for="unit-select" style="font-weight: bold; color: #1e293b; font-size: 12.5pt; white-space: nowrap;">
+                <!-- เลือกงาน/แผนกวิชา (ดึงจากบันทึกข้อความ เอกสารหมายเลข 1 เป็นค่าเริ่มต้น) -->
+                <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 6px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+                    <label for="unit-select" style="font-weight: bold; color: #1e293b; font-size: 13pt; white-space: nowrap;">
                         🏢 งาน/แผนก:
                     </label>
-                    <select id="unit-select" onchange="changeUnit(this.value)" style="padding: 5px 8px; border-radius: 8px; border: 2px solid #64748b; font-family: inherit; font-size: 12pt; font-weight: bold; color: #334155; background-color: #f8fafc; cursor: pointer; min-width: 150px; max-width: 210px;">
+                    <select id="unit-select" onchange="changeUnit(this.value)" style="padding: 6px 10px; border-radius: 8px; border: 2px solid #64748b; font-family: inherit; font-size: 12.5pt; font-weight: bold; color: #334155; background-color: #f8fafc; cursor: pointer; min-width: 180px; max-width: 260px;">
                         @foreach($allSubDepts as $sd)
-                            <option value="{{ $sd->name }}" {{ ($deptName === $sd->name) ? 'selected' : '' }}>
+                            <option value="{{ $sd->name }}" {{ ($deptName === $sd->name || (str_contains($sd->name, $deptName) && !empty($deptName)) || (str_contains($deptName, $sd->name) && !empty($sd->name))) ? 'selected' : '' }}>
                                 {{ $sd->name }}
                             </option>
                         @endforeach
