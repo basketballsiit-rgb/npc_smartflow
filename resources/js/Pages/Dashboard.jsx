@@ -22032,15 +22032,14 @@ return (
                                                                 </>
                                                             )}
 
-                                                            <a
-                                                                href={route('travel_loans.contract_pdf', item.travel_loan_id)}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 mt-0.5"
-                                                                title="พิมพ์/เปิดดูสัญญายืมเงิน (แบบ กค. 101)"
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleOpenPlanCutModal(item.rawLoan)}
+                                                                className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline inline-flex items-center gap-1 mt-0.5 cursor-pointer"
+                                                                title="เปิดดูรายละเอียดสัญญา กค. 101"
                                                             >
-                                                                <span>📄</span> ดูสัญญา กค.101
-                                                            </a>
+                                                                <span>📄</span> ดูรายละเอียดสัญญา
+                                                            </button>
                                                         </>
                                                     ) : (
                                                         <>
