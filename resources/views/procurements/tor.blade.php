@@ -691,7 +691,6 @@
 
             <!-- 4. ผู้อำนวยการ วิทยาลัยสารพัดช่างน่าน -->
             <div class="signature-row" id="sig-row-director" style="margin-top: 25px;">
-                <div style="margin-bottom: 6px; font-weight: bold;">(ความเห็น / การอนุมัติ)</div>
                 <div>(ลงชื่อ) <span class="sig-dots"></span> ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
                 <div style="padding-left: 2.2cm;">( <span id="director-name-text" contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
                 <div class="sig-pos-line" id="director-pos-text" style="display: none;">ตำแหน่ง ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
