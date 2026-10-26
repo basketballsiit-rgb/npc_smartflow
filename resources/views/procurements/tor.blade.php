@@ -41,11 +41,11 @@
 
         .section-block {
             margin-bottom: 12px;
-            page-break-inside: avoid;
+            page-break-inside: auto;
         }
         .section-heading {
             font-weight: bold;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
         }
         .section-body {
             text-indent: 1.2cm;
@@ -59,32 +59,23 @@
             line-height: 1.25;
         }
 
-        .items-table {
+        /* ตารางรายละเอียดคุณลักษณะเฉพาะของพัสดุตามภาพที่ 1 */
+        .tor-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 6px 0 12px 0;
+            margin: 8px 0 12px 0;
         }
-        .items-table th, .items-table td {
-            padding: 2px 4px;
+        .tor-table th, .tor-table td {
+            border: 1px solid #000;
+            padding: 5px 8px;
+            font-size: 14pt;
+            line-height: 1.25;
             vertical-align: top;
-            border: none;
         }
-        .items-table td.col-idx {
-            width: 35px;
+        .tor-table th {
+            font-weight: bold;
             text-align: center;
-        }
-        .items-table td.col-desc {
-            text-align: left;
-            padding-left: 8px;
-        }
-        .items-table td.col-qty {
-            width: 60px;
-            text-align: right;
-            padding-right: 12px;
-        }
-        .items-table td.col-unit {
-            width: 80px;
-            text-align: left;
+            background-color: #fdfdfd;
         }
 
         .signatures-container {
@@ -128,10 +119,68 @@
                 size: A4 portrait;
                 margin: 2.0cm 2.0cm 2.0cm 2.5cm;
             }
+            .tor-table {
+                page-break-inside: auto;
+            }
+            .tor-table tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+            .tor-table thead {
+                display: table-header-group;
+            }
+            .signature-row {
+                page-break-inside: avoid;
+            }
         }
     </style>
 </head>
 @php
+    if (!function_exists('cleanItemDescription')) {
+        function cleanItemDescription($desc) {
+            if (!$desc) return '';
+            $cleaned = preg_replace('/[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]/u', '', $desc);
+            $cleaned = str_replace(['💵', '📦', '💰', '📑', '📝', '🛒', '📄', '📊', '🎯', '📍', '🏷️'], '', $cleaned);
+            // เอาคำว่า [กิจกรรมที่ 1], (กิจกรรมที่ 1), หรือ กิจกรรมที่ ... ออกจากหน้ารายการ
+            $cleaned = preg_replace('/^\[\s*กิจกรรมที่\s*[\d๐-๙]+\s*\]\s*/u', '', $cleaned);
+            $cleaned = preg_replace('/^\(\s*กิจกรรมที่\s*[\d๐-๙]+\s*\)\s*/u', '', $cleaned);
+            $cleaned = preg_replace('/[\(\[\{]\s*กิจกรรมที่\s*[\d๐-๙]+[^\]\)\}]*[\)\]\}]\s*/u', '', $cleaned);
+            $cleaned = preg_replace('/^กิจกรรมที่\s*[\d๐-๙]+\s*[:：\-–—]?\s*/u', '', $cleaned);
+            return trim($cleaned);
+        }
+    }
+
+    if (!function_exists('generateDefaultSpec')) {
+        function generateDefaultSpec($itemName, $unit = 'ชุด') {
+            $name = trim($itemName);
+            if (preg_match('/กระเป๋า(พยาบาล|ฉุกเฉิน|ปฐมพยาบาล)/u', $name)) {
+                return 'เป็นกระเป๋าสำหรับจัดเก็บยาและอุปกรณ์ปฐมพยาบาลเบื้องต้น ผลิตจากวัสดุที่มีความแข็งแรงทนทาน ไม่ฉีกขาดง่าย และทำความสะอาดได้ มีช่องจัดเก็บอุปกรณ์อย่างเหมาะสม สามารถเปิดและปิดได้สะดวก มีหูหิ้วหรือสายสำหรับถือหรือเคลื่อนย้าย มีขนาดประมาณ 25 × 50 × 20 เซนติเมตร';
+            }
+            if (preg_match('/(ความดัน|วัดความดัน|omron)/ui', $name)) {
+                return 'เป็นเครื่องวัดความดันโลหิตแบบดิจิทัลชนิดวัดบริเวณต้นแขน ใช้พลังงานจากแบตเตอรี่ สามารถใช้งานได้โดยไม่ต้องต่อไฟฟ้าตลอดเวลา สามารถแสดงค่าความดันโลหิตตัวบน ค่าความดันโลหิตตัวล่าง และอัตราการเต้นของชีพจร มีผ้าพันต้นแขนและอุปกรณ์ประกอบครบถ้วนตามมาตรฐานของผู้ผลิต มีคู่มือการใช้งานและเงื่อนไขการรับประกันสินค้า 5 ปี ตามที่ผู้ผลิตหรือผู้จำหน่ายกำหนด สินค้าต้องเป็นของใหม่ อยู่ในสภาพพร้อมใช้งาน';
+            }
+            if (preg_match('/(กระดาษ|a4|double\s*a|80\s*แกรม)/ui', $name)) {
+                return 'เป็นกระดาษถ่ายเอกสารสีขาว เนื้อกระดาษเรียบเนียน ไม่ติดขัดเครื่อง พิมพ์ได้สองหน้า ความหนาไม่น้อยกว่า 80 แกรม ขนาดมาตรฐาน A4 (210 × 297 มม.) บรรจุ 500 แผ่นต่อรีม คุณภาพได้มาตรฐาน มอก. หรือเทียบเท่า';
+            }
+            if (preg_match('/(หมึก|toner|cartridge|ตลับหมึก|ขวดหมึก|epson|canon|hp)/ui', $name)) {
+                return 'เป็นหมึกพิมพ์แท้หรือเทียบเท่าคุณภาพสูงตรงรุ่น ให้คุณภาพงานพิมพ์ที่คมชัด สีสันสดใส ไม่ทำให้หัวพิมพ์อุดตันหรืออุปกรณ์พิมพ์ชำรุดเสียหาย บรรจุในบรรจุภัณฑ์มาตรฐานจากโรงงานผู้ผลิต สินค้าใหม่ไม่เคยผ่านการใช้งาน';
+            }
+            if (preg_match('/(แฟ้ม|ห่วง|ตราช้าง)/ui', $name)) {
+                return 'เป็นแฟ้มสำหรับจัดเก็บเอกสาร ขนาดมาตรฐาน ผลิตจากวัสดุคุณภาพดี สันแฟ้มและกลไกหนีบเอกสารแข็งแรง ทนทาน เอกสารไม่หลุดร่วงง่าย จัดเก็บเอกสารได้อย่างเป็นระเบียบเรียบร้อย';
+            }
+            if (preg_match('/(ปากกา|เขียน)/ui', $name)) {
+                return 'เป็นปากกาเขียนลื่น หมึกไหลสม่ำเสมอ เส้นคมชัด ไม่ขาดตอน แห้งเร็ว ด้ามจับกระชับมือ คุณภาพได้มาตรฐานการใช้งานในสำนักงานและการเรียนการสอน';
+            }
+            if (preg_match('/(คอมพิวเตอร์|computer|โน้ตบุ๊ก|notebook|จอ|monitor)/ui', $name)) {
+                return 'เป็นอุปกรณ์เทคโนโลยีสารสนเทศที่มีประสิทธิภาพ มีคุณลักษณะตรงตามเกณฑ์มาตรฐานขั้นต่ำของกระทรวงดิจิทัลเพื่อเศรษฐกิจและสังคมหรือเทียบเท่า มีอุปกรณ์ต่อพ่วงและระบบความปลอดภัยครบถ้วน พร้อมการรับประกันคุณภาพตามมาตรฐาน';
+            }
+            if (preg_match('/(ชุดฝึก|อุปกรณ์ฝึก|เครื่องมือ|ชุดทดลอง)/ui', $name)) {
+                return 'เป็นชุดอุปกรณ์หรือเครื่องมือฝึกปฏิบัติการที่มีมาตรฐาน มีความปลอดภัยต่อผู้ใช้งาน ผลิตจากวัสดุแข็งแรงทนทาน เหมาะสมสำหรับการจัดการเรียนการสอนสายอาชีพตามหลักสูตร';
+            }
+            return 'เป็นพัสดุ/วัสดุที่มีคุณภาพ ได้มาตรฐานตามที่ทางราชการกำหนด ของใหม่ ไม่เคยผ่านการใช้งานหรือนำมาปรับสภาพใหม่ มีความแข็งแรงทนทาน และเหมาะสมกับการใช้งานตามวัตถุประสงค์ของโครงการ';
+        }
+    }
+
     if (!function_exists('cleanPersonName')) {
         function cleanPersonName($name) {
             if (!$name) return '..........................................................';
@@ -220,9 +269,11 @@
         }
     }
 
-    // 1. Proposer (ผู้เสนอ / ผู้กำหนดขอบเขตฯ)
-    $cleanProposerName = cleanPersonName($project->user?->name ?? '..........................................................');
-    
+    // 1. Proposer & Staff (ผู้เสนอ / เจ้าหน้าที่ในงาน หรือเกี่ยวข้องในงาน)
+    $cleanProposerName = cleanPersonName($project->responsible_person ?: ($project->user?->name ?? '..........................................................'));
+    $defaultStaffName = $cleanProposerName;
+    $defaultStaffPosition = $project->position ?: ($project->user?->position ?? 'เจ้าหน้าที่ผู้รับผิดชอบงาน');
+
     // 2. Department & Sub-department Resolution
     $actualDept = $project->department;
     $userPos = null;
@@ -274,7 +325,11 @@
         $deptDisplayName = 'งาน' . $deptDisplayName;
     }
 
-    // Resolve Head of Dept / Sub-unit
+    if (empty($defaultStaffPosition) || $defaultStaffPosition === '..........................................................') {
+        $defaultStaffPosition = 'เจ้าหน้าที่' . $deptDisplayName;
+    }
+
+    // Resolve Head of Dept / Sub-unit (หัวหน้างาน / หัวหน้าแผนก)
     $headOfDeptName = null;
     $sig2 = $project->approvals?->where('step_number', 2)->first();
     if ($sig2 && $sig2->user && $sig2->status === 'approved') {
@@ -319,7 +374,7 @@
     $headOfDeptName = $headOfDeptName ?: $cleanProposerName;
     $headOfDeptTitle = 'หัวหน้า' . (str_starts_with($deptName, 'งาน') || str_starts_with($deptName, 'แผนก') || str_starts_with($deptName, 'ฝ่าย') ? $deptName : $deptDisplayName);
 
-    // 3. Deputy Director options
+    // 3. Deputy Director options (รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงาน)
     $deputyOptions = [
         'academic' => [
             'key' => 'academic',
@@ -330,8 +385,8 @@
         ],
         'student_affairs' => [
             'key' => 'student_affairs',
-            'division' => 'ฝ่ายกิจการนักเรียนนักศึกษา',
-            'title' => 'รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา',
+            'division' => 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา',
+            'title' => 'รองผู้อำนวยการฝ่ายพัฒนากิจการนักเรียนนักศึกษา',
             'name' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_name')->value('value') 
                 ?: (\App\Models\Department::whereNull('parent_id')->where('name', 'like', '%กิจการ%')->value('deputy_director_name') ?: 'นายนิพนธ์ ร่องพืช'),
         ],
@@ -370,7 +425,7 @@
         $initialDeputyKey = 'resources';
     } elseif (str_contains($divisionName, 'กิจการ') || str_contains($divisionName, 'พัฒนา')) {
         $initialDeputyKey = 'student_affairs';
-    } elseif (str_contains($divisionName, 'แผน') || str_contains($divisionName, 'ร่วมมือ')) {
+    } elseif (str_contains($divisionName, 'แผน') || str_contains($divisionName, 'ร่วมมือ') || str_contains($divisionName, 'ยุทธศาสตร์')) {
         $initialDeputyKey = 'planning';
     } elseif (str_contains($divisionName, 'วิชาการ')) {
         $initialDeputyKey = 'academic';
@@ -379,13 +434,16 @@
     $deputyDirectorName = $deputyOptions[$initialDeputyKey]['name'];
     $deputyDirectorTitle = $deputyOptions[$initialDeputyKey]['title'];
 
-    // 4. College Director
+    // 4. College Director (ผู้อำนวยการสถานศึกษา)
     $directorUser = \App\Models\User::where('position', 'like', '%ผู้อำนวยการวิทยาลัย%')
         ->orWhere('position', 'like', '%ผู้อำนวยการ%')
         ->where('position', 'not like', '%รองผู้อำนวยการ%')
         ->first();
     $directorSetting = \App\Models\SystemSetting::where('key', 'director_name')->first();
     $directorName = $directorSetting ? cleanPersonName($directorSetting->value) : ($directorUser ? cleanPersonName($directorUser->name) : 'นายกเชษฐ์ กิ่งชนะ');
+
+    // All Staff Users for Selection Dropdown
+    $allStaffUsers = \App\Models\User::where('is_active', true)->orderBy('name')->get(['id', 'name', 'position', 'department_id']);
 
     // Items and Amounts
     $procItems = $items ?: ($procurement ? $procurement->items : collect());
@@ -407,26 +465,28 @@
 
 <body>
     <!-- Interactive Top Control Bar -->
-    <div class="no-print" style="margin: 0 auto 20px auto; width: 210mm; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px 18px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
-        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="unit-select" style="font-weight: bold; color: #1e293b; font-size: 13pt;">
-                    🏢 เลือกงาน/แผนกวิชา:
-                </label>
-                <select id="unit-select" onchange="changeUnit(this.value)" style="padding: 4px 10px; border-radius: 8px; border: 2px solid #0284c7; font-family: inherit; font-size: 13pt; font-weight: bold; color: #0369a1; background-color: #ffffff; cursor: pointer;">
-                    @foreach($allSubDepts as $sd)
-                        <option value="{{ $sd->name }}" data-parent="{{ $sd->parent?->name }}" {{ ($deptName === $sd->name) ? 'selected' : '' }}>
-                            {{ $sd->name }} ({{ $sd->parent?->name ?: 'ฝ่ายทั่วไป' }})
-                        </option>
-                    @endforeach
-                </select>
+    <div class="no-print" style="margin: 0 auto 20px auto; width: 210mm; background: linear-gradient(to right, #f8fafc, #f1f5f9); border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 12px 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.04);">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 8px;">
+            <div style="font-weight: bold; color: #1e293b; font-size: 14pt;">
+                📋 ขอบเขตและรายละเอียดคุณลักษณะเฉพาะ (TOR)
             </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button type="button" onclick="toggleSignatureOrder()" style="padding: 5px 12px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-family: inherit; font-size: 11pt; font-weight: bold; cursor: pointer;">
+                    🔄 สลับลำดับลายเซ็น
+                </button>
+                <button onclick="window.print()" style="padding: 6px 18px; background-color: #7c3aed; color: #ffffff; border: none; border-radius: 8px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 8px rgba(124,58,237,0.25);">
+                    <span>🖨️</span> สั่งพิมพ์แบบฟอร์ม TOR
+                </button>
+            </div>
+        </div>
 
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px;">
+            <!-- 1. เลือกรองฝ่ายที่เกี่ยวข้อง -->
             <div style="display: flex; align-items: center; gap: 6px;">
-                <label for="deputy-select" style="font-weight: bold; color: #1e293b; font-size: 13pt;">
-                    👔 เลือกรองฝ่ายที่เกี่ยวข้อง:
+                <label for="deputy-select" style="font-weight: bold; color: #1e293b; font-size: 12.5pt;">
+                    👔 1. รองฝ่ายที่เกี่ยวข้อง:
                 </label>
-                <select id="deputy-select" onchange="changeDeputy(this.value)" style="padding: 4px 10px; border-radius: 8px; border: 2px solid #7c3aed; font-family: inherit; font-size: 13pt; font-weight: bold; color: #4c1d95; background-color: #ffffff; cursor: pointer; outline: none;">
+                <select id="deputy-select" onchange="changeDeputy(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #7c3aed; font-family: inherit; font-size: 12pt; font-weight: bold; color: #4c1d95; background-color: #ffffff; cursor: pointer; outline: none; max-width: 250px;">
                     @foreach($deputyOptions as $key => $opt)
                         <option value="{{ $key }}" {{ ($initialDeputyKey === $key) ? 'selected' : '' }}>
                             {{ $opt['division'] }} — ({{ $opt['name'] }})
@@ -435,18 +495,49 @@
                     <option value="custom">✏️ กำหนดเอง...</option>
                 </select>
             </div>
-        </div>
 
-        <button onclick="window.print()" style="padding: 6px 18px; background-color: #7c3aed; color: #ffffff; border: none; border-radius: 8px; font-family: inherit; font-size: 13pt; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 8px rgba(124,58,237,0.25);">
-            <span>🖨️</span> สั่งพิมพ์แบบฟอร์ม TOR
-        </button>
+            <!-- 2. เลือกงาน/แผนกวิชา (หัวหน้างาน) -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="unit-select" style="font-weight: bold; color: #1e293b; font-size: 12.5pt;">
+                    🏢 2. หัวหน้างาน/แผนก:
+                </label>
+                <select id="unit-select" onchange="changeUnit(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #0284c7; font-family: inherit; font-size: 12pt; font-weight: bold; color: #0369a1; background-color: #ffffff; cursor: pointer; max-width: 240px;">
+                    @foreach($allSubDepts as $sd)
+                        <option value="{{ $sd->name }}" data-parent="{{ $sd->parent?->name }}" {{ ($deptName === $sd->name) ? 'selected' : '' }}>
+                            {{ $sd->name }} ({{ $sd->parent?->name ?: 'ฝ่ายทั่วไป' }})
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- 3. เจ้าหน้าที่ในงาน หรือเกี่ยวข้องในงาน (ทำเป็นตัวเลือก) -->
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <label for="staff-select" style="font-weight: bold; color: #1e293b; font-size: 12.5pt;">
+                    👤 3. เจ้าหน้าที่ในงาน/ผู้เกี่ยวข้อง:
+                </label>
+                <select id="staff-select" onchange="changeStaff(this.value)" style="padding: 4px 8px; border-radius: 8px; border: 2px solid #059669; font-family: inherit; font-size: 12pt; font-weight: bold; color: #065f46; background-color: #ffffff; cursor: pointer; max-width: 260px;">
+                    <option value="default" data-name="{{ $defaultStaffName }}" data-pos="{{ $defaultStaffPosition }}">
+                        {{ $defaultStaffName }} ({{ $defaultStaffPosition }})
+                    </option>
+                    @foreach($allStaffUsers as $staff)
+                        @php $sClean = cleanPersonName($staff->name); @endphp
+                        @if($sClean !== $defaultStaffName)
+                            <option value="{{ $staff->id }}" data-name="{{ $sClean }}" data-pos="{{ $staff->position ?: ('เจ้าหน้าที่' . $deptDisplayName) }}">
+                                {{ $sClean }} ({{ $staff->position ?: 'เจ้าหน้าที่' }})
+                            </option>
+                        @endif
+                    @endforeach
+                    <option value="custom">✏️ กำหนดชื่อเอง...</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <div class="page-container">
         <!-- Header -->
         <div class="doc-header">
             <div>ขอบเขตและรายละเอียดคุณลักษณะเฉพาะ</div>
-            <div>การจัดซื้อพัสดุ<span id="tor-dept-header1">{{ $deptDisplayName }}</span> จำนวน .......{{ $itemsCount }}......รายการ</div>
+            <div>การจัดซื้อพัสดุ<span id="tor-dept-header1">{{ $deptDisplayName }}</span> จำนวน .......<span id="tor-items-count-display">{{ $itemsCount }}</span>......รายการ</div>
             <div><span id="tor-dept-header2">{{ $deptDisplayName }}</span>..... วิทยาลัยสารพัดช่างน่าน</div>
         </div>
 
@@ -457,7 +548,7 @@
                 การบริหาร{{ $deptDisplayName }} เป็นงานที่ทางวิทยาลัยฯ ต้องดำเนินการภายใต้ระเบียบข้อบังคับ เป็นงานสนับสนุนงานอื่น ๆ ให้สามารถดำเนินการไปได้ด้วยดี ซึ่งเป็นหน่วยงานที่ต้องดำเนินการจึงต้องมีการพัฒนา งานด้าน{{ $deptDisplayName }}อยู่เสมอ เพื่อให้เกิดความถูกต้อง ไม่ให้เกิดการเสียหายแก่ทางราชการและบังเกิดผลดีต่อการจัดการศึกษา
             </div>
             <div class="section-body">
-                {{ $deptDisplayName }} วิทยาลัยสารพัดช่างน่าน ตระหนักและเห็นความสำคัญของการบริหาร{{ $deptDisplayName }} และจัดระบบงานดังกล่าวให้สามารถตรวจสอบติดตามได้อย่างมีระบบมากยิ่งขึ้น มีความจำเป็นต้องจัดซื้อวัสดุอุปกรณ์ จำนวน {{ $itemsCount }} รายการ เพื่อใช้รองรับการปฏิบัติงานและดำเนินงานตามภารกิจของเจ้าหน้าที่ผู้ปฏิบัติงานด้านการบริหาร{{ $deptDisplayName }} และสามารถเบิกใช้งานได้อย่างต่อเนื่อง
+                {{ $deptDisplayName }} วิทยาลัยสารพัดช่างน่าน ตระหนักและเห็นความสำคัญของการบริหาร{{ $deptDisplayName }} และจัดระบบงานดังกล่าวให้สามารถตรวจสอบติดตามได้อย่างมีระบบมากยิ่งขึ้น มีความจำเป็นต้องจัดซื้อวัสดุอุปกรณ์ จำนวน <span id="tor-items-count-display2">{{ $itemsCount }}</span> รายการ เพื่อใช้รองรับการปฏิบัติงานและดำเนินงานตามภารกิจของเจ้าหน้าที่ผู้ปฏิบัติงานด้านการบริหาร{{ $deptDisplayName }} และสามารถเบิกใช้งานได้อย่างต่อเนื่อง
             </div>
         </div>
 
@@ -485,30 +576,71 @@
             </div>
         </div>
 
-        <!-- 4. รายละเอียดคุณลักษณะเฉพาะของพัสดุ -->
+        <!-- 4. รายละเอียดคุณลักษณะเฉพาะของพัสดุ (แบบฟอร์มตารางตามภาพที่ 1) -->
         <div class="section-block">
             <div class="section-heading">4. รายละเอียดคุณลักษณะเฉพาะของพัสดุ</div>
-            <table class="items-table">
-                <tbody>
-                    @if($procItems->count() > 0)
-                        @foreach($procItems as $idx => $it)
-                            <tr>
-                                <td class="col-idx">{{ $idx + 1 }}</td>
-                                <td class="col-desc">{{ preg_replace('/[💵📦💰📑📝🛒📄📊]/u', '', $it->description ?? $it->name ?? '') }}</td>
-                                <td class="col-qty">{{ intval($it->quantity) == $it->quantity ? intval($it->quantity) : number_format($it->quantity, 2) }}</td>
-                                <td class="col-unit">{{ $it->unit ?? 'ชุด' }}</td>
-                            </tr>
-                        @endforeach
-                    @else
+            <table class="tor-table" id="tor-items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 6%;">ที่</th>
+                        <th style="width: 29%;">รายการพัสดุ</th>
+                        <th style="width: 49%;">คุณลักษณะเฉพาะที่กำหนด</th>
+                        <th style="width: 8%;">จำนวน</th>
+                        <th style="width: 8%;">หน่วยนับ</th>
+                    </tr>
+                </thead>
+                <tbody id="tor-items-tbody">
+                    @forelse($procItems as $idx => $it)
+                        @php
+                            $cleanName = cleanItemDescription($it->description ?? $it->name ?? '');
+                            $specText = !empty($it->specification) ? $it->specification : generateDefaultSpec($cleanName, $it->unit ?? 'ชุด');
+                            $qty = (float)($it->quantity ?? 1);
+                            $formattedQty = ($qty == (int)$qty) ? number_format($qty, 0) : number_format($qty, 2);
+                            $unit = $it->unit ?? 'ชุด';
+                        @endphp
                         <tr>
-                            <td class="col-idx">1</td>
-                            <td class="col-desc">จัดซื้อวัสดุอุปกรณ์ตามโครงการ {{ $project->title }}</td>
-                            <td class="col-qty">1</td>
-                            <td class="col-unit">งาน</td>
+                            <td style="text-align: center;">{{ $idx + 1 }}</td>
+                            <td style="text-align: left;">
+                                <div contenteditable="true" style="outline: none;">{{ $cleanName }}</div>
+                            </td>
+                            <td style="text-align: left; text-align: justify; text-justify: inter-cluster;">
+                                <div contenteditable="true" style="outline: none; min-height: 20px;">{{ $specText }}</div>
+                            </td>
+                            <td style="text-align: center;">
+                                <div contenteditable="true" style="outline: none;">{{ $formattedQty }}</div>
+                            </td>
+                            <td style="text-align: center;">
+                                <div contenteditable="true" style="outline: none;">{{ $unit }}</div>
+                            </td>
                         </tr>
-                    @endif
+                    @empty
+                        <tr>
+                            <td style="text-align: center;">1</td>
+                            <td style="text-align: left;">
+                                <div contenteditable="true" style="outline: none;">จัดซื้อวัสดุอุปกรณ์ตามโครงการ {{ $project->title }}</div>
+                            </td>
+                            <td style="text-align: left; text-align: justify;">
+                                <div contenteditable="true" style="outline: none;">เป็นพัสดุ/วัสดุที่มีคุณภาพ ได้มาตรฐานตามที่ทางราชการกำหนด ของใหม่ ไม่เคยผ่านการใช้งาน มีความแข็งแรงทนทาน เหมาะสมสำหรับการปฏิบัติงานตามโครงการ</div>
+                            </td>
+                            <td style="text-align: center;">
+                                <div contenteditable="true" style="outline: none;">1</div>
+                            </td>
+                            <td style="text-align: center;">
+                                <div contenteditable="true" style="outline: none;">งาน</div>
+                            </td>
+                        </tr>
+                    @endforelse
                 </tbody>
             </table>
+            <div class="no-print" style="margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+                <button type="button" onclick="addTorRow()" style="padding: 4px 12px; background: #059669; color: white; border: none; border-radius: 6px; font-family: inherit; font-size: 11pt; cursor: pointer; font-weight: bold;">
+                    ➕ เพิ่มรายการพัสดุในตาราง
+                </button>
+                <button type="button" onclick="removeTorLastRow()" style="padding: 4px 12px; background: #e11d48; color: white; border: none; border-radius: 6px; font-family: inherit; font-size: 11pt; cursor: pointer; font-weight: bold;">
+                    ➖ ลบรายการสุดท้าย
+                </button>
+                <span style="font-size: 11pt; color: #64748b; margin-left: 8px;">* คลิกที่ข้อความในตารางเพื่อพิมพ์แก้ไขได้ทันทีก่อนสั่งพิมพ์</span>
+            </div>
         </div>
 
         <!-- 5. ราคากลางของพัสดุที่จะซื้อ -->
@@ -560,36 +692,59 @@
         </div>
 
         <!-- SIGNATURES (การลงลายมือชื่อ 4 ตำแหน่ง) -->
-        <div class="signatures-container">
-            <!-- 1. ผู้เสนอ (ผู้กำหนดขอบเขตฯ) -->
-            <div class="signature-row">
-                <div>(ลงชื่อ) <span class="sig-dots"></span> ผู้กำหนดขอบเขตและรายละเอียดคุณลักษณะเฉพาะ</div>
-                <div style="padding-left: 2.2cm;">( {{ $cleanProposerName }} )</div>
+        <div class="signatures-container" id="signatures-wrapper">
+            <!-- 1. เจ้าหน้าที่ในงาน หรือเกี่ยวข้องในงาน (ทำเป็นตัวเลือก) -->
+            <div class="signature-row" id="sig-row-staff">
+                <div>(ลงชื่อ) <span class="sig-dots"></span> เจ้าหน้าที่ในงาน / ผู้กำหนดรายละเอียดคุณลักษณะเฉพาะ</div>
+                <div style="padding-left: 2.2cm;">( <span id="staff-name-text" contenteditable="true" style="outline: none;">{{ $defaultStaffName }}</span> )</div>
+                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="staff-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $defaultStaffPosition }}</div>
             </div>
 
-            <!-- 2. หัวหน้างาน / หัวหน้าสาขา -->
-            <div class="signature-row">
+            <!-- 2. หัวหน้างาน / หัวหน้าแผนก -->
+            <div class="signature-row" id="sig-row-head">
                 <div>(ลงชื่อ) <span class="sig-dots"></span> <span id="tor-head-title">{{ $headOfDeptTitle }}</span></div>
-                <div style="padding-left: 2.2cm;">( <span id="tor-head-name">{{ $headOfDeptName }}</span> )</div>
+                <div style="padding-left: 2.2cm;">( <span id="tor-head-name" contenteditable="true" style="outline: none;">{{ $headOfDeptName }}</span> )</div>
+                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="tor-head-pos" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $headOfDeptTitle }}</div>
             </div>
 
-            <!-- 3. รองฝ่ายที่เกี่ยวข้อง (Interactive Dynamic Name & Title) -->
-            <div class="signature-row">
+            <!-- 3. รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงาน -->
+            <div class="signature-row" id="sig-row-deputy">
                 <div>(ลงชื่อ) <span class="sig-dots"></span> <span id="deputy-title-text">{{ $deputyDirectorTitle }}</span></div>
-                <div style="padding-left: 2.2cm;">( <span id="deputy-name-text">{{ $deputyDirectorName }}</span> )</div>
+                <div style="padding-left: 2.2cm;">( <span id="deputy-name-text" contenteditable="true" style="outline: none;">{{ $deputyDirectorName }}</span> )</div>
+                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;" id="deputy-pos-text" contenteditable="true" style="outline: none;">ตำแหน่ง {{ $deputyDirectorTitle }}</div>
             </div>
 
-            <!-- 4. ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน -->
-            <div class="signature-row">
+            <!-- 4. ผู้อำนวยการสถานศึกษา (วิทยาลัยสารพัดช่างน่าน) -->
+            <div class="signature-row" id="sig-row-director">
                 <div>(ลงชื่อ) <span class="sig-dots"></span> ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
-                <div style="padding-left: 2.2cm;">( {{ $directorName }} )</div>
+                <div style="padding-left: 2.2cm;">( <span id="director-name-text" contenteditable="true" style="outline: none;">{{ $directorName }}</span> )</div>
+                <div style="padding-left: 2.2cm; font-size: 13.5pt; color: #333;">ตำแหน่ง ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน</div>
             </div>
         </div>
     </div>
 
-    <!-- Client-Side Deputy Switcher Script -->
+    <!-- Client-Side Switcher & Dynamic Table Script -->
     <script>
         const deputyData = @json($deputyOptions);
+
+        function changeStaff(val) {
+            if (val === 'custom') {
+                const customName = prompt("กรุณาระบุชื่อ-นามสกุล เจ้าหน้าที่ในงาน/ผู้เกี่ยวข้อง:", "");
+                if (!customName) return;
+                const customPos = prompt("กรุณาระบุตำแหน่ง:", "เจ้าหน้าที่...");
+                document.getElementById('staff-name-text').innerText = customName;
+                document.getElementById('staff-pos-text').innerText = 'ตำแหน่ง ' + (customPos || 'เจ้าหน้าที่');
+                return;
+            }
+            const sel = document.getElementById('staff-select');
+            const opt = sel.options[sel.selectedIndex];
+            if (opt) {
+                const name = opt.getAttribute('data-name');
+                const pos = opt.getAttribute('data-pos');
+                if (name) document.getElementById('staff-name-text').innerText = name;
+                if (pos) document.getElementById('staff-pos-text').innerText = 'ตำแหน่ง ' + pos;
+            }
+        }
 
         function changeUnit(unitName) {
             const select = document.getElementById('unit-select');
@@ -607,15 +762,17 @@
             if (h2) h2.innerText = display;
 
             const ht = document.getElementById('tor-head-title');
-            if (ht) {
-                if (display.startsWith('งาน') || display.startsWith('แผนก') || display.startsWith('ฝ่าย')) {
-                    ht.innerText = 'หัวหน้า' + display;
-                } else if (display.startsWith('สาขาวิชา')) {
-                    ht.innerText = 'หัวหน้าแผนกวิชา' + display.replace(/^สาขาวิชา(งาน)?/, '');
-                } else {
-                    ht.innerText = 'หัวหน้างาน' + display;
-                }
+            const hp = document.getElementById('tor-head-pos');
+            let newTitle = '';
+            if (display.startsWith('งาน') || display.startsWith('แผนก') || display.startsWith('ฝ่าย')) {
+                newTitle = 'หัวหน้า' + display;
+            } else if (display.startsWith('สาขาวิชา')) {
+                newTitle = 'หัวหน้าแผนกวิชา' + display.replace(/^สาขาวิชา(งาน)?/, '');
+            } else {
+                newTitle = 'หัวหน้างาน' + display;
             }
+            if (ht) ht.innerText = newTitle;
+            if (hp) hp.innerText = 'ตำแหน่ง ' + newTitle;
 
             if (parentDiv) {
                 if (parentDiv.includes('บริหาร') || parentDiv.includes('ทรัพยากร')) {
@@ -643,13 +800,83 @@
 
                 document.getElementById('deputy-title-text').innerText = customTitle;
                 document.getElementById('deputy-name-text').innerText = customName;
+                document.getElementById('deputy-pos-text').innerText = 'ตำแหน่ง ' + customTitle;
                 return;
             }
 
             if (deputyData[val]) {
                 document.getElementById('deputy-title-text').innerText = deputyData[val].title;
                 document.getElementById('deputy-name-text').innerText = deputyData[val].name;
+                document.getElementById('deputy-pos-text').innerText = 'ตำแหน่ง ' + deputyData[val].title;
             }
+        }
+
+        let isOrderFlipped = false;
+        function toggleSignatureOrder() {
+            const wrapper = document.getElementById('signatures-wrapper');
+            const staff = document.getElementById('sig-row-staff');
+            const head = document.getElementById('sig-row-head');
+            const deputy = document.getElementById('sig-row-deputy');
+            const director = document.getElementById('sig-row-director');
+
+            if (!isOrderFlipped) {
+                // ลำดับ: รองฝ่าย -> หัวหน้างาน -> เจ้าหน้าที่ -> ผอ.
+                wrapper.innerHTML = '';
+                wrapper.appendChild(deputy);
+                wrapper.appendChild(head);
+                wrapper.appendChild(staff);
+                wrapper.appendChild(director);
+                isOrderFlipped = true;
+            } else {
+                // ลำดับ: เจ้าหน้าที่ -> หัวหน้างาน -> รองฝ่าย -> ผอ.
+                wrapper.innerHTML = '';
+                wrapper.appendChild(staff);
+                wrapper.appendChild(head);
+                wrapper.appendChild(deputy);
+                wrapper.appendChild(director);
+                isOrderFlipped = false;
+            }
+        }
+
+        function addTorRow() {
+            const tbody = document.getElementById('tor-items-tbody');
+            const count = tbody.querySelectorAll('tr').length + 1;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="text-align: center;">${count}</td>
+                <td style="text-align: left;">
+                    <div contenteditable="true" style="outline: none;">ระบุชื่อรายการพัสดุ...</div>
+                </td>
+                <td style="text-align: left; text-align: justify;">
+                    <div contenteditable="true" style="outline: none;">เป็นพัสดุ/วัสดุที่มีคุณภาพ ได้มาตรฐานตามที่ทางราชการกำหนด ของใหม่ ไม่เคยผ่านการใช้งาน...</div>
+                </td>
+                <td style="text-align: center;">
+                    <div contenteditable="true" style="outline: none;">1</div>
+                </td>
+                <td style="text-align: center;">
+                    <div contenteditable="true" style="outline: none;">ชุด</div>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            updateItemsCount();
+        }
+
+        function removeTorLastRow() {
+            const tbody = document.getElementById('tor-items-tbody');
+            const rows = tbody.querySelectorAll('tr');
+            if (rows.length > 1) {
+                rows[rows.length - 1].remove();
+                updateItemsCount();
+            }
+        }
+
+        function updateItemsCount() {
+            const tbody = document.getElementById('tor-items-tbody');
+            const count = tbody.querySelectorAll('tr').length;
+            const disp1 = document.getElementById('tor-items-count-display');
+            const disp2 = document.getElementById('tor-items-count-display2');
+            if (disp1) disp1.innerText = count;
+            if (disp2) disp2.innerText = count;
         }
     </script>
 </body>

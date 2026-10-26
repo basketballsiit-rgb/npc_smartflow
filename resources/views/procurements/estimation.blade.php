@@ -83,6 +83,20 @@
     </style>
 </head>
 @php
+    if (!function_exists('cleanItemDescription')) {
+        function cleanItemDescription($desc) {
+            if (!$desc) return '';
+            $cleaned = preg_replace('/[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]/u', '', $desc);
+            $cleaned = str_replace(['💵', '📦', '💰', '📑', '📝', '🛒', '📄', '📊', '🎯', '📍', '🏷️'], '', $cleaned);
+            // เอาคำว่า [กิจกรรมที่ 1], (กิจกรรมที่ 1), หรือ กิจกรรมที่ ... ออกจากหน้ารายการ
+            $cleaned = preg_replace('/^\[\s*กิจกรรมที่\s*[\d๐-๙]+\s*\]\s*/u', '', $cleaned);
+            $cleaned = preg_replace('/^\(\s*กิจกรรมที่\s*[\d๐-๙]+\s*\)\s*/u', '', $cleaned);
+            $cleaned = preg_replace('/[\(\[\{]\s*กิจกรรมที่\s*[\d๐-๙]+[^\]\)\}]*[\)\]\}]\s*/u', '', $cleaned);
+            $cleaned = preg_replace('/^กิจกรรมที่\s*[\d๐-๙]+\s*[:：\-–—]?\s*/u', '', $cleaned);
+            return trim($cleaned);
+        }
+    }
+
     if (!function_exists('cleanPersonName')) {
         function cleanPersonName($name) {
             if (!$name) return '..........................................................';
@@ -224,8 +238,7 @@
         <tbody>
             @foreach($items as $index => $item)
             @php
-                $cleanDesc = preg_replace('/[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]/u', '', $item->description);
-                $cleanDesc = trim(str_replace(['💵', '📦', '💰', '📑', '📝', '🛒', '📄', '📊'], '', $cleanDesc));
+                $cleanDesc = cleanItemDescription($item->description);
                 
                 $qtyVal = (float)$item->quantity;
                 $formattedQty = ($qtyVal == (int)$qtyVal) ? number_format($qtyVal, 0) : number_format($qtyVal, 2);
@@ -238,11 +251,11 @@
             @endphp
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
-                <td class="text-left">{{ $cleanDesc }}</td>
-                <td class="text-right" style="width: 8%; border-right: none;">{{ $formattedQty }}</td>
-                <td class="text-center" style="width: 10%; border-left: none;">{{ $item->unit }}</td>
-                <td class="text-right">{{ $formattedUnitPrice }}</td>
-                <td class="text-right" style="font-weight: bold;">{{ $formattedTotalPrice }}</td>
+                <td class="text-left" contenteditable="true" style="outline: none;">{{ $cleanDesc }}</td>
+                <td class="text-right" style="width: 8%; border-right: none;" contenteditable="true" style="outline: none;">{{ $formattedQty }}</td>
+                <td class="text-center" style="width: 10%; border-left: none;" contenteditable="true" style="outline: none;">{{ $item->unit }}</td>
+                <td class="text-right" contenteditable="true" style="outline: none;">{{ $formattedUnitPrice }}</td>
+                <td class="text-right" style="font-weight: bold;" contenteditable="true" style="outline: none;">{{ $formattedTotalPrice }}</td>
             </tr>
             @endforeach
 

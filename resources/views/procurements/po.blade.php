@@ -112,6 +112,19 @@
     </div>
 
     @php
+        if (!function_exists('cleanItemDescriptionPo')) {
+            function cleanItemDescriptionPo($desc) {
+                if (!$desc) return '';
+                $cleaned = preg_replace('/[\x{1F300}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]/u', '', $desc);
+                $cleaned = str_replace(['💵', '📦', '💰', '📑', '📝', '🛒', '📄', '📊', '🎯', '📍', '🏷️'], '', $cleaned);
+                $cleaned = preg_replace('/^\[\s*กิจกรรมที่\s*[\d๐-๙]+\s*\]\s*/u', '', $cleaned);
+                $cleaned = preg_replace('/^\(\s*กิจกรรมที่\s*[\d๐-๙]+\s*\)\s*/u', '', $cleaned);
+                $cleaned = preg_replace('/[\(\[\{]\s*กิจกรรมที่\s*[\d๐-๙]+[^\]\)\}]*[\)\]\}]\s*/u', '', $cleaned);
+                $cleaned = preg_replace('/^กิจกรรมที่\s*[\d๐-๙]+\s*[:：\-–—]?\s*/u', '', $cleaned);
+                return trim($cleaned);
+            }
+        }
+
         function thaiNumberPo($number) {
             $thainum = ['๐'=>'0','๑'=>'1','๒'=>'2','๓'=>'3','๔'=>'4','๕'=>'5','๖'=>'6','๗'=>'7','๘'=>'8','๙'=>'9'];
             return strtr((string)$number, $thainum);
@@ -243,7 +256,7 @@
             @forelse($items as $index => $item)
                 <tr>
                     <td class="text-center">{{ $index + 1 }}</td>
-                    <td>{{ $item->description }}</td>
+                    <td>{{ cleanItemDescriptionPo($item->description) }}</td>
                     <td class="text-center">{{ number_format($item->quantity, 0) }}</td>
                     <td class="text-center">{{ $item->unit }}</td>
                     <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
