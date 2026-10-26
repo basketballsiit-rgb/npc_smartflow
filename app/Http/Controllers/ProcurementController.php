@@ -207,11 +207,11 @@ class ProcurementController extends Controller
             ]
         );
 
-        // Single document number determined by Planning
-        $docNumber = $procurement->plan_procurement_doc_number ?: $procurement->plan_loan_doc_number;
-
-        if (!$docNumber && $request->filled('procurement_number') && !str_starts_with($request->input('procurement_number'), 'PR-')) {
+        // Single document number determined by Planning or provided by staff
+        if ($request->filled('procurement_number')) {
             $docNumber = trim($request->input('procurement_number'));
+        } else {
+            $docNumber = $procurement->plan_procurement_doc_number ?: $procurement->plan_loan_doc_number;
         }
 
         if ($docNumber) {

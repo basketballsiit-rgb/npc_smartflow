@@ -16024,8 +16024,8 @@ ${itemsListText}
         }
 
         const queue = procurementData.procurementQueue || [];
-        const pendingCount = queue.filter(p => !p.procurement || p.procurement.status === 'pending' || p.procurement.status === 'received' || p.procurement.status === 'processing').length;
-        const waitingIntakeCount = queue.filter(p => !p.procurement || p.procurement.status === 'pending').length;
+        const pendingCount = queue.filter(p => !p.procurement || p.procurement.status === 'pending' || p.procurement.status === 'plan_cut' || p.procurement.status === 'received' || p.procurement.status === 'processing').length;
+        const waitingIntakeCount = queue.filter(p => !p.procurement || p.procurement.status === 'pending' || p.procurement.status === 'plan_cut').length;
         const receivedCount = queue.filter(p => p.procurement?.status === 'received' || p.procurement?.status === 'processing').length;
         const forwardedCount = queue.filter(p => p.procurement?.status === 'forwarded_to_finance').length;
         const totalBudgetSum = queue.reduce((sum, p) => {
@@ -16036,7 +16036,7 @@ ${itemsListText}
 
         const filteredQueue = queue.filter(p => {
             const procStatus = p.procurement?.status || 'pending';
-            if (procurementFilterTab === 'pending' && procStatus === 'forwarded_to_finance') return false;
+            if (procurementFilterTab === 'pending' && (procStatus === 'forwarded_to_finance' || procStatus === 'completed')) return false;
             if (procurementFilterTab === 'forwarded' && procStatus !== 'forwarded_to_finance') return false;
 
             if (!procurementSearch) return true;
@@ -16644,20 +16644,22 @@ ${itemsListText}
                                                             <span>🔍</span> ดูชุดจัดซื้อจัดจ้าง
                                                         </button>
 
-                                                        {/* Quick Receive Button if pending */}
+                                                        {/* Quick Receive Button if pending or plan_cut */}
                                                         {procStatus !== 'received' && procStatus !== 'forwarded_to_finance' && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
+                                                                    const defaultDocNum = p.procurement?.plan_procurement_doc_number || (p.procurement?.procurement_number && !p.procurement.procurement_number.startsWith('PR-') ? p.procurement.procurement_number : '');
                                                                     Swal.fire({
                                                                         title: '📥 ลงรับชุดจัดซื้อจัดจ้าง',
                                                                         html: `
                                                                             <div class="text-left text-xs text-slate-600 space-y-2 font-sans">
-                                                                                <p><strong>โครงการ:</strong> ${p.title}</p>
+                                                                                <p><strong>โครงการ/รายการ:</strong> ${p.title}</p>
                                                                                 <p><strong>ผู้เสนอ:</strong> ${p.user?.name || '-'}</p>
                                                                                 <div class="pt-2">
-                                                                                    <label class="block font-bold text-slate-800 mb-1">เลขที่ลงรับพัสดุ (ถ้ามี):</label>
-                                                                                    <input id="swal-proc-num" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" placeholder="เช่น พด. 012/2569" value="${p.procurement?.procurement_number || ''}">
+                                                                                    <label class="block font-bold text-slate-800 mb-1">เลขที่ลงรับพัสดุ / เลขคุมจัดซื้อ:</label>
+                                                                                    <input id="swal-proc-num" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" placeholder="เช่น พด. 012/2569" value="${defaultDocNum}">
+                                                                                    <span class="text-[10px] text-slate-500">ดึงเลขคุมจากงานแผนงานโดยอัตโนมัติ</span>
                                                                                 </div>
                                                                                 <div>
                                                                                     <label class="block font-bold text-slate-800 mb-1">วันที่ลงรับ:</label>
@@ -16675,7 +16677,10 @@ ${itemsListText}
                                                                         })
                                                                     }).then((res) => {
                                                                         if (res.isConfirmed) {
-                                                                            router.post(route('procurements.receive', p.id), res.value, {
+                                                                            const receiveRoute = p.is_routine
+                                                                                ? route('routine_procurements.receive', p.procurement_id)
+                                                                                : route('procurements.receive', p.id);
+                                                                            router.post(receiveRoute, res.value, {
                                                                                 onSuccess: () => Swal.fire('สำเร็จ', 'งานพัสดุลงรับชุดจัดซื้อจัดจ้างเรียบร้อยแล้ว', 'success')
                                                                             });
                                                                         }
@@ -16704,7 +16709,10 @@ ${itemsListText}
                                                                         cancelButtonText: 'ยกเลิก'
                                                                     }).then((res) => {
                                                                         if (res.isConfirmed) {
-                                                                            router.post(route('procurements.forward_to_finance', p.id), {}, {
+                                                                            const forwardRoute = p.is_routine
+                                                                                ? route('routine_procurements.forward_to_finance', p.procurement_id)
+                                                                                : route('procurements.forward_to_finance', p.id);
+                                                                            router.post(forwardRoute, {}, {
                                                                                 onSuccess: () => Swal.fire('สำเร็จ', 'ตั้งเบิกและส่งต่อให้งานการเงินเรียบร้อยแล้ว', 'success')
                                                                             });
                                                                         }
@@ -16829,15 +16837,17 @@ ${itemsListText}
                                             <button
                                                 type="button"
                                                 onClick={() => {
+                                                    const defaultDocNum = proc?.plan_procurement_doc_number || (proc?.procurement_number && !proc.procurement_number.startsWith('PR-') ? proc.procurement_number : '');
                                                     Swal.fire({
                                                         title: '📥 ลงรับชุดจัดซื้อจัดจ้าง',
                                                         html: `
                                                             <div class="text-left text-xs text-slate-600 space-y-2 font-sans">
-                                                                <p><strong>โครงการ:</strong> ${p.title}</p>
+                                                                <p><strong>โครงการ/รายการ:</strong> ${p.title}</p>
                                                                 <p><strong>ผู้เสนอ:</strong> ${p.user?.name || '-'}</p>
                                                                 <div class="pt-2">
-                                                                    <label class="block font-bold text-slate-800 mb-1">เลขที่ลงรับพัสดุ (ถ้ามี):</label>
-                                                                    <input id="swal-proc-num-modal" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" placeholder="เช่น พด. 012/2569" value="${proc?.procurement_number || ''}">
+                                                                    <label class="block font-bold text-slate-800 mb-1">เลขที่ลงรับพัสดุ / เลขคุมจัดซื้อ:</label>
+                                                                    <input id="swal-proc-num-modal" class="w-full rounded-xl border border-purple-200 px-3 py-2 text-sm" placeholder="เช่น พด. 012/2569" value="${defaultDocNum}">
+                                                                    <span class="text-[10px] text-slate-500">ดึงเลขคุมจากงานแผนงานโดยอัตโนมัติ</span>
                                                                 </div>
                                                                 <div>
                                                                     <label class="block font-bold text-slate-800 mb-1">วันที่ลงรับ:</label>
@@ -16855,7 +16865,10 @@ ${itemsListText}
                                                         })
                                                     }).then((res) => {
                                                         if (res.isConfirmed) {
-                                                            router.post(route('procurements.receive', p.id), res.value, {
+                                                            const receiveRoute = p.is_routine
+                                                                ? route('routine_procurements.receive', p.procurement_id)
+                                                                : route('procurements.receive', p.id);
+                                                            router.post(receiveRoute, res.value, {
                                                                 onSuccess: () => {
                                                                     setViewingProcurementProject(null);
                                                                     Swal.fire('สำเร็จ', 'งานพัสดุลงรับชุดจัดซื้อจัดจ้างเรียบร้อยแล้ว', 'success');
@@ -16885,7 +16898,10 @@ ${itemsListText}
                                                         cancelButtonText: 'ยกเลิก'
                                                     }).then((res) => {
                                                         if (res.isConfirmed) {
-                                                            router.post(route('procurements.forward_to_finance', p.id), {}, {
+                                                            const forwardRoute = p.is_routine
+                                                                ? route('routine_procurements.forward_to_finance', p.procurement_id)
+                                                                : route('procurements.forward_to_finance', p.id);
+                                                            router.post(forwardRoute, {}, {
                                                                 onSuccess: () => {
                                                                     setViewingProcurementProject(null);
                                                                     Swal.fire('สำเร็จ', 'ตั้งเบิกและส่งต่อให้งานการเงินเรียบร้อยแล้ว', 'success');
@@ -20466,13 +20482,23 @@ ${itemsListText}
 
         const trackingList = [...sourceTrackingProjects, ...travelLoanTrackingItems, ...routineTrackingItems].filter(p => {
             if (isProcurementView) {
-                // งานพัสดุ: แสดงเฉพาะโครงการที่มีชุดจัดซื้อจัดจ้าง (ไม่แสดงสัญญายืมเงินเพียวๆ)
-                return p.hasProcComponent && (
-                    p.totalProcAmount > 0 || 
-                    (p.procSets && p.procSets.length > 0) || 
-                    p.disbursement_type === 'procurement' || 
-                    p.disbursement_type === 'both'
+                // งานพัสดุ: แสดงเฉพาะรายการที่งานแผนได้ตัดยอดงบและส่งต่อให้งานพัสดุแล้วเท่านั้น
+                const isCutByPlan = Boolean(
+                    p.isProcPlanCut ||
+                    p.plan_procurement_cut_at ||
+                    p.plan_procurement_doc_number ||
+                    p.isProcReceived ||
+                    p.isProcForwardedToFin ||
+                    p.isProcDisbursed ||
+                    p.procurement?.plan_procurement_cut_at ||
+                    p.procurement?.plan_procurement_doc_number ||
+                    p.procurement?.status === 'plan_cut' ||
+                    p.procurement?.status === 'received' ||
+                    p.procurement?.status === 'processing' ||
+                    p.procurement?.status === 'forwarded_to_finance' ||
+                    p.procurement?.status === 'completed'
                 );
+                return p.hasProcComponent && isCutByPlan;
             }
             if (isStrictFinanceUser) {
                 return p.hasLoanAtFinance || p.hasProcAtFinance;
@@ -21617,7 +21643,7 @@ return (
                                                     {/* 2. Procurement Staff Actions: Receive package after planning cuts budget (hidden in Plan Cut Register) */}
                                                     {!isPlanView && (isProcurementStaff || (isAdmin && isProcurementView)) && (
                                                         <>
-                                                            {(item.plan_procurement_cut_at || item.procurement_status === 'plan_cut' || item.status === 'approved') && 
+                                                            {(item.plan_procurement_cut_at || item.procurement_status === 'plan_cut' || item.isProcPlanCut) && 
                                                              (!item.procurement || item.procurement.status === 'pending' || item.procurement.status === 'plan_cut') && (
                                                                 <button
                                                                     type="button"

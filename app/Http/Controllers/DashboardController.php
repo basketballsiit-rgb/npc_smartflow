@@ -450,51 +450,66 @@ class DashboardController extends Controller
 
         // 3. Procurement Head Dashboard Data
         if ($user->isProcurementHead() || $user->isAdmin()) {
-            $data['procurementData'] = [
-                'procurementQueue' => Project::where(function($q) {
-                        $q->where('status', 'approved')
-                          ->orWhereHas('procurement');
-                    })
-                    ->with(['user', 'department', 'procurement.items', 'procurement.committees', 'budget'])
-                    ->latest()
-                    ->get()
-                    ->filter(function($p) {
-                        $disbType = $p->disbursement_type;
-                        if ($disbType === 'loan') return false;
-                        if ($disbType === 'procurement' || $disbType === 'both') return true;
-                        if ($p->budget?->is_advance_payment) return false;
+            // โครงการที่งานแผนได้ตัดยอดงบและส่งต่อให้งานพัสดุแล้วเท่านั้น
+            $projectQueue = Project::whereHas('procurement', function($q) {
+                    $q->whereNotNull('plan_procurement_cut_at')
+                      ->orWhereNotNull('plan_procurement_doc_number')
+                      ->orWhereIn('status', ['plan_cut', 'received', 'processing', 'forwarded_to_finance', 'completed']);
+                })
+                ->with(['user', 'department', 'procurement.items', 'procurement.committees', 'budget'])
+                ->latest()
+                ->get()
+                ->filter(function($p) {
+                    $disbType = $p->disbursement_type;
+                    if ($disbType === 'loan') return false;
+                    if ($p->budget?->is_advance_payment) return false;
 
-                        // Auto-detect based on activities and items
-                        $hasLoan = false;
-                        $hasProc = false;
-                        if (is_array($p->activities)) {
-                            foreach ($p->activities as $act) {
-                                if (!empty($act['loan_items'])) {
-                                    foreach ($act['loan_items'] as $li) {
-                                        $amt = (float)($li['total_price'] ?? (($li['quantity'] ?? 0) * ($li['unit_price'] ?? 0)));
-                                        if ($amt > 0) $hasLoan = true;
-                                    }
-                                }
-                                if (!empty($act['procurement_items'])) {
-                                    foreach ($act['procurement_items'] as $pi) {
-                                        $amt = (float)($pi['total_price'] ?? (($pi['quantity'] ?? 0) * ($pi['unit_price'] ?? 0)));
-                                        if ($amt > 0) $hasProc = true;
-                                    }
-                                }
-                            }
-                        }
-                        if ($p->procurement && $p->procurement->items) {
-                            foreach ($p->procurement->items as $pi) {
-                                $amt = (float)($pi->total_price ?? (($pi->quantity ?? 0) * ($pi->unit_price ?? 0)));
-                                if ($amt > 0) $hasProc = true;
-                            }
-                        }
-                        if ($hasLoan && !$hasProc) {
-                            return false;
-                        }
-                        return true;
-                    })
-                    ->values(),
+                    $proc = $p->procurement;
+                    if (!$proc) return false;
+
+                    // แสดงเฉพาะรายการที่งานแผนได้ตัดยอดงบและส่งต่อให้งานพัสดุแล้วเท่านั้น
+                    $isCutByPlan = !empty($proc->plan_procurement_cut_at) ||
+                                   !empty($proc->plan_procurement_doc_number) ||
+                                   in_array($proc->status, ['plan_cut', 'received', 'processing', 'forwarded_to_finance', 'completed']);
+
+                    return $isCutByPlan;
+                })
+                ->values();
+
+            // รายการจัดซื้อจัดจ้างงบดำเนินงาน/นอกระบบที่งานแผนได้ตัดยอดงบและส่งต่อให้งานพัสดุแล้ว
+            $routineProcurements = \App\Models\Procurement::whereNotNull('routine_budget_plan_id')
+                ->where(function($q) {
+                    $q->whereNotNull('plan_procurement_cut_at')
+                      ->orWhereNotNull('plan_procurement_doc_number')
+                      ->orWhereIn('status', ['plan_cut', 'received', 'processing', 'forwarded_to_finance', 'completed']);
+                })
+                ->with(['routineBudgetPlan.department', 'items', 'committees'])
+                ->latest()
+                ->get()
+                ->map(function($proc) {
+                    $rp = $proc->routineBudgetPlan;
+                    $total = (float)$proc->items->sum('total_price');
+                    if ($total <= 0 && $rp) {
+                        $total = (float)($rp->allocated_amount ?? 0);
+                    }
+                    return [
+                        'id' => 'routine_' . $proc->id,
+                        'is_routine' => true,
+                        'procurement_id' => $proc->id,
+                        'title' => $proc->memo_subject ?: ($rp?->title ?? 'งบดำเนินงาน/นอกระบบ'),
+                        'user' => ['name' => 'งานวางแผนและงบประมาณ (ตัดยอดงบ ผง.)'],
+                        'academic_year' => $rp?->academic_year ?? '2570',
+                        'department' => $rp?->department ?? (object)['name' => 'งานวางแผนและงบประมาณ'],
+                        'estimated_budget' => $total,
+                        'allocated_budget' => $total,
+                        'procurement' => $proc,
+                    ];
+                });
+
+            $mergedQueue = $projectQueue->concat($routineProcurements)->values();
+
+            $data['procurementData'] = [
+                'procurementQueue' => $mergedQueue,
                 'vendors' => \App\Models\Vendor::orderBy('name', 'asc')->get(),
                 'users' => User::with('department')->get()->map(function ($u) {
                     $cId = null;

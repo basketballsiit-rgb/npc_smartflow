@@ -14,8 +14,12 @@ class ProcurementDashboardController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. Procurement Queue (Approved projects ready for purchasing)
-        $procurementQueue = Project::where('status', 'approved')
+        // 1. Procurement Queue (แสดงเฉพาะโครงการที่งานแผนได้ตัดยอดงบและส่งต่อให้งานพัสดุแล้ว)
+        $procurementQueue = Project::whereHas('procurement', function($q) {
+                $q->whereNotNull('plan_procurement_cut_at')
+                  ->orWhereNotNull('plan_procurement_doc_number')
+                  ->orWhereIn('status', ['plan_cut', 'received', 'processing', 'forwarded_to_finance', 'completed']);
+            })
             ->with(['user', 'department', 'procurement.items', 'procurement.committees'])
             ->latest()
             ->get();
