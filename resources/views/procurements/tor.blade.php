@@ -437,7 +437,7 @@
 
     $fiscalYear = $project->academic_year ?? '2569';
     $budgetSourceName = $project->budget?->fundingSource?->name ?? 'งบประมาณรายจ่ายอื่น';
-    $deliveryDays = request('delivery_days', '5');
+    $deliveryDays = request('delivery_days', '7');
 
     // All Sub-departments for Interactive Selection
     $allSubDepts = \App\Models\Department::whereNotNull('parent_id')->with('parent')->orderBy('name')->get();
@@ -638,7 +638,7 @@
         <div class="section-block">
             <div class="section-heading">7. กำหนดเวลาส่งมอบพัสดุ</div>
             <div class="section-sublist">
-                ส่งมอบพัสดุภายใน {{ $deliveryDays }} วันทำการนับแต่วันที่ลงนามในสัญญาหรือข้อตกลงเป็นหนังสือ
+                ส่งมอบพัสดุภายใน <span id="delivery-days-text" contenteditable="true" style="outline: none; font-weight: bold;">{{ $deliveryDays }}</span> วันทำการนับแต่วันที่ลงนามในสัญญาหรือข้อตกลงเป็นหนังสือ
             </div>
         </div>
 
