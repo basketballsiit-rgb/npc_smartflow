@@ -504,9 +504,16 @@ class ProcurementController extends Controller
             'finance_number' => 'nullable|string|max:100',
             'receive_date' => 'nullable|date',
             'notes' => 'nullable|string|max:500',
+            'target' => 'nullable|string',
         ]);
 
-        $procurement->loan_status = 'finance_received';
+        $target = $request->input('target', 'all');
+        if ($target === 'procurement' || $procurement->status === 'forwarded_to_finance') {
+            $procurement->status = 'finance_received';
+        }
+        if ($target === 'loan' || $procurement->loan_status === 'plan_cut' || !empty($procurement->plan_loan_cut_at)) {
+            $procurement->loan_status = 'finance_received';
+        }
         $procurement->finance_received_at = now();
         $procurement->finance_doc_number = $validated['finance_number'] 
             ?? $procurement->plan_loan_doc_number 
@@ -624,6 +631,7 @@ class ProcurementController extends Controller
             'finance_number' => 'nullable|string|max:100',
             'receive_date' => 'nullable|date',
             'notes' => 'nullable|string|max:500',
+            'target' => 'nullable|string',
         ]);
 
         $procurement = $project->procurement;
@@ -635,7 +643,13 @@ class ProcurementController extends Controller
             ]);
         }
 
-        $procurement->loan_status = 'finance_received';
+        $target = $request->input('target', 'all');
+        if ($target === 'procurement' || $procurement->status === 'forwarded_to_finance') {
+            $procurement->status = 'finance_received';
+        }
+        if ($target === 'loan' || $procurement->loan_status === 'plan_cut' || !empty($procurement->plan_loan_cut_at)) {
+            $procurement->loan_status = 'finance_received';
+        }
         $procurement->finance_received_at = now();
         $procurement->finance_doc_number = $validated['finance_number'] 
             ?? $procurement->plan_loan_doc_number 
