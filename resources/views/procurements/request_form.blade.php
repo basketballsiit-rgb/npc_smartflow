@@ -533,7 +533,7 @@
             <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 8px;">ที่</td>
             <td><span contenteditable="true" style="outline: none;">{{ (!empty($procurement->plan_procurement_cut_at) && !empty($procurement->plan_procurement_doc_number)) ? $procurement->plan_procurement_doc_number : '........../' . ($project->academic_year ?: '2570') }}</span></td>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; text-align: right; padding-right: 8px;">วันที่</td>
-            <td><span contenteditable="true" style="outline: none;">{{ $day }}</span> เดือน <span contenteditable="true" style="outline: none;">{{ $month }}</span> พ.ศ. <span contenteditable="true" style="outline: none;">{{ $year }}</span></td>
+            <td><span contenteditable="true" style="outline: none;">............</span> เดือน <span contenteditable="true" style="outline: none;">....................................</span> พ.ศ. <span contenteditable="true" style="outline: none;">................</span></td>
         </tr>
         <tr>
             <td style="white-space: nowrap; width: 1%; font-weight: bold; padding-right: 8px;">เรื่อง</td>
@@ -703,8 +703,8 @@
                     <div class="box-title">7. ความเห็นรองผู้อำนวยการฝ่ายบริหารทรัพยากร</div>
                     <div style="padding-left: 6px; line-height: 1.2;">
                         เรียน ผู้อำนวยการฯ<br>
-                        <span class="chk-box">(&nbsp;/&nbsp;) มีข้อมูลครบถ้วน และมีงบประมาณเพียงพอ</span><br>
-                        <span class="chk-box">(&nbsp;/&nbsp;) เห็นควรอนุมัติ</span>
+                        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) มีข้อมูลครบถ้วน และมีงบประมาณเพียงพอ</span><br>
+                        <span class="chk-box">(&nbsp;&nbsp;&nbsp;) เห็นควรอนุมัติ</span>
                     </div>
                     <div style="text-align: center; margin-top: 5px;">
                         <div>ลงชื่อ............................................................</div>
@@ -720,7 +720,7 @@
         <div style="font-weight: bold; font-size: 12pt; margin-bottom: 2px;">คำสั่งผู้อำนวยการ</div>
         <div style="margin-bottom: 1px;">
             <span class="chk-box">(&nbsp;&nbsp;&nbsp;) ทราบ</span> &nbsp;&nbsp;&nbsp;&nbsp; 
-            <span class="chk-box">(&nbsp;/&nbsp;) อนุมัติ ตามงบประมาณที่ขอจัดซื้อ และคณะกรรมการฯ รายชื่อตามเสนอข้างต้น</span>
+            <span class="chk-box">(&nbsp;&nbsp;&nbsp;) อนุมัติ ตามงบประมาณที่ขอจัดซื้อ และคณะกรรมการฯ รายชื่อตามเสนอข้างต้น</span>
         </div>
         <div style="margin-bottom: 2px;">
             <span class="chk-box">(&nbsp;&nbsp;&nbsp;) ไม่อนุมัติเพราะ</span> ........................................................................................................................
