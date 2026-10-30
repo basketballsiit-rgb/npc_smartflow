@@ -246,6 +246,7 @@ class DashboardController extends Controller
                     'funding_source_id' => $tl->funding_source_id,
                     'funding_source_name' => $tl->fundingSource?->name,
                     'funding_source_code' => $tl->fundingSource?->code,
+                    'budget_category' => $tl->budget_category ?: ($tl->funding_source_id == 11 ? 'off_budget' : 'in_budget'),
                     'expense_type' => $tl->expense_type,
                     'allowance_amount' => (float)$tl->allowance_amount,
                     'allowance_detail' => $tl->allowance_detail,
@@ -359,7 +360,7 @@ class DashboardController extends Controller
         // 1. Teacher / User Proposals Data (Always loaded for all users so anyone can view their own projects)
         $data['teacherData'] = [
             'projects' => Project::where('user_id', $user->id)
-                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement'])
+                ->with(['department', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'fundingSource', 'budget.fundingSource', 'procurement', 'procurements.items', 'procurements.department', 'procurements.creator'])
                 ->latest()
                 ->get(),
             'proposalsCount' => Project::where('user_id', $user->id)->count(),
@@ -432,7 +433,9 @@ class DashboardController extends Controller
                 'advancePayments' => $advancePayments,
                 'externalTravelLoans' => $travelLoansForReviews,
                 'nextDocNumberPreview' => DocumentNumberService::previewNext(),
-                'nextLoanDocNumberPreview' => DocumentNumberService::previewNextLoan(),
+                'nextLoanDocNumberPreview' => DocumentNumberService::previewNextLoan('in_budget'),
+                'nextLoanOffBudgetDocNumberPreview' => DocumentNumberService::previewNextLoan('off_budget'),
+                'docNumberSettings' => DocumentNumberService::getSettings(),
                 'apiIntegrationStatus' => $apiIntegrationStatus,
             ];
         }
@@ -876,7 +879,7 @@ class DashboardController extends Controller
             || $activeDelegatedPrincipals->some(fn($p) => $p->isAdmin() || $p->isPlanHead() || $p->isPlanStaff() || $p->isProcurementHead() || $p->isProcurementStaff() || $p->isFinanceStaff() || $p->isExecutive());
 
         if ($isPowerUser || in_array($activeTab, ['operation_calendar', 'project_status', 'all_projects', 'document_tracking', 'central_budgets', 'special_project_budgets', 'action_plan_report', 'annual_budget_requests', 'budgets', 'proposals', 'preliminary', 'chapter_preliminary', 'chapter_1', 'chapter_2', 'chapter_3', 'chapter_4', 'chapter_5', 'appendix', 'full_report', 'chapter_full_report'])) {
-            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'specialProjectBudget', 'approvals.user', 'approvals.delegatedFromUser', 'procurement.items', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
+            $masterQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'specialProjectBudget', 'approvals.user', 'approvals.delegatedFromUser', 'procurement.items', 'procurements.items', 'procurements.department', 'procurements.creator', 'appendices', 'photos', 'survey', 'travelLoans', 'expenseClearings'])
                 ->latest();
 
             // Non-power users (e.g. general teachers/proposers) only track their own projects, or specifically selected project (unless viewing all_projects or action_plan_report tab)
@@ -1029,6 +1032,39 @@ class DashboardController extends Controller
                             'finance_disbursed_amount' => (float)($p->procurement->finance_disbursed_amount ?? 0),
                             'finance_payment_ref' => $p->procurement->finance_payment_ref,
                         ] : null,
+                        'procurements' => $p->procurements ? $p->procurements->map(function($proc) {
+                            return [
+                                'id' => $proc->id,
+                                'set_name' => $proc->set_name ?: ($proc->memo_subject ?: ('ชุดจัดซื้อที่ ' . $proc->id)),
+                                'activity_name' => $proc->activity_name,
+                                'department_id' => $proc->department_id,
+                                'department' => $proc->department ? ['id' => $proc->department->id, 'name' => $proc->department->name] : null,
+                                'department_name' => $proc->department ? $proc->department->name : null,
+                                'created_by' => $proc->created_by,
+                                'creator' => $proc->creator ? ['id' => $proc->creator->id, 'name' => $proc->creator->name] : null,
+                                'status' => $proc->status,
+                                'loan_status' => $proc->loan_status ?? 'pending',
+                                'procurement_number' => $proc->procurement_number,
+                                'plan_procurement_cut_at' => $proc->plan_procurement_cut_at ? $proc->plan_procurement_cut_at->format('d/m/Y H:i') : null,
+                                'plan_procurement_doc_number' => $proc->plan_procurement_doc_number,
+                                'plan_loan_cut_at' => $proc->plan_loan_cut_at ? $proc->plan_loan_cut_at->format('d/m/Y H:i') : null,
+                                'plan_loan_doc_number' => $proc->plan_loan_doc_number,
+                                'finance_received_at' => $proc->finance_received_at ? $proc->finance_received_at->format('d/m/Y H:i') : null,
+                                'finance_doc_number' => $proc->finance_doc_number,
+                                'finance_disbursed_at' => $proc->finance_disbursed_at ? $proc->finance_disbursed_at->format('d/m/Y H:i') : null,
+                                'finance_disbursed_amount' => (float)($proc->finance_disbursed_amount ?? 0),
+                                'finance_payment_ref' => $proc->finance_payment_ref,
+                                'total_amount' => (float)($proc->items ? $proc->items->sum('total_price') : 0),
+                                'items' => $proc->items ? $proc->items->map(fn($it) => [
+                                    'id' => $it->id,
+                                    'description' => $it->description,
+                                    'quantity' => (float)$it->quantity,
+                                    'unit' => $it->unit,
+                                    'unit_price' => (float)$it->unit_price,
+                                    'total_price' => (float)$it->total_price,
+                                ])->values() : [],
+                            ];
+                        })->values() : [],
                         'procurement_status' => $p->procurement?->status,
                         'loan_status' => $p->procurement?->loan_status ?? 'pending',
                         'plan_procurement_cut_at' => $p->procurement?->plan_procurement_cut_at ? $p->procurement->plan_procurement_cut_at->format('d/m/Y H:i') : null,
@@ -1104,6 +1140,7 @@ class DashboardController extends Controller
                             return [
                                 'id' => $tl->id,
                                 'contract_no' => $tl->contract_no,
+                                'budget_category' => $tl->budget_category ?: ($tl->funding_source_id == 11 ? 'off_budget' : 'in_budget'),
                                 'total_loan_amount' => (float)$tl->total_loan_amount,
                                 'loan_status' => $tl->loan_status,
                                 'finance_disbursed_at' => $tl->finance_disbursed_at ? $tl->finance_disbursed_at->format('d/m/Y') : null,

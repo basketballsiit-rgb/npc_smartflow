@@ -261,6 +261,7 @@ Route::middleware('auth')->group(function () {
     Route::put('projects/{project}/preliminary', [ProjectController::class, 'preliminaryUpdate'])->name('projects.preliminary_update');
     Route::post('projects/direct-allocate', [ProjectController::class, 'directStoreAndAllocate'])->name('projects.direct_allocate_store');
     Route::post('projects/{project}/committee-allocate', [ProjectController::class, 'committeeAllocateBudget'])->name('projects.committee_allocate');
+    Route::post('projects/{project}/update-proposed-budget', [ProjectController::class, 'updateProposedBudget'])->name('projects.update_proposed_budget');
     Route::post('projects/batch-allocate', [ProjectController::class, 'batchAllocateBudgets'])->name('projects.batch_allocate');
     Route::post('projects/ai/map-strategies', [ProjectController::class, 'aiAutoMapStrategies'])->name('projects.ai.map_strategies');
     Route::post('projects/ai/detect-duplicates', [ProjectController::class, 'aiDetectDuplicates'])->name('projects.ai.detect_duplicates');
@@ -298,10 +299,20 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/procurement/finance-clear', [ProcurementController::class, 'financeClear'])->name('procurements.finance_clear');
     Route::post('projects/{project}/procurement/rollback', [ProcurementController::class, 'rollbackStatus'])->name('procurements.rollback');
     Route::get('projects/{project}/procurement/document/{type}', [ProcurementController::class, 'downloadDocument'])->name('procurements.download_document');
+    Route::post('projects/{project}/procurement-sets', [ProcurementController::class, 'createProcurementSet'])->name('procurements.create_set');
+    Route::post('procurement-sets/{procurement}/update', [ProcurementController::class, 'updateProcurementSet'])->name('procurements.update_set');
+    Route::delete('procurement-sets/{procurement}', [ProcurementController::class, 'deleteProcurementSet'])->name('procurements.delete_set');
+    Route::post('procurement-sets/{procurement}/plan-cut', [ProcurementController::class, 'planCutSet'])->name('procurements.plan_cut_set');
+    Route::post('procurement-sets/{procurement}/receive', [ProcurementController::class, 'receiveSet'])->name('procurements.receive_set');
+    Route::post('procurement-sets/{procurement}/forward-to-finance', [ProcurementController::class, 'forwardToFinanceSet'])->name('procurements.forward_to_finance_set');
+    Route::post('procurement-sets/{procurement}/finance-receive', [ProcurementController::class, 'financeReceiveSet'])->name('procurements.finance_receive_set');
+    Route::post('procurement-sets/{procurement}/finance-disburse', [ProcurementController::class, 'financeDisburseSet'])->name('procurements.finance_disburse_set');
+    Route::get('procurement-sets/{procurement}/document/{type}', [ProcurementController::class, 'downloadProcurementDocument'])->name('procurements.download_set_document');
     Route::post('procurements/ai/draft-tor', [ProcurementController::class, 'aiDraftTor'])->name('procurements.ai.draft_tor');
     Route::post('procurements/ai/check-tor', [ProcurementController::class, 'aiCheckTorCompliance'])->name('procurements.ai.check_tor');
 
-    // External Travel Loans (npc_eleve / npc_hr integration)
+    // External Travel Loans (npc_eleve / npc_hr integration & Manual paper submission)
+    Route::post('travel-loans/manual', [TravelLoanWebController::class, 'createManualLoan'])->name('travel_loans.manual_create');
     Route::post('travel-loans/{travelLoan}/plan-cut', [TravelLoanWebController::class, 'planCut'])->name('travel_loans.plan_cut');
     Route::post('travel-loans/{travelLoan}/finance-receive', [TravelLoanWebController::class, 'financeReceive'])->name('travel_loans.finance_receive');
     Route::post('travel-loans/{travelLoan}/finance-disburse', [TravelLoanWebController::class, 'financeDisburse'])->name('travel_loans.finance_disburse');

@@ -552,6 +552,22 @@ class ProcurementController extends Controller
             $procurement->finance_disbursed_at = $now;
             $procurement->finance_disbursed_amount = (float)($procurement->finance_disbursed_amount ?: 0) + $actualSpent;
             $procurement->finance_payment_ref = $ref;
+        } elseif (str_starts_with($target, 'proc_set_')) {
+            $setId = (int)str_replace('proc_set_', '', $target);
+            $setProc = Procurement::find($setId);
+            if ($setProc) {
+                $setProc->status = 'completed';
+                $setProc->finance_disbursed_at = $now;
+                $setProc->finance_disbursed_amount = $actualSpent;
+                $setProc->finance_payment_ref = $ref;
+                $setProc->save();
+            }
+            $procurement->status = 'completed';
+            $procurement->finance_disbursed_at = $now;
+            $procurement->finance_disbursed_amount = (float)($procurement->finance_disbursed_amount ?: 0) + $actualSpent;
+            $procurement->finance_payment_ref = $procurement->finance_payment_ref 
+                ? ($procurement->finance_payment_ref . ' | ' . $ref)
+                : $ref;
         } elseif ($target === 'procurement') {
             $procurement->status = 'completed';
             $procurement->finance_disbursed_at = $now;
@@ -702,6 +718,22 @@ class ProcurementController extends Controller
             $procurement->finance_payment_ref = $procurement->finance_payment_ref 
                 ? ($procurement->finance_payment_ref . ' | ' . $ref)
                 : $ref;
+        } elseif (str_starts_with($target, 'proc_set_')) {
+            $setId = (int)str_replace('proc_set_', '', $target);
+            $setProc = Procurement::find($setId);
+            if ($setProc) {
+                $setProc->status = 'completed';
+                $setProc->finance_disbursed_at = $now;
+                $setProc->finance_disbursed_amount = $actualSpent;
+                $setProc->finance_payment_ref = $ref;
+                $setProc->save();
+            }
+            $procurement->status = 'completed';
+            $procurement->finance_disbursed_at = $now;
+            $procurement->finance_disbursed_amount = (float)($procurement->finance_disbursed_amount ?: 0) + $actualSpent;
+            $procurement->finance_payment_ref = $procurement->finance_payment_ref 
+                ? ($procurement->finance_payment_ref . ' | ' . $ref)
+                : $ref;
         } elseif ($target === 'procurement') {
             $procurement->status = 'completed';
             $procurement->finance_disbursed_at = $now;
@@ -847,9 +879,17 @@ class ProcurementController extends Controller
      */
     public function downloadDocument(Project $project, $type)
     {
-        $project->load(['user', 'department', 'budget.fundingSource', 'procurement.items', 'procurement.committees']);
+        $project->load(['user', 'department', 'budget.fundingSource', 'procurements.items', 'procurements.committees']);
 
-        if (!$project->procurement) {
+        $procurement = null;
+        if (request()->has('procurement_id')) {
+            $procurement = Procurement::find(request('procurement_id'));
+        }
+        if (!$procurement) {
+            $procurement = $project->procurement;
+        }
+
+        if (!$procurement) {
             return redirect()->route('dashboard')->with('error', 'Procurement process has not been initialized yet.');
         }
 
@@ -857,15 +897,23 @@ class ProcurementController extends Controller
             abort(404);
         }
 
-        $purchasingCommittee = $project->procurement->purchasingCommittee()->get();
-        $inspectionCommittee = $project->procurement->inspectionCommittee()->get();
+        // If procurement has a delegated department, use it for the document
+        if ($procurement->department) {
+            $project->department = $procurement->department;
+        }
+        if ($procurement->creator) {
+            $project->user = $procurement->creator;
+        }
+
+        $purchasingCommittee = $procurement->purchasingCommittee()->get();
+        $inspectionCommittee = $procurement->inspectionCommittee()->get();
 
         $viewName = ($type === 'purchase_order' || $type === 'po') ? 'procurements.po' : "procurements.{$type}";
 
         return view($viewName, [
             'project' => $project,
-            'procurement' => $project->procurement,
-            'items' => $project->procurement->items,
+            'procurement' => $procurement,
+            'items' => $procurement->items,
             'purchasingCommittee' => $purchasingCommittee,
             'inspectionCommittee' => $inspectionCommittee,
             'vendorName' => request('vendor_name', ''),
@@ -876,6 +924,343 @@ class ProcurementController extends Controller
             'poNumber' => request('po_number', ''),
             'poDate' => request('po_date', ''),
         ]);
+    }
+
+    /**
+     * Download document directly for a specific procurement set.
+     */
+    public function downloadProcurementDocument(Procurement $procurement, $type)
+    {
+        $project = $procurement->project;
+        if (!$project) {
+            return $this->downloadRoutineDocument($procurement, $type);
+        }
+        request()->merge(['procurement_id' => $procurement->id]);
+        return $this->downloadDocument($project, $type);
+    }
+
+    /**
+     * Create a new procurement set (ชุดจัดซื้อจัดจ้างย่อย) for a project under the shared budget pool.
+     */
+    public function createProcurementSet(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isProcurementHead() && $user->id !== $project->user_id && !$user->department_id) {
+            abort(403, 'คุณไม่มีสิทธิ์ในการสร้างชุดจัดซื้อจัดจ้างสำหรับโครงการนี้');
+        }
+
+        if (!in_array($project->status, ['approved', 'in_progress', 'evaluating', 'completed']) && $project->current_approval_step < 6) {
+            return redirect()->back()->with('error', 'โครงการนี้ยังไม่ผ่านการอนุมัติสมบูรณ์ในแท็บที่ 1 (Plan) จึงยังไม่สามารถสร้างชุดจัดซื้อจัดจ้างได้');
+        }
+
+        $validated = $request->validate([
+            'set_name' => 'required|string|max:255',
+            'department_id' => 'nullable|exists:departments,id',
+            'activity_name' => 'nullable|string|max:255',
+            'tor_specifications' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.description' => 'required|string|max:255',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit' => 'required|string|max:50',
+            'items.*.unit_price' => 'required|numeric|min:0',
+        ], [
+            'set_name.required' => 'กรุณาระบุชื่อชุดจัดซื้อจัดจ้าง',
+            'items.required' => 'กรุณาระบุรายการพัสดุอย่างน้อย 1 รายการ',
+            'items.*.description.required' => 'กรุณาระบุชื่อรายการพัสดุ',
+        ]);
+
+        $setTotal = 0;
+        foreach ($validated['items'] as $item) {
+            $setTotal += (floatval($item['quantity']) * floatval($item['unit_price']));
+        }
+
+        // Shared Budget Pool Validation
+        $projectBudget = floatval($project->allocated_budget ?: $project->estimated_budget);
+        $existingProcurementsSum = 0;
+        foreach ($project->procurements as $existingProc) {
+            $existingProcurementsSum += $existingProc->items->sum('total_price');
+        }
+
+        $remainingBudget = max(0, $projectBudget - $existingProcurementsSum);
+        if ($projectBudget > 0 && $remainingBudget <= 0.001) {
+            return redirect()->back()->with('error', 'ไม่สามารถสร้างชุดจัดซื้อจัดจ้างเพิ่มเติมได้: โครงการนี้ได้จัดทำชุดจัดซื้อจัดจ้างครบตามวงเงินงบประมาณที่ได้รับจัดสรรแล้ว (' . number_format($projectBudget, 2) . ' บาท)');
+        }
+
+        if (($existingProcurementsSum + $setTotal) > ($projectBudget + 0.01)) {
+            return redirect()->back()->with('error', 'ไม่สามารถสร้างชุดจัดซื้อได้: ยอดเงินชุดจัดซื้อนี้ (' . number_format($setTotal, 2) . ' บาท) เกินวงเงินคงเหลือของโครงการ (' . number_format($remainingBudget, 2) . ' บาท จากวงเงินโครงการทั้งหมด ' . number_format($projectBudget, 2) . ' บาท)');
+        }
+
+        $setCount = $project->procurements()->count() + 1;
+        $procurementNumber = 'PR-' . $project->id . '-' . str_pad($setCount, 2, '0', STR_PAD_LEFT);
+
+        $departmentId = !empty($validated['department_id']) ? $validated['department_id'] : ($user->department_id ?: $project->department_id);
+
+        $procurement = Procurement::create([
+            'project_id' => $project->id,
+            'department_id' => $departmentId,
+            'created_by' => $user->id,
+            'set_name' => $validated['set_name'],
+            'activity_name' => $validated['activity_name'] ?? null,
+            'procurement_number' => $procurementNumber,
+            'tor_specifications' => $validated['tor_specifications'] ?? null,
+            'status' => 'pending',
+            'memo_date' => now(),
+            'memo_subject' => $validated['set_name'] . ' (' . $project->title . ')',
+        ]);
+
+        foreach ($validated['items'] as $item) {
+            $procurement->items()->create([
+                'description' => $item['description'],
+                'quantity' => $item['quantity'],
+                'unit' => $item['unit'],
+                'unit_price' => $item['unit_price'],
+                'total_price' => floatval($item['quantity']) * floatval($item['unit_price']),
+            ]);
+        }
+
+        // Auto-advance project status to 'in_progress' (PDCA Do phase)
+        if ($project->status === 'approved') {
+            $project->status = 'in_progress';
+            $project->save();
+        }
+
+        return redirect()->back()->with('message', 'สร้างชุดจัดซื้อจัดจ้าง "' . $validated['set_name'] . '" ยอดเงิน ฿' . number_format($setTotal, 2) . ' เรียบร้อยแล้ว (อยู่ภายใต้งบประมาณโครงการรวม)');
+    }
+
+    /**
+     * Update an existing procurement set.
+     */
+    public function updateProcurementSet(Request $request, Procurement $procurement)
+    {
+        $user = auth()->user();
+        $project = $procurement->project;
+        if (!$project) {
+            return redirect()->back()->with('error', 'ไม่พบข้อมูลโครงการ');
+        }
+
+        if (!$user->isAdmin() && !$user->isProcurementHead() && $user->id !== $project->user_id && $user->id !== $procurement->created_by) {
+            abort(403, 'คุณไม่มีสิทธิ์แก้ไขชุดจัดซื้อจัดจ้างนี้');
+        }
+
+        if (in_array($procurement->status, ['forwarded_to_finance', 'finance_received', 'completed'])) {
+            return redirect()->back()->with('error', 'ชุดจัดซื้อนี้ถูกส่งไปยังงานการเงินหรือเบิกจ่ายแล้ว ไม่สามารถแก้ไขได้');
+        }
+
+        $validated = $request->validate([
+            'set_name' => 'required|string|max:255',
+            'department_id' => 'nullable|exists:departments,id',
+            'activity_name' => 'nullable|string|max:255',
+            'tor_specifications' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.description' => 'required|string|max:255',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit' => 'required|string|max:50',
+            'items.*.unit_price' => 'required|numeric|min:0',
+        ]);
+
+        $setTotal = 0;
+        foreach ($validated['items'] as $item) {
+            $setTotal += (floatval($item['quantity']) * floatval($item['unit_price']));
+        }
+
+        // Shared Budget Pool Validation
+        $projectBudget = floatval($project->allocated_budget ?: $project->estimated_budget);
+        $otherProcurementsSum = 0;
+        foreach ($project->procurements as $otherProc) {
+            if ($otherProc->id !== $procurement->id) {
+                $otherProcurementsSum += $otherProc->items->sum('total_price');
+            }
+        }
+
+        if (($otherProcurementsSum + $setTotal) > ($projectBudget + 0.01)) {
+            $remainingBudget = max(0, $projectBudget - $otherProcurementsSum);
+            return redirect()->back()->with('error', 'ไม่สามารถบันทึกได้: ยอดเงินชุดจัดซื้อนี้ (' . number_format($setTotal, 2) . ' บาท) รวมกับชุดอื่นจะเกินวงเงินโครงการคงเหลือ (' . number_format($remainingBudget, 2) . ' บาท จากวงเงินโครงการทั้งหมด ' . number_format($projectBudget, 2) . ' บาท)');
+        }
+
+        $procurement->set_name = $validated['set_name'];
+        if (!empty($validated['department_id'])) {
+            $procurement->department_id = $validated['department_id'];
+        }
+        $procurement->activity_name = $validated['activity_name'] ?? null;
+        $procurement->tor_specifications = $validated['tor_specifications'] ?? null;
+        $procurement->memo_subject = $validated['set_name'] . ' (' . $project->title . ')';
+        $procurement->save();
+
+        // Recreate items
+        $procurement->items()->delete();
+        foreach ($validated['items'] as $item) {
+            $procurement->items()->create([
+                'description' => $item['description'],
+                'quantity' => $item['quantity'],
+                'unit' => $item['unit'],
+                'unit_price' => $item['unit_price'],
+                'total_price' => floatval($item['quantity']) * floatval($item['unit_price']),
+            ]);
+        }
+
+        return redirect()->back()->with('message', 'อัปเดตข้อมูลชุดจัดซื้อจัดจ้าง "' . $validated['set_name'] . '" เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Delete a procurement set.
+     */
+    public function deleteProcurementSet(Request $request, Procurement $procurement)
+    {
+        $user = auth()->user();
+        $project = $procurement->project;
+
+        if (!$user->isAdmin() && !$user->isProcurementHead() && $user->id !== $project?->user_id && $user->id !== $procurement->created_by) {
+            abort(403, 'คุณไม่มีสิทธิ์ลบชุดจัดซื้อจัดจ้างนี้');
+        }
+
+        if (in_array($procurement->status, ['received', 'forwarded_to_finance', 'finance_received', 'completed'])) {
+            return redirect()->back()->with('error', 'ชุดจัดซื้อนี้ได้รับการลงรับหรือส่งต่อแล้ว ไม่สามารถลบได้ กรุณาติดต่อเจ้าหน้าที่พัสดุ');
+        }
+
+        $setName = $procurement->set_name ?: ('ชุดจัดซื้อ ' . $procurement->procurement_number);
+        $procurement->items()->delete();
+        $procurement->delete();
+
+        return redirect()->back()->with('message', 'ลบชุดจัดซื้อจัดจ้าง "' . $setName . '" เรียบร้อยแล้ว วงเงินถูกคืนกลับสู่กองงบประมาณโครงการ');
+    }
+
+    /**
+     * Plan cut budget for an individual procurement set.
+     */
+    public function planCutSet(Request $request, Procurement $procurement)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานวางแผนและงบประมาณหรือผู้ดูแลระบบเท่านั้นที่สามารถตัดยอดงบประมาณได้');
+        }
+
+        $validated = $request->validate([
+            'plan_doc_number' => 'nullable|string|max:100',
+            'cut_date' => 'nullable|date',
+        ]);
+
+        if (!empty($validated['plan_doc_number'])) {
+            $docNumber = trim($validated['plan_doc_number']);
+            if ($docNumber === DocumentNumberService::previewNext()) {
+                DocumentNumberService::generateAndIncrement();
+            }
+        } else {
+            $docNumber = DocumentNumberService::generateAndIncrement();
+        }
+
+        $cutDateTime = !empty($validated['cut_date']) ? \Carbon\Carbon::parse($validated['cut_date']) : now();
+
+        $procurement->plan_procurement_cut_at = $cutDateTime;
+        $procurement->plan_procurement_doc_number = $docNumber;
+        if (empty($procurement->procurement_number) || str_starts_with($procurement->procurement_number, 'PR-')) {
+            $procurement->procurement_number = $docNumber;
+        }
+        $procurement->status = 'plan_cut';
+        $procurement->save();
+
+        return redirect()->back()->with('message', 'งานแผนงานตัดยอดงบประมาณชุดจัดซื้อ "' . ($procurement->set_name ?: $procurement->procurement_number) . '" เรียบร้อยแล้ว (เลขคุม: ' . $docNumber . ')');
+    }
+
+    /**
+     * Procurement staff acknowledges and receives an individual procurement set.
+     */
+    public function receiveSet(Request $request, Procurement $procurement)
+    {
+        if (!auth()->user()->isProcurementHead() && !auth()->user()->isAdmin()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานพัสดุหรือผู้ดูแลระบบเท่านั้นที่สามารถลงรับได้');
+        }
+
+        $docNumber = $procurement->procurement_number;
+        if ($request->filled('procurement_number')) {
+            $docNumber = trim($request->input('procurement_number'));
+        } elseif (!empty($procurement->plan_procurement_doc_number)) {
+            $docNumber = $procurement->plan_procurement_doc_number;
+        }
+
+        if ($docNumber) {
+            $procurement->procurement_number = $docNumber;
+        }
+        $procurement->memo_date = $request->filled('memo_date') ? $request->input('memo_date') : now();
+        $procurement->status = 'received';
+        $procurement->save();
+
+        return redirect()->back()->with('message', 'งานพัสดุลงรับชุดจัดซื้อ "' . ($procurement->set_name ?: $procurement->procurement_number) . '" เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Procurement staff forwards an individual procurement set to finance.
+     */
+    public function forwardToFinanceSet(Request $request, Procurement $procurement)
+    {
+        if (!auth()->user()->isProcurementHead() && !auth()->user()->isAdmin()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานพัสดุหรือผู้ดูแลระบบเท่านั้นที่สามารถส่งต่อได้');
+        }
+
+        $procurement->status = 'forwarded_to_finance';
+        $procurement->save();
+
+        return redirect()->back()->with('message', 'ส่งต่อชุดจัดซื้อ "' . ($procurement->set_name ?: $procurement->procurement_number) . '" ให้งานการเงินเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Finance staff acknowledges and receives an individual procurement set.
+     */
+    public function financeReceiveSet(Request $request, Procurement $procurement)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isFinanceStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานการเงินหรือผู้ดูแลระบบเท่านั้นที่สามารถลงรับได้');
+        }
+
+        $procurement->status = 'finance_received';
+        $procurement->finance_received_at = now();
+        $procurement->finance_doc_number = $request->input('finance_number') 
+            ?: ($procurement->plan_procurement_doc_number ?: ('กง. P-' . $procurement->id . '/' . (date('Y') + 543)));
+        $procurement->save();
+
+        return redirect()->back()->with('message', 'งานการเงินลงรับชุดจัดซื้อ "' . ($procurement->set_name ?: $procurement->procurement_number) . '" เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Finance staff records actual disbursement for an individual procurement set.
+     */
+    public function financeDisburseSet(Request $request, Procurement $procurement)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isFinanceStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่งานการเงินหรือผู้ดูแลระบบเท่านั้นที่สามารถบันทึกจ่ายเงินได้');
+        }
+
+        $validated = $request->validate([
+            'actual_spent_amount' => 'required|numeric|min:0',
+            'payment_ref' => 'nullable|string|max:100',
+        ]);
+
+        $actualSpent = (float)$validated['actual_spent_amount'];
+        $ref = $validated['payment_ref'] ?? 'โอนเงิน KTB';
+        $now = now();
+
+        $procurement->status = 'completed';
+        $procurement->finance_disbursed_at = $now;
+        $procurement->finance_disbursed_amount = $actualSpent;
+        $procurement->finance_payment_ref = $ref;
+        $procurement->save();
+
+        // Update project budget
+        $project = $procurement->project;
+        if ($project) {
+            $budget = $project->budget;
+            if (!$budget) {
+                $budget = new \App\Models\Budget();
+                $budget->project_id = $project->id;
+                $budget->funding_source_id = $project->funding_source_id;
+                $budget->allocated_amount = (float)($project->allocated_budget ?: $project->estimated_budget);
+            }
+            $budget->spent_amount = (float)($budget->spent_amount ?: 0) + $actualSpent;
+            $budget->save();
+        }
+
+        return redirect()->back()->with('message', 'งานการเงินบันทึกจ่ายเงิน/โอนเงินชุดจัดซื้อ "' . ($procurement->set_name ?: $procurement->procurement_number) . '" ฿' . number_format($actualSpent, 2) . ' เรียบร้อยแล้ว (อ้างอิง: ' . $ref . ')');
     }
 
     /**

@@ -258,7 +258,15 @@ class Project extends Model
      */
     public function procurement()
     {
-        return $this->hasOne(Procurement::class);
+        return $this->hasOne(Procurement::class)->latestOfMany();
+    }
+
+    /**
+     * Get all procurement sets for this project.
+     */
+    public function procurements()
+    {
+        return $this->hasMany(Procurement::class);
     }
 
     /**

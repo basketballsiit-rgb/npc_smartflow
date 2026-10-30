@@ -22,6 +22,11 @@ class DocumentNumberService
         $loanDigits = (int) SystemSetting::get('doc_loan_digits', 3);
         $loanCurrentNo = (int) SystemSetting::get('doc_loan_current_no', 1);
 
+        $loanOffBudgetPrefix = SystemSetting::get('doc_loan_off_budget_prefix', 'สย.บกศ.');
+        $loanOffBudgetFormat = SystemSetting::get('doc_loan_off_budget_format', '{PREFIX} {NUMBER}/{YEAR}');
+        $loanOffBudgetDigits = (int) SystemSetting::get('doc_loan_off_budget_digits', 3);
+        $loanOffBudgetCurrentNo = (int) SystemSetting::get('doc_loan_off_budget_current_no', 1);
+
         return [
             // Unified / Procurement settings
             'prefix' => $prefix,
@@ -30,11 +35,17 @@ class DocumentNumberService
             'current_no' => $currentNo > 0 ? $currentNo : 1,
             'fiscal_year' => $currentFiscalYear,
 
-            // Loan Contract settings
+            // Loan Contract settings (เงินในระบบ - งบจัดสรร)
             'loan_prefix' => $loanPrefix,
             'loan_format' => $loanFormat,
             'loan_digits' => $loanDigits > 0 ? $loanDigits : 3,
             'loan_current_no' => $loanCurrentNo > 0 ? $loanCurrentNo : 1,
+
+            // Loan Contract settings (เงินนอกงบประมาณ - บกศ.)
+            'loan_off_budget_prefix' => $loanOffBudgetPrefix,
+            'loan_off_budget_format' => $loanOffBudgetFormat,
+            'loan_off_budget_digits' => $loanOffBudgetDigits > 0 ? $loanOffBudgetDigits : 3,
+            'loan_off_budget_current_no' => $loanOffBudgetCurrentNo > 0 ? $loanOffBudgetCurrentNo : 1,
         ];
     }
 
@@ -63,12 +74,22 @@ class DocumentNumberService
     public static function previewNext(string $type = 'unified'): string
     {
         $settings = self::getSettings();
-        if ($type === 'loan') {
+        if ($type === 'loan' || $type === 'loan_in_budget') {
             return self::formatNumber(
                 $settings['loan_format'],
                 $settings['loan_prefix'],
                 $settings['loan_current_no'],
                 $settings['loan_digits'],
+                $settings['fiscal_year']
+            );
+        }
+
+        if ($type === 'loan_off_budget') {
+            return self::formatNumber(
+                $settings['loan_off_budget_format'],
+                $settings['loan_off_budget_prefix'],
+                $settings['loan_off_budget_current_no'],
+                $settings['loan_off_budget_digits'],
                 $settings['fiscal_year']
             );
         }
@@ -83,11 +104,11 @@ class DocumentNumberService
     }
 
     /**
-     * Preview the next loan document number.
+     * Preview the next loan document number (supports in_budget or off_budget).
      */
-    public static function previewNextLoan(): string
+    public static function previewNextLoan(string $budgetCategory = 'in_budget'): string
     {
-        return self::previewNext('loan');
+        return self::previewNext($budgetCategory === 'off_budget' ? 'loan_off_budget' : 'loan');
     }
 
     /**
@@ -96,7 +117,7 @@ class DocumentNumberService
     public static function generateAndIncrement(string $type = 'unified'): string
     {
         $settings = self::getSettings();
-        if ($type === 'loan') {
+        if ($type === 'loan' || $type === 'loan_in_budget') {
             $formatted = self::formatNumber(
                 $settings['loan_format'],
                 $settings['loan_prefix'],
@@ -105,8 +126,23 @@ class DocumentNumberService
                 $settings['fiscal_year']
             );
 
-            // Increment sequence for loan
-            SystemSetting::set('doc_loan_current_no', $settings['loan_current_no'] + 1, 'numbering', 'ลำดับเลขที่สัญญายืมเงินแผนงานปัจจุบัน', 'number');
+            // Increment sequence for in-budget loan
+            SystemSetting::set('doc_loan_current_no', $settings['loan_current_no'] + 1, 'numbering', 'ลำดับเลขที่สัญญายืมเงินแผนงานปัจจุบัน (เงินในระบบ)', 'number');
+
+            return $formatted;
+        }
+
+        if ($type === 'loan_off_budget') {
+            $formatted = self::formatNumber(
+                $settings['loan_off_budget_format'],
+                $settings['loan_off_budget_prefix'],
+                $settings['loan_off_budget_current_no'],
+                $settings['loan_off_budget_digits'],
+                $settings['fiscal_year']
+            );
+
+            // Increment sequence for off-budget loan
+            SystemSetting::set('doc_loan_off_budget_current_no', $settings['loan_off_budget_current_no'] + 1, 'numbering', 'ลำดับเลขที่สัญญายืมเงินแผนงานปัจจุบัน (เงินนอกงบประมาณ บกศ.)', 'number');
 
             return $formatted;
         }
@@ -126,11 +162,11 @@ class DocumentNumberService
     }
 
     /**
-     * Generate and increment loan document number.
+     * Generate and increment loan document number based on budget category.
      */
-    public static function generateAndIncrementLoan(): string
+    public static function generateAndIncrementLoan(string $budgetCategory = 'in_budget'): string
     {
-        return self::generateAndIncrement('loan');
+        return self::generateAndIncrement($budgetCategory === 'off_budget' ? 'loan_off_budget' : 'loan');
     }
 
     /**
@@ -152,18 +188,32 @@ class DocumentNumberService
             SystemSetting::set('doc_unified_current_no', max(1, (int)$data['current_no']), 'numbering', 'ลำดับเลขที่เอกสารจัดซื้อจัดจ้างปัจจุบัน', 'number');
         }
 
-        // Loan Contract
+        // Loan Contract (เงินในระบบ)
         if (isset($data['loan_prefix'])) {
-            SystemSetting::set('doc_loan_prefix', trim($data['loan_prefix']), 'numbering', 'คำนำหน้าเลขคุมสัญญายืมเงิน', 'text');
+            SystemSetting::set('doc_loan_prefix', trim($data['loan_prefix']), 'numbering', 'คำนำหน้าเลขคุมสัญญายืมเงิน (เงินในระบบ)', 'text');
         }
         if (isset($data['loan_format'])) {
-            SystemSetting::set('doc_loan_format', trim($data['loan_format']), 'numbering', 'รูปแบบเลขคุมสัญญายืมเงิน', 'text');
+            SystemSetting::set('doc_loan_format', trim($data['loan_format']), 'numbering', 'รูปแบบเลขคุมสัญญายืมเงิน (เงินในระบบ)', 'text');
         }
         if (isset($data['loan_digits'])) {
-            SystemSetting::set('doc_loan_digits', max(1, (int)$data['loan_digits']), 'numbering', 'จำนวนหลักตัวเลขคุมสัญญายืมเงิน', 'number');
+            SystemSetting::set('doc_loan_digits', max(1, (int)$data['loan_digits']), 'numbering', 'จำนวนหลักตัวเลขคุมสัญญายืมเงิน (เงินในระบบ)', 'number');
         }
         if (isset($data['loan_current_no'])) {
-            SystemSetting::set('doc_loan_current_no', max(1, (int)$data['loan_current_no']), 'numbering', 'ลำดับเลขที่สัญญายืมเงินปัจจุบัน', 'number');
+            SystemSetting::set('doc_loan_current_no', max(1, (int)$data['loan_current_no']), 'numbering', 'ลำดับเลขที่สัญญายืมเงินปัจจุบัน (เงินในระบบ)', 'number');
+        }
+
+        // Loan Contract (เงินนอกงบประมาณ บกศ.)
+        if (isset($data['loan_off_budget_prefix'])) {
+            SystemSetting::set('doc_loan_off_budget_prefix', trim($data['loan_off_budget_prefix']), 'numbering', 'คำนำหน้าเลขคุมสัญญายืมเงิน (เงินนอกงบประมาณ บกศ.)', 'text');
+        }
+        if (isset($data['loan_off_budget_format'])) {
+            SystemSetting::set('doc_loan_off_budget_format', trim($data['loan_off_budget_format']), 'numbering', 'รูปแบบเลขคุมสัญญายืมเงิน (เงินนอกงบประมาณ บกศ.)', 'text');
+        }
+        if (isset($data['loan_off_budget_digits'])) {
+            SystemSetting::set('doc_loan_off_budget_digits', max(1, (int)$data['loan_off_budget_digits']), 'numbering', 'จำนวนหลักตัวเลขคุมสัญญายืมเงิน (เงินนอกงบประมาณ บกศ.)', 'number');
+        }
+        if (isset($data['loan_off_budget_current_no'])) {
+            SystemSetting::set('doc_loan_off_budget_current_no', max(1, (int)$data['loan_off_budget_current_no']), 'numbering', 'ลำดับเลขที่สัญญายืมเงินปัจจุบัน (เงินนอกงบประมาณ บกศ.)', 'number');
         }
 
         return self::getSettings();

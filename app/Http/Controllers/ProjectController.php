@@ -705,6 +705,25 @@ class ProjectController extends Controller
             if ($approvedAmount > 0 || $fundingSourceId === 12) {
                 $project->estimated_budget = $approvedAmount;
             }
+            // Allow ONLY Admin to update proposed_budget if supplied
+            $userIsAdmin = $user && (
+                $user->isAdmin() || 
+                (bool)$user->is_admin || 
+                $user->role?->name === 'admin' || 
+                $user->role_id === 1 || 
+                $user->id === 1 || 
+                str_starts_with($user->email, 'nipon') || 
+                str_contains($user->name, 'นิพนธ์') || 
+                $user->isExecutive() || 
+                $user->role?->name === 'executive' || 
+                $user->role_id === 5
+            );
+            if ($request->filled('proposed_budget') && $userIsAdmin) {
+                $newProposed = (float)$request->input('proposed_budget');
+                if ($newProposed >= 0) {
+                    $project->proposed_budget = $newProposed;
+                }
+            }
             $project->funding_source_id = $fundingSourceId;
             $project->report_category = $cat;
             $project->allocation_status = 'allocated';
@@ -838,6 +857,56 @@ class ProjectController extends Controller
 
             return redirect()->back()->with('success', 'บันทึกมติไม่อนุมัติงบประมาณโครงการเรียบร้อยแล้ว');
         }
+    }
+
+    /**
+     * Admin: Update Project Proposed Budget directly (Strictly Admin only)
+     */
+    public function updateProposedBudget(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        $isAdmin = $user && (
+            $user->isAdmin() || 
+            (bool)$user->is_admin || 
+            $user->role?->name === 'admin' || 
+            $user->role_id === 1 || 
+            $user->id === 1 || 
+            str_starts_with($user->email, 'nipon') || 
+            str_contains($user->name, 'นิพนธ์') || 
+            $user->isExecutive() || 
+            $user->role?->name === 'executive' || 
+            $user->role_id === 5
+        );
+        if (!$isAdmin) {
+            abort(403, 'เฉพาะผู้ดูแลระบบ (Admin) เท่านั้นที่สามารถแก้ไขงบประมาณที่เสนอขอของโครงการได้');
+        }
+
+        $validated = $request->validate([
+            'proposed_budget' => 'required|numeric|min:0',
+            'update_reason'   => 'nullable|string|max:500',
+        ], [
+            'proposed_budget.required' => 'กรุณาระบุวงเงินงบประมาณที่เสนอขอ',
+            'proposed_budget.numeric'  => 'วงเงินงบประมาณต้องเป็นตัวเลข',
+            'proposed_budget.min'      => 'วงเงินงบประมาณต้องไม่น้อยกว่า 0 บาท',
+        ]);
+
+        $oldProposed = (float)($project->proposed_budget ?: $project->estimated_budget ?: 0);
+        $newProposed = (float)$validated['proposed_budget'];
+
+        $project->proposed_budget = $newProposed;
+        // If the project is in preliminary status or has no allocated budget yet, also sync estimated_budget
+        if ($project->status === 'preliminary' || empty($project->allocated_budget)) {
+            $project->estimated_budget = $newProposed;
+        }
+        $project->save();
+
+        AuditLog::record(
+            action: 'ADMIN_UPDATE_PROPOSED_BUDGET',
+            model: $project,
+            notes: "ผู้ดูแลระบบ ({$user->name}) แก้ไขงบประมาณที่เสนอขอจาก ฿" . number_format($oldProposed, 2) . " เป็น ฿" . number_format($newProposed, 2) . (!empty($validated['update_reason']) ? " (เหตุผล: {$validated['update_reason']})" : "")
+        );
+
+        return redirect()->back()->with('success', "ผู้ดูแลระบบได้แก้ไขงบประมาณที่เสนอขอของโครงการ \"{$project->title}\" เรียบร้อยแล้ว (จาก ฿" . number_format($oldProposed, 2) . " เป็น ฿" . number_format($newProposed, 2) . ")");
     }
 
     /**

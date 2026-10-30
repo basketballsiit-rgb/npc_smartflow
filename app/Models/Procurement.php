@@ -9,6 +9,10 @@ class Procurement extends Model
     protected $fillable = [
         'project_id',
         'routine_budget_plan_id',
+        'department_id',
+        'created_by',
+        'set_name',
+        'activity_name',
         'procurement_number',
         'memo_date',
         'memo_subject',
@@ -39,6 +43,22 @@ class Procurement extends Model
             'finance_disbursed_at' => 'datetime',
             'finance_disbursed_amount' => 'decimal:2',
         ];
+    }
+
+    /**
+     * Get the department associated with this procurement set.
+     */
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    /**
+     * Get the user who created this procurement set.
+     */
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     /**

@@ -31,6 +31,7 @@ class TravelLoan extends Model
         'return_days',
         'project_id',
         'funding_source_id',
+        'budget_category',
         'expense_type',
         'allowance_amount',
         'allowance_detail',
