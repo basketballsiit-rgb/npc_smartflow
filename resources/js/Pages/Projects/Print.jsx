@@ -1,5 +1,29 @@
 import { Head, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { processSignatureImage } from '@/Components/SignaturePad';
+
+function AutoTrimmedSignature({ src, className, style, alt = "ลายมือชื่อ" }) {
+    const [trimmedSrc, setTrimmedSrc] = useState(src);
+
+    useEffect(() => {
+        if (!src) return;
+        setTrimmedSrc(src);
+        processSignatureImage(src, (result) => {
+            if (result) setTrimmedSrc(result);
+        });
+    }, [src]);
+
+    if (!src) return null;
+
+    return (
+        <img 
+            src={trimmedSrc || src} 
+            alt={alt} 
+            className={className} 
+            style={style} 
+        />
+    );
+}
 
 export default function Print({ project, strategyCategories = [], resolvedHead = null }) {
     const { college_settings, departments_data } = usePage().props;
@@ -1203,7 +1227,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                         12. การอนุมัติโครงการ{formattedProjectTitle ? toArabicNumerals(formattedProjectTitle) : '......................................................'}
                     </p>
                     
-                    <div className="space-y-8 font-sarabun" style={{ fontSize: 'var(--doc-font-size)', lineHeight: 'var(--doc-line-height)' }}>
+                    <div className="space-y-10 sm:space-y-12 font-sarabun" style={{ fontSize: 'var(--doc-font-size)', lineHeight: 'var(--doc-line-height)' }}>
                         {/* Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงานดังกล่าว (ขวา) */}
                         <div className="grid grid-cols-2 gap-x-6 sm:gap-x-8">
                             {/* ซ้าย: ผู้เสนอโครงการ (ตามสิทธิ์ของผู้เสนอ) */}
@@ -1215,16 +1239,16 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
                                             {includeSignatures && (isFastTrackApproval(sig1) ? project.user?.signature_data : (sig1?.signature_data || project.user?.signature_data)) ? (
-                                                <img 
+                                                <AutoTrimmedSignature 
                                                     src={isFastTrackApproval(sig1) ? project.user?.signature_data : (sig1?.signature_data || project.user?.signature_data)} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="signature-img h-14 sm:h-16 max-w-[160px] sm:max-w-[190px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                    className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-8"></div>
+                                                <div className="h-10"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-42 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เสนอโครงการ
@@ -1267,16 +1291,16 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
                                             {includeSignatures && getEffectiveRelatedDeputySignature() ? (
-                                                <img 
+                                                <AutoTrimmedSignature 
                                                     src={getEffectiveRelatedDeputySignature()} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="signature-img h-14 sm:h-16 max-w-[160px] sm:max-w-[190px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                    className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-8"></div>
+                                                <div className="h-10"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-42 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เห็นชอบโครงการ
@@ -1308,16 +1332,16 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
                                             {includeSignatures && sig3?.signature_data && !isFastTrackApproval(sig3) ? (
-                                                <img 
+                                                <AutoTrimmedSignature 
                                                     src={sig3.signature_data} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="signature-img h-14 sm:h-16 max-w-[160px] sm:max-w-[190px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                    className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-8"></div>
+                                                <div className="h-10"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-42 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้ตรวจสอบโครงการ
@@ -1352,16 +1376,16 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
                                             {includeSignatures && getEffectivePlanDeputySignature() ? (
-                                                <img 
+                                                <AutoTrimmedSignature 
                                                     src={getEffectivePlanDeputySignature()} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="signature-img h-14 sm:h-16 max-w-[160px] sm:max-w-[190px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                    className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-8"></div>
+                                                <div className="h-10"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-42 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เห็นชอบโครงการ
@@ -1391,16 +1415,16 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
                                         {includeSignatures && getEffectiveResourceDeputySignature() ? (
-                                            <img 
+                                            <AutoTrimmedSignature 
                                                 src={getEffectiveResourceDeputySignature()} 
                                                 alt="ลายมือชื่อ" 
-                                                className="signature-img h-14 sm:h-16 max-w-[170px] sm:max-w-[200px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
                                                 style={{ mixBlendMode: 'multiply' }}
                                             />
                                         ) : (
-                                            <div className="h-8"></div>
+                                            <div className="h-10"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-42 sm:w-48 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-48 sm:w-56 inline-block mb-1"></span>
                                     </div>
                                     <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                         ผู้เห็นชอบโครงการ
@@ -1435,16 +1459,16 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
                                         {includeSignatures && getEffectiveDirectorSignature() ? (
-                                            <img 
+                                            <AutoTrimmedSignature 
                                                 src={getEffectiveDirectorSignature()} 
                                                 alt="ลายมือชื่อ" 
-                                                className="signature-img h-16 sm:h-20 max-w-[200px] sm:max-w-[240px] object-contain -mb-3.5 sm:-mb-4 z-10" 
+                                                className="signature-img h-24 sm:h-28 max-w-[260px] sm:max-w-[320px] object-contain -mb-6 sm:-mb-7 z-10" 
                                                 style={{ mixBlendMode: 'multiply' }}
                                             />
                                         ) : (
-                                            <div className="h-9"></div>
+                                            <div className="h-12"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-52 sm:w-64 inline-block mb-1"></span>
                                     </div>
                                     <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                         ผู้อนุมัติโครงการ
