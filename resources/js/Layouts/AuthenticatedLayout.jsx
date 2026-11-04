@@ -980,6 +980,17 @@ export default function AuthenticatedLayout({ header, children }) {
                                     <span className="text-sm">🏛️</span>
                                     {isSidebarOpen && <span>สรุปโครงการทั้งหมดของวิทยาลัย</span>}
                                 </Link>
+                                <a
+                                    href={route('projects.batch_print')}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={getSubLinkClass(url.includes('projects/batch-print'))}
+                                    title="เล่มรวมแบบเสนอโครงการทั้ง 4 ฝ่าย (พิมพ์เอกสาร / Export PDF พร้อมลงนาม)"
+                                >
+                                    <span className={getPrefixClass(url.includes('projects/batch-print'), 'text-amber-300')}>└─</span>
+                                    <span className="text-sm">📑</span>
+                                    {isSidebarOpen && <span className="font-black text-amber-300">เล่มรวมแบบเสนอโครงการ (PDF)</span>}
+                                </a>
                                 <Link
                                     href={route('strategies.dashboard')}
                                     className={getSubLinkClass(route().current('strategies.dashboard'))}
@@ -1393,6 +1404,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                             <span className="flex items-center gap-2"><span>💼</span> งบเฉพาะกิจโครงการ</span>
                                             <span className="text-[9px] bg-amber-400/20 px-1.5 py-0.5 rounded text-amber-200">ส่วนกลาง</span>
                                         </Link>
+                                        <a href={route('projects.batch_print')} target="_blank" rel="noopener noreferrer" onClick={() => setShowingMobileMenu(false)} className="flex items-center gap-2 p-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 font-bold border border-amber-400/30">
+                                            <span>📑</span> เล่มรวมแบบเสนอโครงการ (PDF)
+                                        </a>
                                     </div>
                                 )}
 

@@ -266,6 +266,7 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/ai/map-strategies', [ProjectController::class, 'aiAutoMapStrategies'])->name('projects.ai.map_strategies');
     Route::post('projects/ai/detect-duplicates', [ProjectController::class, 'aiDetectDuplicates'])->name('projects.ai.detect_duplicates');
     Route::post('projects/ai/audit-consistency', [ProjectController::class, 'auditConsistency'])->name('projects.ai.audit_consistency');
+    Route::get('projects/batch-print', [ProjectController::class, 'batchPrint'])->name('projects.batch_print');
     Route::resource('projects', ProjectController::class)->except(['index']);
     Route::get('projects/{project}/print', [ProjectController::class, 'print'])->name('projects.print');
     Route::post('projects/generate-ai-content', [ProjectController::class, 'generateAiContent'])->name('projects.generate_ai_content');

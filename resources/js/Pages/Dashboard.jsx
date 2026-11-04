@@ -9972,6 +9972,15 @@ ${itemsListText}
                                     <span>➕</span> เพิ่มโครงการ & จัดสรรงบตรง
                                 </button>
                             )}
+                            <a
+                                href={route('projects.batch_print')}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                                title="เปิดหน้าเล่มรวมแบบเสนอโครงการทั้ง 4 ฝ่ายเพื่อสั่งพิมพ์หรือบันทึกเป็น PDF ไฟล์เดียว"
+                            >
+                                <span>📑</span> เล่มรวมแบบเสนอโครงการ (PDF)
+                            </a>
                             <button
                                 type="button"
                                 onClick={() => setActiveTab('action_plan_report')}
@@ -19544,6 +19553,14 @@ ${itemsListText}
                         </p>
                     </div>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
+                        <a
+                            href={route('projects.batch_print')}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                        >
+                            <span>📑</span> พิมพ์เล่มรวมแบบเสนอโครงการ (PDF)
+                        </a>
                         <div className="bg-white/15 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 text-right">
                             <span className="text-[11px] text-purple-200 block font-medium">งบประมาณเสนอขอรวมทั้งสิ้น</span>
                             <span className="text-lg sm:text-xl font-black text-amber-300 font-mono">

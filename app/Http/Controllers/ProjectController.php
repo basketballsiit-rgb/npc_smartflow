@@ -2327,6 +2327,123 @@ class ProjectController extends Controller
     }
 
     /**
+     * Display printable batch official project proposals book (เล่มรวมแบบเสนอโครงการ)
+     * Grouped and sorted by the 4 main college divisions.
+     */
+    public function batchPrint(Request $request)
+    {
+        $user = auth()->user();
+        if (!$user) {
+            abort(403, 'กรุณาเข้าสู่ระบบก่อนใช้งาน');
+        }
+
+        $fiscalYear = $request->input('fiscal_year', \App\Models\SystemSetting::where('key', 'current_fiscal_year')->value('value') ?: '2569');
+        $divisionFilter = $request->input('division_id', 'all');
+
+        $query = Project::query()
+            ->with([
+                'user',
+                'department.parent',
+                'approvals.user',
+                'approvals.delegatedFromUser',
+                'approvals.roleDelegation',
+                'budget.fundingSource'
+            ]);
+
+        // Filter by fiscal year / academic year
+        if (!empty($fiscalYear) && $fiscalYear !== 'all') {
+            $query->where(function ($q) use ($fiscalYear) {
+                $q->where('academic_year', $fiscalYear)
+                  ->orWhereNull('academic_year');
+            });
+        }
+
+        // Only include submitted / existing projects (exclude abandoned drafts if any)
+        $query->where('status', '!=', 'draft');
+
+        $allProjects = $query->orderBy('id', 'asc')->get();
+
+        // 4 Main Divisions
+        $divisions = \App\Models\Department::whereNull('parent_id')
+            ->orderBy('order_index', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $allCategories = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->get();
+
+        $processedProjects = $allProjects->map(function ($proj) {
+            $latestApprovalsByStep = $proj->approvals->sortByDesc('id')->unique('step_number')->sortBy('step_number')->values();
+            $proj->setRelation('approvals', $latestApprovalsByStep);
+            $proj->resolved_head = $this->resolveDepartmentHead($proj);
+            return $proj;
+        });
+
+        // Group by 4 Main Divisions
+        $groupedByDivision = [];
+        foreach ($divisions as $div) {
+            $divProjects = $processedProjects->filter(function ($p) use ($div) {
+                if ($p->department && $p->department->parent_id == $div->id) {
+                    return true;
+                }
+                if ($p->department_id == $div->id) {
+                    return true;
+                }
+                return false;
+            })->values();
+
+            $groupedByDivision[] = [
+                'division_id' => $div->id,
+                'division_name' => $div->name,
+                'division_code' => $div->code,
+                'deputy_director_name' => $div->deputy_director_name,
+                'deputy_director_position' => $div->deputy_director_position,
+                'projects' => $divProjects,
+                'total_projects' => $divProjects->count(),
+                'total_proposed_budget' => $divProjects->sum(function ($p) {
+                    return (float)($p->proposed_budget ?: ($p->estimated_budget ?: 0));
+                }),
+                'total_allocated_budget' => $divProjects->sum(function ($p) {
+                    return (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?: 0));
+                }),
+            ];
+        }
+
+        // Unassigned or central projects
+        $parentIds = $divisions->pluck('id')->toArray();
+        $otherProjects = $processedProjects->filter(function ($p) use ($parentIds) {
+            $parentMatch = $p->department && in_array($p->department->parent_id, $parentIds);
+            $selfMatch = in_array($p->department_id, $parentIds);
+            return !$parentMatch && !$selfMatch;
+        })->values();
+
+        if ($otherProjects->isNotEmpty()) {
+            $groupedByDivision[] = [
+                'division_id' => 0,
+                'division_name' => 'โครงการส่วนกลาง / อื่นๆ',
+                'division_code' => 'OTHER',
+                'deputy_director_name' => '',
+                'deputy_director_position' => '',
+                'projects' => $otherProjects,
+                'total_projects' => $otherProjects->count(),
+                'total_proposed_budget' => $otherProjects->sum(function ($p) {
+                    return (float)($p->proposed_budget ?: ($p->estimated_budget ?: 0));
+                }),
+                'total_allocated_budget' => $otherProjects->sum(function ($p) {
+                    return (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?: 0));
+                }),
+            ];
+        }
+
+        return Inertia::render('Projects/BatchPrint', [
+            'groupedByDivision' => $groupedByDivision,
+            'strategyCategories' => $allCategories,
+            'fiscalYear' => $fiscalYear,
+            'divisionsList' => $divisions,
+            'initialDivisionFilter' => $divisionFilter,
+        ]);
+    }
+
+    /**
      * Resolve Department Head for Step 2 Endorsement in Project Print.
      * Strictly derives head position from proposer's position (e.g. เจ้าหน้าที่งาน... -> หัวหน้างาน...)
      * and only returns head name if an actual user in the system holds this head position.
