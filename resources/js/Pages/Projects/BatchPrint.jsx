@@ -29,6 +29,48 @@ function AutoTrimmedSignature({ src, className, style, alt = "ลายมือ
     );
 }
 
+// Shared Utility Functions
+const cleanPersonName = (name) => {
+    if (!name) return '';
+    let cleaned = String(name).replace(/\s*\([^)]*\)/g, '').trim();
+    cleaned = cleaned.replace(/^\(+|\)+$/g, '').trim();
+    return cleaned;
+};
+
+const toArabicNumerals = (val) => {
+    if (val === null || val === undefined) return '';
+    const thaiToArabic = {
+        '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4',
+        '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9'
+    };
+    return String(val).replace(/[๐-๙]/g, (ch) => thaiToArabic[ch] || ch);
+};
+const toThaiNumerals = toArabicNumerals;
+
+const formatCurrencyThai = (value) => {
+    const formatted = new Intl.NumberFormat('th-TH', { style: 'decimal', minimumFractionDigits: 0 }).format(value || 0);
+    return toArabicNumerals(formatted);
+};
+
+const thaiMonths = [
+    'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+    'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
+];
+
+const formatThaiSignatureDate = (dateStr) => {
+    if (!dateStr) return 'วันที่ ........ เดือน .................... พ.ศ. ............';
+    try {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) return 'วันที่ ........ เดือน .................... พ.ศ. ............';
+        const day = toThaiNumerals(date.getDate());
+        const month = thaiMonths[date.getMonth()];
+        const year = toThaiNumerals(date.getFullYear() + 543);
+        return `วันที่ ${day} เดือน ${month} พ.ศ. ${year}`;
+    } catch (e) {
+        return 'วันที่ ........ เดือน .................... พ.ศ. ............';
+    }
+};
+
 // Single Project Proposal Template Component (1:1 identical to Projects/Print.jsx)
 function SingleProjectProposalDocument({
     project,
@@ -39,48 +81,6 @@ function SingleProjectProposalDocument({
     college_settings = {},
     fontStyles = {},
 }) {
-    // Utility to clean person name
-    const cleanPersonName = (name) => {
-        if (!name) return '';
-        let cleaned = String(name).replace(/\s*\([^)]*\)/g, '').trim();
-        cleaned = cleaned.replace(/^\(+|\)+$/g, '').trim();
-        return cleaned;
-    };
-
-    const toArabicNumerals = (val) => {
-        if (val === null || val === undefined) return '';
-        const thaiToArabic = {
-            '๐': '0', '๑': '1', '๒': '2', '๓': '3', '๔': '4',
-            '๕': '5', '๖': '6', '๗': '7', '๘': '8', '๙': '9'
-        };
-        return String(val).replace(/[๐-๙]/g, (ch) => thaiToArabic[ch] || ch);
-    };
-    const toThaiNumerals = toArabicNumerals;
-
-    const formatCurrencyThai = (value) => {
-        const formatted = new Intl.NumberFormat('th-TH', { style: 'decimal', minimumFractionDigits: 0 }).format(value || 0);
-        return toArabicNumerals(formatted);
-    };
-
-    const thaiMonths = [
-        'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
-        'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
-    ];
-
-    const formatThaiSignatureDate = (dateStr) => {
-        if (!dateStr) return 'วันที่ ........ เดือน .................... พ.ศ. ............';
-        try {
-            const date = new Date(dateStr);
-            if (isNaN(date.getTime())) return 'วันที่ ........ เดือน .................... พ.ศ. ............';
-            const day = toThaiNumerals(date.getDate());
-            const month = thaiMonths[date.getMonth()];
-            const year = toThaiNumerals(date.getFullYear() + 543);
-            return `วันที่ ${day} เดือน ${month} พ.ศ. ${year}`;
-        } catch (e) {
-            return 'วันที่ ........ เดือน .................... พ.ศ. ............';
-        }
-    };
-
     const getApprovalByStep = (step) => {
         return project.approvals?.find(a => a.step_number === step && a.status === 'approved');
     };
