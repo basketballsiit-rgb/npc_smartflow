@@ -383,16 +383,16 @@ class DashboardController extends Controller
                 $prelimQuery->where('user_id', $user->id);
             }
 
-            $queueQuery = Project::whereIn('status', ['pending_approval', 'submitted', 'draft', 'rejected'])
-                ->with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'approvals']);
+            $queueQuery = Project::with(['user', 'department.parent', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'approvals']);
 
             if (!$isAuthorizedPlanOrExec) {
                 // Regular users only see their own projects, plus Step 2 projects if they or their principal are department head
                 $queueQuery->where(function($q) use ($user, $activeDelegatedPrincipals) {
-                    $q->where('user_id', $user->id);
+                    $q->where('user_id', $user->id)
+                      ->whereIn('status', ['pending_approval', 'submitted', 'draft', 'rejected']);
                     if ($user->isDepartmentHead()) {
                         $q->orWhere(function($sub) use ($user) {
-                            $sub->where('current_approval_step', 2)
+                            $sub->where('current_approval_step', '>=', 2)
                                 ->whereIn('status', ['submitted', 'pending_approval'])
                                 ->where('user_id', '!=', $user->id)
                                 ->where('department_id', $user->department_id);
@@ -401,7 +401,7 @@ class DashboardController extends Controller
                     foreach ($activeDelegatedPrincipals as $principal) {
                         if ($principal->isDepartmentHead()) {
                             $q->orWhere(function($sub) use ($user, $principal) {
-                                $sub->where('current_approval_step', 2)
+                                $sub->where('current_approval_step', '>=', 2)
                                     ->whereIn('status', ['submitted', 'pending_approval'])
                                     ->where('user_id', '!=', $user->id)
                                     ->where('department_id', $principal->department_id);
@@ -410,6 +410,9 @@ class DashboardController extends Controller
                     }
                 });
             } else {
+                // For Planning / Exec / Admin: only show projects that have completed the full proposal and submitted into Step 2 or beyond!
+                $queueQuery->whereIn('status', ['pending_approval', 'submitted'])
+                    ->where('current_approval_step', '>=', 2);
                 $queueQuery->orderByRaw("CASE WHEN status = 'pending_approval' AND current_approval_step = 3 THEN 0 WHEN status = 'pending_approval' THEN 1 ELSE 2 END");
             }
 

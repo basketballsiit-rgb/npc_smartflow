@@ -4876,17 +4876,18 @@ export default function Dashboard({
             };
         }
 
-        // 4. Level 2 (Orange / 20-40%): มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ
-        const hasFullContent = Boolean(p.chapter_1_content) || (Array.isArray(p.activities) && p.activities.length > 0) || ['submitted', 'pending_approval', 'approved', 'budget_approved'].includes(p.status);
-        const isPreliminaryOnly = (p.status === 'preliminary') && !p.chapter_1_content;
+        // 4. Level 2 (Orange / 20-40%): จัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอนที่ 2 แล้ว
+        // นำเอาเฉพาะโครงการที่ได้มีการจัดทำโครงการแบบเต็มรูปแบบ และมีการกดปุ่มยื่นเสนอขั้นตอนที่ 2 ขึ้นไปมาแสดง
+        const isStep2Submitted = (parseInt(p.current_approval_step, 10) >= 2 || (p.approvals || []).some(a => a.step_number === 1 && (a.status === 'submitted' || a.status === 'approved')))
+            && !['draft', 'preliminary', 'budget_approved'].includes(p.status);
 
-        if (!isPreliminaryOnly && (hasFullContent || ['draft', 'submitted', 'pending_approval', 'approved'].includes(p.status))) {
+        if (isStep2Submitted) {
             return {
                 key: 'orange',
                 level: 2,
                 percentage: 30,
-                label: 'มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ',
-                short_label: 'เริ่มจัดทำโครงการแบบเต็มรูปแบบ',
+                label: 'จัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอนที่ 2 แล้ว (รอการอนุมัติ 6 ขั้นตอน)',
+                short_label: 'จัดทำฉบับเต็ม & ยื่นเสนอขั้นตอนที่ 2 แล้ว',
                 dot: '🟠',
                 color: 'orange',
                 hex: '#f97316',
@@ -4894,13 +4895,14 @@ export default function Dashboard({
             };
         }
 
-        // 5. Level 1 (Red / 0-20%): ยังไม่ได้เริ่มดำเนินการ
+        // 5. Level 1 (Red / 0-20%): เริ่มต้น / ยังไม่ได้เริ่มจัดทำโครงการแบบเต็มรูปแบบ
+        // (โครงการที่ได้รับอนุมัติเงินจัดสรรแล้ว แต่เจ้าของโครงการยังไม่ได้เข้ามาจัดทำโครงการแบบเต็มรูปแบบและกดยื่นเสนอขั้นตอนที่ 2)
         return {
             key: 'red',
             level: 1,
             percentage: 10,
-            label: 'ยังไม่ได้เริ่มดำเนินการ',
-            short_label: 'ยังไม่ได้เริ่มดำเนินการ',
+            label: 'เริ่มต้น / รอจัดทำโครงการแบบเต็มรูปแบบ (ยังไม่ได้ยื่นเสนอขั้นตอนที่ 2)',
+            short_label: 'เริ่มต้น / รอจัดทำฉบับเต็ม',
             dot: '🔴',
             color: 'red',
             hex: '#ef4444',
@@ -20116,8 +20118,8 @@ ${itemsListText}
                             </span>
                         </div>
                         <div className="mt-3">
-                            <h4 className="text-xs font-black text-slate-800">ยังไม่ได้เริ่มดำเนินการ</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">ข้อเสนอเบื้องต้น/ยังไม่ทำฉบับเต็ม</p>
+                            <h4 className="text-xs font-black text-slate-800">เริ่มต้น / รอจัดทำฉบับเต็ม</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">รอจัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอน 2</p>
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-rose-100 flex items-baseline justify-between">
                             <span className="text-lg font-black text-rose-700 font-mono">{stats.red.count} โครงการ</span>
@@ -20144,8 +20146,8 @@ ${itemsListText}
                             </span>
                         </div>
                         <div className="mt-3">
-                            <h4 className="text-xs font-black text-slate-800">เริ่มจัดทำโครงการเต็มรูปแบบ</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เขียนบทที่ 1 / รอการอนุมัติ 6 ขั้น</p>
+                            <h4 className="text-xs font-black text-slate-800">จัดทำฉบับเต็ม & ยื่นเสนอขั้นตอน 2</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">จัดทำฉบับเต็มครบถ้วน ยื่นเสนอรออนุมัติ 6 ขั้น</p>
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-orange-100 flex items-baseline justify-between">
                             <span className="text-lg font-black text-orange-700 font-mono">{stats.orange.count} โครงการ</span>
@@ -20266,7 +20268,7 @@ ${itemsListText}
                                         : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
                                 }`}
                             >
-                                <span>🔴</span> ยังไม่เริ่ม ({stats.red.count})
+                                <span>🔴</span> เริ่มต้น/รอฉบับเต็ม ({stats.red.count})
                             </button>
                             <button
                                 type="button"
@@ -20277,7 +20279,7 @@ ${itemsListText}
                                         : 'bg-orange-50 text-orange-800 hover:bg-orange-100 border border-orange-200'
                                 }`}
                             >
-                                <span>🟠</span> เริ่มทำฉบับเต็ม ({stats.orange.count})
+                                <span>🟠</span> ฉบับเต็ม&ยื่นขั้นตอน 2 ({stats.orange.count})
                             </button>
                             <button
                                 type="button"

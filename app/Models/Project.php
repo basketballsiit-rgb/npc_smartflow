@@ -408,17 +408,18 @@ class Project extends Model
             ];
         }
 
-        // 4. Check Level 2 (Orange): มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ
-        $hasFullContent = !empty($this->chapter_1_content) || !empty($this->activities) || in_array($this->status, ['submitted', 'pending_approval', 'approved', 'budget_approved']);
-        $isPreliminaryOnly = ($this->status === 'preliminary') && empty($this->chapter_1_content);
+        // 4. Check Level 2 (Orange): จัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอนที่ 2 แล้ว
+        // นำเอาเฉพาะโครงการที่ได้มีการจัดทำโครงการแบบเต็มรูปแบบ และมีการกดปุ่มยื่นเสนอขั้นตอนที่ 2 ขึ้นไปมาแสดง
+        $hasSubmittedStep2 = (int)$this->current_approval_step >= 2 
+            && !in_array($this->status, ['draft', 'preliminary', 'budget_approved']);
 
-        if (!$isPreliminaryOnly && ($hasFullContent || in_array($this->status, ['draft', 'submitted', 'pending_approval', 'approved']))) {
+        if ($hasSubmittedStep2) {
             return [
                 'key' => 'orange',
                 'level' => 2,
                 'percentage' => 30,
-                'label' => 'มีการเริ่มจัดทำโครงการแบบเต็มรูปแบบ',
-                'short_label' => 'เริ่มจัดทำโครงการแบบเต็มรูปแบบ',
+                'label' => 'จัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอนที่ 2 แล้ว (รอการอนุมัติ 6 ขั้นตอน)',
+                'short_label' => 'จัดทำฉบับเต็ม & ยื่นเสนอขั้นตอนที่ 2 แล้ว',
                 'color' => 'orange',
                 'hex' => '#f97316',
                 'dot' => '🟠',
@@ -426,13 +427,14 @@ class Project extends Model
             ];
         }
 
-        // 5. Level 1 (Red): ยังไม่ได้เริ่มดำเนินการ
+        // 5. Level 1 (Red): เริ่มต้น / ยังไม่ได้เริ่มจัดทำโครงการแบบเต็มรูปแบบ
+        // (รวมถึงโครงการที่ได้รับอนุมัติเงินจัดสรรแล้ว แต่เจ้าของโครงการยังไม่ได้เข้ามาจัดทำโครงการแบบเต็มรูปแบบและกดยื่นเสนอขั้นตอนที่ 2)
         return [
             'key' => 'red',
             'level' => 1,
             'percentage' => 10,
-            'label' => 'ยังไม่ได้เริ่มดำเนินการ',
-            'short_label' => 'ยังไม่ได้เริ่มดำเนินการ',
+            'label' => 'เริ่มต้น / รอจัดทำโครงการแบบเต็มรูปแบบ (ยังไม่ได้ยื่นเสนอขั้นตอนที่ 2)',
+            'short_label' => 'เริ่มต้น / รอจัดทำฉบับเต็ม',
             'color' => 'red',
             'hex' => '#ef4444',
             'dot' => '🔴',
