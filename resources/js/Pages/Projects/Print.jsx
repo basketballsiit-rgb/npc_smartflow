@@ -1227,11 +1227,11 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                         12. การอนุมัติโครงการ{formattedProjectTitle ? toArabicNumerals(formattedProjectTitle) : '......................................................'}
                     </p>
                     
-                    <div className="space-y-10 sm:space-y-12 font-sarabun" style={{ fontSize: 'var(--doc-font-size)', lineHeight: 'var(--doc-line-height)' }}>
+                    <div className="space-y-8 font-sarabun" style={{ fontSize: 'var(--doc-font-size)', lineHeight: 'var(--doc-line-height)' }}>
                         {/* Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงานดังกล่าว (ขวา) */}
-                        <div className="grid grid-cols-2 gap-x-6 sm:gap-x-8">
+                        <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6">
                             {/* ซ้าย: ผู้เสนอโครงการ (ตามสิทธิ์ของผู้เสนอ) */}
-                            <div className="flex justify-center">
+                            <div className="flex justify-center pl-2 sm:pl-4">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
                                         <span className="absolute right-full mr-2 whitespace-nowrap font-normal bottom-0.5">
@@ -1242,19 +1242,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 <AutoTrimmedSignature 
                                                     src={isFastTrackApproval(sig1) ? project.user?.signature_data : (sig1?.signature_data || project.user?.signature_data)} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
+                                                    className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-10"></div>
+                                                <div className="h-6"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-28 sm:w-32 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เสนอโครงการ
                                         </span>
                                     </div>
-                                    <p className="font-bold pt-1.5 whitespace-nowrap">
+                                    <p className="font-bold pt-2 whitespace-nowrap">
                                         ({toThaiNumerals((!isFastTrackApproval(sig1) && sig1?.user?.name) ? cleanPersonName(sig1.user.name) : (cleanedResponsiblePerson || '...............................................'))})
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal max-w-[280px] text-slate-800">
@@ -1283,7 +1283,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                             </div>
 
                             {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงานดังกล่าว) */}
-                            <div className="flex justify-center">
+                            <div className="flex justify-center pr-4 sm:pr-8">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
                                         <span className="absolute right-full mr-2 whitespace-nowrap font-normal bottom-0.5">
@@ -1294,19 +1294,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 <AutoTrimmedSignature 
                                                     src={getEffectiveRelatedDeputySignature()} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
+                                                    className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-10"></div>
+                                                <div className="h-6"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-28 sm:w-32 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เห็นชอบโครงการ
                                         </span>
                                     </div>
-                                    <p className="font-bold pt-1.5 whitespace-nowrap">
+                                    <p className="font-bold pt-2 whitespace-nowrap">
                                         ({getRelatedDeputyName()})
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal max-w-[280px] text-slate-800">
@@ -1322,9 +1322,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                         </div>
 
                         {/* Row 2: ผู้ตรวจสอบโครงการ: หัวหน้างานพัฒนายุทธศาสตร์ฯ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายยุทธศาสตร์ฯ (ขวา) */}
-                        <div className="grid grid-cols-2 gap-x-6 sm:gap-x-8">
+                        <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6">
                             {/* ซ้าย: ผู้ตรวจสอบโครงการ (หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ) */}
-                            <div className="flex justify-center">
+                            <div className="flex justify-center pl-2 sm:pl-4">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
                                         <span className="absolute right-full mr-2 whitespace-nowrap font-normal bottom-0.5">
@@ -1335,19 +1335,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 <AutoTrimmedSignature 
                                                     src={sig3.signature_data} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
+                                                    className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-10"></div>
+                                                <div className="h-6"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-28 sm:w-32 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้ตรวจสอบโครงการ
                                         </span>
                                     </div>
-                                    <p className="font-bold pt-1.5 whitespace-nowrap">
+                                    <p className="font-bold pt-2 whitespace-nowrap">
                                         ({!isFastTrackApproval(sig3) && sig3?.user?.name 
                                             ? toThaiNumerals(cleanPersonName(sig3.user.name)) 
                                             : toThaiNumerals(cleanPersonName(college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา'))})
@@ -1368,7 +1368,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                             </div>
 
                             {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน) */}
-                            <div className="flex justify-center">
+                            <div className="flex justify-center pr-4 sm:pr-8">
                                 <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                     <div className="relative flex items-center justify-center">
                                         <span className="absolute right-full mr-2 whitespace-nowrap font-normal bottom-0.5">
@@ -1379,19 +1379,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 <AutoTrimmedSignature 
                                                     src={getEffectivePlanDeputySignature()} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
+                                                    className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-10"></div>
+                                                <div className="h-6"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-28 sm:w-32 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เห็นชอบโครงการ
                                         </span>
                                     </div>
-                                    <p className="font-bold pt-1.5 whitespace-nowrap">
+                                    <p className="font-bold pt-2 whitespace-nowrap">
                                         ({getPlanDeputyName()})
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
@@ -1418,19 +1418,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             <AutoTrimmedSignature 
                                                 src={getEffectiveResourceDeputySignature()} 
                                                 alt="ลายมือชื่อ" 
-                                                className="signature-img h-20 sm:h-24 max-w-[220px] sm:max-w-[260px] object-contain -mb-5 sm:-mb-6 z-10" 
+                                                className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
                                                 style={{ mixBlendMode: 'multiply' }}
                                             />
                                         ) : (
-                                            <div className="h-10"></div>
+                                            <div className="h-6"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-48 sm:w-56 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-32 sm:w-36 inline-block mb-1"></span>
                                     </div>
                                     <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                         ผู้เห็นชอบโครงการ
                                     </span>
                                 </div>
-                                <p className="font-bold pt-1.5 whitespace-nowrap">
+                                <p className="font-bold pt-2 whitespace-nowrap">
                                     ({!isFastTrackApproval(resourceDeputySig) && resourceDeputySig?.user?.name 
                                         ? toThaiNumerals(cleanPersonName(resourceDeputySig.user.name)) 
                                         : toThaiNumerals(cleanPersonName(college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา'))})
@@ -1462,19 +1462,19 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             <AutoTrimmedSignature 
                                                 src={getEffectiveDirectorSignature()} 
                                                 alt="ลายมือชื่อ" 
-                                                className="signature-img h-24 sm:h-28 max-w-[260px] sm:max-w-[320px] object-contain -mb-6 sm:-mb-7 z-10" 
+                                                className="signature-img h-13 sm:h-14 max-w-[145px] sm:max-w-[160px] object-contain -mb-2.5 z-10" 
                                                 style={{ mixBlendMode: 'multiply' }}
                                             />
                                         ) : (
-                                            <div className="h-12"></div>
+                                            <div className="h-7"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-52 sm:w-64 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-36 sm:w-40 inline-block mb-1"></span>
                                     </div>
                                     <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                         ผู้อนุมัติโครงการ
                                     </span>
                                 </div>
-                                <p className="font-bold pt-1.5 whitespace-nowrap">
+                                <p className="font-bold pt-2 whitespace-nowrap">
                                     ({!isFastTrackApproval(sig6) && sig6?.user?.name 
                                         ? toThaiNumerals(cleanPersonName(sig6.user.name)) 
                                         : toThaiNumerals(cleanPersonName(college_settings?.director_name || 'นายกเชษฐ์ กิ่งชนะ'))})
