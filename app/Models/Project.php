@@ -390,17 +390,19 @@ class Project extends Model
             ];
         }
 
-        // 3. Check Level 3 (Yellow): มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง
-        $isFullyApproved = ($this->status === 'approved' || $this->status === 'in_progress' || (int)$this->current_approval_step >= 6);
-        $hasStartedContract = $hasLoans || $hasProcurements;
+        // 3. Check Level 3 (Yellow): ผ่านการอนุมัติครบ 6 ขั้นตอนแล้ว & พร้อม/อยู่ระหว่างดำเนินโครงการ (ยืมเงิน/จัดซื้อจัดจ้าง)
+        $step6Approved = $this->relationLoaded('approvals') 
+            ? $this->approvals->where('step_number', 6)->where('status', 'approved')->isNotEmpty()
+            : $this->approvals()->where('step_number', 6)->where('status', 'approved')->exists();
+        $isFullyApproved = ($this->status === 'approved' || $this->status === 'in_progress' || (int)$this->current_approval_step >= 6 || $step6Approved);
 
-        if ($isFullyApproved && $hasStartedContract) {
+        if ($isFullyApproved) {
             return [
                 'key' => 'yellow',
                 'level' => 3,
                 'percentage' => 50,
-                'label' => 'มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง',
-                'short_label' => 'อนุมัติครบ & ดำเนินโครงการ (ยืมเงิน/จัดซื้อ)',
+                'label' => 'ผ่านการอนุมัติครบ 6 ขั้นตอนเรียบร้อย & พร้อม/อยู่ระหว่างดำเนินโครงการ (จัดซื้อ/ยืมเงิน)',
+                'short_label' => 'อนุมัติครบ 6 ขั้น & พร้อมดำเนินโครงการ',
                 'color' => 'amber',
                 'hex' => '#eab308',
                 'dot' => '🟡',
@@ -408,18 +410,19 @@ class Project extends Model
             ];
         }
 
-        // 4. Check Level 2 (Orange): จัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอนที่ 2 แล้ว
-        // นำเอาเฉพาะโครงการที่ได้มีการจัดทำโครงการแบบเต็มรูปแบบ และมีการกดปุ่มยื่นเสนอขั้นตอนที่ 2 ขึ้นไปมาแสดง
+        // 4. Check Level 2 (Orange): จัดทำโครงการแบบเต็มรูปแบบ & อยู่ระหว่างรอการอนุมัติ (ขั้นตอนที่ 2 - 5)
+        // นำเอาเฉพาะโครงการที่ได้มีการจัดทำโครงการแบบเต็มรูปแบบ และมีการกดปุ่มยื่นเสนอขั้นตอนที่ 2 ขึ้นไปมาแสดง และยังไม่อนุมัติครบ 6 ขั้นตอน
         $hasSubmittedStep2 = (int)$this->current_approval_step >= 2 
-            && !in_array($this->status, ['draft', 'preliminary', 'budget_approved']);
+            && !in_array($this->status, ['draft', 'preliminary', 'budget_approved'])
+            && !$isFullyApproved;
 
         if ($hasSubmittedStep2) {
             return [
                 'key' => 'orange',
                 'level' => 2,
                 'percentage' => 30,
-                'label' => 'จัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอนที่ 2 แล้ว (รอการอนุมัติ 6 ขั้นตอน)',
-                'short_label' => 'จัดทำฉบับเต็ม & ยื่นเสนอขั้นตอนที่ 2 แล้ว',
+                'label' => 'จัดทำโครงการแบบเต็มรูปแบบ & อยู่ระหว่างรอการอนุมัติ (ขั้นตอนที่ 2 - 5)',
+                'short_label' => 'ฉบับเต็ม & อยู่ระหว่างรออนุมัติ',
                 'color' => 'orange',
                 'hex' => '#f97316',
                 'dot' => '🟠',

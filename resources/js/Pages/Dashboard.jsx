@@ -4853,22 +4853,17 @@ export default function Dashboard({
             };
         }
 
-        // 3. Level 3 (Yellow / 40-60%): มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง
-        const isFullyApproved = p.status === 'approved' || p.status === 'in_progress' || (parseInt(p.current_approval_step, 10) >= 6);
-        const hasStartedContract = hasLoans
-            || Boolean(p.procurement_number)
-            || Boolean(p.procurement?.procurement_number)
-            || (Array.isArray(p.procurement_items) && p.procurement_items.length > 0)
-            || Boolean(p.plan_procurement_cut_at)
-            || Boolean(p.plan_loan_cut_at);
+        // 3. Level 3 (Yellow / 40-60%): ผ่านการอนุมัติครบ 6 ขั้นตอนแล้ว & พร้อม/อยู่ระหว่างดำเนินโครงการ (ยืมเงิน/จัดซื้อจัดจ้าง)
+        const step6Approved = (p.approvals || []).some(a => a.step_number === 6 && a.status === 'approved');
+        const isFullyApproved = p.status === 'approved' || p.status === 'in_progress' || (parseInt(p.current_approval_step, 10) >= 6) || step6Approved;
 
-        if (isFullyApproved && hasStartedContract) {
+        if (isFullyApproved) {
             return {
                 key: 'yellow',
                 level: 3,
                 percentage: 50,
-                label: 'มีการอนุมัติครบและดำเนินโครงการ ตรวจสอบจากการเขียนสัญญายืมเงิน หรือจัดซื้อจัดจ้าง',
-                short_label: 'อนุมัติครบ & ดำเนินโครงการ (ยืมเงิน/จัดซื้อ)',
+                label: 'ผ่านการอนุมัติครบ 6 ขั้นตอนเรียบร้อย & พร้อม/อยู่ระหว่างดำเนินโครงการ (จัดซื้อ/ยืมเงิน)',
+                short_label: 'อนุมัติครบ 6 ขั้น & พร้อมดำเนินโครงการ',
                 dot: '🟡',
                 color: 'amber',
                 hex: '#eab308',
@@ -4876,18 +4871,19 @@ export default function Dashboard({
             };
         }
 
-        // 4. Level 2 (Orange / 20-40%): จัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอนที่ 2 แล้ว
-        // นำเอาเฉพาะโครงการที่ได้มีการจัดทำโครงการแบบเต็มรูปแบบ และมีการกดปุ่มยื่นเสนอขั้นตอนที่ 2 ขึ้นไปมาแสดง
+        // 4. Level 2 (Orange / 20-40%): จัดทำโครงการแบบเต็มรูปแบบ & อยู่ระหว่างรอการอนุมัติ (ขั้นตอนที่ 2 - 5)
+        // นำเอาเฉพาะโครงการที่ได้มีการจัดทำโครงการแบบเต็มรูปแบบ และมีการกดปุ่มยื่นเสนอขั้นตอนที่ 2 ขึ้นไปมาแสดง และยังไม่อนุมัติครบ
         const isStep2Submitted = (parseInt(p.current_approval_step, 10) >= 2 || (p.approvals || []).some(a => a.step_number === 1 && (a.status === 'submitted' || a.status === 'approved')))
-            && !['draft', 'preliminary', 'budget_approved'].includes(p.status);
+            && !['draft', 'preliminary', 'budget_approved'].includes(p.status)
+            && !isFullyApproved;
 
         if (isStep2Submitted) {
             return {
                 key: 'orange',
                 level: 2,
                 percentage: 30,
-                label: 'จัดทำโครงการแบบเต็มรูปแบบ & ยื่นเสนอขั้นตอนที่ 2 แล้ว (รอการอนุมัติ 6 ขั้นตอน)',
-                short_label: 'จัดทำฉบับเต็ม & ยื่นเสนอขั้นตอนที่ 2 แล้ว',
+                label: 'จัดทำโครงการแบบเต็มรูปแบบ & อยู่ระหว่างรอการอนุมัติ (ขั้นตอนที่ 2 - 5)',
+                short_label: 'ฉบับเต็ม & อยู่ระหว่างรออนุมัติ',
                 dot: '🟠',
                 color: 'orange',
                 hex: '#f97316',
@@ -20146,8 +20142,8 @@ ${itemsListText}
                             </span>
                         </div>
                         <div className="mt-3">
-                            <h4 className="text-xs font-black text-slate-800">จัดทำฉบับเต็ม & ยื่นเสนอขั้นตอน 2</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">จัดทำฉบับเต็มครบถ้วน ยื่นเสนอรออนุมัติ 6 ขั้น</p>
+                            <h4 className="text-xs font-black text-slate-800">จัดทำฉบับเต็ม & รออนุมัติ (ขั้นตอน 2-5)</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">ยื่นเสนอฉบับเต็ม อยู่ระหว่างรออนุมัติครบ 6 ขั้น</p>
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-orange-100 flex items-baseline justify-between">
                             <span className="text-lg font-black text-orange-700 font-mono">{stats.orange.count} โครงการ</span>
@@ -20174,8 +20170,8 @@ ${itemsListText}
                             </span>
                         </div>
                         <div className="mt-3">
-                            <h4 className="text-xs font-black text-slate-800">อนุมัติครบ & ดำเนินโครงการ</h4>
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">เขียนสัญญายืมเงิน / จัดซื้อจัดจ้าง</p>
+                            <h4 className="text-xs font-black text-slate-800">อนุมัติครบ 6 ขั้น & พร้อมดำเนินโครงการ</h4>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">อนุมัติครบ 6 ขั้นเรียบร้อย พร้อมยืมเงิน / จัดซื้อจัดจ้าง</p>
                         </div>
                         <div className="mt-3 pt-2.5 border-t border-amber-100 flex items-baseline justify-between">
                             <span className="text-lg font-black text-amber-800 font-mono">{stats.yellow.count} โครงการ</span>
@@ -20279,7 +20275,7 @@ ${itemsListText}
                                         : 'bg-orange-50 text-orange-800 hover:bg-orange-100 border border-orange-200'
                                 }`}
                             >
-                                <span>🟠</span> ฉบับเต็ม&ยื่นขั้นตอน 2 ({stats.orange.count})
+                                <span>🟠</span> ฉบับเต็ม&รออนุมัติ ({stats.orange.count})
                             </button>
                             <button
                                 type="button"
@@ -20290,7 +20286,7 @@ ${itemsListText}
                                         : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
                                 }`}
                             >
-                                <span>🟡</span> อนุมัติ&ยืมเงิน/จัดซื้อ ({stats.yellow.count})
+                                <span>🟡</span> อนุมัติครบ&พร้อมดำเนินโครงการ ({stats.yellow.count})
                             </button>
                             <button
                                 type="button"
