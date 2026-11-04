@@ -572,6 +572,47 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         return null;
     };
 
+    const getEffectivePlanHeadSignature = () => {
+        if (sig3?.signature_data && !isFastTrackApproval(sig3)) {
+            return sig3.signature_data;
+        }
+        return college_settings?.plan_head_signature || null;
+    };
+
+    // Section 12 Date Settings & State
+    const getInitialPrintSigningDate = () => {
+        if (college_settings?.project_print_signing_date) {
+            return college_settings.project_print_signing_date;
+        }
+        const sourceDate = sig6?.signed_at || sig1?.signed_at || project.created_at || new Date().toISOString();
+        try {
+            return new Date(sourceDate).toISOString().split('T')[0];
+        } catch (e) {
+            return new Date().toISOString().split('T')[0];
+        }
+    };
+
+    const [printDateMode, setPrintDateMode] = useState(college_settings?.project_print_date_mode || 'uniform');
+    const [customPrintDate, setCustomPrintDate] = useState(getInitialPrintSigningDate());
+
+    // Uniform / Step Date resolver for all 6 signatures in Section 12
+    const getSigningDate = (stepSig, fallbackDate = null) => {
+        if (!includeSignatures || printDateMode === 'blank') {
+            return 'วันที่ ........ เดือน .................... พ.ศ. ............';
+        }
+        if (printDateMode === 'uniform') {
+            return customPrintDate 
+                ? formatThaiSignatureDate(customPrintDate) 
+                : 'วันที่ ........ เดือน .................... พ.ศ. ............';
+        }
+        // printDateMode === 'step_date'
+        const actualDate = stepSig?.signed_at || fallbackDate;
+        if (actualDate && !isFastTrackApproval(stepSig)) {
+            return formatThaiSignatureDate(actualDate);
+        }
+        return 'วันที่ ........ เดือน .................... พ.ศ. ............';
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0">
             <Head>
@@ -754,6 +795,34 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                             <span>📄</span> ไม่มีลายเซ็นต์
                         </button>
                     </div>
+
+                    {/* Section 12 Date Picker & Mode Switcher */}
+                    {includeSignatures && (
+                        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                            <span className="text-slate-500 px-1.5 text-[11px] flex items-center gap-1">
+                                <span>📅</span> วันที่ข้อ 12:
+                            </span>
+                            <select
+                                value={printDateMode}
+                                onChange={(e) => setPrintDateMode(e.target.value)}
+                                className="rounded-lg border-slate-200 py-1 pl-2 pr-6 text-xs font-bold text-slate-800 bg-white focus:ring-purple-500 focus:border-purple-500"
+                                title="เลือกโหมดการลงวันที่สำหรับพิมพ์"
+                            >
+                                <option value="uniform">ระบุวันที่เหมือนกัน</option>
+                                <option value="step_date">ตามระบบจริง</option>
+                                <option value="blank">เว้นว่างจุดไข่ปลา</option>
+                            </select>
+                            {printDateMode === 'uniform' && (
+                                <input
+                                    type="date"
+                                    value={customPrintDate}
+                                    onChange={(e) => setCustomPrintDate(e.target.value)}
+                                    className="rounded-lg border-slate-200 py-0.5 px-2 text-xs font-bold text-slate-800 bg-white focus:ring-purple-500 focus:border-purple-500"
+                                    title="เลือกวันที่ที่จะระบุในข้อ 12 ของเอกสารเหมือนกันทั้งหมด"
+                                />
+                            )}
+                        </div>
+                    )}
 
                     <button
                         type="button"
@@ -1275,9 +1344,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                     : 'เจ้าหน้าที่ผู้เสนอโครงการ'))}
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && (sig1?.signed_at || project.created_at) 
-                                            ? formatThaiSignatureDate(sig1?.signed_at || project.created_at) 
-                                            : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                        {getSigningDate(sig1, sig1?.signed_at || project.created_at)}
                                     </p>
                                 </div>
                             </div>
@@ -1313,9 +1380,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         {getRelatedDeputyPosition()}
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig4?.signed_at && !isFastTrackApproval(sig4)
-                                            ? formatThaiSignatureDate(sig4.signed_at) 
-                                            : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                        {getSigningDate(sig4)}
                                     </p>
                                 </div>
                             </div>
@@ -1331,9 +1396,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig3?.signature_data && !isFastTrackApproval(sig3) ? (
+                                            {includeSignatures && getEffectivePlanHeadSignature() ? (
                                                 <AutoTrimmedSignature 
-                                                    src={sig3.signature_data} 
+                                                    src={getEffectivePlanHeadSignature()} 
                                                     alt="ลายมือชื่อ" 
                                                     className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
                                                     style={{ mixBlendMode: 'multiply' }}
@@ -1360,9 +1425,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 : toThaiNumerals(college_settings?.plan_head_position || 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ'))}
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig3?.signed_at && !isFastTrackApproval(sig3)
-                                            ? formatThaiSignatureDate(sig3.signed_at) 
-                                            : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                        {getSigningDate(sig3)}
                                     </p>
                                 </div>
                             </div>
@@ -1398,9 +1461,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         {getPlanDeputyPosition()}
                                     </p>
                                     <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                        {includeSignatures && sig5?.signed_at && !isFastTrackApproval(sig5)
-                                            ? formatThaiSignatureDate(sig5.signed_at) 
-                                            : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                        {getSigningDate(sig5)}
                                     </p>
                                 </div>
                             </div>
@@ -1443,9 +1504,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             : toThaiNumerals(college_settings?.resource_deputy_position || 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร'))}
                                 </p>
                                 <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                    {includeSignatures && resourceDeputySig?.signed_at && !isFastTrackApproval(resourceDeputySig)
-                                        ? formatThaiSignatureDate(resourceDeputySig.signed_at) 
-                                        : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                    {getSigningDate(resourceDeputySig)}
                                 </p>
                             </div>
                         </div>
@@ -1487,9 +1546,7 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             : toThaiNumerals(college_settings?.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'))}
                                 </p>
                                 <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                    {includeSignatures && sig6?.signed_at && !isFastTrackApproval(sig6)
-                                        ? formatThaiSignatureDate(sig6.signed_at) 
-                                        : 'วันที่ ........ เดือน .................... พ.ศ. ............'}
+                                    {getSigningDate(sig6)}
                                 </p>
                             </div>
                         </div>

@@ -81,12 +81,16 @@ class HandleInertiaRequests extends Middleware
                     ?: (\App\Models\Department::whereNull('parent_id')->where(function($q) {
                             $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');
                         })->value('deputy_director_position') ?: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'),
-                // Executive Signatures for Documents & Printing
+                // Executive & Department Head Signatures for Documents & Printing
                 'director_signature' => \App\Models\SystemSetting::where('key', 'director_signature')->value('value') ?: null,
                 'academic_deputy_signature' => \App\Models\SystemSetting::where('key', 'academic_deputy_signature')->value('value') ?: null,
                 'resource_deputy_signature' => \App\Models\SystemSetting::where('key', 'resource_deputy_signature')->value('value') ?: null,
                 'student_affairs_deputy_signature' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_signature')->value('value') ?: null,
                 'plan_deputy_signature' => \App\Models\SystemSetting::where('key', 'plan_deputy_signature')->value('value') ?: null,
+                'plan_head_signature' => \App\Models\SystemSetting::where('key', 'plan_head_signature')->value('value') ?: null,
+                // Project Document Print Date Settings
+                'project_print_signing_date' => \App\Models\SystemSetting::where('key', 'project_print_signing_date')->value('value') ?: null,
+                'project_print_date_mode' => \App\Models\SystemSetting::where('key', 'project_print_date_mode')->value('value') ?: 'uniform',
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),

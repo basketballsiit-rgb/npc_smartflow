@@ -3803,6 +3803,9 @@ export default function Dashboard({
         plan_deputy_position: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
         plan_head_name: 'นายพิพัฒน์ สีมา',
         plan_head_position: 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ',
+        plan_head_signature: '',
+        project_print_signing_date: '',
+        project_print_date_mode: 'uniform',
         director_signature: '',
         academic_deputy_signature: '',
         resource_deputy_signature: '',
@@ -7261,6 +7264,118 @@ export default function Dashboard({
                                                 )}
                                             </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ (Plan Head Config & Signature) */}
+                        <div className="space-y-4 border-t border-purple-100 pt-6">
+                            <div>
+                                <h4 className="text-sm font-bold text-purple-900 border-l-4 border-indigo-600 pl-3">
+                                    การตั้งค่าหัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ (ผู้ตรวจสอบโครงการ ข้อ 12)
+                                </h4>
+                                <p className="text-xs text-slate-500 mt-1 pl-4 leading-relaxed">
+                                    กำหนดชื่อ ตำแหน่ง และแนบลายมือชื่อดิจิทัลของหัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ สำหรับแสดงผลในส่วนผู้ตรวจสอบโครงการ (ข้อ 12) ของแบบเสนอโครงการ
+                                </p>
+                            </div>
+
+                            <div className="bg-indigo-50/60 p-4 rounded-2xl border border-indigo-100 space-y-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ชื่อ-นามสกุล หัวหน้างานพัฒนายุทธศาสตร์ฯ</label>
+                                        <input
+                                            type="text"
+                                            value={settingsForm.plan_head_name || ''}
+                                            onChange={(e) => setSettingsForm({ ...settingsForm, plan_head_name: e.target.value })}
+                                            className="w-full rounded-xl border-indigo-200 px-3 py-2 text-xs font-bold text-slate-900 focus:border-indigo-500 focus:ring-indigo-500 bg-white"
+                                            placeholder="เช่น นายพิพัฒน์ สีมา"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-0.5">ตำแหน่ง / ตำแหน่งรักษาการ</label>
+                                        <input
+                                            type="text"
+                                            value={settingsForm.plan_head_position || 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ'}
+                                            onChange={(e) => setSettingsForm({ ...settingsForm, plan_head_position: e.target.value })}
+                                            className="w-full rounded-xl border-indigo-200 px-3 py-2 text-xs font-medium text-slate-800 focus:border-indigo-500 focus:ring-indigo-500 bg-white"
+                                            placeholder="เช่น หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Plan Head Signature Attachment */}
+                                <div className="pt-2 border-t border-indigo-200/60 flex items-center justify-between gap-2 bg-white/80 p-2.5 rounded-xl border border-indigo-200 shadow-2xs">
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-10 w-28 border border-dashed border-indigo-300 rounded-lg bg-indigo-50 flex items-center justify-center p-0.5 overflow-hidden">
+                                            {settingsForm.plan_head_signature ? (
+                                                <img src={settingsForm.plan_head_signature} alt="ลายเซ็นต์หัวหน้างานพัฒนายุทธศาสตร์ฯ" className="h-full object-contain" style={{ mixBlendMode: 'multiply' }} />
+                                            ) : (
+                                                <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <span className="text-[11px] font-bold text-indigo-950 block">ลายเซ็นต์หัวหน้างานพัฒนายุทธศาสตร์ฯ</span>
+                                            <span className="text-[10px] text-slate-500">ใช้ในส่วนผู้ตรวจสอบโครงการ (ข้อ 12)</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenAdminSignatureModal('plan_head_signature', 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ', settingsForm.plan_head_name || 'หัวหน้างานพัฒนายุทธศาสตร์ฯ')}
+                                            className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-xs transition cursor-pointer"
+                                        >
+                                            {settingsForm.plan_head_signature ? 'เปลี่ยน' : 'แนบ'}
+                                        </button>
+                                        {settingsForm.plan_head_signature && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveAdminSignature('plan_head_signature', 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ')}
+                                                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition cursor-pointer"
+                                            >
+                                                ลบ
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* การตั้งค่าการลงวันที่ในการพิมพ์เอกสารโครงการ (Section 12 Print Date Settings) */}
+                        <div className="space-y-4 border-t border-purple-100 pt-6">
+                            <div>
+                                <h4 className="text-sm font-bold text-purple-900 border-l-4 border-emerald-600 pl-3">
+                                    การตั้งค่าการลงวันที่ในการพิมพ์เอกสารโครงการ (ข้อ 12)
+                                </h4>
+                                <p className="text-xs text-slate-500 mt-1 pl-4 leading-relaxed">
+                                    กำหนดรูปแบบและวันที่ลงนามในแบบเสนอโครงการ (ข้อ 12) โดยระบบสามารถระบุวันที่ให้เหมือนกันทั้งหมดทุกจุดลงนามได้
+                                </p>
+                            </div>
+
+                            <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-100 space-y-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">โหมดการลงวันที่ในเอกสารพิมพ์ (Date Mode)</label>
+                                        <select
+                                            value={settingsForm.project_print_date_mode || 'uniform'}
+                                            onChange={(e) => setSettingsForm({ ...settingsForm, project_print_date_mode: e.target.value })}
+                                            className="w-full rounded-xl border-emerald-200 px-3.5 py-2 text-xs font-semibold text-emerald-950 focus:border-emerald-500 focus:ring-emerald-500 bg-white"
+                                        >
+                                            <option value="uniform">📌 ระบุวันที่ลงนามเหมือนกันทั้งหมดในข้อ 12 (แนะนำสำหรับเอกสารทางการ)</option>
+                                            <option value="step_date">⏱️ ตามวันที่ลงนามจริงในระบบแต่ละขั้นตอน (หากยังไม่ลงนามจะเว้นเป็นจุดไข่ปลา)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1">วันที่ลงนามตั้งต้นสำหรับพิมพ์ (Default Signing Date)</label>
+                                        <input
+                                            type="date"
+                                            value={settingsForm.project_print_signing_date || ''}
+                                            onChange={(e) => setSettingsForm({ ...settingsForm, project_print_signing_date: e.target.value })}
+                                            className="w-full rounded-xl border-emerald-200 px-3.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 bg-white"
+                                        />
+                                        <span className="text-[10px] text-slate-500 mt-0.5 block">
+                                            * หากเว้นว่างไว้ ระบบในหน้าพิมพ์จะเลือกวันที่ของโครงการ หรือให้ผู้พิมพ์ปรับเลือกวันที่ได้ทันทีก่อนสั่งพิมพ์
+                                        </span>
                                     </div>
                                 </div>
                             </div>
