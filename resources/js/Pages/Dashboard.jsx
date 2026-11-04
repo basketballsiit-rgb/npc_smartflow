@@ -9,7 +9,7 @@ import WorkloadAnalyzerModal from '@/Components/WorkloadAnalyzerModal';
 import AppendixManager from '@/Components/AppendixManager';
 import PreliminaryManager from '@/Components/PreliminaryManager';
 import FullReportManager from '@/Components/FullReportManager';
-import SignaturePad from '@/Components/SignaturePad';
+import SignaturePad, { processSignatureImage } from '@/Components/SignaturePad';
 import axios from 'axios';
 
 export default function Dashboard({ 
@@ -6968,7 +6968,7 @@ export default function Dashboard({
                                     <div className="flex items-center gap-3">
                                         <div className="h-12 w-32 border border-dashed border-purple-300 rounded-lg bg-purple-50/50 flex items-center justify-center p-1 overflow-hidden">
                                             {settingsForm.director_signature ? (
-                                                <img src={settingsForm.director_signature} alt="ลายเซ็นต์ท่านผู้อำนวยการ" className="h-full object-contain" />
+                                                <img src={settingsForm.director_signature} alt="ลายเซ็นต์ท่านผู้อำนวยการ" className="h-full object-contain" style={{ mixBlendMode: 'multiply' }} />
                                             ) : (
                                                 <span className="text-[11px] text-slate-400 font-medium">ยังไม่มีลายเซ็นต์</span>
                                             )}
@@ -7052,7 +7052,7 @@ export default function Dashboard({
                                             <div className="flex items-center gap-2">
                                                 <div className="h-10 w-24 border border-dashed border-sky-300 rounded-lg bg-sky-50 flex items-center justify-center p-0.5 overflow-hidden">
                                                     {settingsForm.academic_deputy_signature ? (
-                                                        <img src={settingsForm.academic_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" />
+                                                        <img src={settingsForm.academic_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" style={{ mixBlendMode: 'multiply' }} />
                                                     ) : (
                                                         <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
                                                     )}
@@ -7113,7 +7113,7 @@ export default function Dashboard({
                                             <div className="flex items-center gap-2">
                                                 <div className="h-10 w-24 border border-dashed border-emerald-300 rounded-lg bg-emerald-50 flex items-center justify-center p-0.5 overflow-hidden">
                                                     {settingsForm.resource_deputy_signature ? (
-                                                        <img src={settingsForm.resource_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" />
+                                                        <img src={settingsForm.resource_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" style={{ mixBlendMode: 'multiply' }} />
                                                     ) : (
                                                         <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
                                                     )}
@@ -7174,7 +7174,7 @@ export default function Dashboard({
                                             <div className="flex items-center gap-2">
                                                 <div className="h-10 w-24 border border-dashed border-amber-300 rounded-lg bg-amber-50 flex items-center justify-center p-0.5 overflow-hidden">
                                                     {settingsForm.student_affairs_deputy_signature ? (
-                                                        <img src={settingsForm.student_affairs_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" />
+                                                        <img src={settingsForm.student_affairs_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" style={{ mixBlendMode: 'multiply' }} />
                                                     ) : (
                                                         <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
                                                     )}
@@ -7235,7 +7235,7 @@ export default function Dashboard({
                                             <div className="flex items-center gap-2">
                                                 <div className="h-10 w-24 border border-dashed border-purple-300 rounded-lg bg-purple-50 flex items-center justify-center p-0.5 overflow-hidden">
                                                     {settingsForm.plan_deputy_signature ? (
-                                                        <img src={settingsForm.plan_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" />
+                                                        <img src={settingsForm.plan_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" style={{ mixBlendMode: 'multiply' }} />
                                                     ) : (
                                                         <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
                                                     )}
@@ -30571,11 +30571,9 @@ return (
                                                         Swal.fire('ไฟล์มีขนาดใหญ่เกินไป', 'ขนาดไฟล์สูงสุดไม่เกิน 2MB', 'warning');
                                                         return;
                                                     }
-                                                    const reader = new FileReader();
-                                                    reader.onload = (uploadEv) => {
-                                                        setSigModalUploadData(uploadEv.target?.result);
-                                                    };
-                                                    reader.readAsDataURL(file);
+                                                    processSignatureImage(file, (processedData) => {
+                                                        setSigModalUploadData(processedData);
+                                                    });
                                                 }}
                                                 className="hidden"
                                                 id="admin-sig-file-upload"
@@ -30588,8 +30586,8 @@ return (
                                                 <span className="text-xs font-bold text-purple-900">
                                                     คลิกเพื่อเลือกไฟล์รูปภาพลายเซ็นต์
                                                 </span>
-                                                <span className="text-[11px] text-slate-400">
-                                                    แนะนำไฟล์ .png พื้นหลังโปร่งใส (ขนาดไม่เกิน 2MB)
+                                                <span className="text-[11px] text-slate-500">
+                                                    ระบบจะลบพื้นหลังขาวให้อัตโนมัติเป็น PNG โปร่งใส (ขนาดไม่เกิน 2MB)
                                                 </span>
                                             </label>
                                         </div>
@@ -30597,8 +30595,13 @@ return (
                                         {sigModalUploadData && (
                                             <div className="p-3 bg-white border border-purple-200 rounded-xl flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
-                                                    <img src={sigModalUploadData} alt="ตัวอย่างลายเซ็นต์" className="h-12 max-w-[120px] object-contain" />
-                                                    <span className="text-xs font-bold text-emerald-700">✓ โหลดรูปภาพสำเร็จ</span>
+                                                    <div className="p-1 border border-dashed border-purple-300 rounded-lg bg-slate-50">
+                                                        <img src={sigModalUploadData} alt="ตัวอย่างลายเซ็นต์" className="h-14 max-w-[140px] object-contain" style={{ mixBlendMode: 'multiply' }} />
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-xs font-bold text-emerald-700 block">✓ ลบพื้นหลังขาวโปร่งใสสำเร็จ</span>
+                                                        <span className="text-[10px] text-slate-500">ลายเซ็นต์พร้อมใช้งาน</span>
+                                                    </div>
                                                 </div>
                                                 <button
                                                     type="button"

@@ -591,6 +591,12 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                     line-height: 1.25 !important;
                 }
 
+                .signature-img {
+                    mix-blend-mode: multiply !important;
+                    background-color: transparent !important;
+                    filter: contrast(1.1) brightness(1.02);
+                }
+
                 @media print {
                     @page {
                         size: A4 portrait;
@@ -629,6 +635,13 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                     .print-break-inside-avoid {
                         break-inside: avoid;
                         page-break-inside: avoid;
+                    }
+                    .signature-img {
+                        mix-blend-mode: multiply !important;
+                        background-color: transparent !important;
+                        filter: contrast(1.1) brightness(1.02) !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
                     h1, h2, h3, h4 {
                         break-after: avoid;
@@ -1205,12 +1218,13 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 <img 
                                                     src={isFastTrackApproval(sig1) ? project.user?.signature_data : (sig1?.signature_data || project.user?.signature_data)} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                    className="signature-img h-14 sm:h-16 max-w-[160px] sm:max-w-[190px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                    style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-6"></div>
+                                                <div className="h-8"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-32 sm:w-36 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-42 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เสนอโครงการ
@@ -1256,12 +1270,13 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 <img 
                                                     src={getEffectiveRelatedDeputySignature()} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                    className="signature-img h-14 sm:h-16 max-w-[160px] sm:max-w-[190px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                    style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-6"></div>
+                                                <div className="h-8"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-32 sm:w-36 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-42 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เห็นชอบโครงการ
@@ -1296,12 +1311,13 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 <img 
                                                     src={sig3.signature_data} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                    className="signature-img h-14 sm:h-16 max-w-[160px] sm:max-w-[190px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                    style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-6"></div>
+                                                <div className="h-8"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-32 sm:w-36 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-42 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้ตรวจสอบโครงการ
@@ -1339,12 +1355,13 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                                 <img 
                                                     src={getEffectivePlanDeputySignature()} 
                                                     alt="ลายมือชื่อ" 
-                                                    className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                    className="signature-img h-14 sm:h-16 max-w-[160px] sm:max-w-[190px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                    style={{ mixBlendMode: 'multiply' }}
                                                 />
                                             ) : (
-                                                <div className="h-6"></div>
+                                                <div className="h-8"></div>
                                             )}
-                                            <span className="border-b border-dotted border-slate-700 w-32 sm:w-36 inline-block mb-1"></span>
+                                            <span className="border-b border-dotted border-slate-700 w-36 sm:w-42 inline-block mb-1"></span>
                                         </div>
                                         <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                             ผู้เห็นชอบโครงการ
@@ -1377,12 +1394,13 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             <img 
                                                 src={getEffectiveResourceDeputySignature()} 
                                                 alt="ลายมือชื่อ" 
-                                                className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                className="signature-img h-14 sm:h-16 max-w-[170px] sm:max-w-[200px] object-contain -mb-3 sm:-mb-3.5 z-10" 
+                                                style={{ mixBlendMode: 'multiply' }}
                                             />
                                         ) : (
-                                            <div className="h-6"></div>
+                                            <div className="h-8"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-40 sm:w-44 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-42 sm:w-48 inline-block mb-1"></span>
                                     </div>
                                     <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                         ผู้เห็นชอบโครงการ
@@ -1420,12 +1438,13 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             <img 
                                                 src={getEffectiveDirectorSignature()} 
                                                 alt="ลายมือชื่อ" 
-                                                className="h-12 max-w-[150px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
+                                                className="signature-img h-16 sm:h-20 max-w-[200px] sm:max-w-[240px] object-contain -mb-3.5 sm:-mb-4 z-10" 
+                                                style={{ mixBlendMode: 'multiply' }}
                                             />
                                         ) : (
-                                            <div className="h-7"></div>
+                                            <div className="h-9"></div>
                                         )}
-                                        <span className="border-b border-dotted border-slate-700 w-40 sm:w-44 inline-block mb-1"></span>
+                                        <span className="border-b border-dotted border-slate-700 w-44 sm:w-52 inline-block mb-1"></span>
                                     </div>
                                     <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
                                         ผู้อนุมัติโครงการ

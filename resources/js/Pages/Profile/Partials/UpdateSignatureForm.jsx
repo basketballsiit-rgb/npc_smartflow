@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import SignaturePad from '@/Components/SignaturePad';
+import SignaturePad, { processSignatureImage } from '@/Components/SignaturePad';
 import { usePage, router } from '@inertiajs/react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -31,11 +31,9 @@ export default function UpdateSignatureForm({ className = '' }) {
         }
 
         setUploadFileName(file.name);
-        const reader = new FileReader();
-        reader.onload = (uploadEvent) => {
-            setUploadSignatureData(uploadEvent.target?.result);
-        };
-        reader.readAsDataURL(file);
+        processSignatureImage(file, (processedData) => {
+            setUploadSignatureData(processedData);
+        });
     };
 
     const handleSave = async () => {

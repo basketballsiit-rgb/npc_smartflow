@@ -1,6 +1,164 @@
 import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
 /**
+ * Trim transparent whitespace around canvas drawing to eliminate excessive blank margins.
+ */
+export function trimCanvas(canvas, padding = 8) {
+    if (!canvas) return null;
+    try {
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+
+        let minX = w, minY = h, maxX = 0, maxY = 0;
+        let found = false;
+
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const alpha = d[(y * w + x) * 4 + 3];
+                if (alpha > 15) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                    found = true;
+                }
+            }
+        }
+
+        if (!found || maxX <= minX || maxY <= minY) {
+            return canvas.toDataURL('image/png');
+        }
+
+        const cropX = Math.max(0, minX - padding);
+        const cropY = Math.max(0, minY - padding);
+        const cropW = Math.min(w - cropX, (maxX - minX) + (padding * 2));
+        const cropH = Math.min(h - cropY, (maxY - minY) + (padding * 2));
+
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = cropW;
+        cropCanvas.height = cropH;
+        const cropCtx = cropCanvas.getContext('2d');
+        cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+        return cropCanvas.toDataURL('image/png');
+    } catch (e) {
+        console.error('Error trimming canvas:', e);
+        return canvas.toDataURL('image/png');
+    }
+}
+
+/**
+ * Automatically removes white or off-white background from uploaded signature files,
+ * performs edge anti-aliasing, and trims excess padding to produce a crisp transparent PNG.
+ */
+export function processSignatureImage(source, callback, options = {}) {
+    const {
+        brightnessThreshold = 220,
+        fadeThreshold = 175,
+        padding = 8,
+    } = options;
+
+    const handleImg = (img) => {
+        try {
+            const canvas = document.createElement('canvas');
+            const w = img.naturalWidth || img.width || 400;
+            const h = img.naturalHeight || img.height || 200;
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+
+            const imgData = ctx.getImageData(0, 0, w, h);
+            const d = imgData.data;
+
+            let minX = w, minY = h, maxX = 0, maxY = 0;
+            let hasStroke = false;
+
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    const idx = (y * w + x) * 4;
+                    const r = d[idx];
+                    const g = d[idx + 1];
+                    const b = d[idx + 2];
+                    const a = d[idx + 3];
+
+                    if (a < 10) continue;
+
+                    // Standard perceived brightness (ITU-R BT.601)
+                    const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                    if (brightness >= brightnessThreshold) {
+                        d[idx + 3] = 0; // Completely transparent
+                    } else if (brightness > fadeThreshold) {
+                        // Smooth anti-aliased edge
+                        const factor = (brightnessThreshold - brightness) / (brightnessThreshold - fadeThreshold);
+                        d[idx + 3] = Math.round(a * factor);
+                        if (d[idx + 3] > 15) {
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            if (y < minY) minY = y;
+                            if (y > maxY) maxY = y;
+                            hasStroke = true;
+                        }
+                    } else {
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        hasStroke = true;
+                    }
+                }
+            }
+
+            ctx.putImageData(imgData, 0, 0);
+
+            if (hasStroke && maxX > minX && maxY > minY) {
+                const cropX = Math.max(0, minX - padding);
+                const cropY = Math.max(0, minY - padding);
+                const cropW = Math.min(w - cropX, (maxX - minX) + (padding * 2));
+                const cropH = Math.min(h - cropY, (maxY - minY) + (padding * 2));
+
+                const cropCanvas = document.createElement('canvas');
+                cropCanvas.width = cropW;
+                cropCanvas.height = cropH;
+                const cropCtx = cropCanvas.getContext('2d');
+                cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+                callback(cropCanvas.toDataURL('image/png'));
+            } else {
+                callback(canvas.toDataURL('image/png'));
+            }
+        } catch (e) {
+            console.error('Error processing signature image transparency:', e);
+            callback(typeof source === 'string' ? source : null);
+        }
+    };
+
+    if (typeof source === 'string') {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => handleImg(img);
+        img.onerror = () => callback(source);
+        img.src = source;
+    } else if (source instanceof File || source instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => handleImg(img);
+            img.onerror = () => callback(e.target.result);
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(source);
+    } else {
+        callback(null);
+    }
+}
+
+/**
  * High-precision touch & stylus signature pad.
  * Fully compatible with iPad, Apple Pencil, iPhone, Android, and desktop mouse.
  */
@@ -25,9 +183,10 @@ const SignaturePad = forwardRef(({
         clear: () => clearCanvas(),
         undo: () => undoStroke(),
         isEmpty: () => !hasStrokes,
-        toDataURL: () => {
+        toDataURL: (trim = true) => {
             const canvas = canvasRef.current;
-            return canvas ? canvas.toDataURL('image/png') : null;
+            if (!canvas) return null;
+            return trim ? trimCanvas(canvas) : canvas.toDataURL('image/png');
         }
     }));
 
