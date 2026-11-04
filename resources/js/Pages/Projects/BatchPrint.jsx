@@ -79,10 +79,19 @@ function SingleProjectProposalDocument({
     printDateMode = 'uniform',
     customPrintDate = '',
     college_settings = {},
+    departments_data = {},
     fontStyles = {},
 }) {
+    const formatProjectTitleForApproval = (title) => {
+        if (!title) return '';
+        let clean = title.trim();
+        clean = clean.replace(/^(โครงการ|กิจกรรม)\s*/, '');
+        return clean;
+    };
+    const formattedProjectTitle = formatProjectTitleForApproval(project.title);
+
     const getApprovalByStep = (step) => {
-        return project.approvals?.find(a => a.step_number === step && a.status === 'approved');
+        return project.approvals?.find(a => a.step_number === step && (a.status === 'approved' || a.status === 'submitted'));
     };
 
     const cleanPositionText = (pos) => {
@@ -134,6 +143,89 @@ function SingleProjectProposalDocument({
         return [];
     };
 
+    const resourceDeputySig = project.approvals?.find(a => 
+        (a.status === 'approved' || a.status === 'submitted') && 
+        a.step_number > 1 &&
+        a.step_number !== 6 &&
+        a.user_id !== project.user_id &&
+        (
+            a.user?.name?.includes('จักรพงศ์') ||
+            a.acting_position_text?.includes('บริหารทรัพยากร') ||
+            (a.user?.position?.includes('รองผู้อำนวยการ') && a.user?.position?.includes('บริหารทรัพยากร'))
+        )
+    );
+
+    const getRelatedDeputyName = () => {
+        if (sig4?.acting_signatory_name) {
+            return toThaiNumerals(cleanPersonName(sig4.acting_signatory_name));
+        }
+        if (sig4?.user?.name && !isFastTrackApproval(sig4) && sig4.user_id !== project.user_id) {
+            return toThaiNumerals(cleanPersonName(sig4.user.name));
+        }
+        if (project.department?.deputy_director_name) {
+            return toThaiNumerals(cleanPersonName(project.department.deputy_director_name));
+        }
+        if (project.department?.parent?.deputy_director_name) {
+            return toThaiNumerals(cleanPersonName(project.department.parent.deputy_director_name));
+        }
+        const parentName = project.department?.parent?.name || '';
+        const curDeptName = project.department?.name || '';
+        const combined = `${parentName} ${curDeptName}`;
+        if (combined.includes('วิชาการ')) {
+            return toThaiNumerals(cleanPersonName(college_settings?.academic_deputy_name || 'นายนิพนธ์ ร่องพืช'));
+        }
+        if (combined.includes('บริหารทรัพยากร')) {
+            return toThaiNumerals(cleanPersonName(college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา'));
+        }
+        if (combined.includes('กิจการนักเรียน') || combined.includes('พัฒนากิจการ')) {
+            return toThaiNumerals(cleanPersonName(college_settings?.student_affairs_deputy_name || 'นายวิทยา ปันโน'));
+        }
+        if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
+            return getPlanDeputyName();
+        }
+        return '...............................................';
+    };
+
+    const getPlanDeputyName = () => {
+        if (sig5?.acting_signatory_name) {
+            return toThaiNumerals(cleanPersonName(sig5.acting_signatory_name));
+        }
+        if (sig5?.user?.name && !isFastTrackApproval(sig5) && sig5.user_id !== project.user_id) {
+            return toThaiNumerals(cleanPersonName(sig5.user.name));
+        }
+        const planDept = departments_data?.divisions?.find(d => 
+            d.name?.includes('ยุทธศาสตร์') || d.name?.includes('แผนงาน')
+        );
+        if (planDept?.deputy_director_name) {
+            return toThaiNumerals(cleanPersonName(planDept.deputy_director_name));
+        }
+        if (college_settings?.plan_deputy_name) {
+            return toThaiNumerals(cleanPersonName(college_settings.plan_deputy_name));
+        }
+        return toThaiNumerals('นายนิพนธ์ ร่องพืช');
+    };
+
+    const getPlanDeputyPosition = () => {
+        if (!isFastTrackApproval(sig5) && sig5?.user_id !== project.user_id) {
+            if (sig5?.acting_position_text) {
+                return toThaiNumerals(sig5.acting_position_text);
+            }
+            if (sig5?.user?.position_level) {
+                return toThaiNumerals(sig5.user.position_level);
+            }
+        }
+        const planDept = departments_data?.divisions?.find(d => 
+            d.name?.includes('ยุทธศาสตร์') || d.name?.includes('แผนงาน')
+        );
+        if (planDept?.deputy_director_position) {
+            return toThaiNumerals(planDept.deputy_director_position);
+        }
+        if (college_settings?.plan_deputy_position) {
+            return toThaiNumerals(college_settings.plan_deputy_position);
+        }
+        return 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน';
+    };
+
     const getRelatedDeputyPosition = () => {
         if (!isFastTrackApproval(sig4) && sig4?.user_id !== project.user_id) {
             if (sig4?.acting_position_text) return toThaiNumerals(sig4.acting_position_text);
@@ -151,10 +243,6 @@ function SingleProjectProposalDocument({
         }
         return 'รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง';
     };
-
-    const resourceDeputySig = sig4?.acting_position_text?.includes('บริหารทรัพยากร') 
-        ? sig4 
-        : (sig5?.acting_position_text?.includes('บริหารทรัพยากร') ? sig5 : null);
 
     const getEffectiveDirectorSignature = () => {
         if (sig6?.signature_data && !isFastTrackApproval(sig6)) return sig6.signature_data;
@@ -261,7 +349,7 @@ function SingleProjectProposalDocument({
     const cleanedResponsiblePerson = cleanPersonName(project.responsible_person || project.user?.name || '-');
 
     return (
-        <div className="single-project-proposal print-doc-container font-sarabun bg-white p-8 md:p-12 mb-8 shadow-sm border border-slate-200 rounded-lg print:shadow-none print:border-none print:p-0 print:mb-0 print:rounded-none text-slate-900 leading-normal">
+        <div className="single-project-proposal print-doc-container font-sarabun max-w-4xl mx-auto bg-white p-8 md:p-12 mb-8 shadow-sm border border-slate-200 rounded-lg print:shadow-none print:border-none print:p-0 print:mb-0 print:rounded-none print:max-w-none text-slate-900 leading-normal">
             {/* Header */}
             <div className="text-center font-bold mb-6 space-y-0.5 font-sarabun">
                 <h1 className="text-lg md:text-xl font-bold text-slate-900">
@@ -647,11 +735,13 @@ function SingleProjectProposalDocument({
             </div>
 
             {/* Section 12: Approvals & Signatures (Exact same layout & styling as Projects/Print.jsx) */}
-            <div className="pt-6 print-break-inside-avoid">
-                <p className="print-title font-bold text-slate-900 mb-4">12. การอนุมัติโครงการ</p>
+            <div className="pt-8 print-break-inside-avoid font-sarabun">
+                <p className="print-title font-bold text-slate-900 mb-8 pl-[2.2rem] -indent-[2.2rem] leading-relaxed text-left" style={{ textWrap: 'pretty' }}>
+                    12. การอนุมัติโครงการ{formattedProjectTitle ? toArabicNumerals(formattedProjectTitle) : '......................................................'}
+                </p>
 
-                <div className="space-y-6 pt-2 font-sarabun text-sm sm:text-base">
-                    {/* Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองฝ่ายที่เกี่ยวข้อง (ขวา) */}
+                <div className="space-y-8 font-sarabun" style={{ fontSize: 'var(--doc-font-size)', lineHeight: 'var(--doc-line-height)' }}>
+                    {/* Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงานดังกล่าว (ขวา) */}
                     <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6">
                         {/* ซ้าย: ผู้เสนอโครงการ */}
                         <div className="flex justify-center pl-2 sm:pl-4">
@@ -661,10 +751,10 @@ function SingleProjectProposalDocument({
                                         ลงชื่อ
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
-                                        {includeSignatures && sig1?.signature_data ? (
+                                        {includeSignatures && (isFastTrackApproval(sig1) ? project.user?.signature_data : (sig1?.signature_data || project.user?.signature_data)) ? (
                                             <AutoTrimmedSignature 
-                                                src={sig1.signature_data} 
-                                                alt="ลายมือชื่อผู้เสนอ" 
+                                                src={isFastTrackApproval(sig1) ? project.user?.signature_data : (sig1?.signature_data || project.user?.signature_data)} 
+                                                alt="ลายมือชื่อ" 
                                                 className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
                                                 style={{ mixBlendMode: 'multiply' }}
                                             />
@@ -678,18 +768,32 @@ function SingleProjectProposalDocument({
                                     </span>
                                 </div>
                                 <p className="font-bold pt-2 whitespace-nowrap">
-                                    ({toThaiNumerals(cleanPersonName(project.responsible_person || project.user?.name || '...................................................'))})
+                                    ({toThaiNumerals((!isFastTrackApproval(sig1) && sig1?.user?.name) ? cleanPersonName(sig1.user.name) : (cleanedResponsiblePerson || '...............................................'))})
                                 </p>
-                                <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                    {toThaiNumerals(cleanPositionText(project.position || project.user?.position || (deptName ? (deptName.startsWith('ฝ่าย') ? `เจ้าหน้าที่งาน${deptName.replace(/^ฝ่าย/, '')}` : (deptName.startsWith('งาน') ? `เจ้าหน้าที่${deptName}` : `เจ้าหน้าที่${deptName}`)) : 'เจ้าหน้าที่ผู้เสนอโครงการ')))}
+                                <p className="leading-normal pt-0.5 font-normal max-w-[280px] text-slate-800">
+                                    {project.position 
+                                        ? toThaiNumerals(cleanPositionText(project.position)) 
+                                        : (project.user?.position 
+                                            ? toThaiNumerals(cleanPositionText(project.user.position)) 
+                                            : (project.department?.name 
+                                                ? toThaiNumerals(
+                                                    cleanPositionText(
+                                                        project.department.name.startsWith('ฝ่าย') 
+                                                            ? `เจ้าหน้าที่งาน${project.department.name.replace(/^ฝ่าย/, '')}` 
+                                                            : (project.department.name.startsWith('งาน') 
+                                                                ? `เจ้าหน้าที่${project.department.name}` 
+                                                                : `เจ้าหน้าที่${project.department.name}`)
+                                                    )
+                                                ) 
+                                                : 'เจ้าหน้าที่ผู้เสนอโครงการ'))}
                                 </p>
                                 <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                    {getSigningDate(sig1, project.created_at)}
+                                    {getSigningDate(sig1, sig1?.signed_at || project.created_at)}
                                 </p>
                             </div>
                         </div>
 
-                        {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง) */}
+                        {/* ขวา: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่ายที่เกี่ยวข้องกับงานดังกล่าว) */}
                         <div className="flex justify-center pr-4 sm:pr-8">
                             <div className="relative inline-flex flex-col items-center text-center font-sarabun">
                                 <div className="relative flex items-center justify-center">
@@ -714,20 +818,9 @@ function SingleProjectProposalDocument({
                                     </span>
                                 </div>
                                 <p className="font-bold pt-2 whitespace-nowrap">
-                                    ({toThaiNumerals(cleanPersonName(sig4?.acting_signatory_name || (!isFastTrackApproval(sig4) && sig4?.user?.name ? sig4.user.name : (
-                                        (() => {
-                                            const parentName = project.department?.parent?.name || '';
-                                            const curDeptName = project.department?.name || '';
-                                            const combined = `${parentName} ${curDeptName}`;
-                                            if (combined.includes('วิชาการ')) return college_settings?.academic_deputy_name || 'นายนิพนธ์ ร่องพืช';
-                                            if (combined.includes('บริหารทรัพยากร')) return college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา';
-                                            if (combined.includes('กิจการนักเรียน') || combined.includes('พัฒนากิจการ')) return college_settings?.student_affairs_deputy_name || 'นายวิทยา ปันโน';
-                                            if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) return college_settings?.plan_deputy_name || 'นายนิพนธ์ ร่องพืช';
-                                            return project.department?.parent?.deputy_director_name || project.department?.deputy_director_name || 'นายนิพนธ์ ร่องพืช';
-                                        })()
-                                    ))))})
+                                    ({getRelatedDeputyName()})
                                 </p>
-                                <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
+                                <p className="leading-normal pt-0.5 font-normal max-w-[280px] text-slate-800">
                                     {getRelatedDeputyPosition()}
                                 </p>
                                 <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
@@ -737,7 +830,7 @@ function SingleProjectProposalDocument({
                         </div>
                     </div>
 
-                    {/* Row 2: ผู้ตรวจสอบโครงการ (หัวหน้างานพัฒนายุทธศาสตร์ฯ ซ้าย) & ผู้เห็นชอบโครงการ (รองฝ่ายยุทธศาสตร์ฯ ขวา) */}
+                    {/* Row 2: ผู้ตรวจสอบโครงการ: หัวหน้างานพัฒนายุทธศาสตร์ฯ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายยุทธศาสตร์ฯ (ขวา) */}
                     <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6">
                         {/* ซ้าย: ผู้ตรวจสอบโครงการ (หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ) */}
                         <div className="flex justify-center pl-2 sm:pl-4">
@@ -768,7 +861,7 @@ function SingleProjectProposalDocument({
                                         ? toThaiNumerals(cleanPersonName(sig3.user.name)) 
                                         : toThaiNumerals(cleanPersonName(college_settings?.plan_head_name || 'นายพิพัฒน์ สีมา'))})
                                 </p>
-                                <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
+                                <p className="leading-normal pt-0.5 font-normal max-w-[280px] text-slate-800">
                                     {!isFastTrackApproval(sig3) && sig3?.acting_position_text
                                         ? toThaiNumerals(sig3.acting_position_text)
                                         : (!isFastTrackApproval(sig3) && sig3?.user?.position_level 
@@ -806,16 +899,10 @@ function SingleProjectProposalDocument({
                                     </span>
                                 </div>
                                 <p className="font-bold pt-2 whitespace-nowrap">
-                                    ({!isFastTrackApproval(sig5) && sig5?.user?.name && sig5.user_id !== project.user_id
-                                        ? toThaiNumerals(cleanPersonName(sig5.user.name)) 
-                                        : toThaiNumerals(cleanPersonName(college_settings?.plan_deputy_name || 'นายนิพนธ์ ร่องพืช'))})
+                                    ({getPlanDeputyName()})
                                 </p>
-                                <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                    {!isFastTrackApproval(sig5) && sig5?.acting_position_text
-                                        ? toThaiNumerals(sig5.acting_position_text)
-                                        : (!isFastTrackApproval(sig5) && sig5?.user?.position_level 
-                                            ? toThaiNumerals(sig5.user.position_level) 
-                                            : toThaiNumerals(college_settings?.plan_deputy_position || 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'))}
+                                <p className="leading-normal pt-0.5 font-normal max-w-[280px] text-slate-800">
+                                    {getPlanDeputyPosition()}
                                 </p>
                                 <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
                                     {getSigningDate(sig5)}
@@ -824,89 +911,87 @@ function SingleProjectProposalDocument({
                         </div>
                     </div>
 
-                    {/* Row 3: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่ายบริหารทรัพยากร) */}
-                    <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6">
-                        <div></div>
-                        <div className="flex justify-center pr-4 sm:pr-8">
-                            <div className="relative inline-flex flex-col items-center text-center font-sarabun">
-                                <div className="relative flex items-center justify-center">
-                                    <span className="absolute right-full mr-2 whitespace-nowrap font-normal bottom-0.5">
-                                        ลงชื่อ
-                                    </span>
-                                    <div className="relative inline-flex flex-col items-center">
-                                        {includeSignatures && getEffectiveResourceDeputySignature() ? (
-                                            <AutoTrimmedSignature 
-                                                src={getEffectiveResourceDeputySignature()} 
-                                                alt="ลายมือชื่อ" 
-                                                className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
-                                                style={{ mixBlendMode: 'multiply' }}
-                                            />
-                                        ) : (
-                                            <div className="h-6"></div>
-                                        )}
-                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-32 inline-block mb-1"></span>
-                                    </div>
-                                    <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
-                                        ผู้เห็นชอบโครงการ
-                                    </span>
+                    {/* Row 3: ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายบริหารทรัพยากร (ตรงกลาง) */}
+                    <div className="flex justify-center">
+                        <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                            <div className="relative flex items-center justify-center">
+                                <span className="absolute right-full mr-2 whitespace-nowrap font-normal bottom-0.5">
+                                    ลงชื่อ
+                                </span>
+                                <div className="relative inline-flex flex-col items-center">
+                                    {includeSignatures && getEffectiveResourceDeputySignature() ? (
+                                        <AutoTrimmedSignature 
+                                            src={getEffectiveResourceDeputySignature()} 
+                                            alt="ลายมือชื่อ" 
+                                            className="signature-img h-11 sm:h-12 max-w-[125px] sm:max-w-[140px] object-contain -mb-2 z-10" 
+                                            style={{ mixBlendMode: 'multiply' }}
+                                        />
+                                    ) : (
+                                        <div className="h-6"></div>
+                                    )}
+                                    <span className="border-b border-dotted border-slate-700 w-32 sm:w-36 inline-block mb-1"></span>
                                 </div>
-                                <p className="font-bold pt-2 whitespace-nowrap">
-                                    ({resourceDeputySig && !isFastTrackApproval(resourceDeputySig) && resourceDeputySig.user?.name 
-                                        ? toThaiNumerals(cleanPersonName(resourceDeputySig.user.name)) 
-                                        : toThaiNumerals(cleanPersonName(college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา'))})
-                                </p>
-                                <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                    {resourceDeputySig?.acting_position_text 
-                                        ? toThaiNumerals(resourceDeputySig.acting_position_text) 
-                                        : toThaiNumerals(college_settings?.resource_deputy_position || 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร')}
-                                </p>
-                                <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                    {getSigningDate(resourceDeputySig)}
-                                </p>
+                                <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
+                                    ผู้เห็นชอบโครงการ
+                                </span>
                             </div>
+                            <p className="font-bold pt-2 whitespace-nowrap">
+                                ({!isFastTrackApproval(resourceDeputySig) && resourceDeputySig?.user?.name 
+                                    ? toThaiNumerals(cleanPersonName(resourceDeputySig.user.name)) 
+                                    : toThaiNumerals(cleanPersonName(college_settings?.resource_deputy_name || 'นายจักรพงศ์ พรหมสกุลปัญญา'))})
+                            </p>
+                            <p className="leading-normal pt-0.5 font-normal max-w-[320px] text-slate-800">
+                                {!isFastTrackApproval(resourceDeputySig) && resourceDeputySig?.acting_position_text
+                                    ? toThaiNumerals(resourceDeputySig.acting_position_text)
+                                    : (!isFastTrackApproval(resourceDeputySig) && resourceDeputySig?.user?.position_level 
+                                        ? toThaiNumerals(resourceDeputySig.user.position_level) 
+                                        : toThaiNumerals(college_settings?.resource_deputy_position || 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร'))}
+                            </p>
+                            <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
+                                {getSigningDate(resourceDeputySig)}
+                            </p>
                         </div>
                     </div>
 
-                    {/* Row 4: ผู้อนุมัติโครงการ (ผู้อำนวยการวิทยาลัย) */}
-                    <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6">
-                        <div></div>
-                        <div className="flex justify-center pr-4 sm:pr-8">
-                            <div className="relative inline-flex flex-col items-center text-center font-sarabun">
-                                <div className="relative flex items-center justify-center">
-                                    <span className="absolute right-full mr-2 whitespace-nowrap font-normal bottom-0.5">
-                                        ลงชื่อ
-                                    </span>
-                                    <div className="relative inline-flex flex-col items-center">
-                                        {includeSignatures && getEffectiveDirectorSignature() ? (
-                                            <AutoTrimmedSignature 
-                                                src={getEffectiveDirectorSignature()} 
-                                                alt="ลายมือชื่อ" 
-                                                className="signature-img h-13 sm:h-14 max-w-[145px] sm:max-w-[160px] object-contain -mb-2 z-10" 
-                                                style={{ mixBlendMode: 'multiply' }}
-                                            />
-                                        ) : (
-                                            <div className="h-6"></div>
-                                        )}
-                                        <span className="border-b border-dotted border-slate-700 w-28 sm:w-32 inline-block mb-1"></span>
-                                    </div>
-                                    <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
-                                        ผู้อนุมัติโครงการ
-                                    </span>
+                    {/* Row 4: ผู้อนุมัติโครงการ: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน (ตรงกลาง) */}
+                    <div className="flex justify-center">
+                        <div className="relative inline-flex flex-col items-center text-center font-sarabun">
+                            <div className="relative flex items-center justify-center">
+                                <span className="absolute right-full mr-2 whitespace-nowrap font-normal bottom-0.5">
+                                    ลงชื่อ
+                                </span>
+                                <div className="relative inline-flex flex-col items-center">
+                                    {includeSignatures && getEffectiveDirectorSignature() ? (
+                                        <AutoTrimmedSignature 
+                                            src={getEffectiveDirectorSignature()} 
+                                            alt="ลายมือชื่อ" 
+                                            className="signature-img h-13 sm:h-14 max-w-[145px] sm:max-w-[160px] object-contain -mb-2.5 z-10" 
+                                            style={{ mixBlendMode: 'multiply' }}
+                                        />
+                                    ) : (
+                                        <div className="h-7"></div>
+                                    )}
+                                    <span className="border-b border-dotted border-slate-700 w-36 sm:w-40 inline-block mb-1"></span>
                                 </div>
-                                <p className="font-bold pt-2 whitespace-nowrap">
-                                    ({!isFastTrackApproval(sig6) && sig6?.user?.name 
-                                        ? toThaiNumerals(cleanPersonName(sig6.user.name)) 
-                                        : toThaiNumerals(cleanPersonName(college_settings?.director_name || 'นายกเชษฐ์ กิ่งชนะ'))})
-                                </p>
-                                <p className="leading-normal pt-0.5 font-normal whitespace-nowrap tracking-tight text-slate-800">
-                                    {!isFastTrackApproval(sig6) && sig6?.acting_position_text 
-                                        ? toThaiNumerals(sig6.acting_position_text) 
-                                        : toThaiNumerals(college_settings?.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน')}
-                                </p>
-                                <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
-                                    {getSigningDate(sig6)}
-                                </p>
+                                <span className="absolute left-full ml-2 whitespace-nowrap font-normal bottom-0.5">
+                                    ผู้อนุมัติโครงการ
+                                </span>
                             </div>
+                            <p className="font-bold pt-2 whitespace-nowrap">
+                                ({!isFastTrackApproval(sig6) && sig6?.user?.name 
+                                    ? toThaiNumerals(cleanPersonName(sig6.user.name)) 
+                                    : toThaiNumerals(cleanPersonName(college_settings?.director_name || 'นายกเชษฐ์ กิ่งชนะ'))})
+                            </p>
+                            <p className="leading-normal pt-0.5 font-normal max-w-[320px] text-slate-800">
+                                {!isFastTrackApproval(sig6) && sig6?.acting_position_text
+                                    ? toThaiNumerals(sig6.acting_position_text)
+                                    : (!isFastTrackApproval(sig6) && sig6?.user?.position_level 
+                                        ? toThaiNumerals(sig6.user.position_level) 
+                                        : toThaiNumerals(college_settings?.director_position || 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน'))}
+                            </p>
+                            <p className="leading-normal pt-0.5 font-normal text-slate-700 whitespace-nowrap">
+                                {getSigningDate(sig6)}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -923,7 +1008,7 @@ export default function BatchPrint({
     divisionsList = [],
     initialDivisionFilter = 'all',
 }) {
-    const { college_settings } = usePage().props;
+    const { college_settings, departments_data } = usePage().props;
     const [fontSizePreset, setFontSizePreset] = useState('normal');
     const [includeSignatures, setIncludeSignatures] = useState(true);
     const [selectedDivisionId, setSelectedDivisionId] = useState(initialDivisionFilter);
@@ -1226,7 +1311,7 @@ export default function BatchPrint({
             </div>
 
             {/* MAIN PRINTABLE BOOK CONTAINER */}
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-4xl mx-auto">
                 {/* 1. OFFICIAL COVER PAGE (หน้าปกเล่มรวมโครงการ) */}
                 {showCoverPage && (
                     <div className="page-break font-sarabun bg-white p-12 md:p-16 mb-8 shadow-sm border border-slate-200 rounded-lg print:shadow-none print:border-none print:p-0 print:mb-0 min-h-[900px] flex flex-col justify-between items-center text-center">
@@ -1375,6 +1460,7 @@ export default function BatchPrint({
                                 printDateMode={printDateMode}
                                 customPrintDate={customPrintDate}
                                 college_settings={college_settings}
+                                departments_data={departments_data}
                                 fontStyles={fontStyles}
                             />
                         ))}
