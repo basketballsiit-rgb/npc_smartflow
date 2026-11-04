@@ -82,12 +82,18 @@ class HandleInertiaRequests extends Middleware
                             $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');
                         })->value('deputy_director_position') ?: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'),
                 // Executive & Department Head Signatures for Documents & Printing
-                'director_signature' => \App\Models\SystemSetting::where('key', 'director_signature')->value('value') ?: null,
+                'director_signature' => \App\Models\SystemSetting::where('key', 'director_signature')->value('value') 
+                    ?: (\App\Models\User::where('position', 'like', '%ผู้อำนวยการ%')->where('position', 'not like', '%รอง%')->where('email', 'not like', 'nipon%')->value('signature_data') ?: null),
                 'academic_deputy_signature' => \App\Models\SystemSetting::where('key', 'academic_deputy_signature')->value('value') ?: null,
                 'resource_deputy_signature' => \App\Models\SystemSetting::where('key', 'resource_deputy_signature')->value('value') ?: null,
                 'student_affairs_deputy_signature' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_signature')->value('value') ?: null,
                 'plan_deputy_signature' => \App\Models\SystemSetting::where('key', 'plan_deputy_signature')->value('value') ?: null,
-                'plan_head_signature' => \App\Models\SystemSetting::where('key', 'plan_head_signature')->value('value') ?: null,
+                'plan_head_signature' => \App\Models\SystemSetting::where('key', 'plan_head_signature')->value('value') 
+                    ?: (\App\Models\User::where(function($q) {
+                            $q->where('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')
+                              ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
+                              ->orWhere('name', 'like', '%พิพัฒน์%');
+                        })->where('position', 'not like', '%รอง%')->where('email', 'not like', 'nipon%')->value('signature_data') ?: null),
                 // Project Document Print Date Settings
                 'project_print_signing_date' => \App\Models\SystemSetting::where('key', 'project_print_signing_date')->value('value') ?: null,
                 'project_print_date_mode' => \App\Models\SystemSetting::where('key', 'project_print_date_mode')->value('value') ?: 'uniform',

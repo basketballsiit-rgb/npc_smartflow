@@ -290,6 +290,20 @@ class AdminController extends Controller
                     $directorUser->update(['position' => trim((string)$value)]);
                 }
             }
+            if ($key === 'director_signature' && !empty($value)) {
+                $directorUser = User::where(function ($q) {
+                    $q->where('position', 'like', '%ผู้อำนวยการ%')
+                      ->where('position', 'not like', '%รอง%');
+                })->where('email', 'not like', 'nipon%')
+                  ->where('name', 'not like', '%นิพนธ์%')
+                  ->first();
+                if ($directorUser) {
+                    $directorUser->update([
+                        'signature_data' => $value,
+                        'signature_updated_at' => now(),
+                    ]);
+                }
+            }
 
             // Sync with Plan Head User account (Strictly Plan Head only, never overwrite Deputy Director)
             if ($key === 'plan_head_name' && !empty($value)) {
@@ -316,6 +330,23 @@ class AdminController extends Controller
                   ->first();
                 if ($planUser) {
                     $planUser->update(['position' => trim((string)$value)]);
+                }
+            }
+            if ($key === 'plan_head_signature' && !empty($value)) {
+                $planUser = User::where(function ($q) {
+                    $q->where('position', 'like', '%หัวหน้างาน%พัฒนายุทธศาสตร์%')
+                      ->orWhere('position', 'like', '%หัวหน้างาน%แผน%')
+                      ->orWhere('position', 'like', '%หัวหน้างาน%ยุทธศาสตร์%')
+                      ->orWhere('name', 'like', '%พิพัฒน์%');
+                })->where('position', 'not like', '%รอง%')
+                  ->where('email', 'not like', 'nipon%')
+                  ->where('name', 'not like', '%นิพนธ์%')
+                  ->first();
+                if ($planUser) {
+                    $planUser->update([
+                        'signature_data' => $value,
+                        'signature_updated_at' => now(),
+                    ]);
                 }
             }
         }

@@ -3,17 +3,21 @@ import { useState, useEffect } from 'react';
 import { processSignatureImage } from '@/Components/SignaturePad';
 
 function AutoTrimmedSignature({ src, className, style, alt = "ลายมือชื่อ" }) {
-    const [trimmedSrc, setTrimmedSrc] = useState(src);
+    const isValid = typeof src === 'string' && src.trim().length > 20 && src !== 'null' && src !== 'undefined';
+    const [trimmedSrc, setTrimmedSrc] = useState(isValid ? src : null);
 
     useEffect(() => {
-        if (!src) return;
+        if (!isValid) {
+            setTrimmedSrc(null);
+            return;
+        }
         setTrimmedSrc(src);
         processSignatureImage(src, (result) => {
             if (result) setTrimmedSrc(result);
         });
-    }, [src]);
+    }, [src, isValid]);
 
-    if (!src) return null;
+    if (!isValid) return null;
 
     return (
         <img 
@@ -532,21 +536,48 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         if (sig6?.signature_data && !isFastTrackApproval(sig6)) {
             return sig6.signature_data;
         }
-        return college_settings?.director_signature || null;
+        if (college_settings?.director_signature) {
+            return college_settings.director_signature;
+        }
+        if (sig6?.user?.signature_data) {
+            return sig6.user.signature_data;
+        }
+        if (sig6?.signature_data) {
+            return sig6.signature_data;
+        }
+        return null;
     };
 
     const getEffectivePlanDeputySignature = () => {
         if (sig5?.signature_data && !isFastTrackApproval(sig5) && sig5.user_id !== project.user_id) {
             return sig5.signature_data;
         }
-        return college_settings?.plan_deputy_signature || null;
+        if (college_settings?.plan_deputy_signature) {
+            return college_settings.plan_deputy_signature;
+        }
+        if (sig5?.user?.signature_data && sig5.user_id !== project.user_id) {
+            return sig5.user.signature_data;
+        }
+        if (sig5?.signature_data && sig5.user_id !== project.user_id) {
+            return sig5.signature_data;
+        }
+        return null;
     };
 
     const getEffectiveResourceDeputySignature = () => {
         if (resourceDeputySig?.signature_data && !isFastTrackApproval(resourceDeputySig)) {
             return resourceDeputySig.signature_data;
         }
-        return college_settings?.resource_deputy_signature || null;
+        if (college_settings?.resource_deputy_signature) {
+            return college_settings.resource_deputy_signature;
+        }
+        if (resourceDeputySig?.user?.signature_data) {
+            return resourceDeputySig.user.signature_data;
+        }
+        if (resourceDeputySig?.signature_data) {
+            return resourceDeputySig.signature_data;
+        }
+        return null;
     };
 
     const getEffectiveRelatedDeputySignature = () => {
@@ -557,17 +588,22 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         const curDeptName = project.department?.name || '';
         const combined = `${parentName} ${curDeptName}`;
 
+        let preset = null;
         if (combined.includes('วิชาการ')) {
-            return college_settings?.academic_deputy_signature || null;
+            preset = college_settings?.academic_deputy_signature || null;
+        } else if (combined.includes('บริหารทรัพยากร')) {
+            preset = college_settings?.resource_deputy_signature || null;
+        } else if (combined.includes('กิจการนักเรียน') || combined.includes('พัฒนากิจการ')) {
+            preset = college_settings?.student_affairs_deputy_signature || null;
+        } else if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
+            preset = college_settings?.plan_deputy_signature || null;
         }
-        if (combined.includes('บริหารทรัพยากร')) {
-            return college_settings?.resource_deputy_signature || null;
+        if (preset) return preset;
+        if (sig4?.user?.signature_data && sig4.user_id !== project.user_id) {
+            return sig4.user.signature_data;
         }
-        if (combined.includes('กิจการนักเรียน') || combined.includes('พัฒนากิจการ')) {
-            return college_settings?.student_affairs_deputy_signature || null;
-        }
-        if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
-            return college_settings?.plan_deputy_signature || null;
+        if (sig4?.signature_data && sig4.user_id !== project.user_id) {
+            return sig4.signature_data;
         }
         return null;
     };
@@ -576,7 +612,16 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         if (sig3?.signature_data && !isFastTrackApproval(sig3)) {
             return sig3.signature_data;
         }
-        return college_settings?.plan_head_signature || null;
+        if (college_settings?.plan_head_signature) {
+            return college_settings.plan_head_signature;
+        }
+        if (sig3?.user?.signature_data) {
+            return sig3.user.signature_data;
+        }
+        if (sig3?.signature_data) {
+            return sig3.signature_data;
+        }
+        return null;
     };
 
     // Section 12 Date Settings & State

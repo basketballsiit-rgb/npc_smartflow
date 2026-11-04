@@ -121,11 +121,24 @@ export function processSignatureImage(source, callback, options = {}) {
                 const cropW = Math.min(w - cropX, (maxX - minX) + (padding * 2));
                 const cropH = Math.min(h - cropY, (maxY - minY) + (padding * 2));
 
+                // Constrain max dimensions to keep transparent PNG lightweight and sharp
+                const maxOutputW = 600;
+                const maxOutputH = 250;
+                let targetW = cropW;
+                let targetH = cropH;
+                if (targetW > maxOutputW || targetH > maxOutputH) {
+                    const ratio = Math.min(maxOutputW / targetW, maxOutputH / targetH);
+                    targetW = Math.max(1, Math.round(targetW * ratio));
+                    targetH = Math.max(1, Math.round(targetH * ratio));
+                }
+
                 const cropCanvas = document.createElement('canvas');
-                cropCanvas.width = cropW;
-                cropCanvas.height = cropH;
+                cropCanvas.width = targetW;
+                cropCanvas.height = targetH;
                 const cropCtx = cropCanvas.getContext('2d');
-                cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+                cropCtx.imageSmoothingEnabled = true;
+                cropCtx.imageSmoothingQuality = 'high';
+                cropCtx.drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
 
                 callback(cropCanvas.toDataURL('image/png'));
             } else {

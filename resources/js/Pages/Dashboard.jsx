@@ -5435,17 +5435,33 @@ export default function Dashboard({
             finalData = sigModalUploadData;
         }
 
+        const targetKey = signatureModalTarget.key;
+        const targetTitle = signatureModalTarget.title;
+
         setSettingsForm(prev => ({
             ...prev,
-            [signatureModalTarget.key]: finalData,
+            [targetKey]: finalData,
         }));
         setSignatureModalTarget(null);
-        Swal.fire({
-            title: 'แนบลายเซ็นต์เรียบร้อย',
-            text: `แนบลายเซ็นต์สำหรับ ${signatureModalTarget.title} สำเร็จ (อย่าลืมกดปุ่ม "บันทึกการตั้งค่าทั้งหมด" ด้านล่าง)`,
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false,
+
+        // Instantly persist signature to system_settings in backend
+        router.post(route('admin.settings.update'), { 
+            settings: { [targetKey]: finalData } 
+        }, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                Swal.fire({
+                    title: 'บันทึกและแนบลายเซ็นต์สำเร็จ!',
+                    text: `บันทึกลายเซ็นต์สำหรับ ${targetTitle} เรียบร้อยแล้ว พร้อมใช้งานในการพิมพ์เอกสารทันที`,
+                    icon: 'success',
+                    timer: 2500,
+                    showConfirmButton: false,
+                });
+            },
+            onError: () => {
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถบันทึกลายเซ็นต์ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+            }
         });
     };
 
@@ -5465,7 +5481,17 @@ export default function Dashboard({
                     ...prev,
                     [targetKey]: '',
                 }));
-                Swal.fire('ลบเรียบร้อย', 'ลบลายเซ็นต์เรียบร้อยแล้ว (อย่าลืมกดบันทึกการตั้งค่าทั้งหมดด้านล่าง)', 'success');
+
+                // Instantly remove signature from system_settings in backend
+                router.post(route('admin.settings.update'), { 
+                    settings: { [targetKey]: '' } 
+                }, {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onSuccess: () => {
+                        Swal.fire('ลบเรียบร้อย', `ลบลายเซ็นต์ของ ${title} เรียบร้อยแล้ว`, 'success');
+                    }
+                });
             }
         });
     };
