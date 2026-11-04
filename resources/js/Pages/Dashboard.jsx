@@ -6144,10 +6144,22 @@ export default function Dashboard({
             (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0) > 0
         ).length;
 
+        // ฟังก์ชันตรวจสอบว่าเป็นโครงการงบเฉพาะกิจ / งบเฉพาะโครงการ
+        const isProjectSpecialBudget = (p) => {
+            const sId = Number(p.funding_source_id || p.budget?.funding_source_id || p.fundingSource?.id || 0);
+            const sName = p.fundingSource?.name || p.budget?.fundingSource?.name || p.funding_source_name || '';
+            const hasSpecialBudgetRecord = Boolean(
+                p.specialProjectBudget || 
+                p.special_project_budget || 
+                p.special_project_budget_id || 
+                p.is_special_budget ||
+                (Array.isArray(specialProjectBudgets) && specialProjectBudgets.some(sp => String(sp.project_id) === String(p.id)))
+            );
+            return sId === 13 || sName.includes('งบเฉพาะ') || sName.includes('เฉพาะกิจ') || hasSpecialBudgetRecord;
+        };
+
         // โครงการงบเฉพาะ (Special Project Budget)
-        const specialBudgetList = sourceProjects.filter(p => 
-            Boolean(p.specialProjectBudget || p.special_project_budget || p.special_project_budget_id || p.is_special_budget)
-        );
+        const specialBudgetList = sourceProjects.filter(p => isProjectSpecialBudget(p));
         const countSpecialBudget = specialBudgetList.length;
         const sumSpecialBudget = specialBudgetList.reduce((sum, p) => 
             sum + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0)
@@ -6155,20 +6167,22 @@ export default function Dashboard({
 
         // โครงการใช้งบประมาณ (Non-special, budget > 0)
         const budgetList = sourceProjects.filter(p => {
-            const isSpecial = Boolean(p.specialProjectBudget || p.special_project_budget || p.special_project_budget_id || p.is_special_budget);
+            if (isProjectSpecialBudget(p)) return false;
             const amt = parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0;
-            return !isSpecial && amt > 0;
+            const sId = Number(p.funding_source_id || p.budget?.funding_source_id || p.fundingSource?.id || 0);
+            return sId !== 12 && amt > 0;
         });
         const countBudget = budgetList.length;
         const sumBudget = budgetList.reduce((sum, p) => 
             sum + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0)
         , 0);
 
-        // โครงการไม่ใช้งบประมาณ (Non-special, budget === 0)
+        // โครงการไม่ใช้งบประมาณ (Non-special, budget === 0 หรือเลือกไม่ใช้งบประมาณ)
         const nonBudgetList = sourceProjects.filter(p => {
-            const isSpecial = Boolean(p.specialProjectBudget || p.special_project_budget || p.special_project_budget_id || p.is_special_budget);
+            if (isProjectSpecialBudget(p)) return false;
             const amt = parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0;
-            return !isSpecial && amt === 0;
+            const sId = Number(p.funding_source_id || p.budget?.funding_source_id || p.fundingSource?.id || 0);
+            return sId === 12 || amt === 0;
         });
         const countNonBudget = nonBudgetList.length;
 
@@ -6386,8 +6400,23 @@ export default function Dashboard({
                     </div>
 
                     {/* Card 5: Special Project Budget */}
-                    <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/40 to-amber-100/40 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">โครงการงบเฉพาะ</span>
+                    <div 
+                        onClick={() => {
+                            if (isPlanStaff || isAdmin) {
+                                setActiveTab('special_project_budgets');
+                            }
+                        }}
+                        className={`rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/40 to-amber-100/40 p-4 sm:p-5 shadow-xs flex flex-col justify-between ${isPlanStaff || isAdmin ? 'cursor-pointer hover:border-amber-400 hover:shadow-sm transition-all' : ''}`}
+                        title={isPlanStaff || isAdmin ? 'คลิกเพื่อเปิดดูทะเบียนงบเฉพาะกิจโครงการ' : undefined}
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">โครงการงบเฉพาะ</span>
+                            {(isPlanStaff || isAdmin) && (
+                                <span className="text-[10px] text-amber-700 bg-amber-100/80 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold">
+                                    เปิดดู ↗
+                                </span>
+                            )}
+                        </div>
                         <div className="mt-2">
                             <p className="text-2xl sm:text-3xl font-black text-amber-950 font-mono">{countSpecialBudget} <span className="text-xs font-bold text-slate-600">โครงการ</span></p>
                             <p className="text-[10px] text-amber-800 mt-1 font-semibold truncate" title={`฿${new Intl.NumberFormat('th-TH').format(sumSpecialBudget)}`}>
