@@ -357,6 +357,8 @@ class DashboardController extends Controller
             ];
         }
 
+        $data['strategyCategories'] = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->orderBy('id', 'asc')->get();
+
         // 1. Teacher / User Proposals Data (Always loaded for all users so anyone can view their own projects)
         $data['teacherData'] = [
             'projects' => Project::where('user_id', $user->id)
@@ -1018,6 +1020,19 @@ class DashboardController extends Controller
                         'allocated_budget' => $allocAmt,
                         'allocated_amount' => $allocAmt,
                         'report_category' => $p->resolveReportCategory(),
+                        'strategy_selections' => $p->strategy_selections ?: [],
+                        'iqa_strategy_ids' => $p->iqa_strategy_ids ?: [],
+                        'ovec_strategy_ids' => $p->ovec_strategy_ids ?: [],
+                        'national_strategy_ids' => $p->national_strategy_ids ?: [],
+                        'provincial_strategy_ids' => $p->provincial_strategy_ids ?: [],
+                        'special_project_budget' => $p->specialProjectBudget ? [
+                            'id' => $p->specialProjectBudget->id,
+                            'fiscal_year' => $p->specialProjectBudget->fiscal_year,
+                            'title' => $p->specialProjectBudget->title,
+                            'document_number' => $p->specialProjectBudget->document_number,
+                            'agency_name' => $p->specialProjectBudget->agency_name,
+                        ] : null,
+                        'is_special_budget' => (bool)$p->specialProjectBudget,
                         'status' => $p->status,
                         'current_approval_step' => $p->current_approval_step,
                         'procurement' => $p->procurement ? [

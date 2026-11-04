@@ -45,7 +45,8 @@ export default function Dashboard({
     institutionalExpenditureProjections = null,
     currentTab,
     currentChapter,
-    selectedProjectId
+    selectedProjectId,
+    strategyCategories = []
 }) {
     const { auth, flash, departments_data } = usePage().props;
     const { url } = usePage();
@@ -3442,8 +3443,10 @@ export default function Dashboard({
         if (typeof window !== 'undefined') {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('admin_tab') === 'users') return 'users';
+            if (urlParams.get('admin_tab') === 'kanban') return 'kanban';
+            if (urlParams.get('admin_tab') === 'overview') return 'overview';
         }
-        return 'kanban';
+        return 'overview';
     });
 
     // Unified & Loan Document Number Settings State
@@ -6115,6 +6118,675 @@ export default function Dashboard({
         });
     };
 
+    // ==========================================
+    // ศูนย์ควบคุมหลัก (Command Center Overview)
+    // ==========================================
+    const renderCommandCenterOverview = () => {
+        // 1. Gather all projects
+        const masterList = Array.isArray(allProjectsMaster) ? allProjectsMaster : [];
+        const teacherList = Array.isArray(teacherData?.projects) ? teacherData.projects : [];
+        const projectMap = new Map();
+        [...masterList, ...teacherList].forEach(p => {
+            if (p && p.id && !projectMap.has(p.id)) {
+                projectMap.set(p.id, p);
+            }
+        });
+        const sourceProjects = Array.from(projectMap.values());
+
+        // 2. Calculations for Top 6 KPI Cards
+        const totalProjectsCount = sourceProjects.length;
+
+        // รายการที่ผ่านการอนุมัติ (Status approved / budget_approved / in_progress / completed / step 6)
+        const approvedCount = sourceProjects.filter(p => 
+            ['approved', 'budget_approved', 'in_progress', 'completed'].includes(p.status) || 
+            (parseInt(p.current_approval_step, 10) >= 6) || 
+            (p.approvals || []).some(a => a.step_number === 6 && a.status === 'approved') ||
+            (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0) > 0
+        ).length;
+
+        // โครงการงบเฉพาะ (Special Project Budget)
+        const specialBudgetList = sourceProjects.filter(p => 
+            Boolean(p.specialProjectBudget || p.special_project_budget || p.special_project_budget_id || p.is_special_budget)
+        );
+        const countSpecialBudget = specialBudgetList.length;
+        const sumSpecialBudget = specialBudgetList.reduce((sum, p) => 
+            sum + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0)
+        , 0);
+
+        // โครงการใช้งบประมาณ (Non-special, budget > 0)
+        const budgetList = sourceProjects.filter(p => {
+            const isSpecial = Boolean(p.specialProjectBudget || p.special_project_budget || p.special_project_budget_id || p.is_special_budget);
+            const amt = parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0;
+            return !isSpecial && amt > 0;
+        });
+        const countBudget = budgetList.length;
+        const sumBudget = budgetList.reduce((sum, p) => 
+            sum + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0)
+        , 0);
+
+        // โครงการไม่ใช้งบประมาณ (Non-special, budget === 0)
+        const nonBudgetList = sourceProjects.filter(p => {
+            const isSpecial = Boolean(p.specialProjectBudget || p.special_project_budget || p.special_project_budget_id || p.is_special_budget);
+            const amt = parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0;
+            return !isSpecial && amt === 0;
+        });
+        const countNonBudget = nonBudgetList.length;
+
+        // วงเงินงบประมาณโครงการทั้งหมด
+        const totalBudgetSum = sourceProjects.reduce((sum, p) => 
+            sum + (parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0)
+        , 0);
+
+        // 3. สถานะโครงการ 5 ระดับ (5-Level Lifecycle Status)
+        const levelStats = {
+            red: { count: 0, budget: 0 },
+            orange: { count: 0, budget: 0 },
+            yellow: { count: 0, budget: 0 },
+            green: { count: 0, budget: 0 },
+            blue: { count: 0, budget: 0 },
+        };
+        sourceProjects.forEach(p => {
+            const st = getExecutionStatus(p);
+            const k = st?.key || 'red';
+            const b = parseFloat(p.allocated_budget) || parseFloat(p.estimated_budget) || 0;
+            if (levelStats[k]) {
+                levelStats[k].count++;
+                levelStats[k].budget += b;
+            }
+        });
+
+        // 4. สถานะของโครงการที่ไปอยู่ในส่วนของงาน (งานวางแผน, งานพัสดุ, งานการเงิน)
+        // 4.1 งานวางแผน
+        const planItemsCutPending = sourceProjects.filter(p => {
+            const hasProc = p.procurement || (Array.isArray(p.procurements) && p.procurements.length > 0);
+            const procNotCut = hasProc && !p.plan_procurement_cut_at && !p.procurement?.plan_procurement_cut_at;
+            const hasLoans = Array.isArray(p.travelLoans) && p.travelLoans.some(l => !l.plan_cut_at && !l.plan_loan_cut_at);
+            return procNotCut || hasLoans;
+        }).length;
+        const planPrelimPending = sourceProjects.filter(p => p.status === 'draft' || p.status === 'preliminary').length;
+        const planBudgetApproved = sourceProjects.filter(p => p.status === 'budget_approved').length;
+
+        // 4.2 งานพัสดุ
+        const procWaitingReceive = sourceProjects.filter(p => {
+            const proc = p.procurement;
+            return proc && (p.plan_procurement_cut_at || proc.plan_procurement_cut_at) && (proc.status === 'pending' || proc.status === 'plan_cut');
+        }).length;
+        const procProcessing = sourceProjects.filter(p => {
+            const proc = p.procurement;
+            return proc && (proc.status === 'received' || proc.status === 'processing');
+        }).length;
+        const procReadyFinance = sourceProjects.filter(p => {
+            const proc = p.procurement;
+            return proc && (proc.status === 'completed' || proc.procurement_received_at);
+        }).length;
+
+        // 4.3 งานการเงิน
+        const finLoanPendingDisburse = sourceProjects.filter(p => {
+            return Array.isArray(p.travelLoans) && p.travelLoans.some(l => (l.plan_cut_at || l.plan_loan_cut_at) && !l.finance_disbursed_at);
+        }).length;
+        const finProcPendingPay = sourceProjects.filter(p => {
+            const proc = p.procurement;
+            return proc && (proc.status === 'completed' || proc.finance_received_at) && !proc.finance_disbursed_at;
+        }).length;
+        const finCleared = sourceProjects.filter(p => {
+            const hasLoansCleared = Array.isArray(p.travelLoans) && p.travelLoans.length > 0 && p.travelLoans.every(l => l.cleared_at || l.loan_status === 'cleared');
+            const procDisbursed = Boolean(p.procurement?.finance_disbursed_at);
+            return hasLoansCleared || procDisbursed;
+        }).length;
+
+        // 5. ประเด็นยุทธศาสตร์ ของโครงการในภาพรวม (เป็นวงกลม ระบุจำนวน ข้อที่เลือก/ข้อทั้งหมด)
+        const stratCats = (strategyCategories && strategyCategories.length > 0) 
+            ? strategyCategories 
+            : (adminData?.strategyCategories || []);
+
+        const strategyAnalysis = stratCats.map(cat => {
+            const items = Array.isArray(cat.items) ? cat.items : [];
+            const itemCounts = {};
+            items.forEach(it => { itemCounts[it.id] = 0; });
+
+            sourceProjects.forEach(p => {
+                const sel = p.strategy_selections?.[cat.id] || p.strategy_selections?.[String(cat.id)] || [];
+                const selectedIds = new Set(Array.isArray(sel) ? sel.map(Number) : []);
+                if (cat.code === 'iqa') {
+                    if (Array.isArray(p.iqa_strategy_ids)) p.iqa_strategy_ids.forEach(id => selectedIds.add(Number(id)));
+                    if (p.iqa_strategy_id) selectedIds.add(Number(p.iqa_strategy_id));
+                }
+                if (cat.code === 'ovec') {
+                    if (Array.isArray(p.ovec_strategy_ids)) p.ovec_strategy_ids.forEach(id => selectedIds.add(Number(id)));
+                    if (p.ovec_strategy_id) selectedIds.add(Number(p.ovec_strategy_id));
+                }
+                if (cat.code === 'national' && Array.isArray(p.national_strategy_ids)) {
+                    p.national_strategy_ids.forEach(id => selectedIds.add(Number(id)));
+                }
+                if (cat.code === 'provincial' && Array.isArray(p.provincial_strategy_ids)) {
+                    p.provincial_strategy_ids.forEach(id => selectedIds.add(Number(id)));
+                }
+                selectedIds.forEach(id => {
+                    if (itemCounts[id] !== undefined) itemCounts[id]++;
+                });
+            });
+
+            const selectedCount = items.filter(it => (itemCounts[it.id] || 0) > 0).length;
+            const totalCount = items.length;
+            const pct = totalCount > 0 ? Math.round((selectedCount / totalCount) * 100) : 0;
+
+            return {
+                ...cat,
+                totalCount,
+                selectedCount,
+                pct,
+                itemsWithUsage: items.map(it => ({
+                    ...it,
+                    usageCount: itemCounts[it.id] || 0,
+                    isSelected: (itemCounts[it.id] || 0) > 0,
+                })),
+            };
+        });
+
+        return (
+            <div className="space-y-6">
+                {/* 1. Header Banner 2 (ภาพที่ 1 คงไว้): ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน */}
+                <div className="rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-purple-950 text-white p-5 sm:p-6 shadow-xl border border-purple-400/30">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        <div>
+                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-bold border border-amber-300/30 mb-2">
+                                <span>📍</span> Real-time Document & Loan Tracking Center
+                            </div>
+                            <h3 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                                <span>📍</span> ศูนย์ติดตามเอกสารจัดซื้อจัดจ้าง & สัญญายืมเงิน
+                            </h3>
+                            <p className="text-xs sm:text-sm text-purple-200 max-w-2xl mt-1 leading-relaxed">
+                                ตรวจสอบตำแหน่งเอกสารตัวจริง ทราบทันทีว่าสัญญายืมเงิน (กค. 101) และชุดจัดซื้อจัดจ้างวางอยู่ที่โต๊ะงานใด ใครเป็นผู้ถือเอกสาร ป้องกันเอกสารตกค้างหรือสูญหายระหว่างหน่วยงาน
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            {(isPlanStaff || isAdmin) && (
+                                <button
+                                    type="button"
+                                    onClick={handleOpenExternalCutModal}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 px-3.5 py-2 text-xs font-black text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer ring-2 ring-emerald-300/40"
+                                    title="สิทธิ์งานแผนงาน/Admin: บันทึกตัดยอดชุดจัดซื้อจัดจ้าง / สัญญายืมเงิน ทั้งแบบไม่อิงโครงการ (สาธารณูปโภค/เงินเดือน) และ อิงโครงการในระบบ"
+                                >
+                                    <span>✂️</span> บันทึกตัดยอดงบประมาณ (ในระบบ / นอกระบบ)
+                                </button>
+                            )}
+                            {isPlanStaff && (
+                                <button
+                                    type="button"
+                                    onClick={openDirectAllocateModal}
+                                    className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-3.5 py-2 text-xs font-black text-white shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                                    title="สิทธิ์พิเศษสำหรับงานแผนงาน/Admin: เพิ่มโครงการและจัดสรรงบได้ทันที"
+                                >
+                                    <span>➕</span> เพิ่มโครงการ & จัดสรรงบทันที
+                                </button>
+                            )}
+                            <Link
+                                href={route('projects.quick_create')}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/30 px-3.5 py-2 text-xs font-black shadow-xs hover:scale-105 active:scale-95 transition-all"
+                            >
+                                <span>💡</span> เสนอโครงการเบื้องต้น (ขอตั้งงบ)
+                            </Link>
+                            <Link
+                                href={route('projects.create')}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white px-3.5 py-2 text-xs font-black shadow-md hover:scale-105 active:scale-95 transition-all"
+                            >
+                                <span>➕</span> จัดทำโครงการฉบับเต็ม
+                            </Link>
+                            {(isPlanStaff || isAdmin) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsDocNumberModalOpen(true)}
+                                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-purple-950 font-black text-xs shadow-md hover:scale-105 active:scale-95 transition cursor-pointer"
+                                >
+                                    <span>⚙️</span> ตั้งค่ารูปแบบเลขคุมเอกสาร
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. การ์ดสถิติ 6 การ์ด (ภาพ 2 บน ปรับปรุง) */}
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+                    {/* Card 1: Total */}
+                    <div className="rounded-2xl border border-purple-200/80 bg-gradient-to-br from-white via-purple-50/40 to-purple-100/40 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-purple-700">จำนวนรายการทั้งหมด</span>
+                        <div className="mt-2">
+                            <p className="text-2xl sm:text-3xl font-black text-purple-950 font-mono">{totalProjectsCount} <span className="text-xs font-bold text-slate-600">รายการ</span></p>
+                            <p className="text-[10px] text-purple-700 mt-1 font-semibold">โครงการทั้งหมดในระบบ</p>
+                        </div>
+                    </div>
+
+                    {/* Card 2: Approved */}
+                    <div className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-white via-emerald-50/40 to-emerald-100/40 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">รายการที่ผ่านการอนุมัติ</span>
+                        <div className="mt-2">
+                            <p className="text-2xl sm:text-3xl font-black text-emerald-950 font-mono">{approvedCount} <span className="text-xs font-bold text-slate-600">รายการ</span></p>
+                            <p className="text-[10px] text-emerald-700 mt-1 font-semibold">{totalProjectsCount > 0 ? Math.round((approvedCount / totalProjectsCount) * 100) : 0}% ของโครงการทั้งหมด</p>
+                        </div>
+                    </div>
+
+                    {/* Card 3: Budget Projects */}
+                    <div className="rounded-2xl border border-blue-200/80 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/40 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700">โครงการใช้งบประมาณ</span>
+                        <div className="mt-2">
+                            <p className="text-2xl sm:text-3xl font-black text-blue-950 font-mono">{countBudget} <span className="text-xs font-bold text-slate-600">โครงการ</span></p>
+                            <p className="text-[10px] text-blue-700 mt-1 font-semibold truncate" title={`฿${new Intl.NumberFormat('th-TH').format(sumBudget)}`}>
+                                ฿{new Intl.NumberFormat('th-TH').format(sumBudget)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Card 4: Non-budget Projects */}
+                    <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50/60 to-slate-100/50 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">โครงการไม่ใช้งบประมาณ</span>
+                        <div className="mt-2">
+                            <p className="text-2xl sm:text-3xl font-black text-slate-900 font-mono">{countNonBudget} <span className="text-xs font-bold text-slate-500">โครงการ</span></p>
+                            <p className="text-[10px] text-slate-500 mt-1 font-semibold">ไม่ใช้งบประมาณสถานศึกษา</p>
+                        </div>
+                    </div>
+
+                    {/* Card 5: Special Project Budget */}
+                    <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-white via-amber-50/40 to-amber-100/40 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800">โครงการงบเฉพาะ</span>
+                        <div className="mt-2">
+                            <p className="text-2xl sm:text-3xl font-black text-amber-950 font-mono">{countSpecialBudget} <span className="text-xs font-bold text-slate-600">โครงการ</span></p>
+                            <p className="text-[10px] text-amber-800 mt-1 font-semibold truncate" title={`฿${new Intl.NumberFormat('th-TH').format(sumSpecialBudget)}`}>
+                                งบเฉพาะกิจ ฿{new Intl.NumberFormat('th-TH').format(sumSpecialBudget)}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Card 6: Total Budget */}
+                    <div className="rounded-2xl border border-indigo-200/80 bg-gradient-to-br from-white via-indigo-50/40 to-indigo-100/40 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">วงเงินงบประมาณโครงการทั้งหมด</span>
+                        <div className="mt-2">
+                            <p className="text-xl sm:text-2xl font-black text-indigo-950 font-mono truncate" title={`฿${new Intl.NumberFormat('th-TH').format(totalBudgetSum)}`}>
+                                ฿{new Intl.NumberFormat('th-TH').format(totalBudgetSum)}
+                            </p>
+                            <p className="text-[10px] text-indigo-700 mt-1 font-semibold">ยอดรวมงบประมาณทุกประเภท</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. การ์ดที่ 1: สถานะของโครงการในแต่ละระดับเพื่อติดตาม (5 ระดับ) */}
+                <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2.5">
+                            <span className="text-2xl">🎯</span>
+                            <div>
+                                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                                    สถานะการดำเนินงานโครงการ 5 ระดับ (Project Execution Lifecycle)
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    ติดตามความคืบหน้าของโครงการตามวงจรบริหารจัดการ ตั้งแต่เริ่มต้น ยื่นเสนอฉบับเต็ม อนุมัติ ดำเนินการ จนถึงสรุปรูปเล่ม 5 บท
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('project_status')}
+                            className="text-xs font-bold text-purple-700 hover:text-purple-900 hover:underline flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+                        >
+                            <span>ดูแดชบอร์ด 5 ระดับแบบละเอียด</span>
+                            <span>➔</span>
+                        </button>
+                    </div>
+
+                    {/* Stacked Progress Bar */}
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between text-xs text-slate-500 font-bold">
+                            <span>ภาพรวมสัดส่วนความคืบหน้าโครงการทั้งหมด ({totalProjectsCount} โครงการ)</span>
+                            <span>
+                                สำเร็จแล้ว {totalProjectsCount > 0 ? Math.round(((levelStats.blue.count + levelStats.green.count) / totalProjectsCount) * 100) : 0}%
+                            </span>
+                        </div>
+                        <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden flex shadow-inner">
+                            <div style={{ width: `${totalProjectsCount > 0 ? (levelStats.red.count / totalProjectsCount) * 100 : 0}%` }} className="bg-rose-500 transition-all" title={`ระดับ 1 (แดง): ${levelStats.red.count} โครงการ`} />
+                            <div style={{ width: `${totalProjectsCount > 0 ? (levelStats.orange.count / totalProjectsCount) * 100 : 0}%` }} className="bg-orange-500 transition-all" title={`ระดับ 2 (ส้ม): ${levelStats.orange.count} โครงการ`} />
+                            <div style={{ width: `${totalProjectsCount > 0 ? (levelStats.yellow.count / totalProjectsCount) * 100 : 0}%` }} className="bg-amber-400 transition-all" title={`ระดับ 3 (เหลือง): ${levelStats.yellow.count} โครงการ`} />
+                            <div style={{ width: `${totalProjectsCount > 0 ? (levelStats.green.count / totalProjectsCount) * 100 : 0}%` }} className="bg-emerald-500 transition-all" title={`ระดับ 4 (เขียว): ${levelStats.green.count} โครงการ`} />
+                            <div style={{ width: `${totalProjectsCount > 0 ? (levelStats.blue.count / totalProjectsCount) * 100 : 0}%` }} className="bg-sky-500 transition-all" title={`ระดับ 5 (ฟ้า): ${levelStats.blue.count} โครงการ`} />
+                        </div>
+                    </div>
+
+                    {/* 5 Cards Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        {/* Level 1: Red */}
+                        <div className="p-4 rounded-2xl border border-rose-200 bg-rose-50/40 flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xl">🔴</span>
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
+                                    ระดับ 1 (10%)
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <h4 className="text-xs font-black text-slate-800">เริ่มต้น / รอทำฉบับเต็ม</h4>
+                                <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">ยังไม่ยื่นเสนอขั้นตอนที่ 2</p>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-rose-200/60 flex items-baseline justify-between">
+                                <span className="text-base font-black text-rose-700 font-mono">{levelStats.red.count} โครงการ</span>
+                                <span className="text-[10px] font-bold text-slate-500 font-mono">฿{new Intl.NumberFormat('th-TH').format(levelStats.red.budget)}</span>
+                            </div>
+                        </div>
+
+                        {/* Level 2: Orange */}
+                        <div className="p-4 rounded-2xl border border-orange-200 bg-orange-50/40 flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xl">🟠</span>
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-orange-100 text-orange-800">
+                                    ระดับ 2 (30%)
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <h4 className="text-xs font-black text-slate-800">ฉบับเต็ม & รออนุมัติ</h4>
+                                <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">รออนุมัติขั้นตอน 2-5</p>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-orange-200/60 flex items-baseline justify-between">
+                                <span className="text-base font-black text-orange-700 font-mono">{levelStats.orange.count} โครงการ</span>
+                                <span className="text-[10px] font-bold text-slate-500 font-mono">฿{new Intl.NumberFormat('th-TH').format(levelStats.orange.budget)}</span>
+                            </div>
+                        </div>
+
+                        {/* Level 3: Yellow */}
+                        <div className="p-4 rounded-2xl border border-amber-200 bg-amber-50/40 flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xl">🟡</span>
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                                    ระดับ 3 (50%)
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <h4 className="text-xs font-black text-slate-800">อนุมัติครบ 6 ขั้น</h4>
+                                <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">พร้อมยืมเงิน/จัดซื้อจัดจ้าง</p>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-amber-200/60 flex items-baseline justify-between">
+                                <span className="text-base font-black text-amber-800 font-mono">{levelStats.yellow.count} โครงการ</span>
+                                <span className="text-[10px] font-bold text-slate-500 font-mono">฿{new Intl.NumberFormat('th-TH').format(levelStats.yellow.budget)}</span>
+                            </div>
+                        </div>
+
+                        {/* Level 4: Green */}
+                        <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/40 flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xl">🟢</span>
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                                    ระดับ 4 (70%)
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <h4 className="text-xs font-black text-slate-800">ดำเนินโครงการแล้ว</h4>
+                                <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">จัดกิจกรรมแล้ว รอสรุปเล่ม</p>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-emerald-200/60 flex items-baseline justify-between">
+                                <span className="text-base font-black text-emerald-700 font-mono">{levelStats.green.count} โครงการ</span>
+                                <span className="text-[10px] font-bold text-slate-500 font-mono">฿{new Intl.NumberFormat('th-TH').format(levelStats.green.budget)}</span>
+                            </div>
+                        </div>
+
+                        {/* Level 5: Blue */}
+                        <div className="p-4 rounded-2xl border border-sky-200 bg-sky-50/40 flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xl">🔵</span>
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-sky-100 text-sky-800">
+                                    ระดับ 5 (90%)
+                                </span>
+                            </div>
+                            <div className="mt-3">
+                                <h4 className="text-xs font-black text-slate-800">สรุปเล่ม & เคลียร์เงิน</h4>
+                                <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">สรุป 5 บท & ปิดยอดครบ</p>
+                            </div>
+                            <div className="mt-3 pt-2.5 border-t border-sky-200/60 flex items-baseline justify-between">
+                                <span className="text-base font-black text-sky-700 font-mono">{levelStats.blue.count} โครงการ</span>
+                                <span className="text-[10px] font-bold text-slate-500 font-mono">฿{new Intl.NumberFormat('th-TH').format(levelStats.blue.budget)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 4. การ์ดที่ 2: สถานะของโครงการที่ไปอยู่ในส่วนของงาน (งานวางแผน, งานพัสดุ, งานการเงิน) */}
+                <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2.5">
+                            <span className="text-2xl">🏢</span>
+                            <div>
+                                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                                    สถานะโครงการตามฝ่ายงานหลัก (Planning • Procurement • Finance)
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    ติดตามเอกสารและโครงการที่กำลังขับเคลื่อนอยู่ในความรับผิดชอบของ 3 ฝ่ายงานหลัก
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* 1. งานวางแผนงานและงบประมาณ */}
+                        <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-white via-indigo-50/20 to-purple-50/30 p-5 flex flex-col justify-between space-y-4 hover:shadow-md transition">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-100 text-indigo-900 text-xs font-black">
+                                        <span>✂️</span> 1. งานวางแผนงานและงบประมาณ
+                                    </span>
+                                    <span className="text-xs font-extrabold text-indigo-700">ฝ่ายยุทธศาสตร์</span>
+                                </div>
+                                <h4 className="text-sm font-black text-slate-800">การจัดสรร & ตัดยอดงบประมาณ</h4>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    กลั่นกรองความสอดคล้องของแผนงาน จัดสรรกรอบงบ และบันทึกตัดยอดหนังสือ ผง.
+                                </p>
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-indigo-100">
+                                        <span className="text-slate-600 font-semibold">⏳ รอแผนงานตัดยอดงบ:</span>
+                                        <span className="font-mono font-black text-indigo-950">{planItemsCutPending} รายการ</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-indigo-100">
+                                        <span className="text-slate-600 font-semibold">💡 รอพิจารณาจัดสรรกรอบงบ:</span>
+                                        <span className="font-mono font-black text-indigo-950">{planPrelimPending} โครงการ</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-indigo-100">
+                                        <span className="text-slate-600 font-semibold">📝 รอเจ้าของจัดทำฉบับเต็ม:</span>
+                                        <span className="font-mono font-black text-indigo-950">{planBudgetApproved} โครงการ</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('budgets')}
+                                className="w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-xs transition text-center cursor-pointer"
+                            >
+                                เปิดเมนูงานแผนและงบประมาณ ➔
+                            </button>
+                        </div>
+
+                        {/* 2. งานพัสดุ */}
+                        <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-white via-amber-50/20 to-orange-50/30 p-5 flex flex-col justify-between space-y-4 hover:shadow-md transition">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100 text-amber-900 text-xs font-black">
+                                        <span>📦</span> 2. งานพัสดุ (Procurement)
+                                    </span>
+                                    <span className="text-xs font-extrabold text-amber-800">บริหารทรัพยากร</span>
+                                </div>
+                                <h4 className="text-sm font-black text-slate-800">การจัดซื้อจัดจ้าง & พัสดุ</h4>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    ลงรับชุดจัดซื้อ ออกเลขคุม PR/PO และจัดทำเอกสารจัดหาพัสดุตามระเบียบ
+                                </p>
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-amber-100">
+                                        <span className="text-slate-600 font-semibold">📥 เอกสารรอพัสดุลงรับเรื่อง:</span>
+                                        <span className="font-mono font-black text-amber-950">{procWaitingReceive} รายการ</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-amber-100">
+                                        <span className="text-slate-600 font-semibold">⚙️ อยู่ระหว่างจัดซื้อจัดจ้าง:</span>
+                                        <span className="font-mono font-black text-amber-950">{procProcessing} รายการ</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-amber-100">
+                                        <span className="text-slate-600 font-semibold">🚚 พร้อมส่งมอบเรื่องให้การเงิน:</span>
+                                        <span className="font-mono font-black text-amber-950">{procReadyFinance} รายการ</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('procurement')}
+                                className="w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-xs transition text-center cursor-pointer"
+                            >
+                                เปิดศูนย์งานพัสดุ ➔
+                            </button>
+                        </div>
+
+                        {/* 3. งานการเงิน */}
+                        <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-white via-emerald-50/20 to-teal-50/30 p-5 flex flex-col justify-between space-y-4 hover:shadow-md transition">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-100 text-emerald-900 text-xs font-black">
+                                        <span>💰</span> 3. งานการเงิน (Finance)
+                                    </span>
+                                    <span className="text-xs font-extrabold text-emerald-800">บริหารทรัพยากร</span>
+                                </div>
+                                <h4 className="text-sm font-black text-slate-800">การเบิกจ่ายเงิน & เคลียร์ยอด</h4>
+                                <p className="text-xs text-slate-500 leading-relaxed">
+                                    โอนจ่ายเงินยืมไปราชการ (กค.101), เบิกจ่ายค่าพัสดุ, และปิดยอดเคลียร์เงิน
+                                </p>
+                                <div className="space-y-2 pt-2">
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-emerald-100">
+                                        <span className="text-slate-600 font-semibold">💸 สัญญายืมเงินรอโอนจ่าย:</span>
+                                        <span className="font-mono font-black text-emerald-950">{finLoanPendingDisburse} รายการ</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-emerald-100">
+                                        <span className="text-slate-600 font-semibold">📦 ชุดจัดซื้อรอตั้งเบิกจ่าย:</span>
+                                        <span className="font-mono font-black text-emerald-950">{finProcPendingPay} รายการ</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs p-2 rounded-xl bg-white border border-emerald-100">
+                                        <span className="text-slate-600 font-semibold">✅ เบิกจ่าย/เคลียร์สมบูรณ์แล้ว:</span>
+                                        <span className="font-mono font-black text-emerald-950">{finCleared} รายการ</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab('clearings')}
+                                className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-xs transition text-center cursor-pointer"
+                            >
+                                เปิดศูนย์งานการเงิน ➔
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 5. การ์ดที่ 3: การ์ดแสดงประเด็นยุทธศาสตร์ ของโครงการในภาพรวม เป็นวงกลม ระบุจำนวน ข้อที่เลือก/ข้อทั้งหมด ของทุกยุทธศาสตร์หลักๆ */}
+                <div className="rounded-3xl border border-slate-200/90 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2.5">
+                            <span className="text-2xl">🎯</span>
+                            <div>
+                                <h3 className="text-base sm:text-lg font-black text-slate-900">
+                                    ประเด็นยุทธศาสตร์ของโครงการในภาพรวม (Strategic Alignment Overview)
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    แสดงสัดส่วนการตอบสนองยุทธศาสตร์หลักของโครงการทั้งหมดในวิทยาลัย (ข้อที่เลือก / ข้อทั้งหมด)
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {strategyAnalysis.map((cat, idx) => {
+                            const circleColor = idx === 0 
+                                ? 'text-indigo-600' 
+                                : idx === 1 
+                                    ? 'text-purple-600' 
+                                    : idx === 2 
+                                        ? 'text-amber-500' 
+                                        : 'text-emerald-500';
+                            const bgBadgeColor = idx === 0 
+                                ? 'bg-indigo-50 border-indigo-200 text-indigo-900' 
+                                : idx === 1 
+                                    ? 'bg-purple-50 border-purple-200 text-purple-900' 
+                                    : idx === 2 
+                                        ? 'bg-amber-50 border-amber-200 text-amber-900' 
+                                        : 'bg-emerald-50 border-emerald-200 text-emerald-900';
+                            const icon = idx === 0 ? '🎯' : idx === 1 ? '🏛️' : idx === 2 ? '🇹🇭' : '🏔️';
+                            const circumference = 2 * Math.PI * 44;
+                            const strokeDashoffset = circumference * (1 - (cat.pct || 0) / 100);
+
+                            return (
+                                <div key={cat.id || idx} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs flex flex-col items-center text-center justify-between space-y-3 hover:shadow-md transition">
+                                    <div className="w-full text-center space-y-1">
+                                        <div className="flex items-center justify-center gap-1.5">
+                                            <span className="text-lg">{icon}</span>
+                                            <h4 className="text-xs font-black text-slate-900 line-clamp-1" title={cat.name}>
+                                                {cat.name}
+                                            </h4>
+                                        </div>
+                                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${bgBadgeColor}`}>
+                                            {cat.code?.toUpperCase()}
+                                        </span>
+                                    </div>
+
+                                    {/* Circular Progress Gauge */}
+                                    <div className="relative w-28 h-28 flex items-center justify-center my-1">
+                                        <svg className="w-28 h-28 transform -rotate-90">
+                                            <circle
+                                                cx="56"
+                                                cy="56"
+                                                r="44"
+                                                stroke="currentColor"
+                                                strokeWidth="9"
+                                                fill="transparent"
+                                                className="text-slate-100"
+                                            />
+                                            <circle
+                                                cx="56"
+                                                cy="56"
+                                                r="44"
+                                                stroke="currentColor"
+                                                strokeWidth="9"
+                                                fill="transparent"
+                                                strokeDasharray={circumference}
+                                                strokeDashoffset={strokeDashoffset}
+                                                strokeLinecap="round"
+                                                className={`transition-all duration-700 ${circleColor}`}
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                            <span className="text-xl font-black text-slate-900 font-mono tracking-tight">
+                                                {cat.selectedCount}/{cat.totalCount}
+                                            </span>
+                                            <span className="text-[11px] font-bold text-slate-500">
+                                                {cat.pct}%
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full space-y-1.5 pt-1 border-t border-slate-100">
+                                        <div className="text-[11px] font-bold text-slate-700">
+                                            เลือกแล้ว <span className="text-purple-700 font-black">{cat.selectedCount}</span> จากทั้งหมด <span className="font-bold">{cat.totalCount}</span> ข้อ
+                                        </div>
+                                        <div className="max-h-24 overflow-y-auto space-y-1 text-left pr-1 scrollbar-thin">
+                                            {cat.itemsWithUsage.map(it => (
+                                                <div key={it.id} className="flex items-center justify-between text-[10px] gap-1 py-0.5">
+                                                    <span className={`truncate flex items-center gap-1 ${it.isSelected ? 'text-slate-800 font-bold' : 'text-slate-400'}`} title={it.name}>
+                                                        <span>{it.isSelected ? '✅' : '⚪'}</span>
+                                                        <span className="truncate">{it.name}</span>
+                                                    </span>
+                                                    {it.isSelected && (
+                                                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-900 font-bold shrink-0">
+                                                            {it.usageCount}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // 0. Admin Component Rendering (Command Center / Kanban + User Management)
     const renderAdminUsersTab = () => {
         if (!adminData) return null;
@@ -6136,6 +6808,18 @@ export default function Dashboard({
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2.5 shrink-0 bg-white/10 p-1.5 rounded-2xl border border-white/15 backdrop-blur-sm">
+                            <button
+                                type="button"
+                                onClick={() => setAdminActiveSubTab('overview')}
+                                className={`px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all flex items-center gap-2 cursor-pointer ${
+                                    adminActiveSubTab === 'overview'
+                                        ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30 font-black scale-102'
+                                        : 'text-white/80 hover:text-white hover:bg-white/10'
+                                }`}
+                            >
+                                <span>🏛️</span>
+                                <span>ศูนย์ควบคุมหลัก</span>
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setAdminActiveSubTab('kanban')}
@@ -6165,7 +6849,9 @@ export default function Dashboard({
                     </div>
                 </div>
 
-                {adminActiveSubTab === 'kanban' ? (
+                {adminActiveSubTab === 'overview' ? (
+                    renderCommandCenterOverview()
+                ) : adminActiveSubTab === 'kanban' ? (
                     <div>
                         {renderDocumentTrackingTab()}
                     </div>
