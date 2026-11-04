@@ -503,6 +503,51 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
         return 'รองผู้อำนวยการฝ่ายที่เกี่ยวข้อง';
     };
 
+    // Helper functions to get signatures with fallback to College Settings preset signatures
+    const getEffectiveDirectorSignature = () => {
+        if (sig6?.signature_data && !isFastTrackApproval(sig6)) {
+            return sig6.signature_data;
+        }
+        return college_settings?.director_signature || null;
+    };
+
+    const getEffectivePlanDeputySignature = () => {
+        if (sig5?.signature_data && !isFastTrackApproval(sig5) && sig5.user_id !== project.user_id) {
+            return sig5.signature_data;
+        }
+        return college_settings?.plan_deputy_signature || null;
+    };
+
+    const getEffectiveResourceDeputySignature = () => {
+        if (resourceDeputySig?.signature_data && !isFastTrackApproval(resourceDeputySig)) {
+            return resourceDeputySig.signature_data;
+        }
+        return college_settings?.resource_deputy_signature || null;
+    };
+
+    const getEffectiveRelatedDeputySignature = () => {
+        if (sig4?.signature_data && !isFastTrackApproval(sig4) && sig4.user_id !== project.user_id) {
+            return sig4.signature_data;
+        }
+        const parentName = project.department?.parent?.name || '';
+        const curDeptName = project.department?.name || '';
+        const combined = `${parentName} ${curDeptName}`;
+
+        if (combined.includes('วิชาการ')) {
+            return college_settings?.academic_deputy_signature || null;
+        }
+        if (combined.includes('บริหารทรัพยากร')) {
+            return college_settings?.resource_deputy_signature || null;
+        }
+        if (combined.includes('กิจการนักเรียน') || combined.includes('พัฒนากิจการ')) {
+            return college_settings?.student_affairs_deputy_signature || null;
+        }
+        if (combined.includes('ยุทธศาสตร์') || combined.includes('แผนงาน')) {
+            return college_settings?.plan_deputy_signature || null;
+        }
+        return null;
+    };
+
     return (
         <div className="min-h-screen bg-slate-100 p-4 md:p-8 font-sans print:bg-white print:p-0">
             <Head>
@@ -1207,9 +1252,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig4?.signature_data && !isFastTrackApproval(sig4) ? (
+                                            {includeSignatures && getEffectiveRelatedDeputySignature() ? (
                                                 <img 
-                                                    src={sig4.signature_data} 
+                                                    src={getEffectiveRelatedDeputySignature()} 
                                                     alt="ลายมือชื่อ" 
                                                     className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                                 />
@@ -1290,9 +1335,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                             ลงชื่อ
                                         </span>
                                         <div className="relative inline-flex flex-col items-center">
-                                            {includeSignatures && sig5?.signature_data && !isFastTrackApproval(sig5) ? (
+                                            {includeSignatures && getEffectivePlanDeputySignature() ? (
                                                 <img 
-                                                    src={sig5.signature_data} 
+                                                    src={getEffectivePlanDeputySignature()} 
                                                     alt="ลายมือชื่อ" 
                                                     className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                                 />
@@ -1328,9 +1373,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         ลงชื่อ
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
-                                        {includeSignatures && resourceDeputySig?.signature_data && !isFastTrackApproval(resourceDeputySig) ? (
+                                        {includeSignatures && getEffectiveResourceDeputySignature() ? (
                                             <img 
-                                                src={resourceDeputySig.signature_data} 
+                                                src={getEffectiveResourceDeputySignature()} 
                                                 alt="ลายมือชื่อ" 
                                                 className="h-10 max-w-[130px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                             />
@@ -1371,9 +1416,9 @@ export default function Print({ project, strategyCategories = [], resolvedHead =
                                         ลงชื่อ
                                     </span>
                                     <div className="relative inline-flex flex-col items-center">
-                                        {includeSignatures && sig6?.signature_data && !isFastTrackApproval(sig6) ? (
+                                        {includeSignatures && getEffectiveDirectorSignature() ? (
                                             <img 
-                                                src={sig6.signature_data} 
+                                                src={getEffectiveDirectorSignature()} 
                                                 alt="ลายมือชื่อ" 
                                                 className="h-12 max-w-[150px] object-contain -mb-2 z-10 filter drop-shadow-2xs" 
                                             />

@@ -9,6 +9,7 @@ import WorkloadAnalyzerModal from '@/Components/WorkloadAnalyzerModal';
 import AppendixManager from '@/Components/AppendixManager';
 import PreliminaryManager from '@/Components/PreliminaryManager';
 import FullReportManager from '@/Components/FullReportManager';
+import SignaturePad from '@/Components/SignaturePad';
 import axios from 'axios';
 
 export default function Dashboard({ 
@@ -3802,11 +3803,20 @@ export default function Dashboard({
         plan_deputy_position: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
         plan_head_name: 'นายพิพัฒน์ สีมา',
         plan_head_position: 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ',
+        director_signature: '',
+        academic_deputy_signature: '',
+        resource_deputy_signature: '',
+        student_affairs_deputy_signature: '',
+        plan_deputy_signature: '',
     };
     (systemSettings || []).forEach(s => {
         initialSettingsObj[s.key] = s.type === 'boolean' ? (s.value === 'true') : s.value;
     });
     const [settingsForm, setSettingsForm] = useState(initialSettingsObj);
+    const [signatureModalTarget, setSignatureModalTarget] = useState(null); // { key, title, roleName }
+    const [sigModalTab, setSigModalTab] = useState('live'); // 'live' | 'upload'
+    const [sigModalUploadData, setSigModalUploadData] = useState(null);
+    const sigPadRef = useRef(null);
 
     // Admin AI Orchestration Hub State
     const [aiAgentsConfig, setAiAgentsConfig] = useState(null);
@@ -5398,6 +5408,65 @@ export default function Dashboard({
         });
     };
 
+    const handleOpenAdminSignatureModal = (targetKey, title, roleName) => {
+        setSignatureModalTarget({ key: targetKey, title, roleName });
+        setSigModalTab('live');
+        setSigModalUploadData(null);
+    };
+
+    const handleConfirmAdminSignature = () => {
+        if (!signatureModalTarget) return;
+        let finalData = null;
+        if (sigModalTab === 'live') {
+            const dataUrl = sigPadRef.current?.toDataURL();
+            if (!dataUrl || sigPadRef.current?.isEmpty()) {
+                Swal.fire('กรุณาลงลายมือชื่อ', 'กรุณาวาดลายมือชื่อบนช่องเซ็นสดก่อนบันทึก', 'warning');
+                return;
+            }
+            finalData = dataUrl;
+        } else {
+            if (!sigModalUploadData) {
+                Swal.fire('กรุณาเลือกไฟล์', 'กรุณาอัปโหลดรูปภาพลายเซ็นก่อนบันทึก', 'warning');
+                return;
+            }
+            finalData = sigModalUploadData;
+        }
+
+        setSettingsForm(prev => ({
+            ...prev,
+            [signatureModalTarget.key]: finalData,
+        }));
+        setSignatureModalTarget(null);
+        Swal.fire({
+            title: 'แนบลายเซ็นต์เรียบร้อย',
+            text: `แนบลายเซ็นต์สำหรับ ${signatureModalTarget.title} สำเร็จ (อย่าลืมกดปุ่ม "บันทึกการตั้งค่าทั้งหมด" ด้านล่าง)`,
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+        });
+    };
+
+    const handleRemoveAdminSignature = (targetKey, title) => {
+        Swal.fire({
+            title: 'ยืนยันการลบลายเซ็นต์?',
+            text: `ต้องการลบลายเซ็นต์ของ "${title}" หรือไม่?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            cancelButtonColor: '#64748b',
+            confirmButtonText: 'ใช่, ลบลายเซ็นต์',
+            cancelButtonText: 'ยกเลิก',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setSettingsForm(prev => ({
+                    ...prev,
+                    [targetKey]: '',
+                }));
+                Swal.fire('ลบเรียบร้อย', 'ลบลายเซ็นต์เรียบร้อยแล้ว (อย่าลืมกดบันทึกการตั้งค่าทั้งหมดด้านล่าง)', 'success');
+            }
+        });
+    };
+
     const handleSaveSettingsSubmit = (e) => {
         e.preventDefault();
         const mergedSettings = {
@@ -6893,6 +6962,49 @@ export default function Dashboard({
                                         </p>
                                     </div>
                                 </div>
+
+                                {/* Director Signature Attachment */}
+                                <div className="mt-2 pt-3 border-t border-purple-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-purple-200/60 shadow-2xs">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-12 w-32 border border-dashed border-purple-300 rounded-lg bg-purple-50/50 flex items-center justify-center p-1 overflow-hidden">
+                                            {settingsForm.director_signature ? (
+                                                <img src={settingsForm.director_signature} alt="ลายเซ็นต์ท่านผู้อำนวยการ" className="h-full object-contain" />
+                                            ) : (
+                                                <span className="text-[11px] text-slate-400 font-medium">ยังไม่มีลายเซ็นต์</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <div className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                                                <span>✍️ ลายมือชื่อดิจิทัลท่านผู้อำนวยการ</span>
+                                                {settingsForm.director_signature ? (
+                                                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">มีลายเซ็นต์แล้ว</span>
+                                                ) : (
+                                                    <span className="px-1.5 py-0.2 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600">ยังไม่แนบ</span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 mt-0.5">ใช้แสดงในส่วนการอนุมัติโครงการ (ข้อ 12) เมื่อเลือก "มีลายเซ็นต์"</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenAdminSignatureModal('director_signature', 'ท่านผู้อำนวยการวิทยาลัย', settingsForm.director_name)}
+                                            className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs hover:scale-105 active:scale-95 transition inline-flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <span>✍️</span> {settingsForm.director_signature ? 'เปลี่ยนลายเซ็นต์' : 'แนบลายเซ็นต์'}
+                                        </button>
+                                        {settingsForm.director_signature && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveAdminSignature('director_signature', 'ท่านผู้อำนวยการวิทยาลัย')}
+                                                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition cursor-pointer"
+                                                title="ลบลายเซ็นต์นี้"
+                                            >
+                                                ลบ
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -6935,6 +7047,37 @@ export default function Dashboard({
                                                 placeholder="เช่น รองผู้อำนวยการฝ่ายวิชาการ"
                                             />
                                         </div>
+                                        {/* Academic Deputy Signature */}
+                                        <div className="pt-2 border-t border-sky-200/60 flex items-center justify-between gap-2 bg-white/80 p-2.5 rounded-xl border border-sky-200 shadow-2xs">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-10 w-24 border border-dashed border-sky-300 rounded-lg bg-sky-50 flex items-center justify-center p-0.5 overflow-hidden">
+                                                    {settingsForm.academic_deputy_signature ? (
+                                                        <img src={settingsForm.academic_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" />
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] font-bold text-sky-950">ลายเซ็นต์รองฝ่ายวิชาการ</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenAdminSignatureModal('academic_deputy_signature', 'รองผู้อำนวยการฝ่ายวิชาการ', settingsForm.academic_deputy_name)}
+                                                    className="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-[11px] font-bold shadow-xs transition cursor-pointer"
+                                                >
+                                                    {settingsForm.academic_deputy_signature ? 'เปลี่ยน' : 'แนบ'}
+                                                </button>
+                                                {settingsForm.academic_deputy_signature && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveAdminSignature('academic_deputy_signature', 'รองผู้อำนวยการฝ่ายวิชาการ')}
+                                                        className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition cursor-pointer"
+                                                    >
+                                                        ลบ
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -6964,6 +7107,37 @@ export default function Dashboard({
                                                 className="w-full rounded-xl border-emerald-200 px-3 py-2 text-xs font-medium text-slate-800 focus:border-emerald-500 focus:ring-emerald-500 bg-white"
                                                 placeholder="เช่น รองผู้อำนวยการฝ่ายบริหารทรัพยากร"
                                             />
+                                        </div>
+                                        {/* Resource Deputy Signature */}
+                                        <div className="pt-2 border-t border-emerald-200/60 flex items-center justify-between gap-2 bg-white/80 p-2.5 rounded-xl border border-emerald-200 shadow-2xs">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-10 w-24 border border-dashed border-emerald-300 rounded-lg bg-emerald-50 flex items-center justify-center p-0.5 overflow-hidden">
+                                                    {settingsForm.resource_deputy_signature ? (
+                                                        <img src={settingsForm.resource_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" />
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] font-bold text-emerald-950">ลายเซ็นต์รองฝ่ายบริหารทรัพยากร</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenAdminSignatureModal('resource_deputy_signature', 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร', settingsForm.resource_deputy_name)}
+                                                    className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold shadow-xs transition cursor-pointer"
+                                                >
+                                                    {settingsForm.resource_deputy_signature ? 'เปลี่ยน' : 'แนบ'}
+                                                </button>
+                                                {settingsForm.resource_deputy_signature && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveAdminSignature('resource_deputy_signature', 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร')}
+                                                        className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition cursor-pointer"
+                                                    >
+                                                        ลบ
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -6995,6 +7169,37 @@ export default function Dashboard({
                                                 placeholder="เช่น ปฏิบัติหน้าที่รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา"
                                             />
                                         </div>
+                                        {/* Student Affairs Deputy Signature */}
+                                        <div className="pt-2 border-t border-amber-200/60 flex items-center justify-between gap-2 bg-white/80 p-2.5 rounded-xl border border-amber-200 shadow-2xs">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-10 w-24 border border-dashed border-amber-300 rounded-lg bg-amber-50 flex items-center justify-center p-0.5 overflow-hidden">
+                                                    {settingsForm.student_affairs_deputy_signature ? (
+                                                        <img src={settingsForm.student_affairs_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" />
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] font-bold text-amber-950">ลายเซ็นต์รองฝ่ายพัฒนากิจการฯ</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenAdminSignatureModal('student_affairs_deputy_signature', 'รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา', settingsForm.student_affairs_deputy_name)}
+                                                    className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold shadow-xs transition cursor-pointer"
+                                                >
+                                                    {settingsForm.student_affairs_deputy_signature ? 'เปลี่ยน' : 'แนบ'}
+                                                </button>
+                                                {settingsForm.student_affairs_deputy_signature && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveAdminSignature('student_affairs_deputy_signature', 'รองผู้อำนวยการฝ่ายกิจการนักเรียนนักศึกษา')}
+                                                        className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition cursor-pointer"
+                                                    >
+                                                        ลบ
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -7024,6 +7229,37 @@ export default function Dashboard({
                                                 className="w-full rounded-xl border-purple-200 px-3 py-2 text-xs font-medium text-slate-800 focus:border-purple-500 focus:ring-purple-500 bg-white"
                                                 placeholder="เช่น รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน"
                                             />
+                                        </div>
+                                        {/* Plan Deputy Signature */}
+                                        <div className="pt-2 border-t border-purple-200/60 flex items-center justify-between gap-2 bg-white/80 p-2.5 rounded-xl border border-purple-200 shadow-2xs">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-10 w-24 border border-dashed border-purple-300 rounded-lg bg-purple-50 flex items-center justify-center p-0.5 overflow-hidden">
+                                                    {settingsForm.plan_deputy_signature ? (
+                                                        <img src={settingsForm.plan_deputy_signature} alt="ลายเซ็นต์" className="h-full object-contain" />
+                                                    ) : (
+                                                        <span className="text-[10px] text-slate-400 font-medium">ยังไม่แนบ</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[11px] font-bold text-purple-950">ลายเซ็นต์รองฝ่ายยุทธศาสตร์ฯ</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleOpenAdminSignatureModal('plan_deputy_signature', 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน', settingsForm.plan_deputy_name || 'รองผู้อำนวยการฝ่ายยุทธศาสตร์')}
+                                                    className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold shadow-xs transition cursor-pointer"
+                                                >
+                                                    {settingsForm.plan_deputy_signature ? 'เปลี่ยน' : 'แนบ'}
+                                                </button>
+                                                {settingsForm.plan_deputy_signature && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveAdminSignature('plan_deputy_signature', 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน')}
+                                                        className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition cursor-pointer"
+                                                    >
+                                                        ลบ
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -30248,6 +30484,150 @@ return (
                                         </div>
                                     </div>
                                 </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Admin Executive Signature Pad Modal */}
+                    {signatureModalTarget && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+                            <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-purple-100 space-y-4">
+                                <div className="flex items-center justify-between border-b border-purple-100 pb-3">
+                                    <div>
+                                        <h3 className="text-base font-black text-purple-950 flex items-center gap-2">
+                                            <span>✍️</span>
+                                            <span>แนบลายมือชื่อดิจิทัล: {signatureModalTarget.title}</span>
+                                        </h3>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            ผู้ดำรงตำแหน่ง: <span className="font-bold text-purple-800">{signatureModalTarget.roleName || '-'}</span>
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSignatureModalTarget(null)}
+                                        className="h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center font-bold text-sm cursor-pointer"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {/* Tabs: Live Draw vs Upload Image */}
+                                <div className="flex items-center gap-2 border-b border-purple-100 pb-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSigModalTab('live')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                            sigModalTab === 'live'
+                                                ? 'bg-purple-600 text-white shadow-xs'
+                                                : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
+                                        }`}
+                                    >
+                                        <span>✍️</span> วาดลายเซ็นสด (Live Draw)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setSigModalTab('upload')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                            sigModalTab === 'upload'
+                                                ? 'bg-purple-600 text-white shadow-xs'
+                                                : 'bg-purple-50 text-purple-800 hover:bg-purple-100'
+                                        }`}
+                                    >
+                                        <span>📁</span> อัปโหลดรูปภาพลายเซ็น (PNG/JPG)
+                                    </button>
+                                </div>
+
+                                {sigModalTab === 'live' ? (
+                                    <div className="space-y-2">
+                                        <div className="rounded-2xl border-2 border-dashed border-purple-300 bg-purple-50/30 p-2 overflow-hidden">
+                                            <SignaturePad
+                                                ref={sigPadRef}
+                                                height={180}
+                                                strokeColor="#0f172a"
+                                                strokeWidth={2.5}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs text-slate-500">
+                                            <span>💡 ใช้เมาส์ ปากกาสไตลัส หรือนิ้วมือวาดลายเซ็นบนกรอบสี่เหลี่ยม</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => sigPadRef.current?.clear()}
+                                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] cursor-pointer"
+                                            >
+                                                ล้างกระดาน
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        <div className="border-2 border-dashed border-purple-300 rounded-2xl p-6 text-center bg-purple-50/20 hover:bg-purple-50/40 transition">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+                                                    if (file.size > 2 * 1024 * 1024) {
+                                                        Swal.fire('ไฟล์มีขนาดใหญ่เกินไป', 'ขนาดไฟล์สูงสุดไม่เกิน 2MB', 'warning');
+                                                        return;
+                                                    }
+                                                    const reader = new FileReader();
+                                                    reader.onload = (uploadEv) => {
+                                                        setSigModalUploadData(uploadEv.target?.result);
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                }}
+                                                className="hidden"
+                                                id="admin-sig-file-upload"
+                                            />
+                                            <label
+                                                htmlFor="admin-sig-file-upload"
+                                                className="cursor-pointer flex flex-col items-center justify-center gap-2"
+                                            >
+                                                <span className="text-3xl">🖼️</span>
+                                                <span className="text-xs font-bold text-purple-900">
+                                                    คลิกเพื่อเลือกไฟล์รูปภาพลายเซ็นต์
+                                                </span>
+                                                <span className="text-[11px] text-slate-400">
+                                                    แนะนำไฟล์ .png พื้นหลังโปร่งใส (ขนาดไม่เกิน 2MB)
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        {sigModalUploadData && (
+                                            <div className="p-3 bg-white border border-purple-200 rounded-xl flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <img src={sigModalUploadData} alt="ตัวอย่างลายเซ็นต์" className="h-12 max-w-[120px] object-contain" />
+                                                    <span className="text-xs font-bold text-emerald-700">✓ โหลดรูปภาพสำเร็จ</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSigModalUploadData(null)}
+                                                    className="text-xs text-rose-600 hover:underline font-bold"
+                                                >
+                                                    เปลี่ยนรูป
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-end gap-2 pt-3 border-t border-purple-100">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSignatureModalTarget(null)}
+                                        className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleConfirmAdminSignature}
+                                        className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-xs font-black text-white shadow-md shadow-purple-500/25 transition cursor-pointer"
+                                    >
+                                        ยืนยันใช้ลายเซ็นต์นี้
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}

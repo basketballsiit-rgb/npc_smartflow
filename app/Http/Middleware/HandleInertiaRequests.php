@@ -81,6 +81,12 @@ class HandleInertiaRequests extends Middleware
                     ?: (\App\Models\Department::whereNull('parent_id')->where(function($q) {
                             $q->where('name', 'like', '%ยุทธศาสตร์%')->orWhere('name', 'like', '%แผนงาน%');
                         })->value('deputy_director_position') ?: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน'),
+                // Executive Signatures for Documents & Printing
+                'director_signature' => \App\Models\SystemSetting::where('key', 'director_signature')->value('value') ?: null,
+                'academic_deputy_signature' => \App\Models\SystemSetting::where('key', 'academic_deputy_signature')->value('value') ?: null,
+                'resource_deputy_signature' => \App\Models\SystemSetting::where('key', 'resource_deputy_signature')->value('value') ?: null,
+                'student_affairs_deputy_signature' => \App\Models\SystemSetting::where('key', 'student_affairs_deputy_signature')->value('value') ?: null,
+                'plan_deputy_signature' => \App\Models\SystemSetting::where('key', 'plan_deputy_signature')->value('value') ?: null,
             ],
             'flash' => [
                 'success' => $request->session()->get('success'),
