@@ -23,5 +23,6 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           chmod +x deploy.sh || true
-          bash ./deploy.sh || true
+          bash -x ./deploy.sh > public/deploy.log 2>&1 || true
+          echo "DEPLOY_FINISHED_STATUS_$?" >> public/deploy.log
           echo "✅ Deploy NPC SmartFlow สำเร็จ!"
