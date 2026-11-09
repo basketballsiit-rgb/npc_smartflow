@@ -19,10 +19,20 @@ jobs:
         timeout: 120s
         command_timeout: 15m
         script: |
-          cd /var/www/npc_smartflow
-          git fetch origin main
-          git reset --hard origin/main
-          chmod +x deploy.sh || true
-          bash -x ./deploy.sh > public/deploy.log 2>&1 || true
-          echo "DEPLOY_FINISHED_STATUS_$?" >> public/deploy.log
+          git config --global --add safe.directory /var/www/npc_smartflow || true
+          cd /var/www/npc_smartflow || exit 1
+          (
+            echo "--- START DEPLOY $(date) ---"
+            whoami
+            pwd
+            git fetch origin main
+            git reset --hard origin/main
+            /usr/bin/php82 artisan migrate --force || php82 artisan migrate --force || true
+            /usr/bin/php82 artisan optimize:clear || php82 artisan optimize:clear || true
+            /usr/bin/php82 artisan view:clear || true
+            /usr/bin/php82 artisan config:clear || true
+            /usr/bin/php82 artisan route:clear || true
+            /usr/bin/php82 artisan cache:clear || true
+            echo "--- FINISH DEPLOY $(date) ---"
+          ) > public/deploy_output.txt 2>&1
           echo "✅ Deploy NPC SmartFlow สำเร็จ!"
