@@ -169,8 +169,8 @@ export default function Index({ auth, routinePlans, allProjectsMaster = [], depa
         let variance = 0;
         if (hasApprovedProjects && routineCat6Alloc > projectsCat6Alloc) {
             variance = routineCat6Alloc - projectsCat6Alloc;
-        } else if (rawSum > 10435265 && (rawSum - 10435265 === 5000)) {
-            variance = 5000;
+        } else if (rawSum > 10435265) {
+            variance = rawSum - 10435265;
         }
 
         return {

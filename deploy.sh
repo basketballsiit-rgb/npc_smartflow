@@ -14,14 +14,22 @@ echo "=== Composer & Artisan Migrate ==="
 
 echo "=== Frontend Build ==="
 if [ -d "/root/.nvm/versions/node/v20.20.2/bin" ]; then
-    /root/.nvm/versions/node/v20.20.2/bin/npm install
-    /root/.nvm/versions/node/v20.20.2/bin/npm run build
+    /root/.nvm/versions/node/v20.20.2/bin/npm run build || {
+        echo "⚠️ Node build in NVM path failed, restoring pre-built assets from git..."
+        git checkout HEAD -- public/build || true
+    }
 else
-    npm install
-    npm run build
+    npm run build || {
+        echo "⚠️ npm run build failed, restoring pre-built assets from git..."
+        git checkout HEAD -- public/build || true
+    }
 fi
 
 echo "=== Clear Cache ==="
 /usr/bin/php82 artisan optimize:clear || php82 artisan optimize:clear || true
+/usr/bin/php82 artisan view:clear || true
+/usr/bin/php82 artisan config:clear || true
+/usr/bin/php82 artisan route:clear || true
+/usr/bin/php82 artisan cache:clear || true
 
 echo "=== Deployment Completed Successfully ==="

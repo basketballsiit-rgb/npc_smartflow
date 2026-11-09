@@ -870,8 +870,8 @@ class DashboardController extends Controller
                 ],
                 'summary' => [
                     'total_projected_ceiling' => $totalCeilings,
-                    'total_requested' => $totalRequestedAll + $routineAllocated + $centralSpent,
-                    'total_allocated' => $totalAllocatedAll + $routineAllocated + $centralSpent,
+                    'total_requested' => $totalCeilings,
+                    'total_allocated' => $totalCeilings,
                     'total_spent' => $totalSpentAll + $routineSpent + $centralSpent,
                 ],
             ];

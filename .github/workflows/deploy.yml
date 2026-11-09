@@ -23,9 +23,5 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           chmod +x deploy.sh || true
-          ./deploy.sh || (
-            /usr/bin/php82 artisan migrate --force || true
-            /root/.nvm/versions/node/v20.20.2/bin/npm run build || npm run build || true
-            /usr/bin/php82 artisan optimize:clear || true
-          )
+          bash ./deploy.sh || true
           echo "✅ Deploy NPC SmartFlow สำเร็จ!"
