@@ -17,6 +17,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
     const [selectedPlanForProcurement, setSelectedPlanForProcurement] = useState(null);
     const [viewingHistoryPlan, setViewingHistoryPlan] = useState(null);
     const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const formCardRef = useRef(null);
     const [tableSearch, setTableSearch] = useState('');
@@ -177,10 +178,14 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
             funding_source_id: plan.funding_source_id || '',
             report_category: plan.report_category || '',
         });
-        setActiveTab('create_plan');
-        setTimeout(() => {
-            formCardRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 50);
+        setIsEditModalOpen(true);
+    };
+
+    const closeEditModal = () => {
+        setIsEditModalOpen(false);
+        setEditingPlan(null);
+        setRateCount('');
+        resetPlan();
     };
 
     const startNewPlan = () => {
@@ -398,6 +403,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         e.preventDefault();
         if (editingPlan) {
             putPlan(route('admin.routine_budgets.update', editingPlan.id), {
+                preserveScroll: true,
                 onSuccess: () => {
                     Swal.fire({
                         icon: 'success',
@@ -406,6 +412,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                         timer: 2000,
                         showConfirmButton: false,
                     });
+                    setIsEditModalOpen(false);
                     setEditingPlan(null);
                     setRateCount('');
                     resetPlan();
@@ -1522,26 +1529,16 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                                             {isPlanHead && (
                                                                 <>
                                                                     <button
-                                                                        onClick={() => {
-                                                                            setEditingPlan(plan);
-                                                                            setRateCount(extractRateFromTitle(plan.title));
-                                                                            setPlanData({
-                                                                                fiscal_year: plan.fiscal_year,
-                                                                                department_id: plan.department_id,
-                                                                                title: plan.title,
-                                                                                allocated_amount: plan.allocated_amount,
-                                                                                funding_source_id: plan.funding_source_id || '',
-                                                                                report_category: plan.report_category || '',
-                                                                            });
-                                                                            setActiveTab('create_plan');
-                                                                        }}
+                                                                        type="button"
+                                                                        onClick={() => startEditPlan(plan)}
                                                                         className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all text-xs"
                                                                         title="แก้ไขแผนงบนี้"
                                                                     >
                                                                         ✏️
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => handlePlanDelete(plan.id)}
+                                                                        type="button"
+                                                                        onClick={() => handlePlanDelete(plan.id, plan.title)}
                                                                         className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all text-xs"
                                                                         title="ลบแผนงบนี้"
                                                                     >
@@ -1930,9 +1927,211 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                     </div>
                 )}
 
+                {/* Modal: แก้ไขแผนงบดำเนินงานประจำปี (Popup Modal สำหรับแก้ไขโดยไม่ต้องเปลี่ยนหน้า) */}
+                {isEditModalOpen && editingPlan && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                        <div className="w-full max-w-3xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8 max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+                            {/* Modal Header */}
+                            <div className="flex justify-between items-start border-b border-gray-100 pb-4 mb-6">
+                                <div>
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold border border-amber-200 mb-1.5">
+                                        <span>✏️</span> แก้ไขข้อมูลการจัดสรรงบดำเนินงาน
+                                    </div>
+                                    <h3 className="text-lg sm:text-xl font-extrabold text-gray-900">
+                                        แก้ไขแผนงบดำเนินงานประจำปี
+                                    </h3>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        กำหนดวงเงินงบดำเนินงาน จัดสรรให้แผนก และเลือกหมวดงบที่ตรงกับรายงานงบรายจ่ายแผนปฏิบัติราชการ
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={closeEditModal}
+                                    className="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition cursor-pointer text-lg leading-none"
+                                    title="ปิดหน้าต่าง"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Modal Form */}
+                            <form onSubmit={handlePlanSubmit} className="space-y-5">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                                            ปีงบประมาณ <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={planData.fiscal_year}
+                                            onChange={e => setPlanData('fiscal_year', e.target.value)}
+                                            className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-3 bg-gray-50"
+                                            placeholder="ตัวอย่าง 2570"
+                                        />
+                                        {planErrors.fiscal_year && <span className="text-red-500 text-[10px]">{planErrors.fiscal_year}</span>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                                            แผนกงาน / สาขาวิชาที่จัดสรร <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            value={planData.department_id}
+                                            onChange={e => setPlanData('department_id', e.target.value)}
+                                            className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-3"
+                                        >
+                                            {departments.map(dept => (
+                                                <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                            ))}
+                                        </select>
+                                        {planErrors.department_id && <span className="text-red-500 text-[10px]">{planErrors.department_id}</span>}
+                                    </div>
+                                </div>
+
+                                {/* แหล่งเงิน / หมวดรายงาน */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-700 mb-1">
+                                            แหล่งเงิน / แหล่งงบประมาณ (คอลัมน์ในรายงาน) <span className="text-red-500">*</span>
+                                        </label>
+                                        <select
+                                            value={planData.funding_source_id}
+                                            onChange={e => setPlanData('funding_source_id', e.target.value)}
+                                            className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-3 font-semibold text-purple-900"
+                                        >
+                                            <option value="">-- เลือกแหล่งเงิน --</option>
+                                            {fundingSources.map(source => (
+                                                <option key={source.id} value={source.id}>
+                                                    {source.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {planErrors.funding_source_id && <span className="text-red-500 text-[10px]">{planErrors.funding_source_id}</span>}
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1 gap-2 flex-wrap">
+                                            <label className="block text-xs font-bold text-gray-700">
+                                                หมวดรายงานงบรายจ่าย (แถวในรายงาน)
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsTableModalOpen(true)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-800 font-extrabold text-xs transition shadow-2xs hover:scale-105 active:scale-95 cursor-pointer border border-purple-200"
+                                                title="คลิกเพื่อเปิดตารางงบรายจ่ายและเลือกเชื่อมหมวดได้โดยตรง"
+                                            >
+                                                <span>📊</span> เชื่อมตารางรายงาน (เปิดดูตาราง/คลิกเลือก)
+                                            </button>
+                                        </div>
+                                        <select
+                                            value={planData.report_category}
+                                            onChange={e => handleSelectCategory(e.target.value)}
+                                            className="w-full text-xs rounded-xl border-purple-200 bg-purple-50/40 focus:ring-purple-500 focus:border-purple-500 p-3"
+                                        >
+                                            <option value="">-- เลือกหมวดในตารางรายงาน หรือระบุเอง --</option>
+                                            {REPORT_CATEGORIES.map(group => (
+                                                <optgroup key={group.group} label={group.group}>
+                                                    {group.items.map(item => (
+                                                        <option key={item.code} value={item.code}>
+                                                            {item.name}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            ))}
+                                        </select>
+                                        <span className="text-[10px] text-gray-400 mt-1 block">เลือกล็อคหมวดเพื่อให้นำตัวเลขไปแสดงในรายงานงบรายจ่ายแผนปฏิบัติราชการโดยอัตโนมัติ</span>
+                                    </div>
+                                </div>
+
+                                {/* อัตรากำลัง / บุคลากร */}
+                                {isRateCategory(planData.report_category) && (
+                                    <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/70 animate-in fade-in duration-200">
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                            <div>
+                                                <label className="block text-xs font-bold text-amber-900">
+                                                    👥 จำนวน ({getUnitName(planData.report_category)}) ของหมวดนี้:
+                                                </label>
+                                                <p className="text-[11px] text-amber-700 mt-0.5">
+                                                    ระบุจำนวนอัตราที่ต้องการ ระบบจะปรับชื่อหมวดและข้อความในรายงานให้อัตโนมัติ
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={rateCount}
+                                                    onChange={e => {
+                                                        const val = e.target.value;
+                                                        setRateCount(val);
+                                                        const base = getBaseTemplateName(planData.report_category);
+                                                        const unit = getUnitName(planData.report_category);
+                                                        const newTitle = val ? `${planData.report_category} ${base} ${val} ${unit}` : `${planData.report_category} ${base}`;
+                                                        setPlanData('title', newTitle);
+                                                    }}
+                                                    className="w-28 text-sm font-bold text-center rounded-xl border-amber-300 focus:ring-amber-500 focus:border-amber-500 p-2 bg-white text-gray-900"
+                                                    placeholder="เช่น 11"
+                                                />
+                                                <span className="text-xs font-bold text-amber-900">{getUnitName(planData.report_category)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                                        ชื่อหมวดงบประมาณประจำปี / รายการจัดสรร <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={planData.title}
+                                        onChange={e => setPlanData('title', e.target.value)}
+                                        className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-3"
+                                        placeholder="เช่น ค่าจัดซื้อวัสดุสำนักงาน, ค่าซ่อมครุภัณฑ์, วัสดุการศึกษาแผนกช่างยนต์"
+                                    />
+                                    {planErrors.title && <span className="text-red-500 text-[10px]">{planErrors.title}</span>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-700 mb-1">
+                                        จำนวนงบประมาณจัดสรร (บาท) <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            step="any"
+                                            value={planData.allocated_amount}
+                                            onChange={e => setPlanData('allocated_amount', e.target.value)}
+                                            className="w-full text-sm font-bold rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-3 pr-12 text-gray-800"
+                                            placeholder="0.00"
+                                        />
+                                        <span className="absolute right-4 top-3.5 text-xs text-gray-400 font-bold">บาท</span>
+                                    </div>
+                                    {planErrors.allocated_amount && <span className="text-red-500 text-[10px]">{planErrors.allocated_amount}</span>}
+                                </div>
+
+                                <div className="flex gap-3 pt-4 border-t border-gray-100">
+                                    <button
+                                        type="submit"
+                                        className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-sm py-3.5 px-6 rounded-xl transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                                    >
+                                        <span>💾 บันทึกการแก้ไข</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={closeEditModal}
+                                        className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-3.5 px-6 rounded-xl transition-all cursor-pointer"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
                 {/* Modal: ตารางงบรายจ่ายตามแผนปฏิบัติราชการ (เลือกหมวดเชื่อมโยง) */}
                 {isTableModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
                         <div className="w-full max-w-4xl rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-purple-100 my-8 max-h-[90vh] flex flex-col">
                             <div className="flex justify-between items-start border-b border-gray-100 pb-4 mb-4">
                                 <div>
