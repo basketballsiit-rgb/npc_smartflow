@@ -80,8 +80,42 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         '8'
     ];
 
-    const getCategoryWeight = (cat) => {
-        if (!cat) return 999999;
+    // Main category titles matching the Action Plan Report structure
+    const MAIN_CATEGORY_TITLES = {
+        '1': '1. งบบุคลากร',
+        '2': '2. งบดำเนินงาน',
+        '3': '3. ค่าวัสดุ',
+        '4': '4. วัสดุการศึกษา',
+        '5': '5. ค่าสาธารณูปโภค',
+        '6': '6. โครงการ',
+        '7': '7. อื่นๆ',
+        '8': '8. สำรองจ่าย',
+        'other': 'หมวดอื่นๆ / ไม่ระบุหมวด'
+    };
+
+    const getMainCategoryKey = (cat, title = '') => {
+        const t = (title || '').toLowerCase();
+        if (t.includes('สำรอง') || t.includes('สำรองจ่าย')) return '8';
+        if (!cat) return 'other';
+        const clean = String(cat).trim();
+        if (clean.startsWith('1')) return '1';
+        if (clean.startsWith('2')) return '2';
+        if (clean.startsWith('3')) return '3';
+        if (clean.startsWith('4')) return '4';
+        if (clean.startsWith('5')) return '5';
+        if (clean.startsWith('6')) return '6';
+        if (clean.startsWith('7')) return '7';
+        if (clean.startsWith('8')) return '8';
+        return 'other';
+    };
+
+    const getCategoryWeight = (cat, title = '') => {
+        const mainKey = getMainCategoryKey(cat, title);
+        let baseWeight = 999999;
+        if (mainKey !== 'other') {
+            baseWeight = (parseInt(mainKey, 10) || 9) * 100000;
+        }
+        if (!cat) return baseWeight + 99999;
         const clean = String(cat).trim();
         const idx = CATEGORY_ORDER.indexOf(clean);
         if (idx !== -1) return idx * 100;
@@ -93,8 +127,8 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         const list = [...filteredRoutinePlans];
         if (tableSortMode === 'category') {
             list.sort((a, b) => {
-                const wA = getCategoryWeight(a.report_category);
-                const wB = getCategoryWeight(b.report_category);
+                const wA = getCategoryWeight(a.report_category, a.title);
+                const wB = getCategoryWeight(b.report_category, b.title);
                 if (wA !== wB) return wA - wB;
                 const catDiff = (a.report_category || '').localeCompare(b.report_category || '', undefined, { numeric: true });
                 if (catDiff !== 0) return catDiff;
@@ -105,6 +139,23 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         }
         return list;
     }, [filteredRoutinePlans, tableSortMode]);
+
+    const categoryGroupTotals = useMemo(() => {
+        const map = {};
+        (sortedFilteredPlans || []).forEach(p => {
+            const grpKey = getMainCategoryKey(p.report_category, p.title);
+            if (!map[grpKey]) {
+                map[grpKey] = { count: 0, allocated: 0, spent: 0, remaining: 0 };
+            }
+            const alloc = parseFloat(p.allocated_amount || 0);
+            const spent = parseFloat(p.spent_amount || 0);
+            map[grpKey].count += 1;
+            map[grpKey].allocated += alloc;
+            map[grpKey].spent += spent;
+            map[grpKey].remaining += (alloc - spent);
+        });
+        return map;
+    }, [sortedFilteredPlans]);
 
     const tableTotalAllocated = filteredRoutinePlans.reduce((sum, p) => sum + parseFloat(p.allocated_amount || 0), 0);
     const tableTotalSpent = filteredRoutinePlans.reduce((sum, p) => sum + parseFloat(p.spent_amount || 0), 0);
@@ -1093,15 +1144,49 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                             const remaining = allocated - spent;
                                             const isCurrentEditing = editingPlan && editingPlan.id === plan.id;
 
+                                            const currentGroupKey = getMainCategoryKey(plan.report_category, plan.title);
+                                            const prevGroupKey = pIdx > 0 ? getMainCategoryKey(sortedFilteredPlans[pIdx - 1].report_category, sortedFilteredPlans[pIdx - 1].title) : null;
+                                            const isNewGroup = tableSortMode === 'category' && currentGroupKey !== prevGroupKey;
+                                            const grpTotals = categoryGroupTotals[currentGroupKey] || { count: 0, allocated: 0, spent: 0, remaining: 0 };
+
                                             return (
-                                                <tr
-                                                    key={plan.id}
-                                                    className={`transition ${
-                                                        isCurrentEditing
-                                                            ? 'bg-purple-100/70 ring-2 ring-purple-400'
-                                                            : 'hover:bg-purple-50/30'
-                                                    }`}
-                                                >
+                                                <React.Fragment key={plan.id}>
+                                                    {isNewGroup && (
+                                                        <tr className="bg-gradient-to-r from-slate-200 via-purple-100/70 to-slate-200 border-t-2 border-b-2 border-slate-400 font-black shadow-xs">
+                                                            <td colSpan={6} className="py-2.5 px-4 text-slate-900">
+                                                                <div className="flex items-center gap-2.5 flex-wrap">
+                                                                    <span className="text-base sm:text-lg">📁</span>
+                                                                    <span className="font-black text-slate-950 text-xs sm:text-sm tracking-tight">
+                                                                        {MAIN_CATEGORY_TITLES[currentGroupKey] || 'หมวดอื่นๆ'}
+                                                                    </span>
+                                                                    <span className="text-[10px] sm:text-[11px] font-black text-purple-950 bg-white/90 border border-purple-300 px-2.5 py-0.5 rounded-full shadow-2xs">
+                                                                        รวม {grpTotals.count} รายการ
+                                                                    </span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-right font-black font-mono text-purple-950 text-xs sm:text-sm whitespace-nowrap bg-purple-50/50">
+                                                                ฿{grpTotals.allocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-right font-black font-mono text-rose-700 text-xs sm:text-sm whitespace-nowrap bg-rose-50/50">
+                                                                ฿{grpTotals.spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-right font-black font-mono text-emerald-800 text-xs sm:text-sm whitespace-nowrap bg-emerald-50/50">
+                                                                ฿{grpTotals.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="py-2.5 px-3 text-center">
+                                                                <span className="inline-block px-2 py-0.5 text-[10px] font-black tracking-wider uppercase text-purple-900 bg-white/90 rounded border border-purple-200">
+                                                                    ยอดรวมหมวด
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    )}
+                                                    <tr
+                                                        className={`transition ${
+                                                            isCurrentEditing
+                                                                ? 'bg-purple-100/70 ring-2 ring-purple-400'
+                                                                : 'hover:bg-purple-50/30'
+                                                        }`}
+                                                    >
                                                     <td className="py-3.5 px-3 text-center text-gray-400 font-mono text-[11px]">
                                                         {pIdx + 1}
                                                     </td>
@@ -1179,8 +1264,9 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            );
-                                        })}
+                                            </React.Fragment>
+                                        );
+                                    })}
                                     </tbody>
                                     <tfoot>
                                         <tr className="bg-slate-900 text-white font-bold text-xs border-t-2 border-slate-700">
@@ -1341,95 +1427,132 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                         const allocated = parseFloat(plan.allocated_amount);
                                         const spent = parseFloat(plan.spent_amount);
                                         const remaining = allocated - spent;
-                                        return (
-                                            <tr key={plan.id} className="hover:bg-purple-50/20 transition">
-                                                <td className="py-4 px-3 text-center text-gray-400 font-mono text-[11px]">
-                                                    {pIdx + 1}
-                                                </td>
-                                                <td className="py-4 px-4">
-                                                    <span className="font-bold text-gray-900 block text-xs">{plan.title}</span>
-                                                    {plan.report_category && (
-                                                        <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-0.5 rounded-md mt-1">
-                                                            <span>📑 หมวด:</span> {plan.report_category}
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td className="py-4 px-3 text-gray-500 text-[11px] whitespace-nowrap">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-gray-400">🕒</span>
-                                                        <span>{formatThaiDateTime(plan.created_at)}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="py-4 px-3 text-gray-600">
-                                                    🏫 {plan.department?.name || '-'}
-                                                </td>
-                                                <td className="py-4 px-3">
-                                                    <span className="text-[11px] font-medium text-purple-900 bg-purple-100/70 px-2 py-0.5 rounded-full">
-                                                        {plan.funding_source?.name || 'ไม่ระบุ'}
-                                                    </span>
-                                                </td>
-                                                <td className="py-4 px-3 text-right font-bold text-gray-900">
-                                                    {allocated.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="py-4 px-3 text-right text-red-500 font-semibold">
-                                                    {spent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="py-4 px-3 text-right text-emerald-600 font-bold">
-                                                    {remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                                                </td>
-                                                <td className="py-4 px-4 text-center">
-                                                    <div className="flex items-center justify-center gap-1 flex-wrap">
-                                                        <button
-                                                            onClick={() => openProcurementModal(plan)}
-                                                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all text-xs flex items-center gap-1"
-                                                            title="ขอจัดซื้อตรง"
-                                                        >
-                                                            🛒 เบิกจัดซื้อ
-                                                        </button>
-                                                        
-                                                        {plan.procurements?.length > 0 && (
-                                                            <button
-                                                                onClick={() => setViewingHistoryPlan(plan)}
-                                                                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1.5 rounded-lg transition-all text-xs"
-                                                                title="ดูประวัติการเบิก"
-                                                            >
-                                                                📋 ({plan.procurements.length})
-                                                            </button>
-                                                        )}
 
-                                                        {isPlanHead && (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setEditingPlan(plan);
-                                                                        setRateCount(extractRateFromTitle(plan.title));
-                                                                        setPlanData({
-                                                                            fiscal_year: plan.fiscal_year,
-                                                                            department_id: plan.department_id,
-                                                                            title: plan.title,
-                                                                            allocated_amount: plan.allocated_amount,
-                                                                            funding_source_id: plan.funding_source_id || '',
-                                                                            report_category: plan.report_category || '',
-                                                                        });
-                                                                        setActiveTab('create_plan');
-                                                                    }}
-                                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all text-xs"
-                                                                    title="แก้ไขแผนงบนี้"
-                                                                >
-                                                                    ✏️
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handlePlanDelete(plan.id)}
-                                                                    className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all text-xs"
-                                                                    title="ลบแผนงบนี้"
-                                                                >
-                                                                    🗑️
-                                                                </button>
-                                                            </>
+                                        const currentGroupKey = getMainCategoryKey(plan.report_category, plan.title);
+                                        const prevGroupKey = pIdx > 0 ? getMainCategoryKey(sortedFilteredPlans[pIdx - 1].report_category, sortedFilteredPlans[pIdx - 1].title) : null;
+                                        const isNewGroup = tableSortMode === 'category' && currentGroupKey !== prevGroupKey;
+                                        const grpTotals = categoryGroupTotals[currentGroupKey] || { count: 0, allocated: 0, spent: 0, remaining: 0 };
+
+                                        return (
+                                            <React.Fragment key={plan.id}>
+                                                {isNewGroup && (
+                                                    <tr className="bg-gradient-to-r from-slate-200 via-purple-100/70 to-slate-200 border-t-2 border-b-2 border-slate-400 font-black shadow-xs">
+                                                        <td colSpan={5} className="py-2.5 px-4 text-slate-900">
+                                                            <div className="flex items-center gap-2.5 flex-wrap">
+                                                                <span className="text-base sm:text-lg">📁</span>
+                                                                <span className="font-black text-slate-950 text-xs sm:text-sm tracking-tight">
+                                                                    {MAIN_CATEGORY_TITLES[currentGroupKey] || 'หมวดอื่นๆ'}
+                                                                </span>
+                                                                <span className="text-[10px] sm:text-[11px] font-black text-purple-950 bg-white/90 border border-purple-300 px-2.5 py-0.5 rounded-full shadow-2xs">
+                                                                    รวม {grpTotals.count} รายการ
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-right font-black font-mono text-purple-950 text-xs sm:text-sm whitespace-nowrap bg-purple-50/50">
+                                                            ฿{grpTotals.allocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-right font-black font-mono text-rose-700 text-xs sm:text-sm whitespace-nowrap bg-rose-50/50">
+                                                            ฿{grpTotals.spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-2.5 px-3 text-right font-black font-mono text-emerald-800 text-xs sm:text-sm whitespace-nowrap bg-emerald-50/50">
+                                                            ฿{grpTotals.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                        </td>
+                                                        <td className="py-2.5 px-4 text-center">
+                                                            <span className="inline-block px-2 py-0.5 text-[10px] font-black tracking-wider uppercase text-purple-900 bg-white/90 rounded border border-purple-200">
+                                                                ยอดรวมหมวด
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                                <tr className="hover:bg-purple-50/20 transition">
+                                                    <td className="py-4 px-3 text-center text-gray-400 font-mono text-[11px]">
+                                                        {pIdx + 1}
+                                                    </td>
+                                                    <td className="py-4 px-4">
+                                                        <span className="font-bold text-gray-900 block text-xs">{plan.title}</span>
+                                                        {plan.report_category && (
+                                                            <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-0.5 rounded-md mt-1">
+                                                                <span>📑 หมวด:</span> {plan.report_category}
+                                                            </span>
                                                         )}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td className="py-4 px-3 text-gray-500 text-[11px] whitespace-nowrap">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-gray-400">🕒</span>
+                                                            <span>{formatThaiDateTime(plan.created_at)}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-3 text-gray-600">
+                                                        🏫 {plan.department?.name || '-'}
+                                                    </td>
+                                                    <td className="py-4 px-3">
+                                                        <span className="text-[11px] font-medium text-purple-900 bg-purple-100/70 px-2 py-0.5 rounded-full">
+                                                            {plan.funding_source?.name || 'ไม่ระบุ'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4 px-3 text-right font-bold text-gray-900">
+                                                        {allocated.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-4 px-3 text-right text-red-500 font-semibold">
+                                                        {spent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-4 px-3 text-right text-emerald-600 font-bold">
+                                                        {remaining.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-4 px-4 text-center">
+                                                        <div className="flex items-center justify-center gap-1 flex-wrap">
+                                                            <button
+                                                                onClick={() => openProcurementModal(plan)}
+                                                                className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all text-xs flex items-center gap-1"
+                                                                title="ขอจัดซื้อตรง"
+                                                            >
+                                                                🛒 เบิกจัดซื้อ
+                                                            </button>
+                                                            
+                                                            {plan.procurements?.length > 0 && (
+                                                                <button
+                                                                    onClick={() => setViewingHistoryPlan(plan)}
+                                                                    className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2.5 py-1.5 rounded-lg transition-all text-xs"
+                                                                    title="ดูประวัติการเบิก"
+                                                                >
+                                                                    📋 ({plan.procurements.length})
+                                                                </button>
+                                                            )}
+
+                                                            {isPlanHead && (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setEditingPlan(plan);
+                                                                            setRateCount(extractRateFromTitle(plan.title));
+                                                                            setPlanData({
+                                                                                fiscal_year: plan.fiscal_year,
+                                                                                department_id: plan.department_id,
+                                                                                title: plan.title,
+                                                                                allocated_amount: plan.allocated_amount,
+                                                                                funding_source_id: plan.funding_source_id || '',
+                                                                                report_category: plan.report_category || '',
+                                                                            });
+                                                                            setActiveTab('create_plan');
+                                                                        }}
+                                                                        className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all text-xs"
+                                                                        title="แก้ไขแผนงบนี้"
+                                                                    >
+                                                                        ✏️
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handlePlanDelete(plan.id)}
+                                                                        className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all text-xs"
+                                                                        title="ลบแผนงบนี้"
+                                                                    >
+                                                                        🗑️
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </React.Fragment>
                                         );
                                     })}
                                     {sortedFilteredPlans.length === 0 && (
