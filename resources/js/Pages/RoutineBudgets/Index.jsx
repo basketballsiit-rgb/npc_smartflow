@@ -65,6 +65,47 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         });
     }, [routinePlans, tableSearch, tableDeptFilter, tableYearFilter]);
 
+    const [tableSortMode, setTableSortMode] = useState('category'); // 'category' | 'latest'
+
+    // Order of categories based on official Action Plan Report structure
+    const CATEGORY_ORDER = [
+        '1', '1.1', '1.2', '1.3', '1.4',
+        '2', '2.1', '2.1.1', '2.1.2', '2.1.3', '2.1.4', '2.1.5',
+        '2.2', '2.2.1', '2.2.2', '2.2.3', '2.2.4',
+        '3', '3.1', '3.2', '3.2.1', '3.2.2', '3.2.3', '3.2.4', '3.3', '3.4',
+        '4', '4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8', '4.9',
+        '5', '5.1', '5.2', '5.3', '5.4', '5.5', '5.6',
+        '6', '6.1', '6.2', '6.3', '6.4',
+        '7', '7.1', '7.2', '7.3',
+        '8'
+    ];
+
+    const getCategoryWeight = (cat) => {
+        if (!cat) return 999999;
+        const clean = String(cat).trim();
+        const idx = CATEGORY_ORDER.indexOf(clean);
+        if (idx !== -1) return idx * 100;
+        const parts = clean.split('.').map(n => parseInt(n, 10) || 0);
+        return (parts[0] || 99) * 10000 + (parts[1] || 0) * 100 + (parts[2] || 0);
+    };
+
+    const sortedFilteredPlans = useMemo(() => {
+        const list = [...filteredRoutinePlans];
+        if (tableSortMode === 'category') {
+            list.sort((a, b) => {
+                const wA = getCategoryWeight(a.report_category);
+                const wB = getCategoryWeight(b.report_category);
+                if (wA !== wB) return wA - wB;
+                const catDiff = (a.report_category || '').localeCompare(b.report_category || '', undefined, { numeric: true });
+                if (catDiff !== 0) return catDiff;
+                return (a.title || '').localeCompare(b.title || '', 'th');
+            });
+        } else {
+            list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        }
+        return list;
+    }, [filteredRoutinePlans, tableSortMode]);
+
     const tableTotalAllocated = filteredRoutinePlans.reduce((sum, p) => sum + parseFloat(p.allocated_amount || 0), 0);
     const tableTotalSpent = filteredRoutinePlans.reduce((sum, p) => sum + parseFloat(p.spent_amount || 0), 0);
     const tableTotalRemaining = tableTotalAllocated - tableTotalSpent;
@@ -186,7 +227,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
         {
             group: 'หมวด 8: สำรองจ่าย',
             items: [
-                { code: '8', name: '7. สำรองจ่าย' },
+                { code: '8', name: '8. สำรองจ่าย' },
             ]
         }
     ];
@@ -953,6 +994,34 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
+                                {/* Sort Order Toggle */}
+                                <div className="inline-flex items-center rounded-xl border border-purple-200 bg-purple-50/50 p-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableSortMode('category')}
+                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                                            tableSortMode === 'category'
+                                                ? 'bg-purple-600 text-white shadow-xs'
+                                                : 'text-purple-700 hover:bg-purple-100'
+                                        }`}
+                                        title="เรียงตามโครงสร้างแผนปฏิบัติราชการ หมวด 1 - 8"
+                                    >
+                                        <span>📑</span> เรียงตามหมวดแผนฯ (1-8)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableSortMode('latest')}
+                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                                            tableSortMode === 'latest'
+                                                ? 'bg-purple-600 text-white shadow-xs'
+                                                : 'text-purple-700 hover:bg-purple-100'
+                                        }`}
+                                        title="เรียงตามวันที่บันทึกล่าสุด"
+                                    >
+                                        <span>🕒</span> ล่าสุด
+                                    </button>
+                                </div>
+
                                 {/* Year Filter */}
                                 <select
                                     value={tableYearFilter}
@@ -1018,7 +1087,7 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 text-xs">
-                                        {filteredRoutinePlans.map((plan, pIdx) => {
+                                        {sortedFilteredPlans.map((plan, pIdx) => {
                                             const allocated = parseFloat(plan.allocated_amount || 0);
                                             const spent = parseFloat(plan.spent_amount || 0);
                                             const remaining = allocated - spent;
@@ -1161,10 +1230,102 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                             )}
                         </div>
                         
+                        {/* Search and Filters Toolbar + Sort Order Selector */}
+                        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3.5 bg-gray-50/90 rounded-2xl border border-gray-100">
+                            <div className="flex-1 relative">
+                                <span className="absolute left-3.5 top-2.5 text-gray-400 text-xs">🔍</span>
+                                <input
+                                    type="text"
+                                    value={tableSearch}
+                                    onChange={e => setTableSearch(e.target.value)}
+                                    placeholder="ค้นหาชื่อหมวดงบ, แผนก, แหล่งเงิน, รหัสรายงาน..."
+                                    className="w-full text-xs pl-9 pr-8 py-2 rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 bg-white"
+                                />
+                                {tableSearch && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableSearch('')}
+                                        className="absolute right-3 top-2 text-xs text-gray-400 hover:text-gray-600"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                                {/* Sort Order Toggle */}
+                                <div className="inline-flex items-center rounded-xl border border-purple-200 bg-purple-50/50 p-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableSortMode('category')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                                            tableSortMode === 'category'
+                                                ? 'bg-purple-600 text-white shadow-xs'
+                                                : 'text-purple-700 hover:bg-purple-100'
+                                        }`}
+                                        title="เรียงตามโครงสร้างแผนปฏิบัติราชการ หมวด 1 - 8"
+                                    >
+                                        <span>📑</span> เรียงตามหมวดแผนฯ (1-8)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTableSortMode('latest')}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                                            tableSortMode === 'latest'
+                                                ? 'bg-purple-600 text-white shadow-xs'
+                                                : 'text-purple-700 hover:bg-purple-100'
+                                        }`}
+                                        title="เรียงตามวันที่บันทึกล่าสุด"
+                                    >
+                                        <span>🕒</span> ล่าสุด
+                                    </button>
+                                </div>
+
+                                {/* Year Filter */}
+                                <select
+                                    value={tableYearFilter}
+                                    onChange={e => setTableYearFilter(e.target.value)}
+                                    className="text-xs rounded-xl border-gray-200 bg-white py-2 px-3 focus:ring-purple-500 focus:border-purple-500 font-medium"
+                                >
+                                    <option value="all">ทุกปีงบประมาณ</option>
+                                    {availableFiscalYears.map(year => (
+                                        <option key={year} value={year}>ปีงบฯ {year}</option>
+                                    ))}
+                                </select>
+
+                                {/* Department Filter */}
+                                <select
+                                    value={tableDeptFilter}
+                                    onChange={e => setTableDeptFilter(e.target.value)}
+                                    className="text-xs rounded-xl border-gray-200 bg-white py-2 px-3 focus:ring-purple-500 focus:border-purple-500 font-medium max-w-[180px] truncate"
+                                >
+                                    <option value="all">ทุกแผนก / สาขาวิชา</option>
+                                    {departments.map(dept => (
+                                        <option key={dept.id} value={dept.id}>{dept.name}</option>
+                                    ))}
+                                </select>
+
+                                {(tableSearch || tableDeptFilter !== 'all' || tableYearFilter !== 'all') && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setTableSearch('');
+                                            setTableDeptFilter('all');
+                                            setTableYearFilter('all');
+                                        }}
+                                        className="text-xs text-rose-600 hover:text-rose-800 bg-rose-50 hover:bg-rose-100 font-bold px-3 py-2 rounded-xl transition"
+                                    >
+                                        ล้างตัวกรอง
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        
                         <div className="overflow-x-auto border border-gray-100 rounded-2xl">
                             <table className="w-full text-left border-collapse min-w-[800px]">
                                 <thead>
                                     <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 text-[11px] font-bold">
+                                        <th className="py-3.5 px-3 w-10 text-center">#</th>
                                         <th className="py-3.5 px-4">หมวดงบ / รายการ</th>
                                         <th className="py-3.5 px-3">วัน-เวลาที่บันทึก</th>
                                         <th className="py-3.5 px-3">แผนกงาน / สาขาวิชา</th>
@@ -1176,17 +1337,20 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 text-xs">
-                                    {routinePlans.map((plan) => {
+                                    {sortedFilteredPlans.map((plan, pIdx) => {
                                         const allocated = parseFloat(plan.allocated_amount);
                                         const spent = parseFloat(plan.spent_amount);
                                         const remaining = allocated - spent;
                                         return (
                                             <tr key={plan.id} className="hover:bg-purple-50/20 transition">
+                                                <td className="py-4 px-3 text-center text-gray-400 font-mono text-[11px]">
+                                                    {pIdx + 1}
+                                                </td>
                                                 <td className="py-4 px-4">
                                                     <span className="font-bold text-gray-900 block text-xs">{plan.title}</span>
                                                     {plan.report_category && (
-                                                        <span className="inline-flex items-center gap-1 text-[10px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded mt-1">
-                                                            <span>หมวดรายงาน:</span> {plan.report_category}
+                                                        <span className="inline-flex items-center gap-1 text-[10px] bg-purple-100 text-purple-900 border border-purple-200 font-bold px-2 py-0.5 rounded-md mt-1">
+                                                            <span>📑 หมวด:</span> {plan.report_category}
                                                         </span>
                                                     )}
                                                 </td>
@@ -1268,27 +1432,28 @@ export default function Index({ auth, routinePlans, departments, fundingSources 
                                             </tr>
                                         );
                                     })}
-                                    {routinePlans.length === 0 && (
+                                    {sortedFilteredPlans.length === 0 && (
                                         <tr>
-                                            <td colSpan="8" className="text-center py-10 text-gray-400">
-                                                ยังไม่มีงบดำเนินงานใดถูกตั้งไว้ในแผนงานประจำปี
+                                            <td colSpan="9" className="text-center py-12 text-gray-400 bg-gray-50/50">
+                                                <span className="text-2xl block mb-1">📭</span>
+                                                <span className="font-bold text-gray-600">ไม่พบรายการงบดำเนินงานตามเงื่อนไขที่เลือก</span>
                                             </td>
                                         </tr>
                                     )}
                                 </tbody>
                                 <tfoot>
                                     <tr className="bg-slate-900 text-white font-bold text-xs border-t-2 border-slate-700">
-                                        <td colSpan="4" className="py-3.5 px-4 text-right">
-                                            รวมทั้งสิ้น ({routinePlans.length} รายการ):
+                                        <td colSpan="5" className="py-3.5 px-4 text-right">
+                                            รวมทั้งสิ้น ({filteredRoutinePlans.length} รายการ):
                                         </td>
                                         <td className="py-3.5 px-3 text-right font-black text-amber-300 font-mono">
-                                            ฿{totalAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            ฿{tableTotalAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                         <td className="py-3.5 px-3 text-right font-black text-rose-300 font-mono">
-                                            ฿{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            ฿{tableTotalSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                         <td className="py-3.5 px-3 text-right font-black text-emerald-300 font-mono">
-                                            ฿{totalRemaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            ฿{tableTotalRemaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                         <td></td>
                                     </tr>

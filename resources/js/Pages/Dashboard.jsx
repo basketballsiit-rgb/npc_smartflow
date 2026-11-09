@@ -12450,14 +12450,45 @@ ${itemsListText}
             });
         });
 
+        const isProjectApprovedForReport = (p) => {
+            if (!p) return false;
+            // โครงการต้องผ่านการอนุมัติแล้วเท่านั้น (สถานะ approved, budget_approved หรือ completed)
+            // โครงการที่ยังไม่อนุมัติ เช่น preliminary (เสนอคำขอเบื้องต้น), pending_approval (รออนุมัติ), submitted, เสนอตั้งงบ ฯลฯ ต้องไม่แสดง
+            const approvedStatuses = ['approved', 'budget_approved', 'completed'];
+            if (!approvedStatuses.includes(p.status)) return false;
+
+            // ต้องมีงบประมาณที่ได้รับอนุมัติจริงมากกว่า 0 (ไม่ใช่ยอดเสนอขอ)
+            const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
+            return alloc > 0;
+        };
+
+        const fourDivisionsList = getFourMainDivisions();
+        const [divAdmin, divAcad, divStud, divPlan] = fourDivisionsList;
+
+        // ตรวจสอบหมวด 6 (6.1, 6.2, 6.3, 6.4) ที่มีโครงการจริงที่ได้รับการอนุมัติแล้วในระบบ
+        const categoriesWithProjects = new Set();
+        (allProjectsMaster || []).forEach(p => {
+            if (!isProjectApprovedForReport(p)) return;
+            const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+            const expectedCat = (mainDiv?.id === divPlan?.id || mainDiv?.code === 'STRATEGY_PLAN' || mainDiv?.code === 'PLAN') ? '6.4'
+                : (mainDiv?.id === divStud?.id || mainDiv?.code === 'STUD') ? '6.2'
+                : (mainDiv?.id === divAdmin?.id || mainDiv?.code === 'RESOURCE' || mainDiv?.code === 'ADMIN') ? '6.3'
+                : '6.1';
+            let cat = p.report_category;
+            if (!cat || !['6.1', '6.2', '6.3', '6.4'].includes(cat) || (cat !== expectedCat && ['6.1', '6.2', '6.3', '6.4'].includes(expectedCat))) {
+                cat = expectedCat;
+            }
+            categoriesWithProjects.add(cat);
+        });
+
         // 1. Populate Routine Budget Plans
         (routinePlans || []).forEach(plan => {
             let cat = plan.report_category;
             if (cat === '3.4') cat = '3.3';
             if (cat === '7.1' && (plan.title?.includes('สำรอง') || plan.title?.includes('สำรองจ่าย'))) cat = '8';
             if (!cat || !rowData[cat]) return;
-            // หมวด 6 เป็นของโครงการจริง (Projects) ที่ได้รับการอนุมัติแล้วเท่านั้น ไม่นำงบประมาณประจำเข้ามาปะปน
-            if (cat.startsWith('6')) return;
+            // หมวด 6 หากมีโครงการจริงที่ได้รับการอนุมัติแล้วในระบบ ไม่นำงบประมาณแผนตั้งต้นมาบวกซ้ำ
+            if (cat.startsWith('6') && categoriesWithProjects.has(cat)) return;
 
             const alloc = parseFloat(plan.allocated_amount || 0);
             if (alloc <= 0) return;
@@ -12482,22 +12513,7 @@ ${itemsListText}
             });
         });
 
-        const isProjectApprovedForReport = (p) => {
-            if (!p) return false;
-            // โครงการต้องผ่านการอนุมัติแล้วเท่านั้น (สถานะ approved, budget_approved หรือ completed)
-            // โครงการที่ยังไม่อนุมัติ เช่น preliminary (เสนอคำขอเบื้องต้น), pending_approval (รออนุมัติ), submitted, เสนอตั้งงบ ฯลฯ ต้องไม่แสดง
-            const approvedStatuses = ['approved', 'budget_approved', 'completed'];
-            if (!approvedStatuses.includes(p.status)) return false;
-
-            // ต้องมีงบประมาณที่ได้รับอนุมัติจริงมากกว่า 0 (ไม่ใช่ยอดเสนอขอ)
-            const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
-            return alloc > 0;
-        };
-
         // 2. Populate Projects (Row 6.1 - 6.4)
-        const fourDivisionsList = getFourMainDivisions();
-        const [divAdmin, divAcad, divStud, divPlan] = fourDivisionsList;
-
         (allProjectsMaster || []).forEach(p => {
             if (!isProjectApprovedForReport(p)) return;
 
@@ -12595,6 +12611,10 @@ ${itemsListText}
         const estimateIncomeByCol = {};
         budgetColumns.forEach(c => { estimateIncomeByCol[c.id] = 0; });
         (routinePlans || []).forEach(plan => {
+            const cat = plan.report_category;
+            // หากหมวด 6 นี้ มีโครงการจริงที่ได้รับการอนุมัติแล้วในระบบ ไม่นำงบประมาณแผนตั้งต้นมาบวกซ้ำในแถวประมาณการรายรับ
+            if (cat && String(cat).startsWith('6') && categoriesWithProjects.has(cat)) return;
+
             const colId = getColumnIdBySource(plan.funding_source?.name || plan.fundingSource?.name, plan.funding_source_id || plan.funding_source?.id);
             if (colId && estimateIncomeByCol[colId] !== undefined) {
                 estimateIncomeByCol[colId] += parseFloat(plan.allocated_amount || 0);
