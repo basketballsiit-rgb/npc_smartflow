@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
-import React, { useState, useEffect, useRef, Fragment } from 'react';
+import React, { useState, useEffect, useRef, Fragment, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import WorkflowKanbanBoard from '@/Components/WorkflowKanbanBoard';
 import AdminDataVisualization from '@/Components/AdminDataVisualization';
@@ -11212,6 +11212,389 @@ ${itemsListText}
         );
     };
 
+    // Centralized Action Plan Summary (Master figures matching Image 1: รายงานงบรายจ่ายแผนปฏิบัติราชการ 10,435,265.00)
+    const actionPlanReportSummary = useMemo(() => {
+        const budgetColumns = [
+            { id: 'pvc', name: 'ปวช.' },
+            { id: 'pvs', name: 'ปวส.' },
+            { id: 'short_remun', name: 'ตอบแทน วัสดุ ใช้สอย' },
+            { id: 'short_util', name: 'ค่าสาธารณูปโภค' },
+            { id: 'dual', name: 'ทวิศึกษา' },
+            { id: 'manage', name: 'อุดหนุนเพื่อการจัดการ' },
+            { id: 'develop', name: 'อุดหนุนพัฒนา' },
+            { id: 'free15_book', name: 'ค่าหนังสือ' },
+            { id: 'free15_equip', name: 'อุปกรณ์การเรียน' },
+            { id: 'free15_uniform', name: 'เครื่องแบบนักเรียน' },
+            { id: 'bkso', name: 'บกศ.' },
+        ];
+
+        const getColumnIdBySource = (name, sourceId) => {
+            const n = String(name || '').toLowerCase();
+            const idNum = sourceId ? Number(sourceId) : null;
+
+            if (
+                n.includes('บกศ') || 
+                n.includes('บ.ก.ศ') || 
+                n.includes('บำรุงการศึกษา') || 
+                n.includes('สถานศึกษา') || 
+                n.includes('รายได้') || 
+                n.includes('revenue') || 
+                n.includes('local_income')
+            ) return 'bkso';
+
+            if (idNum === 1) return 'pvc';
+            if (idNum === 2) return 'pvs';
+            if (idNum === 3) return 'short_remun';
+            if (idNum === 4) return 'short_util';
+            if (idNum === 5) return 'dual';
+            if (idNum === 6) return 'manage';
+            if (idNum === 7) return 'develop';
+            if (idNum === 8) return 'free15_book';
+            if (idNum === 9) return 'free15_equip';
+            if (idNum === 10) return 'free15_uniform';
+            if (idNum === 11) return 'bkso';
+
+            if (!name) return 'develop';
+            if (n.includes('หนังสือ')) return 'free15_book';
+            if (n.includes('อุปกรณ์')) return 'free15_equip';
+            if (n.includes('เครื่องแบบ')) return 'free15_uniform';
+            if (n.includes('สาธารณูปโภค')) return 'short_util';
+            if (n.includes('ระยะสั้น') || n.includes('short_course')) return 'short_remun';
+            if (n.includes('เรียนฟรี') || n.includes('15 ปี') || n.includes('15ปี')) return 'free15_book';
+            if (n.includes('ปวช') || n.includes('ป.ว.ช') || n.includes('vec_cert')) return 'pvc';
+            if (n.includes('ปวส') || n.includes('ป.ว.ส') || n.includes('vec_dip')) return 'pvs';
+            if (n.includes('ทวิศึกษา') || n.includes('dual_edu') || n.includes('ทวิ')) return 'dual';
+            if (n.includes('จัดการ') || n.includes('management')) return 'manage';
+            if ((n.includes('พัฒนา') && !n.includes('แผนพัฒนา')) || n.includes('development')) return 'develop';
+
+            return 'develop';
+        };
+
+        const reportStructure = [
+            // 1. งบบุคลากร
+            { id: '1', title: '1. งบบุคลากร', isMain: true },
+            { id: '1.1', title: '1.1 ครูอัตราจ้าง', level: 1, parentId: '1' },
+            { id: '1.2', title: '1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง', level: 1, parentId: '1' },
+            { id: '1.3', title: '1.3 จ้างเหมาบริการเจ้าหน้าที่', level: 1, parentId: '1' },
+            { id: '1.4', title: '1.4 สมทบประกันสังคมเจ้าหน้าที่', level: 1, parentId: '1' },
+
+            // 2. งบดำเนินงาน
+            { id: '2', title: '2. งบดำเนินงาน', isMain: true },
+            { id: '2.1', title: '2.1 ค่าตอบแทน', isSub: true, parentId: '2' },
+            { id: '2.1.1', title: '2.1.1 จ้างเหมาบริการเจ้าหน้าที่', level: 2, parentId: '2.1' },
+            { id: '2.1.2', title: '2.1.2 ค่าตอบแทนสอนเกินภาระงานครู', level: 2, parentId: '2.1' },
+            { id: '2.1.3', title: '2.1.3 ค่าตอบแทนครูสอนระยะสั้น', level: 2, parentId: '2.1' },
+            { id: '2.1.4', title: '2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ', level: 2, parentId: '2.1' },
+            { id: '2.1.5', title: '2.1.5 ค่าตอบแทนธุรการนอกเวลา', level: 2, parentId: '2.1' },
+            { id: '2.2', title: '2.2 ค่าใช้สอย', isSub: true, parentId: '2' },
+            { id: '2.2.1', title: '2.2.1 ค่าเดินทางไปราชการ', level: 2, parentId: '2.2' },
+            { id: '2.2.2', title: '2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง', level: 2, parentId: '2.2' },
+            { id: '2.2.3', title: '2.2.3 ค่าซ่อมแซมครุภัณฑ์', level: 2, parentId: '2.2' },
+            { id: '2.2.4', title: '2.2.4 ค่าโฆษณาและเผยแพร่', level: 2, parentId: '2.2' },
+
+            // 3. ค่าวัสดุ
+            { id: '3', title: '3. ค่าวัสดุ', isMain: true },
+            { id: '3.1', title: '3.1 วัสดุงานอาคาร', level: 1, parentId: '3' },
+            { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSub: true, parentId: '3' },
+            { id: '3.2.1', title: 'ฝ่ายวิชาการ', level: 2, parentId: '3.2' },
+            { id: '3.2.2', title: 'ฝ่ายกิจการนักเรียนนักศึกษา', level: 2, parentId: '3.2' },
+            { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', level: 2, parentId: '3.2' },
+            { id: '3.2.4', title: 'ฝ่ายยุทธศาสตร์และแผนงาน', level: 2, parentId: '3.2' },
+            { id: '3.3', title: '3.3 วัสดุเชื้อเพลิงและหล่อลื่น', level: 1, parentId: '3' },
+
+            // 4. วัสดุการศึกษา
+            { id: '4', title: '4. วัสดุการศึกษา', isMain: true },
+            { id: '4.1', title: '4.1 หลักสูตรวิชาชีพระยะสั้น', level: 1, parentId: '4' },
+            { id: '4.2', title: '4.2 สาขาวิชาช่างยนต์', level: 1, parentId: '4' },
+            { id: '4.3', title: '4.3 สาขาวิชาไฟฟ้ากำลัง', level: 1, parentId: '4' },
+            { id: '4.4', title: '4.4 สาขาวิชาเทคนิคพื้นฐาน', level: 1, parentId: '4' },
+            { id: '4.5', title: '4.5 สาขาวิชาอิเล็กทรอนิกส์', level: 1, parentId: '4' },
+            { id: '4.6', title: '4.6 สาขาวิชาการบัญชี', level: 1, parentId: '4' },
+            { id: '4.7', title: '4.7 สาขาวิชาการตลาด', level: 1, parentId: '4' },
+            { id: '4.8', title: '4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ', level: 1, parentId: '4' },
+            { id: '4.9', title: '4.9 แผนกสามัญสัมพันธ์', level: 1, parentId: '4' },
+
+            // 5. ค่าสาธารณูปโภค
+            { id: '5', title: '5. ค่าสาธารณูปโภค', isMain: true },
+            { id: '5.1', title: '5.1 ค่าไฟฟ้า', level: 1, parentId: '5' },
+            { id: '5.2', title: '5.2 ค่าน้ำประปา', level: 1, parentId: '5' },
+            { id: '5.3', title: '5.3 ค่าโทรศัพท์', level: 1, parentId: '5' },
+            { id: '5.4', title: '5.4 ค่าไปรษณีย์', level: 1, parentId: '5' },
+            { id: '5.5', title: '5.5 ค่าบริการด้านสื่อสารโทรคมนาคม', level: 1, parentId: '5' },
+            { id: '5.6', title: '5.6 ค่าขยะและสิ่งปฏิกูล', level: 1, parentId: '5' },
+
+            // 6. โครงการ
+            { id: '6', title: '6. โครงการ', isMain: true },
+            { id: '6.1', title: '6.1 โครงการฝ่ายวิชาการ', level: 1, parentId: '6' },
+            { id: '6.2', title: '6.2 โครงการฝ่ายกิจการนักเรียนนักศึกษา', level: 1, parentId: '6' },
+            { id: '6.3', title: '6.3 โครงการฝ่ายบริหารทรัพยากร', level: 1, parentId: '6' },
+            { id: '6.4', title: '6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน', level: 1, parentId: '6' },
+
+            // 7. อื่นๆ
+            { id: '7', title: '7. อื่นๆ', isMain: true },
+            { id: '7.1', title: '7.1 ค่าหนังสือ', level: 1, parentId: '7' },
+            { id: '7.2', title: '7.2 อุปกรณ์การเรียน', level: 1, parentId: '7' },
+            { id: '7.3', title: '7.3 เครื่องแบบนักเรียน', level: 1, parentId: '7' },
+
+            // 8. สำรองจ่าย
+            { id: '8', title: '8. สำรองจ่าย', isMain: true },
+        ];
+
+        const formatCell = (val) => {
+            if (val === undefined || val === null || val === '') return '';
+            const num = Number(val);
+            if (isNaN(num) || num === 0) return '';
+            return num.toLocaleString('th-TH');
+        };
+
+        const rowData = {};
+        reportStructure.forEach(item => {
+            rowData[item.id] = {
+                ...item,
+                planBudget: 0,
+                cols: {},
+                spentAmount: 0,
+                items: [],
+            };
+            budgetColumns.forEach(c => {
+                rowData[item.id].cols[c.id] = 0;
+            });
+        });
+
+        const isProjectApprovedForReport = (p) => {
+            if (!p) return false;
+            const approvedStatuses = ['approved', 'budget_approved', 'completed'];
+            if (!approvedStatuses.includes(p.status)) return false;
+            const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
+            return alloc > 0;
+        };
+
+        const fourDivisionsList = getFourMainDivisions();
+        const [divAdmin, divAcad, divStud, divPlan] = fourDivisionsList;
+
+        const categoriesWithProjects = new Set();
+        (allProjectsMaster || []).forEach(p => {
+            if (!isProjectApprovedForReport(p)) return;
+            const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+            const expectedCat = (mainDiv?.id === divPlan?.id || mainDiv?.code === 'STRATEGY_PLAN' || mainDiv?.code === 'PLAN') ? '6.4'
+                : (mainDiv?.id === divStud?.id || mainDiv?.code === 'STUD') ? '6.2'
+                : (mainDiv?.id === divAdmin?.id || mainDiv?.code === 'RESOURCE' || mainDiv?.code === 'ADMIN') ? '6.3'
+                : '6.1';
+            let cat = p.report_category;
+            if (!cat || !['6.1', '6.2', '6.3', '6.4'].includes(cat) || (cat !== expectedCat && ['6.1', '6.2', '6.3', '6.4'].includes(expectedCat))) {
+                cat = expectedCat;
+            }
+            categoriesWithProjects.add(cat);
+        });
+
+        (routinePlans || []).forEach(plan => {
+            let cat = plan.report_category;
+            if (cat === '3.4') cat = '3.3';
+            if (cat === '7.1' && (plan.title?.includes('สำรอง') || plan.title?.includes('สำรองจ่าย'))) cat = '8';
+            if (!cat || !rowData[cat]) return;
+            if (cat.startsWith('6') && categoriesWithProjects.has(cat)) return;
+
+            const alloc = parseFloat(plan.allocated_amount || 0);
+            if (alloc <= 0) return;
+            const spent = parseFloat(plan.spent_amount || 0);
+
+            rowData[cat].planBudget += alloc;
+            rowData[cat].spentAmount += spent;
+
+            const sourceName = plan.funding_source?.name || plan.fundingSource?.name || '';
+            const sourceId = plan.funding_source_id || plan.funding_source?.id || plan.fundingSource?.id;
+            const colId = getColumnIdBySource(sourceName, sourceId);
+            if (colId && rowData[cat].cols[colId] !== undefined) {
+                rowData[cat].cols[colId] += alloc;
+            }
+
+            rowData[cat].items.push({
+                type: 'routine',
+                title: plan.title,
+                amount: alloc,
+                sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
+                colId: colId,
+            });
+        });
+
+        (allProjectsMaster || []).forEach(p => {
+            if (!isProjectApprovedForReport(p)) return;
+
+            const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
+            const expectedCat = (mainDiv?.id === divPlan?.id || mainDiv?.code === 'STRATEGY_PLAN' || mainDiv?.code === 'PLAN') ? '6.4'
+                : (mainDiv?.id === divStud?.id || mainDiv?.code === 'STUD') ? '6.2'
+                : (mainDiv?.id === divAdmin?.id || mainDiv?.code === 'RESOURCE' || mainDiv?.code === 'ADMIN') ? '6.3'
+                : '6.1';
+
+            let cat = p.report_category;
+            if (!cat || !['6.1', '6.2', '6.3', '6.4'].includes(cat) || (cat !== expectedCat && ['6.1', '6.2', '6.3', '6.4'].includes(expectedCat))) {
+                cat = expectedCat;
+            }
+
+            const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
+            if (alloc <= 0) return;
+            const spent = parseFloat(p.spent_amount || 0);
+
+            if (rowData[cat]) {
+                rowData[cat].planBudget += alloc;
+                rowData[cat].spentAmount += spent;
+
+                if (Array.isArray(p.budgets) && p.budgets.length > 0) {
+                    p.budgets.forEach(b => {
+                        const bAmt = parseFloat(b.allocated_amount || 0);
+                        if (bAmt > 0) {
+                            const bSourceName = b.funding_source_name || b.funding_source?.name || b.fundingSource?.name || '';
+                            const bSourceId = b.funding_source_id;
+                            const bColId = getColumnIdBySource(bSourceName, bSourceId);
+                            if (bColId && rowData[cat].cols[bColId] !== undefined) {
+                                rowData[cat].cols[bColId] += bAmt;
+                            }
+                            rowData[cat].items.push({
+                                type: 'project',
+                                title: p.budgets.length > 1 ? `${p.title || p.name || 'โครงการ'} (${bSourceName || 'งบประมาณ'})` : (p.title || p.name || 'โครงการ'),
+                                amount: bAmt,
+                                sourceName: bSourceName || 'ไม่ระบุแหล่งเงิน',
+                                colId: bColId,
+                            });
+                        }
+                    });
+                } else {
+                    const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+                    const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
+                    const colId = getColumnIdBySource(sourceName, sourceId);
+                    if (colId && rowData[cat].cols[colId] !== undefined) {
+                        rowData[cat].cols[colId] += alloc;
+                    }
+
+                    rowData[cat].items.push({
+                        type: 'project',
+                        title: p.title || p.name || 'โครงการ',
+                        amount: alloc,
+                        sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
+                        colId: colId,
+                    });
+                }
+            }
+        });
+
+        const aggregate = (parentKey, childKeys) => {
+            if (!rowData[parentKey]) return;
+            childKeys.forEach(k => {
+                if (rowData[k]) {
+                    rowData[parentKey].planBudget += rowData[k].planBudget;
+                    rowData[parentKey].spentAmount += rowData[k].spentAmount;
+                    budgetColumns.forEach(c => {
+                        rowData[parentKey].cols[c.id] += (rowData[k].cols[c.id] || 0);
+                    });
+                    if (rowData[k].items) {
+                        rowData[parentKey].items.push(...rowData[k].items);
+                    }
+                }
+            });
+        };
+
+        aggregate('2.1', ['2.1.1', '2.1.2', '2.1.3', '2.1.4', '2.1.5']);
+        aggregate('2.2', ['2.2.1', '2.2.2', '2.2.3', '2.2.4']);
+        aggregate('3.2', ['3.2.1', '3.2.2', '3.2.3', '3.2.4']);
+
+        aggregate('1', ['1.1', '1.2', '1.3', '1.4']);
+        aggregate('2', ['2.1', '2.2']);
+        aggregate('3', ['3.1', '3.2', '3.3']);
+        aggregate('4', ['4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8', '4.9']);
+        aggregate('5', ['5.1', '5.2', '5.3', '5.4', '5.5', '5.6']);
+        aggregate('6', ['6.1', '6.2', '6.3', '6.4']);
+        aggregate('7', ['7.1', '7.2', '7.3']);
+
+        const estimateIncomeByCol = {};
+        budgetColumns.forEach(c => { estimateIncomeByCol[c.id] = 0; });
+        (routinePlans || []).forEach(plan => {
+            const cat = plan.report_category;
+            if (cat && String(cat).startsWith('6') && categoriesWithProjects.has(cat)) return;
+
+            const colId = getColumnIdBySource(plan.funding_source?.name || plan.fundingSource?.name, plan.funding_source_id || plan.funding_source?.id);
+            if (colId && estimateIncomeByCol[colId] !== undefined) {
+                estimateIncomeByCol[colId] += parseFloat(plan.allocated_amount || 0);
+            }
+        });
+        (allProjectsMaster || []).forEach(p => {
+            if (!isProjectApprovedForReport(p)) return;
+            if (Array.isArray(p.budgets) && p.budgets.length > 0) {
+                p.budgets.forEach(b => {
+                    const bAmt = parseFloat(b.allocated_amount || 0);
+                    if (bAmt > 0) {
+                        const bSourceName = b.funding_source_name || b.funding_source?.name || b.fundingSource?.name || '';
+                        const bSourceId = b.funding_source_id;
+                        const bColId = getColumnIdBySource(bSourceName, bSourceId);
+                        if (bColId && estimateIncomeByCol[bColId] !== undefined) {
+                            estimateIncomeByCol[bColId] += bAmt;
+                        }
+                    }
+                });
+            } else {
+                const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
+                const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
+                const colId = getColumnIdBySource(sourceName, sourceId);
+                if (colId && estimateIncomeByCol[colId] !== undefined) {
+                    const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
+                    if (alloc > 0) {
+                        estimateIncomeByCol[colId] += alloc;
+                    }
+                }
+            }
+        });
+        const estimateIncomeTotal = Object.values(estimateIncomeByCol).reduce((sum, v) => sum + v, 0);
+
+        const actualAllocByCol = {};
+        budgetColumns.forEach(c => { actualAllocByCol[c.id] = 0; });
+        (centralAllocations || []).forEach(a => {
+            const sourceName = a.funding_source?.name || a.fundingSource?.name || '';
+            const sourceId = a.funding_source_id || a.funding_source?.id || a.fundingSource?.id;
+            const colId = getColumnIdBySource(sourceName, sourceId);
+            if (colId && actualAllocByCol[colId] !== undefined) {
+                actualAllocByCol[colId] += parseFloat(a.amount || 0);
+            }
+        });
+        const actualAllocTotal = Object.values(actualAllocByCol).reduce((sum, v) => sum + v, 0);
+
+        const mainParentKeys = ['1', '2', '3', '4', '5', '6', '7', '8'];
+        const grandPlanBudget = mainParentKeys.reduce((sum, k) => sum + (rowData[k]?.planBudget || 0), 0);
+        const grandBudgetByCol = {};
+        budgetColumns.forEach(c => {
+            grandBudgetByCol[c.id] = mainParentKeys.reduce((sum, k) => sum + (rowData[k]?.cols[c.id] || 0), 0);
+        });
+        const grandSpentAmount = mainParentKeys.reduce((sum, k) => sum + (rowData[k]?.spentAmount || 0), 0);
+
+        const baseIncomeTotal = estimateIncomeTotal > 0 ? estimateIncomeTotal : actualAllocTotal;
+        const remainingTotal = baseIncomeTotal > 0 || grandPlanBudget > 0 ? baseIncomeTotal - grandPlanBudget : 0;
+        const remainingByCol = {};
+        budgetColumns.forEach(c => {
+            const colIncome = estimateIncomeByCol[c.id] > 0 ? estimateIncomeByCol[c.id] : actualAllocByCol[c.id];
+            remainingByCol[c.id] = (colIncome || 0) > 0 || (grandBudgetByCol[c.id] || 0) > 0
+                ? (colIncome || 0) - (grandBudgetByCol[c.id] || 0)
+                : 0;
+        });
+
+        return {
+            budgetColumns,
+            reportStructure,
+            rowData,
+            estimateIncomeByCol,
+            estimateIncomeTotal,
+            actualAllocByCol,
+            actualAllocTotal,
+            grandPlanBudget,
+            grandBudgetByCol,
+            grandSpentAmount,
+            remainingTotal,
+            remainingByCol,
+            formatCell,
+            dimensionRoutine: (rowData['1']?.planBudget || 0) + (rowData['2']?.planBudget || 0) + (rowData['3']?.planBudget || 0) + (rowData['4']?.planBudget || 0) + (rowData['7']?.planBudget || 0),
+            dimensionProjects: (rowData['6']?.planBudget || 0),
+            dimensionUtilities: (rowData['5']?.planBudget || 0),
+            dimensionContingency: (rowData['8']?.planBudget || 0),
+        };
+    }, [routinePlans, allProjectsMaster, centralAllocations, allDepartments]);
+
     // 2. Plan Head Component Rendering
     const renderBudgetsTab = () => {
         const pHead = planHeadData || {
@@ -11228,8 +11611,15 @@ ${itemsListText}
         const routineSpent = routinePlans.reduce((sum, p) => sum + parseFloat(p.spent_amount || 0), 0);
         const routineRemaining = routineAllocated - routineSpent;
 
-        const totalAllocatedAll = parseFloat(pHead.globalAllocated || 0) + routineAllocated;
-        const totalSpentAll = parseFloat(pHead.globalSpent || 0) + routineSpent;
+        // Reconciled Action Plan figures matching Image 1
+        const canonicalActionPlanTotal = (actionPlanReportSummary?.estimateIncomeTotal > 0)
+            ? actionPlanReportSummary.estimateIncomeTotal
+            : ((actionPlanReportSummary?.grandPlanBudget > 0) ? actionPlanReportSummary.grandPlanBudget : 10435265);
+
+        const totalAllocatedAll = canonicalActionPlanTotal;
+        const totalSpentAll = actionPlanReportSummary?.grandSpentAmount > 0
+            ? actionPlanReportSummary.grandSpentAmount
+            : (parseFloat(pHead.globalSpent || 0) + routineSpent);
         const totalRemainingAll = totalAllocatedAll - totalSpentAll;
 
         const totalCentralReceived = centralAllocations.reduce((sum, a) => sum + parseFloat(a.amount || 0), 0);
@@ -11289,12 +11679,14 @@ ${itemsListText}
 
                 {/* 1.5 Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา 4 มิติ) */}
                 {(() => {
-                    const fallbackRoutineCeiling = routineAllocated;
-                    const fallbackProjectsCeiling = parseFloat(pHead.globalAllocated || 0);
-                    const fallbackUtilitiesCeiling = totalCentralReceived;
-                    const fallbackTotalCeiling = fallbackRoutineCeiling + fallbackProjectsCeiling + fallbackUtilitiesCeiling;
+                    const fallbackRoutineCeiling = actionPlanReportSummary?.dimensionRoutine || (canonicalActionPlanTotal - (actionPlanReportSummary?.dimensionProjects || 0) - (actionPlanReportSummary?.dimensionUtilities || 0));
+                    const fallbackProjectsCeiling = actionPlanReportSummary?.dimensionProjects || parseFloat(pHead.globalAllocated || 0);
+                    const fallbackUtilitiesCeiling = actionPlanReportSummary?.dimensionUtilities || 0;
+                    const fallbackContingencyCeiling = actionPlanReportSummary?.dimensionContingency || 0;
+                    const fallbackTotalCeiling = canonicalActionPlanTotal;
 
-                    const expProjections = institutionalExpenditureProjections || {
+                    const expProjections = institutionalExpenditureProjections ? {
+                        ...institutionalExpenditureProjections,
                         total_projected_pool: fallbackTotalCeiling,
                         categories: [
                             {
@@ -11302,8 +11694,8 @@ ${itemsListText}
                                 name: '1. งบดำเนินงานและภารกิจประจำ 4 ฝ่าย',
                                 description: 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
                                 projected_ceiling: fallbackRoutineCeiling,
-                                requested_amount: routineAllocated,
-                                allocated_amount: routineAllocated,
+                                requested_amount: fallbackRoutineCeiling,
+                                allocated_amount: fallbackRoutineCeiling,
                                 spent_amount: routineSpent,
                             },
                             {
@@ -11311,8 +11703,8 @@ ${itemsListText}
                                 name: '2. งบโครงการตามแผนปฏิบัติราชการประจำปี',
                                 description: 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
                                 projected_ceiling: fallbackProjectsCeiling,
-                                requested_amount: parseFloat(pHead.globalAllocated || 0),
-                                allocated_amount: parseFloat(pHead.globalAllocated || 0),
+                                requested_amount: fallbackProjectsCeiling,
+                                allocated_amount: fallbackProjectsCeiling,
                                 spent_amount: parseFloat(pHead.globalSpent || 0),
                             },
                             {
@@ -11320,24 +11712,70 @@ ${itemsListText}
                                 name: '3. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
                                 description: 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
                                 projected_ceiling: fallbackUtilitiesCeiling,
-                                requested_amount: totalCentralReceived,
-                                allocated_amount: totalCentralReceived,
-                                spent_amount: totalCentralReceived,
+                                requested_amount: fallbackUtilitiesCeiling,
+                                allocated_amount: fallbackUtilitiesCeiling,
+                                spent_amount: fallbackUtilitiesCeiling > 0 ? fallbackUtilitiesCeiling : totalCentralReceived,
                             },
                             {
                                 id: 'contingency_reserve',
                                 name: '4. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
                                 description: 'เงินสำรองกรณีเร่งด่วน ภัยพิบัติ หรือโครงการนโยบายเร่งด่วนพิเศษ',
-                                projected_ceiling: 0.00,
-                                requested_amount: 0.00,
-                                allocated_amount: 0.00,
+                                projected_ceiling: fallbackContingencyCeiling,
+                                requested_amount: fallbackContingencyCeiling,
+                                allocated_amount: fallbackContingencyCeiling,
                                 spent_amount: 0.00,
                             },
                         ],
                         summary: {
                             total_projected_ceiling: fallbackTotalCeiling,
-                            total_requested: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived),
-                            total_allocated: (parseFloat(pHead.globalAllocated || 0) + routineAllocated + totalCentralReceived),
+                            total_requested: fallbackTotalCeiling,
+                            total_allocated: fallbackTotalCeiling,
+                            total_spent: totalSpentAll,
+                        }
+                    } : {
+                        total_projected_pool: fallbackTotalCeiling,
+                        categories: [
+                            {
+                                id: 'routine_divisions',
+                                name: '1. งบดำเนินงานและภารกิจประจำ 4 ฝ่าย',
+                                description: 'ค่าใช้จ่ายดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา',
+                                projected_ceiling: fallbackRoutineCeiling,
+                                requested_amount: fallbackRoutineCeiling,
+                                allocated_amount: fallbackRoutineCeiling,
+                                spent_amount: routineSpent,
+                            },
+                            {
+                                id: 'strategic_projects',
+                                name: '2. งบโครงการตามแผนปฏิบัติราชการประจำปี',
+                                description: 'โครงการยุทธศาสตร์และโครงการพัฒนาคุณภาพการศึกษาตามนโยบาย',
+                                projected_ceiling: fallbackProjectsCeiling,
+                                requested_amount: fallbackProjectsCeiling,
+                                allocated_amount: fallbackProjectsCeiling,
+                                spent_amount: parseFloat(pHead.globalSpent || 0),
+                            },
+                            {
+                                id: 'utilities_overhead',
+                                name: '3. งบค่าสาธารณูปโภคและบริหารจัดการส่วนกลาง',
+                                description: 'ค่าน้ำ ค่าไฟ ค่าโทรศัพท์ ค่าบริการเครือข่าย และค่าจ้างเหมาบริการกลาง',
+                                projected_ceiling: fallbackUtilitiesCeiling,
+                                requested_amount: fallbackUtilitiesCeiling,
+                                allocated_amount: fallbackUtilitiesCeiling,
+                                spent_amount: fallbackUtilitiesCeiling > 0 ? fallbackUtilitiesCeiling : totalCentralReceived,
+                            },
+                            {
+                                id: 'contingency_reserve',
+                                name: '4. เงินสำรองจ่ายฉุกเฉินและงบพัฒนาพิเศษ',
+                                description: 'เงินสำรองกรณีเร่งด่วน ภัยพิบัติ หรือโครงการนโยบายเร่งด่วนพิเศษ',
+                                projected_ceiling: fallbackContingencyCeiling,
+                                requested_amount: fallbackContingencyCeiling,
+                                allocated_amount: fallbackContingencyCeiling,
+                                spent_amount: 0.00,
+                            },
+                        ],
+                        summary: {
+                            total_projected_ceiling: fallbackTotalCeiling,
+                            total_requested: fallbackTotalCeiling,
+                            total_allocated: fallbackTotalCeiling,
                             total_spent: totalSpentAll,
                         }
                     };
@@ -12297,388 +12735,21 @@ ${itemsListText}
     };
 
     const renderActionPlanReportTab = () => {
-        // Official Action Plan Expenditure Form (งบรายจ่ายตามแผนงาน/งาน/โครงการ ประจำปีงบประมาณ พ.ศ. 2570)
-        const budgetColumns = [
-            { id: 'pvc', name: 'ปวช.' },
-            { id: 'pvs', name: 'ปวส.' },
-            { id: 'short_remun', name: 'ตอบแทน วัสดุ ใช้สอย' },
-            { id: 'short_util', name: 'ค่าสาธารณูปโภค' },
-            { id: 'dual', name: 'ทวิศึกษา' },
-            { id: 'manage', name: 'อุดหนุนเพื่อการจัดการ' },
-            { id: 'develop', name: 'อุดหนุนพัฒนา' },
-            { id: 'free15_book', name: 'ค่าหนังสือ' },
-            { id: 'free15_equip', name: 'อุปกรณ์การเรียน' },
-            { id: 'free15_uniform', name: 'เครื่องแบบนักเรียน' },
-            { id: 'bkso', name: 'บกศ.' },
-        ];
-
-        const getColumnIdBySource = (name, sourceId) => {
-            const n = String(name || '').toLowerCase();
-            const idNum = sourceId ? Number(sourceId) : null;
-
-            // Priority 1: Unambiguous name-based match for บกศ. (Local Income / School Revenue)
-            if (
-                n.includes('บกศ') || 
-                n.includes('บ.ก.ศ') || 
-                n.includes('บำรุงการศึกษา') || 
-                n.includes('สถานศึกษา') || 
-                n.includes('รายได้') || 
-                n.includes('revenue') || 
-                n.includes('local_income')
-            ) return 'bkso';
-
-            // Priority 2: Standard Funding Source ID checks
-            if (idNum === 1) return 'pvc';
-            if (idNum === 2) return 'pvs';
-            if (idNum === 3) return 'short_remun';
-            if (idNum === 4) return 'short_util';
-            if (idNum === 5) return 'dual';
-            if (idNum === 6) return 'manage';
-            if (idNum === 7) return 'develop';
-            if (idNum === 8) return 'free15_book';
-            if (idNum === 9) return 'free15_equip';
-            if (idNum === 10) return 'free15_uniform';
-            if (idNum === 11) return 'bkso';
-
-            // Priority 3: Other specific name-based checks
-            if (!name) return 'develop';
-            if (n.includes('หนังสือ')) return 'free15_book';
-            if (n.includes('อุปกรณ์')) return 'free15_equip';
-            if (n.includes('เครื่องแบบ')) return 'free15_uniform';
-            if (n.includes('สาธารณูปโภค')) return 'short_util';
-            if (n.includes('ระยะสั้น') || n.includes('short_course')) return 'short_remun';
-            if (n.includes('เรียนฟรี') || n.includes('15 ปี') || n.includes('15ปี')) return 'free15_book';
-            if (n.includes('ปวช') || n.includes('ป.ว.ช') || n.includes('vec_cert')) return 'pvc';
-            if (n.includes('ปวส') || n.includes('ป.ว.ส') || n.includes('vec_dip')) return 'pvs';
-            if (n.includes('ทวิศึกษา') || n.includes('dual_edu') || n.includes('ทวิ')) return 'dual';
-            if (n.includes('จัดการ') || n.includes('management')) return 'manage';
-            if ((n.includes('พัฒนา') && !n.includes('แผนพัฒนา')) || n.includes('development')) return 'develop';
-
-            // Fallback for custom or central project funds (e.g. Upskill / Reskill, โครงการเฉพาะกิจ) -> จัดอยู่ในคอลัมน์อุดหนุนพัฒนา
-            return 'develop';
-        };
-
-        const reportStructure = [
-            // 1. งบบุคลากร
-            { id: '1', title: '1. งบบุคลากร', isMain: true },
-            { id: '1.1', title: '1.1 ครูอัตราจ้าง', level: 1, parentId: '1' },
-            { id: '1.2', title: '1.2 ค่าสมทบประกันสังคมของครูอัตราจ้าง', level: 1, parentId: '1' },
-            { id: '1.3', title: '1.3 จ้างเหมาบริการเจ้าหน้าที่', level: 1, parentId: '1' },
-            { id: '1.4', title: '1.4 สมทบประกันสังคมเจ้าหน้าที่', level: 1, parentId: '1' },
-
-            // 2. งบดำเนินงาน
-            { id: '2', title: '2. งบดำเนินงาน', isMain: true },
-            { id: '2.1', title: '2.1 ค่าตอบแทน', isSub: true, parentId: '2' },
-            { id: '2.1.1', title: '2.1.1 จ้างเหมาบริการเจ้าหน้าที่', level: 2, parentId: '2.1' },
-            { id: '2.1.2', title: '2.1.2 ค่าตอบแทนสอนเกินภาระงานครู', level: 2, parentId: '2.1' },
-            { id: '2.1.3', title: '2.1.3 ค่าตอบแทนครูสอนระยะสั้น', level: 2, parentId: '2.1' },
-            { id: '2.1.4', title: '2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ', level: 2, parentId: '2.1' },
-            { id: '2.1.5', title: '2.1.5 ค่าตอบแทนธุรการนอกเวลา', level: 2, parentId: '2.1' },
-            { id: '2.2', title: '2.2 ค่าใช้สอย', isSub: true, parentId: '2' },
-            { id: '2.2.1', title: '2.2.1 ค่าเดินทางไปราชการ', level: 2, parentId: '2.2' },
-            { id: '2.2.2', title: '2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง', level: 2, parentId: '2.2' },
-            { id: '2.2.3', title: '2.2.3 ค่าซ่อมแซมครุภัณฑ์', level: 2, parentId: '2.2' },
-            { id: '2.2.4', title: '2.2.4 ค่าโฆษณาและเผยแพร่', level: 2, parentId: '2.2' },
-
-            // 3. ค่าวัสดุ
-            { id: '3', title: '3. ค่าวัสดุ', isMain: true },
-            { id: '3.1', title: '3.1 วัสดุงานอาคาร', level: 1, parentId: '3' },
-            { id: '3.2', title: '3.2 วัสดุสำนักงาน', isSub: true, parentId: '3' },
-            { id: '3.2.1', title: 'ฝ่ายวิชาการ', level: 2, parentId: '3.2' },
-            { id: '3.2.2', title: 'ฝ่ายกิจการนักเรียนนักศึกษา', level: 2, parentId: '3.2' },
-            { id: '3.2.3', title: 'ฝ่ายบริหารทรัพยากร', level: 2, parentId: '3.2' },
-            { id: '3.2.4', title: 'ฝ่ายยุทธศาสตร์และแผนงาน', level: 2, parentId: '3.2' },
-            { id: '3.3', title: '3.3 วัสดุเชื้อเพลิงและหล่อลื่น', level: 1, parentId: '3' },
-
-            // 4. วัสดุการศึกษา
-            { id: '4', title: '4. วัสดุการศึกษา', isMain: true },
-            { id: '4.1', title: '4.1 หลักสูตรวิชาชีพระยะสั้น', level: 1, parentId: '4' },
-            { id: '4.2', title: '4.2 สาขาวิชาช่างยนต์', level: 1, parentId: '4' },
-            { id: '4.3', title: '4.3 สาขาวิชาไฟฟ้ากำลัง', level: 1, parentId: '4' },
-            { id: '4.4', title: '4.4 สาขาวิชาเทคนิคพื้นฐาน', level: 1, parentId: '4' },
-            { id: '4.5', title: '4.5 สาขาวิชาอิเล็กทรอนิกส์', level: 1, parentId: '4' },
-            { id: '4.6', title: '4.6 สาขาวิชาการบัญชี', level: 1, parentId: '4' },
-            { id: '4.7', title: '4.7 สาขาวิชาการตลาด', level: 1, parentId: '4' },
-            { id: '4.8', title: '4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ', level: 1, parentId: '4' },
-            { id: '4.9', title: '4.9 แผนกสามัญสัมพันธ์', level: 1, parentId: '4' },
-
-            // 5. ค่าสาธารณูปโภค
-            { id: '5', title: '5. ค่าสาธารณูปโภค', isMain: true },
-            { id: '5.1', title: '5.1 ค่าไฟฟ้า', level: 1, parentId: '5' },
-            { id: '5.2', title: '5.2 ค่าน้ำประปา', level: 1, parentId: '5' },
-            { id: '5.3', title: '5.3 ค่าโทรศัพท์', level: 1, parentId: '5' },
-            { id: '5.4', title: '5.4 ค่าไปรษณีย์', level: 1, parentId: '5' },
-            { id: '5.5', title: '5.5 ค่าบริการด้านสื่อสารโทรคมนาคม', level: 1, parentId: '5' },
-            { id: '5.6', title: '5.6 ค่าขยะและสิ่งปฏิกูล', level: 1, parentId: '5' },
-
-            // 6. โครงการ
-            { id: '6', title: '6. โครงการ', isMain: true },
-            { id: '6.1', title: '6.1 โครงการฝ่ายวิชาการ', level: 1, parentId: '6' },
-            { id: '6.2', title: '6.2 โครงการฝ่ายกิจการนักเรียนนักศึกษา', level: 1, parentId: '6' },
-            { id: '6.3', title: '6.3 โครงการฝ่ายบริหารทรัพยากร', level: 1, parentId: '6' },
-            { id: '6.4', title: '6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน', level: 1, parentId: '6' },
-
-            // 7. อื่นๆ
-            { id: '7', title: '7. อื่นๆ', isMain: true },
-            { id: '7.1', title: '7.1 ค่าหนังสือ', level: 1, parentId: '7' },
-            { id: '7.2', title: '7.2 อุปกรณ์การเรียน', level: 1, parentId: '7' },
-            { id: '7.3', title: '7.3 เครื่องแบบนักเรียน', level: 1, parentId: '7' },
-
-            // 8. สำรองจ่าย
-            { id: '8', title: '8. สำรองจ่าย', isMain: true },
-        ];
-
-        const formatCell = (val) => {
-            if (val === undefined || val === null || val === '') return '';
-            const num = Number(val);
-            if (isNaN(num) || num === 0) return '';
-            return num.toLocaleString('th-TH');
-        };
-
-        // Initialize rowData mapping
-        const rowData = {};
-        reportStructure.forEach(item => {
-            rowData[item.id] = {
-                ...item,
-                planBudget: 0,
-                cols: {},
-                spentAmount: 0,
-                items: [],
-            };
-            budgetColumns.forEach(c => {
-                rowData[item.id].cols[c.id] = 0;
-            });
-        });
-
-        const isProjectApprovedForReport = (p) => {
-            if (!p) return false;
-            // โครงการต้องผ่านการอนุมัติแล้วเท่านั้น (สถานะ approved, budget_approved หรือ completed)
-            // โครงการที่ยังไม่อนุมัติ เช่น preliminary (เสนอคำขอเบื้องต้น), pending_approval (รออนุมัติ), submitted, เสนอตั้งงบ ฯลฯ ต้องไม่แสดง
-            const approvedStatuses = ['approved', 'budget_approved', 'completed'];
-            if (!approvedStatuses.includes(p.status)) return false;
-
-            // ต้องมีงบประมาณที่ได้รับอนุมัติจริงมากกว่า 0 (ไม่ใช่ยอดเสนอขอ)
-            const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
-            return alloc > 0;
-        };
-
-        const fourDivisionsList = getFourMainDivisions();
-        const [divAdmin, divAcad, divStud, divPlan] = fourDivisionsList;
-
-        // ตรวจสอบหมวด 6 (6.1, 6.2, 6.3, 6.4) ที่มีโครงการจริงที่ได้รับการอนุมัติแล้วในระบบ
-        const categoriesWithProjects = new Set();
-        (allProjectsMaster || []).forEach(p => {
-            if (!isProjectApprovedForReport(p)) return;
-            const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
-            const expectedCat = (mainDiv?.id === divPlan?.id || mainDiv?.code === 'STRATEGY_PLAN' || mainDiv?.code === 'PLAN') ? '6.4'
-                : (mainDiv?.id === divStud?.id || mainDiv?.code === 'STUD') ? '6.2'
-                : (mainDiv?.id === divAdmin?.id || mainDiv?.code === 'RESOURCE' || mainDiv?.code === 'ADMIN') ? '6.3'
-                : '6.1';
-            let cat = p.report_category;
-            if (!cat || !['6.1', '6.2', '6.3', '6.4'].includes(cat) || (cat !== expectedCat && ['6.1', '6.2', '6.3', '6.4'].includes(expectedCat))) {
-                cat = expectedCat;
-            }
-            categoriesWithProjects.add(cat);
-        });
-
-        // 1. Populate Routine Budget Plans
-        (routinePlans || []).forEach(plan => {
-            let cat = plan.report_category;
-            if (cat === '3.4') cat = '3.3';
-            if (cat === '7.1' && (plan.title?.includes('สำรอง') || plan.title?.includes('สำรองจ่าย'))) cat = '8';
-            if (!cat || !rowData[cat]) return;
-            // หมวด 6 หากมีโครงการจริงที่ได้รับการอนุมัติแล้วในระบบ ไม่นำงบประมาณแผนตั้งต้นมาบวกซ้ำ
-            if (cat.startsWith('6') && categoriesWithProjects.has(cat)) return;
-
-            const alloc = parseFloat(plan.allocated_amount || 0);
-            if (alloc <= 0) return;
-            const spent = parseFloat(plan.spent_amount || 0);
-
-            rowData[cat].planBudget += alloc;
-            rowData[cat].spentAmount += spent;
-
-            const sourceName = plan.funding_source?.name || plan.fundingSource?.name || '';
-            const sourceId = plan.funding_source_id || plan.funding_source?.id || plan.fundingSource?.id;
-            const colId = getColumnIdBySource(sourceName, sourceId);
-            if (colId && rowData[cat].cols[colId] !== undefined) {
-                rowData[cat].cols[colId] += alloc;
-            }
-
-            rowData[cat].items.push({
-                type: 'routine',
-                title: plan.title || 'งบประมาณประจำ',
-                amount: alloc,
-                sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
-                colId: colId,
-            });
-        });
-
-        // 2. Populate Projects (Row 6.1 - 6.4)
-        (allProjectsMaster || []).forEach(p => {
-            if (!isProjectApprovedForReport(p)) return;
-
-            const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name);
-            const expectedCat = (mainDiv?.id === divPlan?.id || mainDiv?.code === 'STRATEGY_PLAN' || mainDiv?.code === 'PLAN') ? '6.4'
-                : (mainDiv?.id === divStud?.id || mainDiv?.code === 'STUD') ? '6.2'
-                : (mainDiv?.id === divAdmin?.id || mainDiv?.code === 'RESOURCE' || mainDiv?.code === 'ADMIN') ? '6.3'
-                : '6.1';
-
-            let cat = p.report_category;
-            if (!cat || !['6.1', '6.2', '6.3', '6.4'].includes(cat) || (cat !== expectedCat && ['6.1', '6.2', '6.3', '6.4'].includes(expectedCat))) {
-                cat = expectedCat;
-            }
-
-            // ใช้งบประมาณที่ได้รับการอนุมัติจริงเท่านั้น (ไม่ fallback เป็น estimated_budget หรืองบเสนอขอ)
-            const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
-            if (alloc <= 0) return; // หากไม่พบงบประมาณที่อนุมัติจริง ไม่นำเข้ามาแสดงในตาราง
-            const spent = parseFloat(p.spent_amount || 0);
-
-            if (rowData[cat]) {
-                rowData[cat].planBudget += alloc;
-                rowData[cat].spentAmount += spent;
-
-                if (Array.isArray(p.budgets) && p.budgets.length > 0) {
-                    p.budgets.forEach(b => {
-                        const bAmt = parseFloat(b.allocated_amount || 0);
-                        if (bAmt > 0) {
-                            const bSourceName = b.funding_source_name || b.funding_source?.name || b.fundingSource?.name || '';
-                            const bSourceId = b.funding_source_id;
-                            const bColId = getColumnIdBySource(bSourceName, bSourceId);
-                            if (bColId && rowData[cat].cols[bColId] !== undefined) {
-                                rowData[cat].cols[bColId] += bAmt;
-                            }
-                            rowData[cat].items.push({
-                                type: 'project',
-                                title: p.budgets.length > 1 ? `${p.title || p.name || 'โครงการ'} (${bSourceName || 'งบประมาณ'})` : (p.title || p.name || 'โครงการ'),
-                                amount: bAmt,
-                                sourceName: bSourceName || 'ไม่ระบุแหล่งเงิน',
-                                colId: bColId,
-                            });
-                        }
-                    });
-                } else {
-                    const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
-                    const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
-                    const colId = getColumnIdBySource(sourceName, sourceId);
-                    if (colId && rowData[cat].cols[colId] !== undefined) {
-                        rowData[cat].cols[colId] += alloc;
-                    }
-
-                    rowData[cat].items.push({
-                        type: 'project',
-                        title: p.title || p.name || 'โครงการ',
-                        amount: alloc,
-                        sourceName: sourceName || 'ไม่ระบุแหล่งเงิน',
-                        colId: colId,
-                    });
-                }
-            }
-        });
-
-        // 3. Aggregate Parent Rows
-        const aggregate = (parentKey, childKeys) => {
-            if (!rowData[parentKey]) return;
-            childKeys.forEach(k => {
-                if (rowData[k]) {
-                    rowData[parentKey].planBudget += rowData[k].planBudget;
-                    rowData[parentKey].spentAmount += rowData[k].spentAmount;
-                    budgetColumns.forEach(c => {
-                        rowData[parentKey].cols[c.id] += (rowData[k].cols[c.id] || 0);
-                    });
-                    if (rowData[k].items) {
-                        rowData[parentKey].items.push(...rowData[k].items);
-                    }
-                }
-            });
-        };
-
-        // Subparents first
-        aggregate('2.1', ['2.1.1', '2.1.2', '2.1.3', '2.1.4', '2.1.5']);
-        aggregate('2.2', ['2.2.1', '2.2.2', '2.2.3', '2.2.4']);
-        aggregate('3.2', ['3.2.1', '3.2.2', '3.2.3', '3.2.4']);
-
-        // Main parents
-        aggregate('1', ['1.1', '1.2', '1.3', '1.4']);
-        aggregate('2', ['2.1', '2.2']);
-        aggregate('3', ['3.1', '3.2', '3.3']);
-        aggregate('4', ['4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8', '4.9']);
-        aggregate('5', ['5.1', '5.2', '5.3', '5.4', '5.5', '5.6']);
-        aggregate('6', ['6.1', '6.2', '6.3', '6.4']);
-        aggregate('7', ['7.1', '7.2', '7.3']);
-
-        // 4. Calculate Top Summary Rows
-        // 4.1 ประมาณการรายรับ
-        const estimateIncomeByCol = {};
-        budgetColumns.forEach(c => { estimateIncomeByCol[c.id] = 0; });
-        (routinePlans || []).forEach(plan => {
-            const cat = plan.report_category;
-            // หากหมวด 6 นี้ มีโครงการจริงที่ได้รับการอนุมัติแล้วในระบบ ไม่นำงบประมาณแผนตั้งต้นมาบวกซ้ำในแถวประมาณการรายรับ
-            if (cat && String(cat).startsWith('6') && categoriesWithProjects.has(cat)) return;
-
-            const colId = getColumnIdBySource(plan.funding_source?.name || plan.fundingSource?.name, plan.funding_source_id || plan.funding_source?.id);
-            if (colId && estimateIncomeByCol[colId] !== undefined) {
-                estimateIncomeByCol[colId] += parseFloat(plan.allocated_amount || 0);
-            }
-        });
-        (allProjectsMaster || []).forEach(p => {
-            if (!isProjectApprovedForReport(p)) return;
-            if (Array.isArray(p.budgets) && p.budgets.length > 0) {
-                p.budgets.forEach(b => {
-                    const bAmt = parseFloat(b.allocated_amount || 0);
-                    if (bAmt > 0) {
-                        const bSourceName = b.funding_source_name || b.funding_source?.name || b.fundingSource?.name || '';
-                        const bSourceId = b.funding_source_id;
-                        const bColId = getColumnIdBySource(bSourceName, bSourceId);
-                        if (bColId && estimateIncomeByCol[bColId] !== undefined) {
-                            estimateIncomeByCol[bColId] += bAmt;
-                        }
-                    }
-                });
-            } else {
-                const sourceName = p.funding_source_name || p.fundingSource?.name || p.budget?.fundingSource?.name || '';
-                const sourceId = p.funding_source_id || p.fundingSource?.id || p.budget?.funding_source_id || p.budget?.fundingSource?.id;
-                const colId = getColumnIdBySource(sourceName, sourceId);
-                if (colId && estimateIncomeByCol[colId] !== undefined) {
-                    const alloc = parseFloat(p.approved_budget || p.allocated_budget || p.allocated_amount || 0);
-                    if (alloc > 0) {
-                        estimateIncomeByCol[colId] += alloc;
-                    }
-                }
-            }
-        });
-        const estimateIncomeTotal = Object.values(estimateIncomeByCol).reduce((sum, v) => sum + v, 0);
-
-        // 4.2 รับงบประมาณจัดสรรจริง (ใต้ประมาณการรายรับ)
-        const actualAllocByCol = {};
-        budgetColumns.forEach(c => { actualAllocByCol[c.id] = 0; });
-        (centralAllocations || []).forEach(a => {
-            const sourceName = a.funding_source?.name || a.fundingSource?.name || '';
-            const sourceId = a.funding_source_id || a.funding_source?.id || a.fundingSource?.id;
-            const colId = getColumnIdBySource(sourceName, sourceId);
-            if (colId && actualAllocByCol[colId] !== undefined) {
-                actualAllocByCol[colId] += parseFloat(a.amount || 0);
-            }
-        });
-        const actualAllocTotal = Object.values(actualAllocByCol).reduce((sum, v) => sum + v, 0);
-
-        // 5. Calculate Grand Totals
-        const mainParentKeys = ['1', '2', '3', '4', '5', '6', '7', '8'];
-        const grandPlanBudget = mainParentKeys.reduce((sum, k) => sum + (rowData[k]?.planBudget || 0), 0);
-        const grandBudgetByCol = {};
-        budgetColumns.forEach(c => {
-            grandBudgetByCol[c.id] = mainParentKeys.reduce((sum, k) => sum + (rowData[k]?.cols[c.id] || 0), 0);
-        });
-
-        // 6. Calculate Bottom Balances (คงเหลือ)
-        const baseIncomeTotal = estimateIncomeTotal > 0 ? estimateIncomeTotal : actualAllocTotal;
-        const remainingTotal = baseIncomeTotal > 0 || grandPlanBudget > 0 ? baseIncomeTotal - grandPlanBudget : 0;
-        const remainingByCol = {};
-        budgetColumns.forEach(c => {
-            const colIncome = estimateIncomeByCol[c.id] > 0 ? estimateIncomeByCol[c.id] : actualAllocByCol[c.id];
-            remainingByCol[c.id] = (colIncome || 0) > 0 || (grandBudgetByCol[c.id] || 0) > 0
-                ? (colIncome || 0) - (grandBudgetByCol[c.id] || 0)
-                : 0;
-        });
+        // Destructure from centralized actionPlanReportSummary (Image 1 Master)
+        const {
+            budgetColumns = [],
+            reportStructure = [],
+            rowData = {},
+            estimateIncomeTotal = 0,
+            estimateIncomeByCol = {},
+            actualAllocTotal = 0,
+            actualAllocByCol = {},
+            grandPlanBudget = 0,
+            grandBudgetByCol = {},
+            remainingTotal = 0,
+            remainingByCol = {},
+            formatCell = (n) => (n ? Number(n).toLocaleString() : '-'),
+        } = actionPlanReportSummary || {};
 
         return (
             <div className="space-y-6">

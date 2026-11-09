@@ -810,9 +810,15 @@ class DashboardController extends Controller
             }
 
             // Institutional Expenditure Projections (ประมาณการรายจ่ายสถานศึกษา 4 มิติ)
-            // เชื่อมโยงกรอบเพดานอัตโนมัติจากยอดประมาณการรายรับ/งบตั้งของระบบ (แนวทางที่ 1)
-            $routineAllocated = (float)\App\Models\RoutineBudgetPlan::sum('allocated_amount');
-            $routineSpent = (float)\App\Models\RoutineBudgetPlan::sum('spent_amount');
+            // เชื่อมโยงกรอบเพดานอัตโนมัติจากยอดประมาณการรายรับ/งบตั้งของระบบ โดยไม่บวกซ้ำหมวด 6 (โครงการ)
+            $routineAllocated = (float)\App\Models\RoutineBudgetPlan::where(function($q) {
+                $q->whereNull('report_category')
+                  ->orWhere('report_category', 'not like', '6%');
+            })->sum('allocated_amount');
+            $routineSpent = (float)\App\Models\RoutineBudgetPlan::where(function($q) {
+                $q->whereNull('report_category')
+                  ->orWhere('report_category', 'not like', '6%');
+            })->sum('spent_amount');
             $centralSpent = (float)\App\Models\CentralAllocation::sum('amount');
 
             $routineCeiling = $routineAllocated;

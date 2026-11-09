@@ -32,10 +32,19 @@ class RoutineBudgetController extends Controller
                 ->get();
         }
 
+        $allProjectsMaster = \App\Models\Project::with(['budget.fundingSource', 'budgets', 'department'])
+            ->where(function($q) use ($fiscalYear) {
+                $q->where('academic_year', $fiscalYear)
+                  ->orWhere('budget_year', $fiscalYear)
+                  ->orWhereNull('academic_year');
+            })
+            ->get();
+
         $defaultTab = 'plans';
 
         return Inertia::render('RoutineBudgets/Index', [
             'routinePlans' => $routinePlans,
+            'allProjectsMaster' => $allProjectsMaster,
             'departments' => Department::orderBy('name', 'asc')->get(),
             'fundingSources' => \App\Models\FundingSource::orderBy('id', 'asc')->get(),
             'currentFiscalYear' => $fiscalYear,
