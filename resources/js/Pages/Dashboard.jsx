@@ -11669,6 +11669,111 @@ ${itemsListText}
 
         const isPlanHeadOrAdmin = role === 'admin' || role === 'plan_head' || auth.user.is_plan_head || auth.user.is_plan_staff || auth.user.is_executive || role === 'executive';
 
+        // 1-8 Category Sorting & Grouping for Routine Budget Plans (Ascending from lowest to highest)
+        const routineCategoryOrder = [
+            '1', '1.1', '1.2', '1.3', '1.4',
+            '2', '2.1', '2.1.1', '2.1.2', '2.1.3', '2.1.4', '2.1.5', '2.2', '2.2.1', '2.2.2', '2.2.3', '2.2.4',
+            '3', '3.1', '3.2', '3.2.1', '3.2.2', '3.2.3', '3.2.4', '3.3',
+            '4', '4.1', '4.2', '4.3', '4.4', '4.5', '4.6', '4.7', '4.8', '4.9',
+            '5', '5.1', '5.2', '5.3', '5.4', '5.5', '5.6',
+            '6', '6.1', '6.2', '6.3', '6.4',
+            '7', '7.1', '7.2', '7.3',
+            '8'
+        ];
+
+        const routineMainTitles = {
+            '1': '1. งบบุคลากร',
+            '2': '2. งบดำเนินงาน',
+            '3': '3. ค่าวัสดุ',
+            '4': '4. วัสดุการศึกษา',
+            '5': '5. ค่าสาธารณูปโภค',
+            '6': '6. โครงการ',
+            '7': '7. อื่นๆ (อุดหนุนเรียนฟรี 15 ปี)',
+            '8': '8. สำรองจ่าย',
+            'other': 'หมวดอื่นๆ'
+        };
+
+        const getRoutineMainKey = (cat, title = '') => {
+            const t = (title || '').trim().toLowerCase();
+            if (t.includes('สำรอง') || t.includes('สำรองจ่าย')) return '8';
+            let c = (cat || '').trim();
+            if (!c) {
+                const m = (title || '').trim().match(/^(\d+(\.\d+)*)/);
+                if (m) c = m[1];
+            }
+            if (!c) return 'other';
+            if (c.startsWith('1')) return '1';
+            if (c.startsWith('2')) return '2';
+            if (c.startsWith('3')) return '3';
+            if (c.startsWith('4')) return '4';
+            if (c.startsWith('5')) return '5';
+            if (c.startsWith('6')) return '6';
+            if (c.startsWith('7')) return '7';
+            if (c.startsWith('8')) return '8';
+            return 'other';
+        };
+
+        const getRoutinePlanWeight = (cat, title = '') => {
+            const mainKey = getRoutineMainKey(cat, title);
+            let baseWeight = 999999;
+            if (mainKey !== 'other') {
+                baseWeight = (parseInt(mainKey, 10) || 9) * 100000;
+            }
+            let c = (cat || '').trim();
+            if (!c) {
+                const m = (title || '').trim().match(/^(\d+(\.\d+)*)/);
+                if (m) c = m[1];
+            }
+            if (!c) return baseWeight + 99999;
+            const idx = routineCategoryOrder.indexOf(c);
+            if (idx !== -1) return idx * 100;
+            const parts = c.split('.').map(n => parseInt(n, 10) || 0);
+            return (parts[0] || 99) * 10000 + (parts[1] || 0) * 100 + (parts[2] || 0);
+        };
+
+        // Sort plans ascending (1 -> 8)
+        const sortedRoutineList = [...(routinePlans || [])].sort((a, b) => {
+            const wA = getRoutinePlanWeight(a.report_category, a.title);
+            const wB = getRoutinePlanWeight(b.report_category, b.title);
+            if (wA !== wB) return wA - wB;
+            const catA = (a.report_category || '').trim();
+            const catB = (b.report_category || '').trim();
+            const catDiff = catA.localeCompare(catB, undefined, { numeric: true });
+            if (catDiff !== 0) return catDiff;
+            return (a.title || '').localeCompare(b.title || '', 'th');
+        });
+
+        // Group by main category in 1 to 8 ascending order
+        const routineGroups = [];
+        const mainKeysOrder = ['1', '2', '3', '4', '5', '6', '7', '8', 'other'];
+        const groupMap = {};
+        mainKeysOrder.forEach(k => {
+            groupMap[k] = {
+                key: k,
+                title: routineMainTitles[k],
+                items: [],
+                allocated: 0,
+                spent: 0,
+                remaining: 0
+            };
+        });
+
+        sortedRoutineList.forEach(plan => {
+            const k = getRoutineMainKey(plan.report_category, plan.title);
+            const a = parseFloat(plan.allocated_amount || 0);
+            const s = parseFloat(plan.spent_amount || 0);
+            groupMap[k].items.push(plan);
+            groupMap[k].allocated += a;
+            groupMap[k].spent += s;
+            groupMap[k].remaining += (a - s);
+        });
+
+        mainKeysOrder.forEach(k => {
+            if (groupMap[k].items.length > 0) {
+                routineGroups.push(groupMap[k]);
+            }
+        });
+
         return (
             <div className="space-y-8 font-sans">
                 {/* 1. Global Combined Budget Header */}
@@ -12409,72 +12514,164 @@ ${itemsListText}
 
                 {/* 3. Interactive Section: Routine Budgets Management */}
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
-                    <div>
-                        <h3 className="font-extrabold text-gray-800 text-sm">📋 รายการแผนงบประมาณประจำปีทั้งหมดในระบบ</h3>
-                        <p className="text-xs text-gray-400 mt-0.5">แผนงบดำเนินงานตามภารกิจประจำของแต่ละฝ่าย/งาน/แผนกวิชา</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                        <div>
+                            <h3 className="font-extrabold text-gray-800 text-sm md:text-base flex items-center gap-2">
+                                <span>📋</span> รายการแผนงบประมาณประจำปีทั้งหมดในระบบ
+                            </h3>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                                แผนงบดำเนินงานตามภารกิจประจำ จัดเรียงตามหมวด 1 - 8 (จากน้อยไปหามาก) พร้อมหัวข้อหลักและยอดรวมแต่ละหมวด
+                            </p>
+                        </div>
+                        <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full w-fit">
+                            {routineGroups.length} หมวดหลัก / {routinePlans.length} รายการ
+                        </span>
                     </div>
+
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
-                                    <th className="py-2.5 px-2">หมวดงบประจำปี / สังกัด</th>
-                                    <th className="py-2.5 px-2 text-right">จัดสรร</th>
-                                    <th className="py-2.5 px-2 text-right">เบิกจ่าย</th>
-                                    <th className="py-2.5 px-2 text-right">คงเหลือ</th>
-                                    <th className="py-2.5 px-2 text-center">การจัดการ</th>
+                                    <th className="py-2.5 px-3">หมวดงบประจำปี / สังกัด</th>
+                                    <th className="py-2.5 px-3 text-right">จัดสรร</th>
+                                    <th className="py-2.5 px-3 text-right">เบิกจ่าย</th>
+                                    <th className="py-2.5 px-3 text-right">คงเหลือ</th>
+                                    <th className="py-2.5 px-3 text-center">การจัดการ</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 text-[11px]">
-                                {routinePlans.map((plan) => {
-                                    const alloc = parseFloat(plan.allocated_amount);
-                                    const spent = parseFloat(plan.spent_amount);
-                                    const rem = alloc - spent;
-                                    return (
-                                        <tr key={plan.id} className="hover:bg-gray-50/50">
-                                            <td className="py-3 px-2">
-                                                <span className="font-bold text-gray-800 block">{plan.title}</span>
-                                                <span className="text-[10px] text-gray-400">🏫 {plan.department?.name} (ปี {plan.fiscal_year})</span>
+                                {routineGroups.map((group) => (
+                                    <Fragment key={`group-${group.key}`}>
+                                        {/* หัวข้อหลัก พร้อมรวมงบประจำหมวด */}
+                                        <tr className="bg-slate-100/90 border-t-2 border-b border-slate-300 font-bold text-slate-900">
+                                            <td className="py-2.5 px-3">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="text-base">📁</span>
+                                                    <span className="font-black text-slate-950 text-xs sm:text-sm tracking-tight">
+                                                        {group.title}
+                                                    </span>
+                                                    <span className="text-[10px] sm:text-[11px] font-bold text-purple-900 bg-white border border-purple-200 px-2.5 py-0.5 rounded-full shadow-2xs">
+                                                        รวม {group.items.length} รายการ
+                                                    </span>
+                                                </div>
                                             </td>
-                                            <td className="py-3 px-2 text-right font-semibold text-gray-800">{alloc.toLocaleString()}</td>
-                                            <td className="py-3 px-2 text-right text-red-500 font-semibold">{spent.toLocaleString()}</td>
-                                            <td className="py-3 px-2 text-right text-emerald-600 font-bold">{rem.toLocaleString()}</td>
-                                            <td className="py-3 px-2 text-center space-y-1 sm:space-y-0 sm:space-x-1 whitespace-nowrap">
-                                                <button
-                                                    onClick={() => openRoutineProcurementModal(plan)}
-                                                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all"
-                                                >
-                                                    🛒 ขอซื้อตรง
-                                                </button>
-                                                {plan.procurements?.length > 0 && (
-                                                    <button
-                                                        onClick={() => setViewingRoutineHistoryPlan(plan)}
-                                                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                    >
-                                                        ประวัติ ({plan.procurements.length})
-                                                    </button>
-                                                )}
-                                                {isPlanHeadOrAdmin && (
-                                                    <>
-                                                        <Link
-                                                            href={route('admin.routine_budgets.index')}
-                                                            className="inline-block bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                            title="แก้ไขในหน้าจัดสรรงบดำเนินงานประจำปี"
-                                                        >
-                                                            ✏️
-                                                        </Link>
-                                                        <button
-                                                            onClick={() => handleRoutinePlanDelete(plan.id)}
-                                                            className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                            title="ลบแผนงบประมาณ"
-                                                        >
-                                                            🗑️
-                                                        </button>
-                                                    </>
-                                                )}
+                                            <td className="py-2.5 px-3 text-right font-black font-mono text-slate-950 text-xs sm:text-sm whitespace-nowrap bg-slate-50/60">
+                                                ฿{group.allocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-black font-mono text-rose-700 text-xs sm:text-sm whitespace-nowrap bg-rose-50/40">
+                                                ฿{group.spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-right font-black font-mono text-emerald-800 text-xs sm:text-sm whitespace-nowrap bg-emerald-50/40">
+                                                ฿{group.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </td>
+                                            <td className="py-2.5 px-3 text-center">
+                                                <span className="inline-block px-2 py-0.5 text-[10px] font-black tracking-wider uppercase text-purple-900 bg-white rounded border border-purple-200">
+                                                    ยอดรวมหมวด
+                                                </span>
                                             </td>
                                         </tr>
-                                    );
-                                })}
+
+                                        {/* รายการย่อยในหมวด เรียงลำดับจากน้อยไปหามาก */}
+                                        {group.items.map((plan) => {
+                                            const alloc = parseFloat(plan.allocated_amount || 0);
+                                            const spent = parseFloat(plan.spent_amount || 0);
+                                            const rem = alloc - spent;
+                                            return (
+                                                <tr key={plan.id} className="hover:bg-purple-50/30 transition-colors">
+                                                    <td className="py-3 px-3 pl-6">
+                                                        <div className="space-y-1">
+                                                            <span className="font-bold text-gray-900 block leading-snug">{plan.title}</span>
+                                                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-gray-500">
+                                                                <span>🏫 {plan.department?.name || 'ไม่ระบุฝ่าย'} (ปี {plan.fiscal_year})</span>
+                                                                {plan.report_category && (
+                                                                    <span className="bg-purple-100/70 text-purple-800 font-bold px-1.5 py-0.2 rounded border border-purple-200/60 font-mono">
+                                                                        หมวด: {plan.report_category}
+                                                                    </span>
+                                                                )}
+                                                                {plan.funding_source?.name && (
+                                                                    <span className="bg-slate-100 text-slate-700 font-medium px-1.5 py-0.2 rounded border border-slate-200">
+                                                                        💰 {plan.funding_source.name}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right font-bold text-gray-800 font-mono text-xs">
+                                                        {alloc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right text-rose-600 font-bold font-mono text-xs">
+                                                        {spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right text-emerald-700 font-black font-mono text-xs">
+                                                        {rem.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-center space-y-1 sm:space-y-0 sm:space-x-1 whitespace-nowrap">
+                                                        <button
+                                                            onClick={() => openRoutineProcurementModal(plan)}
+                                                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all shadow-xs cursor-pointer"
+                                                        >
+                                                            🛒 ขอซื้อตรง
+                                                        </button>
+                                                        {plan.procurements?.length > 0 && (
+                                                            <button
+                                                                onClick={() => setViewingRoutineHistoryPlan(plan)}
+                                                                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2 py-1.5 rounded-lg transition-all cursor-pointer"
+                                                            >
+                                                                ประวัติ ({plan.procurements.length})
+                                                            </button>
+                                                        )}
+                                                        {isPlanHeadOrAdmin && (
+                                                            <>
+                                                                <Link
+                                                                    href={route('admin.routine_budgets.index')}
+                                                                    className="inline-block bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                                    title="แก้ไขในหน้าจัดสรรงบดำเนินงานประจำปี"
+                                                                >
+                                                                    ✏️
+                                                                </Link>
+                                                                <button
+                                                                    onClick={() => handleRoutinePlanDelete(plan.id)}
+                                                                    className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all cursor-pointer"
+                                                                    title="ลบแผนงบประมาณ"
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </Fragment>
+                                ))}
+
+                                {routineGroups.length > 0 && (
+                                    <tr className="bg-slate-200/80 font-black text-slate-950 border-t-2 border-slate-400">
+                                        <td className="py-3 px-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-lg">📊</span>
+                                                <span className="text-xs sm:text-sm font-black">
+                                                    ยอดรวมแผนงบประมาณประจำปีทั้งหมด ({routinePlans.length} รายการ)
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="py-3 px-3 text-right font-black font-mono text-purple-950 text-xs sm:text-sm whitespace-nowrap">
+                                            ฿{routineAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="py-3 px-3 text-right font-black font-mono text-rose-700 text-xs sm:text-sm whitespace-nowrap">
+                                            ฿{routineSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="py-3 px-3 text-right font-black font-mono text-emerald-800 text-xs sm:text-sm whitespace-nowrap">
+                                            ฿{routineRemaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="py-3 px-3 text-center">
+                                            <span className="inline-block px-2.5 py-1 text-[11px] font-black uppercase text-slate-900 bg-white rounded-lg border border-slate-300">
+                                                รวมทั้งหมด
+                                            </span>
+                                        </td>
+                                    </tr>
+                                )}
+
                                 {routinePlans.length === 0 && (
                                     <tr>
                                         <td colSpan="5" className="text-center py-6 text-gray-400">ยังไม่มีงบดำเนินงานประจำปีใดๆ ในระบบ</td>

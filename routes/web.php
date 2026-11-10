@@ -27,18 +27,6 @@ Route::get('/auth/keycloak', [KeycloakController::class, 'redirect'])->name('key
 Route::get('/auth/keycloak/callback', [KeycloakController::class, 'callback'])->name('keycloak.callback');
 Route::get('/auth/keycloak/debug', [KeycloakController::class, 'debug'])->name('keycloak.debug');
 
-Route::get('/debug-version', function () {
-    return response()->json([
-        'base_path' => base_path(),
-        'public_path' => public_path(),
-        'git_log' => trim(@shell_exec('git log -1 --format="%h %ci %s"') ?: 'no-exec'),
-        'git_status' => trim(@shell_exec('git status -s') ?: 'no-exec'),
-        'manifest_exists' => file_exists(public_path('build/manifest.json')),
-        'manifest_mtime' => file_exists(public_path('build/manifest.json')) ? date('Y-m-d H:i:s', filemtime(public_path('build/manifest.json'))) : null,
-        'dashboard_entry' => @json_decode(@file_get_contents(public_path('build/manifest.json')), true)['resources/js/Pages/Dashboard.jsx'] ?? null,
-    ]);
-});
-
 
 Route::get('/', function () {
     $approvedQuery = \App\Models\Project::where(function ($q) {
