@@ -643,13 +643,13 @@ export default function Dashboard({
 
     // Form for Central Allocation
     const { data: centralAllocationData, setData: setCentralAllocationData, post: postCentralAllocation, put: putCentralAllocation, reset: resetCentralAllocation, errors: centralAllocationErrors } = useForm({
-        fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
+        fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2570',
         document_number: '',
         budget_code: '',
         activity_code: '',
         sub_account_code: '',
         title: '',
-        funding_source_id: '',
+        funding_source_id: (allFundingSources && allFundingSources[0]?.id) || (planHeadData?.fundingSources && planHeadData.fundingSources[0]?.id) || 1,
         amount: '',
         description: '',
     });
@@ -10292,19 +10292,45 @@ export default function Dashboard({
     // Central Allocation CRUD Actions
     const handleCentralAllocationSubmit = (e) => {
         e.preventDefault();
-        
-        // Ensure funding source is set
-        const defaultSourceId = centralAllocationData.funding_source_id || planHeadData?.fundingSources?.[0]?.id || '';
 
-        const bCode = String(centralAllocationData.budget_code || '').replace(/[^0-9]/g, '');
-        const aCode = String(centralAllocationData.activity_code || '').replace(/[^0-9]/g, '');
-        const sCode = String(centralAllocationData.sub_account_code || '').replace(/[^0-9]/g, '');
+        // Helper to convert Thai digits to Arabic digits and strip non-digits
+        const sanitizeCode = (val) => {
+            if (!val) return '';
+            const arabic = String(val).replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+            return arabic.replace(/[^0-9]/g, '');
+        };
+
+        const bCode = sanitizeCode(centralAllocationData.budget_code);
+        const aCode = sanitizeCode(centralAllocationData.activity_code);
+        const sCode = sanitizeCode(centralAllocationData.sub_account_code);
+
+        if (!centralAllocationData.fiscal_year || !String(centralAllocationData.fiscal_year).trim()) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณาระบุปีงบประมาณ',
+                text: 'กรุณาระบุปีงบประมาณ เช่น 2570',
+                confirmButtonColor: '#7c3aed'
+            });
+            return;
+        }
+
+        // Ensure funding source is set
+        const defaultSourceId = centralAllocationData.funding_source_id || allFundingSources?.[0]?.id || planHeadData?.fundingSources?.[0]?.id || '';
+        if (!defaultSourceId) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณาเลือกหมวดงบเงินทุน',
+                text: 'กรุณาเลือกหมวดงบเงินทุนส่วนกลาง',
+                confirmButtonColor: '#7c3aed'
+            });
+            return;
+        }
 
         if (!bCode || bCode.length !== 20) {
             Swal.fire({
                 icon: 'warning',
                 title: 'รหัสงบประมาณไม่ถูกต้อง',
-                text: `รหัสงบประมาณต้องเป็นตัวเลขความยาว 20 หลักพอดี (ขณะนี้ระบุ ${bCode.length} หลัก) ตัวอย่าง: 20006330015004100003`,
+                text: `รหัสงบประมาณต้องเป็นตัวเลขความยาว 20 หลักพอดี (ขณะนี้ระบุ ${bCode.length} หลัก) สามารถคัดลอกจากหนังสือแจ้งจัดสรรมาวางได้เลย ระบบจะตัดช่องว่างและแปลงเลขไทยให้อัตโนมัติ ตัวอย่าง: 20006330015004100003`,
                 confirmButtonColor: '#7c3aed',
                 confirmButtonText: 'รับทราบและแก้ไข'
             });
@@ -10334,13 +10360,55 @@ export default function Dashboard({
             });
             return;
         }
-        
+
+        if (!centralAllocationData.title || !String(centralAllocationData.title).trim()) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณาระบุชื่องาน/โครงการ/วัตถุประสงค์',
+                text: 'กรุณากรอกชื่องบประมาณจัดสรร เช่น งบอุดหนุนทั่วไปรายหัว',
+                confirmButtonColor: '#7c3aed'
+            });
+            return;
+        }
+
+        const rawAmount = String(centralAllocationData.amount || '').replace(/,/g, '').trim();
+        const cleanAmount = parseFloat(rawAmount.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d)));
+        if (isNaN(cleanAmount) || cleanAmount < 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'กรุณาระบุจำนวนเงินจัดสรร',
+                text: 'กรุณาระบุจำนวนเงินที่ถูกต้อง (มากกว่าหรือเท่ากับ 0)',
+                confirmButtonColor: '#7c3aed'
+            });
+            return;
+        }
+
         const payload = {
-            ...centralAllocationData,
+            fiscal_year: String(centralAllocationData.fiscal_year).trim(),
+            document_number: centralAllocationData.document_number ? String(centralAllocationData.document_number).trim() : null,
             budget_code: bCode,
             activity_code: aCode || null,
             sub_account_code: sCode || null,
-            funding_source_id: defaultSourceId
+            funding_source_id: defaultSourceId,
+            title: String(centralAllocationData.title).trim(),
+            amount: cleanAmount,
+            description: centralAllocationData.description ? String(centralAllocationData.description).trim() : null,
+        };
+
+        const onErrorHandler = (errors) => {
+            console.error('Central allocation error:', errors);
+            let message = 'กรุณาตรวจสอบข้อมูลที่กรอก';
+            if (errors && typeof errors === 'object') {
+                message = Object.values(errors).flat().join('\n');
+            } else if (typeof errors === 'string') {
+                message = errors;
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'เกิดข้อผิดพลาดในการบันทึก',
+                text: message,
+                confirmButtonColor: '#7c3aed'
+            });
         };
 
         if (editingCentralAllocation) {
@@ -10350,14 +10418,16 @@ export default function Dashboard({
                     setEditingCentralAllocation(null);
                     setIsCentralAllocationModalOpen(false);
                     resetCentralAllocation();
-                }
+                },
+                onError: onErrorHandler
             });
         } else {
             router.post(route('admin.central_allocations.store'), payload, {
                 onSuccess: () => {
                     Swal.fire('สำเร็จ!', 'บันทึกการจัดสรรงบประมาณจากส่วนกลางเรียบร้อยแล้ว', 'success');
                     resetCentralAllocation();
-                }
+                },
+                onError: onErrorHandler
             });
         }
     };
@@ -12270,10 +12340,12 @@ ${itemsListText}
                                             </div>
                                             <input
                                                 type="text"
-                                                maxLength={20}
+                                                maxLength={35}
                                                 value={centralAllocationData.budget_code || ''}
                                                 onChange={e => {
-                                                    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 20);
+                                                    const raw = e.target.value;
+                                                    const arabic = raw.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+                                                    const cleaned = arabic.replace(/[^0-9]/g, '').slice(0, 20);
                                                     setCentralAllocationData('budget_code', cleaned);
                                                 }}
                                                 className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
@@ -12281,7 +12353,7 @@ ${itemsListText}
                                                         ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold focus:ring-emerald-500 focus:border-emerald-500'
                                                         : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
                                                 }`}
-                                                placeholder="เช่น 20006330015004100003"
+                                                placeholder="เช่น 20006330015004100003 (คัดลอกมาวางได้เลย)"
                                             />
                                             {centralAllocationErrors.budget_code && (
                                                 <span className="text-red-500 text-[10px]">{centralAllocationErrors.budget_code}</span>
@@ -12309,10 +12381,12 @@ ${itemsListText}
                                             </div>
                                             <input
                                                 type="text"
-                                                maxLength={17}
+                                                maxLength={30}
                                                 value={centralAllocationData.activity_code || ''}
                                                 onChange={e => {
-                                                    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 17);
+                                                    const raw = e.target.value;
+                                                    const arabic = raw.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+                                                    const cleaned = arabic.replace(/[^0-9]/g, '').slice(0, 17);
                                                     setCentralAllocationData('activity_code', cleaned);
                                                 }}
                                                 className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
@@ -12348,10 +12422,12 @@ ${itemsListText}
                                             </div>
                                             <input
                                                 type="text"
-                                                maxLength={7}
+                                                maxLength={20}
                                                 value={centralAllocationData.sub_account_code || ''}
                                                 onChange={e => {
-                                                    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 7);
+                                                    const raw = e.target.value;
+                                                    const arabic = raw.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+                                                    const cleaned = arabic.replace(/[^0-9]/g, '').slice(0, 7);
                                                     setCentralAllocationData('sub_account_code', cleaned);
                                                 }}
                                                 className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
@@ -12390,11 +12466,16 @@ ${itemsListText}
                                             จำนวนงบประมาณแจ้งจัดสรรจริง (บาท) <span className="text-rose-500">*</span>
                                         </label>
                                         <input
-                                            type="number"
+                                            type="text"
                                             value={centralAllocationData.amount}
-                                            onChange={e => setCentralAllocationData('amount', e.target.value)}
+                                            onChange={e => {
+                                                const raw = e.target.value;
+                                                const arabic = raw.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+                                                const cleaned = arabic.replace(/[^0-9.,]/g, '');
+                                                setCentralAllocationData('amount', cleaned);
+                                            }}
                                             className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5 font-mono font-bold"
-                                            placeholder="เช่น 100000"
+                                            placeholder="เช่น 100000 หรือ 100,000"
                                         />
                                         {centralAllocationErrors.amount && (
                                             <span className="text-red-500 text-[10px]">{centralAllocationErrors.amount}</span>
@@ -12690,9 +12771,9 @@ ${itemsListText}
                                                 onChange={e => setCentralAllocationData('funding_source_id', e.target.value)}
                                                 className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
                                             >
-                                                {(planHeadData?.fundingSources || []).map(source => (
+                                                {(allFundingSources?.length ? allFundingSources : (planHeadData?.fundingSources || [])).map(source => (
                                                     <option key={source.id} value={source.id}>
-                                                        {source.name} (ปี {source.fiscal_year})
+                                                        {source.name} {source.fiscal_year ? `(ปี ${source.fiscal_year})` : ''}
                                                     </option>
                                                 ))}
                                             </select>
@@ -12732,10 +12813,12 @@ ${itemsListText}
                                                 </div>
                                                 <input
                                                     type="text"
-                                                    maxLength={20}
+                                                    maxLength={35}
                                                     value={centralAllocationData.budget_code || ''}
                                                     onChange={e => {
-                                                        const cleaned = e.target.value.replace(/\D/g, '').slice(0, 20);
+                                                        const raw = e.target.value;
+                                                        const arabic = raw.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+                                                        const cleaned = arabic.replace(/[^0-9]/g, '').slice(0, 20);
                                                         setCentralAllocationData('budget_code', cleaned);
                                                     }}
                                                     className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
@@ -12743,7 +12826,7 @@ ${itemsListText}
                                                             ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold'
                                                             : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
                                                     }`}
-                                                    placeholder="เช่น 20006330015004100003"
+                                                    placeholder="เช่น 20006330015004100003 (คัดลอกมาวางได้เลย)"
                                                 />
                                             </div>
 
@@ -12768,10 +12851,12 @@ ${itemsListText}
                                                 </div>
                                                 <input
                                                     type="text"
-                                                    maxLength={17}
+                                                    maxLength={30}
                                                     value={centralAllocationData.activity_code || ''}
                                                     onChange={e => {
-                                                        const cleaned = e.target.value.replace(/\D/g, '').slice(0, 17);
+                                                        const raw = e.target.value;
+                                                        const arabic = raw.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+                                                        const cleaned = arabic.replace(/[^0-9]/g, '').slice(0, 17);
                                                         setCentralAllocationData('activity_code', cleaned);
                                                     }}
                                                     className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
@@ -12804,10 +12889,12 @@ ${itemsListText}
                                                 </div>
                                                 <input
                                                     type="text"
-                                                    maxLength={7}
+                                                    maxLength={20}
                                                     value={centralAllocationData.sub_account_code || ''}
                                                     onChange={e => {
-                                                        const cleaned = e.target.value.replace(/\D/g, '').slice(0, 7);
+                                                        const raw = e.target.value;
+                                                        const arabic = raw.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+                                                        const cleaned = arabic.replace(/[^0-9]/g, '').slice(0, 7);
                                                         setCentralAllocationData('sub_account_code', cleaned);
                                                     }}
                                                     className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
@@ -12839,11 +12926,16 @@ ${itemsListText}
                                                 จำนวนเงินแจ้งจัดสรรจริง (บาท) <span className="text-rose-500">*</span>
                                             </label>
                                             <input
-                                                type="number"
+                                                type="text"
                                                 value={centralAllocationData.amount}
-                                                onChange={e => setCentralAllocationData('amount', e.target.value)}
+                                                onChange={e => {
+                                                    const raw = e.target.value;
+                                                    const arabic = raw.replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+                                                    const cleaned = arabic.replace(/[^0-9.,]/g, '');
+                                                    setCentralAllocationData('amount', cleaned);
+                                                }}
                                                 className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5 font-mono font-bold"
-                                                placeholder="เช่น 100000"
+                                                placeholder="เช่น 100000 หรือ 100,000"
                                             />
                                         </div>
                                     </div>

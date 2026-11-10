@@ -13,22 +13,33 @@ class CentralAllocationController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isExecutive()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงฟังก์ชันนี้');
         }
 
-        // Clean spaces and formatting from GFMIS codes before validation
+        // Clean spaces, dashes, commas, and Thai numerals from inputs before validation
+        $thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        $arabicDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
         $cleanedInput = [];
         if ($request->has('budget_code')) {
-            $cleanedInput['budget_code'] = !empty($request->budget_code) ? preg_replace('/[^0-9]/', '', (string)$request->budget_code) : null;
+            $val = str_replace($thaiDigits, $arabicDigits, (string)$request->budget_code);
+            $cleanedInput['budget_code'] = !empty($val) ? preg_replace('/[^0-9]/', '', $val) : null;
         }
         if ($request->has('activity_code')) {
-            $val = !empty($request->activity_code) ? preg_replace('/[^0-9]/', '', (string)$request->activity_code) : null;
-            $cleanedInput['activity_code'] = $val ?: null;
+            $val = str_replace($thaiDigits, $arabicDigits, (string)$request->activity_code);
+            $digits = preg_replace('/[^0-9]/', '', $val);
+            $cleanedInput['activity_code'] = !empty($digits) ? $digits : null;
         }
         if ($request->has('sub_account_code')) {
-            $val = !empty($request->sub_account_code) ? preg_replace('/[^0-9]/', '', (string)$request->sub_account_code) : null;
-            $cleanedInput['sub_account_code'] = $val ?: null;
+            $val = str_replace($thaiDigits, $arabicDigits, (string)$request->sub_account_code);
+            $digits = preg_replace('/[^0-9]/', '', $val);
+            $cleanedInput['sub_account_code'] = !empty($digits) ? $digits : null;
+        }
+        if ($request->has('amount')) {
+            $val = str_replace([',', ' '], '', (string)$request->amount);
+            $val = str_replace($thaiDigits, $arabicDigits, $val);
+            $cleanedInput['amount'] = is_numeric($val) ? (float)$val : $request->amount;
         }
         if (!empty($cleanedInput)) {
             $request->merge($cleanedInput);
@@ -45,9 +56,12 @@ class CentralAllocationController extends Controller
             'amount' => 'required|numeric|min:0',
             'description' => 'nullable|string',
         ], [
+            'fiscal_year.required' => 'กรุณาระบุปีงบประมาณ',
             'title.required' => 'กรุณาระบุชื่องบประมาณจัดสรร',
             'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
+            'funding_source_id.exists' => 'ไม่พบแหล่งเงินทุนที่เลือกในระบบ',
             'amount.required' => 'กรุณาระบุจำนวนเงิน',
+            'amount.numeric' => 'จำนวนเงินต้องเป็นตัวเลขที่ถูกต้อง',
             'budget_code.required' => 'กรุณาระบุรหัสงบประมาณ (20 หลัก)',
             'budget_code.regex' => 'รหัสงบประมาณต้องเป็นตัวเลข 20 หลักพอดี (ตัวอย่าง: 20006330015004100003)',
             'activity_code.regex' => 'รหัสกิจกรรมหลักต้องเป็นตัวเลข 17 หลักพอดี (ตัวอย่าง: 20006690000800000)',
@@ -58,16 +72,20 @@ class CentralAllocationController extends Controller
 
         // Synchronize GFMIS codes with the funding source for cross-module usage (Finance / Projects / Loans)
         if (!empty($validated['funding_source_id'])) {
-            $sourceUpdate = [
-                'budget_code' => $validated['budget_code'] ?? null,
-            ];
-            if (!empty($validated['activity_code'])) {
-                $sourceUpdate['activity_code'] = $validated['activity_code'];
+            try {
+                $sourceUpdate = [
+                    'budget_code' => $validated['budget_code'] ?? null,
+                ];
+                if (!empty($validated['activity_code'])) {
+                    $sourceUpdate['activity_code'] = $validated['activity_code'];
+                }
+                if (!empty($validated['sub_account_code'])) {
+                    $sourceUpdate['sub_account_code'] = $validated['sub_account_code'];
+                }
+                \App\Models\FundingSource::where('id', $validated['funding_source_id'])->update($sourceUpdate);
+            } catch (\Throwable $e) {
+                \Log::warning('FundingSource sync warning: ' . $e->getMessage());
             }
-            if (!empty($validated['sub_account_code'])) {
-                $sourceUpdate['sub_account_code'] = $validated['sub_account_code'];
-            }
-            \App\Models\FundingSource::where('id', $validated['funding_source_id'])->update($sourceUpdate);
         }
 
         return redirect()->back()->with('success', 'บันทึกรับงบประมาณจัดสรรจริงจากส่วนกลางเรียบร้อยแล้ว');
@@ -79,22 +97,33 @@ class CentralAllocationController extends Controller
     public function update(Request $request, CentralAllocation $centralAllocation)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isExecutive()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงฟังก์ชันนี้');
         }
 
-        // Clean spaces and formatting from GFMIS codes before validation
+        // Clean spaces, dashes, commas, and Thai numerals from inputs before validation
+        $thaiDigits = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
+        $arabicDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
         $cleanedInput = [];
         if ($request->has('budget_code')) {
-            $cleanedInput['budget_code'] = !empty($request->budget_code) ? preg_replace('/[^0-9]/', '', (string)$request->budget_code) : null;
+            $val = str_replace($thaiDigits, $arabicDigits, (string)$request->budget_code);
+            $cleanedInput['budget_code'] = !empty($val) ? preg_replace('/[^0-9]/', '', $val) : null;
         }
         if ($request->has('activity_code')) {
-            $val = !empty($request->activity_code) ? preg_replace('/[^0-9]/', '', (string)$request->activity_code) : null;
-            $cleanedInput['activity_code'] = $val ?: null;
+            $val = str_replace($thaiDigits, $arabicDigits, (string)$request->activity_code);
+            $digits = preg_replace('/[^0-9]/', '', $val);
+            $cleanedInput['activity_code'] = !empty($digits) ? $digits : null;
         }
         if ($request->has('sub_account_code')) {
-            $val = !empty($request->sub_account_code) ? preg_replace('/[^0-9]/', '', (string)$request->sub_account_code) : null;
-            $cleanedInput['sub_account_code'] = $val ?: null;
+            $val = str_replace($thaiDigits, $arabicDigits, (string)$request->sub_account_code);
+            $digits = preg_replace('/[^0-9]/', '', $val);
+            $cleanedInput['sub_account_code'] = !empty($digits) ? $digits : null;
+        }
+        if ($request->has('amount')) {
+            $val = str_replace([',', ' '], '', (string)$request->amount);
+            $val = str_replace($thaiDigits, $arabicDigits, $val);
+            $cleanedInput['amount'] = is_numeric($val) ? (float)$val : $request->amount;
         }
         if (!empty($cleanedInput)) {
             $request->merge($cleanedInput);
@@ -112,7 +141,9 @@ class CentralAllocationController extends Controller
         ], [
             'title.required' => 'กรุณาระบุชื่องบประมาณจัดสรร',
             'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
+            'funding_source_id.exists' => 'ไม่พบแหล่งเงินทุนที่เลือกในระบบ',
             'amount.required' => 'กรุณาระบุจำนวนเงิน',
+            'amount.numeric' => 'จำนวนเงินต้องเป็นตัวเลขที่ถูกต้อง',
             'budget_code.required' => 'กรุณาระบุรหัสงบประมาณ (20 หลัก)',
             'budget_code.regex' => 'รหัสงบประมาณต้องเป็นตัวเลข 20 หลักพอดี (ตัวอย่าง: 20006330015004100003)',
             'activity_code.regex' => 'รหัสกิจกรรมหลักต้องเป็นตัวเลข 17 หลักพอดี (ตัวอย่าง: 20006690000800000)',
@@ -123,16 +154,20 @@ class CentralAllocationController extends Controller
 
         // Synchronize GFMIS codes with the funding source
         if (!empty($validated['funding_source_id'])) {
-            $sourceUpdate = [
-                'budget_code' => $validated['budget_code'] ?? null,
-            ];
-            if (!empty($validated['activity_code'])) {
-                $sourceUpdate['activity_code'] = $validated['activity_code'];
+            try {
+                $sourceUpdate = [
+                    'budget_code' => $validated['budget_code'] ?? null,
+                ];
+                if (!empty($validated['activity_code'])) {
+                    $sourceUpdate['activity_code'] = $validated['activity_code'];
+                }
+                if (!empty($validated['sub_account_code'])) {
+                    $sourceUpdate['sub_account_code'] = $validated['sub_account_code'];
+                }
+                \App\Models\FundingSource::where('id', $validated['funding_source_id'])->update($sourceUpdate);
+            } catch (\Throwable $e) {
+                \Log::warning('FundingSource sync warning: ' . $e->getMessage());
             }
-            if (!empty($validated['sub_account_code'])) {
-                $sourceUpdate['sub_account_code'] = $validated['sub_account_code'];
-            }
-            \App\Models\FundingSource::where('id', $validated['funding_source_id'])->update($sourceUpdate);
         }
 
         return redirect()->back()->with('success', 'แก้ไขข้อมูลรับงบจัดสรรจากส่วนกลางเรียบร้อยแล้ว');
@@ -144,7 +179,7 @@ class CentralAllocationController extends Controller
     public function destroy(CentralAllocation $centralAllocation)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead()) {
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isExecutive()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงฟังก์ชันนี้');
         }
 
