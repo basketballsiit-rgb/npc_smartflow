@@ -19,10 +19,13 @@ jobs:
         timeout: 120s
         command_timeout: 15m
         script: |
-          git config --global --add safe.directory /var/www/npc_smartflow
+          set -e
           cd /var/www/npc_smartflow
-          git fetch https://github.com/basketballsiit-rgb/npc_smartflow.git main
-          git reset --hard FETCH_HEAD
+          git config --global --add safe.directory /var/www/npc_smartflow
+          sudo chown -R $(whoami) /var/www/npc_smartflow || true
+          git remote set-url origin https://github.com/basketballsiit-rgb/npc_smartflow.git || git remote add origin https://github.com/basketballsiit-rgb/npc_smartflow.git || true
+          git fetch origin main --force
+          git reset --hard origin/main
           chmod +x deploy.sh
           bash -x deploy.sh
           echo "✅ Deploy NPC SmartFlow สำเร็จ!"
