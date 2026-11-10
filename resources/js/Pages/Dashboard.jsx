@@ -615,6 +615,7 @@ export default function Dashboard({
 
     // Central allocations states
     const [editingCentralAllocation, setEditingCentralAllocation] = useState(null);
+    const [isCentralAllocationModalOpen, setIsCentralAllocationModalOpen] = useState(false);
 
     // Form for Central Allocation
     const { data: centralAllocationData, setData: setCentralAllocationData, post: postCentralAllocation, put: putCentralAllocation, reset: resetCentralAllocation, errors: centralAllocationErrors } = useForm({
@@ -10286,22 +10287,24 @@ export default function Dashboard({
             return;
         }
 
-        if (!aCode || aCode.length !== 17) {
+        // aCode is optional, but if provided must be 17 digits
+        if (aCode && aCode.length !== 17) {
             Swal.fire({
                 icon: 'warning',
                 title: 'รหัสกิจกรรมหลักไม่ถูกต้อง',
-                text: `รหัสกิจกรรมหลักต้องเป็นตัวเลขความยาว 17 หลักพอดี (ขณะนี้ระบุ ${aCode.length} หลัก) ตัวอย่าง: 20006690000800000`,
+                text: `หากระบุ รหัสกิจกรรมหลักต้องเป็นตัวเลขความยาว 17 หลักพอดี (ขณะนี้ระบุ ${aCode.length} หลัก) ตัวอย่าง: 20006690000800000 หรือสามารถเว้นว่างไว้ระบุภายหลังได้`,
                 confirmButtonColor: '#7c3aed',
                 confirmButtonText: 'รับทราบและแก้ไข'
             });
             return;
         }
 
-        if (!sCode || sCode.length !== 7) {
+        // sCode is optional, but if provided must be 7 digits
+        if (sCode && sCode.length !== 7) {
             Swal.fire({
                 icon: 'warning',
                 title: 'รหัสบัญชีย่อยไม่ถูกต้อง',
-                text: `รหัสบัญชีย่อยต้องเป็นตัวเลขความยาว 7 หลักพอดี (ขณะนี้ระบุ ${sCode.length} หลัก) ตัวอย่าง: 0015011`,
+                text: `หากระบุ รหัสบัญชีย่อยต้องเป็นตัวเลขความยาว 7 หลักพอดี (ขณะนี้ระบุ ${sCode.length} หลัก) ตัวอย่าง: 0015011 หรือสามารถเว้นว่างไว้ระบุภายหลังได้`,
                 confirmButtonColor: '#7c3aed',
                 confirmButtonText: 'รับทราบและแก้ไข'
             });
@@ -10311,8 +10314,8 @@ export default function Dashboard({
         const payload = {
             ...centralAllocationData,
             budget_code: bCode,
-            activity_code: aCode,
-            sub_account_code: sCode,
+            activity_code: aCode || null,
+            sub_account_code: sCode || null,
             funding_source_id: defaultSourceId
         };
 
@@ -10321,6 +10324,7 @@ export default function Dashboard({
                 onSuccess: () => {
                     Swal.fire('สำเร็จ!', 'แก้ไขข้อมูลการจัดสรรจากส่วนกลางเรียบร้อยแล้ว', 'success');
                     setEditingCentralAllocation(null);
+                    setIsCentralAllocationModalOpen(false);
                     resetCentralAllocation();
                 }
             });
@@ -12219,7 +12223,7 @@ ${itemsListText}
                                             </span>
                                         </div>
                                         <span className="text-[10px] text-purple-700 font-semibold bg-purple-100/70 px-2 py-0.5 rounded-full">
-                                            ระบบตรวจสอบความยาวตัวเลข (20 / 17 / 7 หลัก) อัตโนมัติ
+                                            รหัสงบ (20 หลัก) บังคับ | รหัสกิจกรรม (17 หลัก) &amp; บัญชีย่อย (7 หลัก) เว้นว่างได้ (ระบุภายหลัง)
                                         </span>
                                     </div>
 
@@ -12263,17 +12267,20 @@ ${itemsListText}
                                         {/* 2. รหัสกิจกรรมหลัก (17 หลัก) */}
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
-                                                <label className="text-[11px] font-bold text-gray-700">
-                                                    รหัสกิจกรรมหลัก <span className="text-rose-500">*</span>
+                                                <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                                                    <span>รหัสกิจกรรมหลัก</span>
+                                                    <span className="text-gray-400 font-normal text-[10px]">(ระบุภายหลังได้)</span>
                                                 </label>
                                                 <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold transition-colors ${
                                                     (centralAllocationData.activity_code || '').length === 17
                                                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                                         : (centralAllocationData.activity_code || '').length > 0
                                                             ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                            : 'bg-slate-200 text-slate-600'
+                                                            : 'bg-slate-100 text-slate-500'
                                                 }`}>
-                                                    {(centralAllocationData.activity_code || '').length}/17 หลัก
+                                                    {(centralAllocationData.activity_code || '').length > 0 
+                                                        ? `${(centralAllocationData.activity_code || '').length}/17 หลัก` 
+                                                        : 'เว้นว่างได้'}
                                                 </span>
                                             </div>
                                             <input
@@ -12289,7 +12296,7 @@ ${itemsListText}
                                                         ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold focus:ring-emerald-500 focus:border-emerald-500'
                                                         : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
                                                 }`}
-                                                placeholder="เช่น 20006690000800000"
+                                                placeholder="เช่น 20006690000800000 (เว้นว่างไว้ก่อนได้)"
                                             />
                                             {centralAllocationErrors.activity_code && (
                                                 <span className="text-red-500 text-[10px]">{centralAllocationErrors.activity_code}</span>
@@ -12299,17 +12306,20 @@ ${itemsListText}
                                         {/* 3. รหัสบัญชีย่อย (7 หลัก) */}
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
-                                                <label className="text-[11px] font-bold text-gray-700">
-                                                    รหัสบัญชีย่อย <span className="text-rose-500">*</span>
+                                                <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                                                    <span>รหัสบัญชีย่อย</span>
+                                                    <span className="text-gray-400 font-normal text-[10px]">(ระบุภายหลังได้)</span>
                                                 </label>
                                                 <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold transition-colors ${
                                                     (centralAllocationData.sub_account_code || '').length === 7
                                                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                                         : (centralAllocationData.sub_account_code || '').length > 0
                                                             ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                                                            : 'bg-slate-200 text-slate-600'
+                                                            : 'bg-slate-100 text-slate-500'
                                                 }`}>
-                                                    {(centralAllocationData.sub_account_code || '').length}/7 หลัก
+                                                    {(centralAllocationData.sub_account_code || '').length > 0 
+                                                        ? `${(centralAllocationData.sub_account_code || '').length}/7 หลัก` 
+                                                        : 'เว้นว่างได้'}
                                                 </span>
                                             </div>
                                             <input
@@ -12325,7 +12335,7 @@ ${itemsListText}
                                                         ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold focus:ring-emerald-500 focus:border-emerald-500'
                                                         : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
                                                 }`}
-                                                placeholder="เช่น 0015011"
+                                                placeholder="เช่น 0015011 (เว้นว่างไว้ก่อนได้)"
                                             />
                                             {centralAllocationErrors.sub_account_code && (
                                                 <span className="text-red-500 text-[10px]">{centralAllocationErrors.sub_account_code}</span>
@@ -12448,15 +12458,61 @@ ${itemsListText}
                                                                 🏛️ งบ: <strong className="text-slate-900">{alloc.budget_code}</strong>
                                                             </span>
                                                         )}
-                                                        {alloc.activity_code && (
-                                                            <span className="text-[9.5px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 rounded border border-slate-200 inline-block" title="รหัสกิจกรรมหลัก 17 หลัก">
-                                                                🎯 กิจกรรม: <strong className="text-slate-900">{alloc.activity_code}</strong>
+                                                        {alloc.activity_code ? (
+                                                            <span className="text-[9.5px] bg-emerald-50 text-emerald-800 font-mono px-1.5 py-0.5 rounded border border-emerald-200 inline-block" title="รหัสกิจกรรมหลัก 17 หลัก">
+                                                                🎯 กิจกรรม: <strong className="text-emerald-950">{alloc.activity_code}</strong>
                                                             </span>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setEditingCentralAllocation(alloc);
+                                                                    setCentralAllocationData({
+                                                                        fiscal_year: alloc.fiscal_year,
+                                                                        document_number: alloc.document_number || '',
+                                                                        budget_code: alloc.budget_code || '',
+                                                                        activity_code: alloc.activity_code || '',
+                                                                        sub_account_code: alloc.sub_account_code || '',
+                                                                        title: alloc.title,
+                                                                        funding_source_id: alloc.funding_source_id,
+                                                                        amount: alloc.amount,
+                                                                        description: alloc.description || '',
+                                                                    });
+                                                                    setIsCentralAllocationModalOpen(true);
+                                                                }}
+                                                                className="text-[9.5px] bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200 inline-block transition-colors"
+                                                                title="คลิกเพื่อระบุรหัสกิจกรรมหลัก 17 หลักเพิ่มเติม"
+                                                            >
+                                                                🎯 กิจกรรม: <span className="italic underline">ยังไม่ระบุ (คลิกเพื่อเติม)</span>
+                                                            </button>
                                                         )}
-                                                        {alloc.sub_account_code && (
-                                                            <span className="text-[9.5px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 rounded border border-slate-200 inline-block" title="รหัสบัญชีย่อย 7 หลัก">
-                                                                📑 บัญชีย่อย: <strong className="text-slate-900">{alloc.sub_account_code}</strong>
+                                                        {alloc.sub_account_code ? (
+                                                            <span className="text-[9.5px] bg-emerald-50 text-emerald-800 font-mono px-1.5 py-0.5 rounded border border-emerald-200 inline-block" title="รหัสบัญชีย่อย 7 หลัก">
+                                                                📑 บัญชีย่อย: <strong className="text-emerald-950">{alloc.sub_account_code}</strong>
                                                             </span>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setEditingCentralAllocation(alloc);
+                                                                    setCentralAllocationData({
+                                                                        fiscal_year: alloc.fiscal_year,
+                                                                        document_number: alloc.document_number || '',
+                                                                        budget_code: alloc.budget_code || '',
+                                                                        activity_code: alloc.activity_code || '',
+                                                                        sub_account_code: alloc.sub_account_code || '',
+                                                                        title: alloc.title,
+                                                                        funding_source_id: alloc.funding_source_id,
+                                                                        amount: alloc.amount,
+                                                                        description: alloc.description || '',
+                                                                    });
+                                                                    setIsCentralAllocationModalOpen(true);
+                                                                }}
+                                                                className="text-[9.5px] bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200 inline-block transition-colors"
+                                                                title="คลิกเพื่อระบุรหัสบัญชีย่อย 7 หลักเพิ่มเติม"
+                                                            >
+                                                                📑 บัญชีย่อย: <span className="italic underline">ยังไม่ระบุ (คลิกเพื่อเติม)</span>
+                                                            </button>
                                                         )}
                                                     </div>
                                                     {alloc.description && <p className="text-[10px] text-gray-400 mt-1">{alloc.description}</p>}
@@ -12481,10 +12537,10 @@ ${itemsListText}
                                                                         amount: alloc.amount,
                                                                         description: alloc.description || '',
                                                                     });
-                                                                    window.scrollTo({ top: 400, behavior: 'smooth' });
+                                                                    setIsCentralAllocationModalOpen(true);
                                                                 }}
                                                                 className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                                title="แก้ไข"
+                                                                title="แก้ไขข้อมูล / เติมรหัส GFMIS เพิ่มเติม"
                                                             >
                                                                 ✏️
                                                             </button>
@@ -12510,6 +12566,269 @@ ${itemsListText}
                             </table>
                         </div>
                     </div>
+
+                    {/* Modal: Edit Central Allocation & Fill GFMIS Codes */}
+                    {isCentralAllocationModalOpen && editingCentralAllocation && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+                            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl border border-purple-100 max-h-[90vh] overflow-y-auto space-y-5 animate-in zoom-in-95 duration-200">
+                                {/* Modal Header */}
+                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-2xl p-2.5 bg-purple-50 text-purple-700 rounded-2xl border border-purple-100">
+                                            ✏️
+                                        </span>
+                                        <div>
+                                            <h3 className="font-extrabold text-gray-900 text-base md:text-lg">
+                                                แก้ไขข้อมูลรับงบจัดสรรจากส่วนกลาง / เติมรหัส GFMIS
+                                            </h3>
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                กรอกแก้ไขข้อมูล หรือระบุรหัสกิจกรรมหลัก (17 หลัก) และรหัสบัญชีย่อย (7 หลัก) ที่ได้รับเพิ่มเติม
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsCentralAllocationModalOpen(false);
+                                            setEditingCentralAllocation(null);
+                                            resetCentralAllocation();
+                                        }}
+                                        className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 flex items-center justify-center font-bold text-sm transition-all"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+
+                                {/* Modal Form */}
+                                <form onSubmit={handleCentralAllocationSubmit} className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                                                ปีงบประมาณ <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={centralAllocationData.fiscal_year}
+                                                onChange={e => setCentralAllocationData('fiscal_year', e.target.value)}
+                                                className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5 font-bold"
+                                                placeholder="เช่น 2570"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                                                เลขที่หนังสือสั่งการ / อ้างอิง
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={centralAllocationData.document_number}
+                                                onChange={e => setCentralAllocationData('document_number', e.target.value)}
+                                                className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                                placeholder="เช่น ศธ 0601/1234 หรือ อ้างอิงแผน"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                                                หมวดงบเงินทุนส่วนกลาง <span className="text-rose-500">*</span>
+                                            </label>
+                                            <select
+                                                value={centralAllocationData.funding_source_id}
+                                                onChange={e => setCentralAllocationData('funding_source_id', e.target.value)}
+                                                className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                            >
+                                                {(planHeadData?.fundingSources || []).map(source => (
+                                                    <option key={source.id} value={source.id}>
+                                                        {source.name} (ปี {source.fiscal_year})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* GFMIS Section in Modal */}
+                                    <div className="bg-purple-50/50 p-4 rounded-2xl border border-purple-200/80 space-y-3">
+                                        <div className="flex items-center justify-between border-b border-purple-200/60 pb-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="text-sm">🏛️</span>
+                                                <span className="text-xs font-bold text-purple-950">
+                                                    รหัสงบประมาณ GFMIS 3 ชุด
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] text-purple-700 bg-purple-100/80 px-2 py-0.5 rounded-full font-semibold">
+                                                ตรวจสอบความยาวตัวเลขอัตโนมัติ
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {/* 1. รหัสงบประมาณ (20 หลัก) */}
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="text-[11px] font-bold text-gray-700">
+                                                        1. รหัสงบประมาณ (20 หลัก) <span className="text-rose-500">*</span>
+                                                    </label>
+                                                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold transition-colors ${
+                                                        (centralAllocationData.budget_code || '').length === 20
+                                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                            : (centralAllocationData.budget_code || '').length > 0
+                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                : 'bg-slate-200 text-slate-600'
+                                                    }`}>
+                                                        {(centralAllocationData.budget_code || '').length}/20 หลัก
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    maxLength={20}
+                                                    value={centralAllocationData.budget_code || ''}
+                                                    onChange={e => {
+                                                        const cleaned = e.target.value.replace(/\D/g, '').slice(0, 20);
+                                                        setCentralAllocationData('budget_code', cleaned);
+                                                    }}
+                                                    className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
+                                                        (centralAllocationData.budget_code || '').length === 20
+                                                            ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold'
+                                                            : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
+                                                    }`}
+                                                    placeholder="เช่น 20006330015004100003"
+                                                />
+                                            </div>
+
+                                            {/* 2. รหัสกิจกรรมหลัก (17 หลัก) */}
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                                                        <span>2. รหัสกิจกรรมหลัก (17 หลัก)</span>
+                                                        <span className="text-gray-400 font-normal text-[10px]">(ระบุภายหลังได้)</span>
+                                                    </label>
+                                                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold transition-colors ${
+                                                        (centralAllocationData.activity_code || '').length === 17
+                                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                            : (centralAllocationData.activity_code || '').length > 0
+                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                : 'bg-slate-100 text-slate-500'
+                                                    }`}>
+                                                        {(centralAllocationData.activity_code || '').length > 0
+                                                            ? `${(centralAllocationData.activity_code || '').length}/17 หลัก`
+                                                            : 'เว้นว่างได้'}
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    maxLength={17}
+                                                    value={centralAllocationData.activity_code || ''}
+                                                    onChange={e => {
+                                                        const cleaned = e.target.value.replace(/\D/g, '').slice(0, 17);
+                                                        setCentralAllocationData('activity_code', cleaned);
+                                                    }}
+                                                    className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
+                                                        (centralAllocationData.activity_code || '').length === 17
+                                                            ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold'
+                                                            : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
+                                                    }`}
+                                                    placeholder="เช่น 20006690000800000 (หากยังไม่ได้รับให้เว้นว่างไว้ก่อนได้)"
+                                                />
+                                            </div>
+
+                                            {/* 3. รหัสบัญชีย่อย (7 หลัก) */}
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                                                        <span>3. รหัสบัญชีย่อย (7 หลัก)</span>
+                                                        <span className="text-gray-400 font-normal text-[10px]">(ระบุภายหลังได้)</span>
+                                                    </label>
+                                                    <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold transition-colors ${
+                                                        (centralAllocationData.sub_account_code || '').length === 7
+                                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                            : (centralAllocationData.sub_account_code || '').length > 0
+                                                                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                : 'bg-slate-100 text-slate-500'
+                                                    }`}>
+                                                        {(centralAllocationData.sub_account_code || '').length > 0
+                                                            ? `${(centralAllocationData.sub_account_code || '').length}/7 หลัก`
+                                                            : 'เว้นว่างได้'}
+                                                    </span>
+                                                </div>
+                                                <input
+                                                    type="text"
+                                                    maxLength={7}
+                                                    value={centralAllocationData.sub_account_code || ''}
+                                                    onChange={e => {
+                                                        const cleaned = e.target.value.replace(/\D/g, '').slice(0, 7);
+                                                        setCentralAllocationData('sub_account_code', cleaned);
+                                                    }}
+                                                    className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
+                                                        (centralAllocationData.sub_account_code || '').length === 7
+                                                            ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold'
+                                                            : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
+                                                    }`}
+                                                    placeholder="เช่น 0015011 (หากยังไม่ได้รับให้เว้นว่างไว้ก่อนได้)"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div className="md:col-span-2">
+                                            <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                                                ชื่องาน/โครงการ/วัตถุประสงค์จากส่วนกลาง <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={centralAllocationData.title}
+                                                onChange={e => setCentralAllocationData('title', e.target.value)}
+                                                className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                                placeholder="เช่น งบอุดหนุนทั่วไปรายหัว"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                                                จำนวนเงินแจ้งจัดสรรจริง (บาท) <span className="text-rose-500">*</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={centralAllocationData.amount}
+                                                onChange={e => setCentralAllocationData('amount', e.target.value)}
+                                                className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5 font-mono font-bold"
+                                                placeholder="เช่น 100000"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-gray-600 mb-1">
+                                            รายละเอียดเพิ่มเติม / ภาระงานแนบ
+                                        </label>
+                                        <textarea
+                                            value={centralAllocationData.description}
+                                            onChange={e => setCentralAllocationData('description', e.target.value)}
+                                            className="w-full text-xs rounded-xl border-gray-200 focus:ring-purple-500 focus:border-purple-500 p-2.5"
+                                            rows="2"
+                                            placeholder="รายละเอียดเพิ่มเติมเกี่ยวกับการเบิกจ่าย หรือเงื่อนไขของงบ..."
+                                        />
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsCentralAllocationModalOpen(false);
+                                                setEditingCentralAllocation(null);
+                                                resetCentralAllocation();
+                                            }}
+                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 px-5 rounded-xl text-xs transition-all"
+                                        >
+                                            ยกเลิก
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition-all shadow-md shadow-purple-200 hover:scale-[1.01] active:scale-95"
+                                        >
+                                            💾 บันทึกการแก้ไข
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* 3. Interactive Section: Routine Budgets Management */}
