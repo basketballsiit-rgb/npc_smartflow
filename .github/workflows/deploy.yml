@@ -20,23 +20,15 @@ jobs:
         command_timeout: 15m
         script: |
           cd /var/www/npc_smartflow
+          rm -f public/deploy_debug.log
           {
             echo "=== Deployment Started $(date) ==="
             echo "User: $(whoami)"
             git config --global --add safe.directory /var/www/npc_smartflow
-            echo "--- Remotes ---"
-            git remote -v
-            echo "--- Current Status ---"
-            git status
-            echo "--- Fetching ---"
-            git fetch https://github.com/basketballsiit-rgb/npc_smartflow.git main --verbose
-            echo "--- Resetting ---"
-            git reset --hard FETCH_HEAD
-            echo "--- HEAD Commit ---"
-            git log -1 --oneline
-            echo "--- Run deploy.sh ---"
+            git fetch origin main --force
+            git reset --hard origin/main
             chmod +x deploy.sh
             bash -x deploy.sh
             echo "=== Deployment Finished Successfully ==="
-          } > public/deploy_debug.log 2>&1
-          cat public/deploy_debug.log
+          } > storage/logs/deploy.log 2>&1
+          cat storage/logs/deploy.log
