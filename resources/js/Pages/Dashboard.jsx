@@ -617,6 +617,30 @@ export default function Dashboard({
     const [editingCentralAllocation, setEditingCentralAllocation] = useState(null);
     const [isCentralAllocationModalOpen, setIsCentralAllocationModalOpen] = useState(false);
 
+    // Expand / Collapse states for budget tables
+    const [isCentralHistoryExpanded, setIsCentralHistoryExpanded] = useState(true);
+    const [isRoutinePlansTableExpanded, setIsRoutinePlansTableExpanded] = useState(true);
+    const [collapsedRoutineGroups, setCollapsedRoutineGroups] = useState({});
+
+    const toggleRoutineGroup = (groupKey) => {
+        setCollapsedRoutineGroups(prev => ({
+            ...prev,
+            [groupKey]: !prev[groupKey]
+        }));
+    };
+
+    const expandAllRoutineGroups = () => {
+        setCollapsedRoutineGroups({});
+    };
+
+    const collapseAllRoutineGroups = (groups) => {
+        const all = {};
+        (groups || []).forEach(g => {
+            all[g.key] = true;
+        });
+        setCollapsedRoutineGroups(all);
+    };
+
     // Form for Central Allocation
     const { data: centralAllocationData, setData: setCentralAllocationData, post: postCentralAllocation, put: putCentralAllocation, reset: resetCentralAllocation, errors: centralAllocationErrors } = useForm({
         fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
@@ -12417,154 +12441,185 @@ ${itemsListText}
 
                     {/* Central Budget List Table - Full Width ล่าง */}
                     <div className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 space-y-4">
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
                             <div className="flex items-center gap-2">
                                 <span className="text-xl">📋</span>
-                                <h3 className="font-extrabold text-gray-800 text-sm md:text-base">
-                                    รายการประวัติรับจัดสรรงบประมาณจากต้นสังกัด / ส่วนกลาง
-                                </h3>
+                                <div>
+                                    <h3 className="font-extrabold text-gray-800 text-sm md:text-base">
+                                        รายการประวัติรับจัดสรรงบประมาณจากต้นสังกัด / ส่วนกลาง
+                                    </h3>
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                        ประวัติการแจ้งจัดสรรงบประมาณจริงจากส่วนกลาง (GFMIS) พร้อมรหัส 3 ชุด
+                                    </p>
+                                </div>
                             </div>
-                            <span className="text-xs text-gray-400">
-                                รวมทั้งสิ้น {centralAllocations.length} รายการ
-                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-bold text-gray-500 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-xl">
+                                    รวม {centralAllocations.length} รายการ
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCentralHistoryExpanded(!isCentralHistoryExpanded)}
+                                    className="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3.5 py-1.5 rounded-xl transition-all shadow-2xs hover:scale-[1.02] active:scale-95 cursor-pointer"
+                                    title={isCentralHistoryExpanded ? 'คลิกเพื่อย่อ/ยุบตาราง' : 'คลิกเพื่อขยายตาราง'}
+                                >
+                                    <span>{isCentralHistoryExpanded ? '🔼 ยุบตารางประวัติ' : '🔽 ขยายดูประวัติจัดสรร'}</span>
+                                </button>
+                            </div>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
-                                        <th className="py-2.5 px-3">ปี / หนังสือสั่งการ</th>
-                                        <th className="py-2.5 px-3">วัตถุประสงค์ / โครงการส่วนกลาง</th>
-                                        <th className="py-2.5 px-3 text-right">วงเงินรับจัดสรร</th>
-                                        <th className="py-2.5 px-3 text-center">การจัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50 text-[11px]">
-                                    {centralAllocations.map((alloc) => {
-                                        const amt = parseFloat(alloc.amount || 0);
-                                        return (
-                                            <tr key={alloc.id} className="hover:bg-gray-50/50">
-                                                <td className="py-3 px-3">
-                                                    <span className="font-bold text-gray-800 block">ปี {alloc.fiscal_year}</span>
-                                                    <span className="text-[10px] text-gray-400">📄 {alloc.document_number || 'ไม่มีเลขที่หนังสือ'}</span>
-                                                </td>
-                                                <td className="py-3 px-3">
-                                                    <span className="font-bold text-gray-800 block">{alloc.title}</span>
-                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                                        <span className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-medium inline-block border border-purple-200">
-                                                            💰 {alloc.funding_source?.name}
-                                                        </span>
-                                                        {alloc.budget_code && (
-                                                            <span className="text-[9.5px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 rounded border border-slate-200 inline-block" title="รหัสงบประมาณ 20 หลัก">
-                                                                🏛️ งบ: <strong className="text-slate-900">{alloc.budget_code}</strong>
-                                                            </span>
-                                                        )}
-                                                        {alloc.activity_code ? (
-                                                            <span className="text-[9.5px] bg-emerald-50 text-emerald-800 font-mono px-1.5 py-0.5 rounded border border-emerald-200 inline-block" title="รหัสกิจกรรมหลัก 17 หลัก">
-                                                                🎯 กิจกรรม: <strong className="text-emerald-950">{alloc.activity_code}</strong>
-                                                            </span>
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setEditingCentralAllocation(alloc);
-                                                                    setCentralAllocationData({
-                                                                        fiscal_year: alloc.fiscal_year,
-                                                                        document_number: alloc.document_number || '',
-                                                                        budget_code: alloc.budget_code || '',
-                                                                        activity_code: alloc.activity_code || '',
-                                                                        sub_account_code: alloc.sub_account_code || '',
-                                                                        title: alloc.title,
-                                                                        funding_source_id: alloc.funding_source_id,
-                                                                        amount: alloc.amount,
-                                                                        description: alloc.description || '',
-                                                                    });
-                                                                    setIsCentralAllocationModalOpen(true);
-                                                                }}
-                                                                className="text-[9.5px] bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200 inline-block transition-colors"
-                                                                title="คลิกเพื่อระบุรหัสกิจกรรมหลัก 17 หลักเพิ่มเติม"
-                                                            >
-                                                                🎯 กิจกรรม: <span className="italic underline">ยังไม่ระบุ (คลิกเพื่อเติม)</span>
-                                                            </button>
-                                                        )}
-                                                        {alloc.sub_account_code ? (
-                                                            <span className="text-[9.5px] bg-emerald-50 text-emerald-800 font-mono px-1.5 py-0.5 rounded border border-emerald-200 inline-block" title="รหัสบัญชีย่อย 7 หลัก">
-                                                                📑 บัญชีย่อย: <strong className="text-emerald-950">{alloc.sub_account_code}</strong>
-                                                            </span>
-                                                        ) : (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    setEditingCentralAllocation(alloc);
-                                                                    setCentralAllocationData({
-                                                                        fiscal_year: alloc.fiscal_year,
-                                                                        document_number: alloc.document_number || '',
-                                                                        budget_code: alloc.budget_code || '',
-                                                                        activity_code: alloc.activity_code || '',
-                                                                        sub_account_code: alloc.sub_account_code || '',
-                                                                        title: alloc.title,
-                                                                        funding_source_id: alloc.funding_source_id,
-                                                                        amount: alloc.amount,
-                                                                        description: alloc.description || '',
-                                                                    });
-                                                                    setIsCentralAllocationModalOpen(true);
-                                                                }}
-                                                                className="text-[9.5px] bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200 inline-block transition-colors"
-                                                                title="คลิกเพื่อระบุรหัสบัญชีย่อย 7 หลักเพิ่มเติม"
-                                                            >
-                                                                📑 บัญชีย่อย: <span className="italic underline">ยังไม่ระบุ (คลิกเพื่อเติม)</span>
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    {alloc.description && <p className="text-[10px] text-gray-400 mt-1">{alloc.description}</p>}
-                                                </td>
-                                                <td className="py-3 px-3 text-right font-bold text-gray-800 font-mono text-xs">
-                                                    {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amt)}
-                                                </td>
-                                                <td className="py-3 px-3 text-center space-x-1 whitespace-nowrap">
-                                                    {isPlanHeadOrAdmin && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingCentralAllocation(alloc);
-                                                                    setCentralAllocationData({
-                                                                        fiscal_year: alloc.fiscal_year,
-                                                                        document_number: alloc.document_number || '',
-                                                                        budget_code: alloc.budget_code || '',
-                                                                        activity_code: alloc.activity_code || '',
-                                                                        sub_account_code: alloc.sub_account_code || '',
-                                                                        title: alloc.title,
-                                                                        funding_source_id: alloc.funding_source_id,
-                                                                        amount: alloc.amount,
-                                                                        description: alloc.description || '',
-                                                                    });
-                                                                    setIsCentralAllocationModalOpen(true);
-                                                                }}
-                                                                className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                                title="แก้ไขข้อมูล / เติมรหัส GFMIS เพิ่มเติม"
-                                                            >
-                                                                ✏️
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleCentralAllocationDelete(alloc.id)}
-                                                                className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                                title="ลบ"
-                                                            >
-                                                                🗑️
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                    {centralAllocations.length === 0 && (
-                                        <tr>
-                                            <td colSpan="4" className="text-center py-8 text-gray-400">ยังไม่มีบันทึกรับงบจัดสรรจากส่วนกลางในระบบ</td>
+
+                        {isCentralHistoryExpanded ? (
+                            <div className="overflow-x-auto animate-in fade-in duration-200">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
+                                            <th className="py-2.5 px-3">ปี / หนังสือสั่งการ</th>
+                                            <th className="py-2.5 px-3">วัตถุประสงค์ / โครงการส่วนกลาง</th>
+                                            <th className="py-2.5 px-3 text-right">วงเงินรับจัดสรร</th>
+                                            <th className="py-2.5 px-3 text-center">การจัดการ</th>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 text-[11px]">
+                                        {centralAllocations.map((alloc) => {
+                                            const amt = parseFloat(alloc.amount || 0);
+                                            return (
+                                                <tr key={alloc.id} className="hover:bg-gray-50/50">
+                                                    <td className="py-3 px-3">
+                                                        <span className="font-bold text-gray-800 block">ปี {alloc.fiscal_year}</span>
+                                                        <span className="text-[10px] text-gray-400">📄 {alloc.document_number || 'ไม่มีเลขที่หนังสือ'}</span>
+                                                    </td>
+                                                    <td className="py-3 px-3">
+                                                        <span className="font-bold text-gray-800 block">{alloc.title}</span>
+                                                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                                            <span className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-medium inline-block border border-purple-200">
+                                                                💰 {alloc.funding_source?.name}
+                                                            </span>
+                                                            {alloc.budget_code && (
+                                                                <span className="text-[9.5px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 rounded border border-slate-200 inline-block" title="รหัสงบประมาณ 20 หลัก">
+                                                                    🏛️ งบ: <strong className="text-slate-900">{alloc.budget_code}</strong>
+                                                                </span>
+                                                            )}
+                                                            {alloc.activity_code ? (
+                                                                <span className="text-[9.5px] bg-emerald-50 text-emerald-800 font-mono px-1.5 py-0.5 rounded border border-emerald-200 inline-block" title="รหัสกิจกรรมหลัก 17 หลัก">
+                                                                    🎯 กิจกรรม: <strong className="text-emerald-950">{alloc.activity_code}</strong>
+                                                                </span>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setEditingCentralAllocation(alloc);
+                                                                        setCentralAllocationData({
+                                                                            fiscal_year: alloc.fiscal_year,
+                                                                            document_number: alloc.document_number || '',
+                                                                            budget_code: alloc.budget_code || '',
+                                                                            activity_code: alloc.activity_code || '',
+                                                                            sub_account_code: alloc.sub_account_code || '',
+                                                                            title: alloc.title,
+                                                                            funding_source_id: alloc.funding_source_id,
+                                                                            amount: alloc.amount,
+                                                                            description: alloc.description || '',
+                                                                        });
+                                                                        setIsCentralAllocationModalOpen(true);
+                                                                    }}
+                                                                    className="text-[9.5px] bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200 inline-block transition-colors"
+                                                                    title="คลิกเพื่อระบุรหัสกิจกรรมหลัก 17 หลักเพิ่มเติม"
+                                                                >
+                                                                    🎯 กิจกรรม: <span className="italic underline">ยังไม่ระบุ (คลิกเพื่อเติม)</span>
+                                                                </button>
+                                                            )}
+                                                            {alloc.sub_account_code ? (
+                                                                <span className="text-[9.5px] bg-emerald-50 text-emerald-800 font-mono px-1.5 py-0.5 rounded border border-emerald-200 inline-block" title="รหัสบัญชีย่อย 7 หลัก">
+                                                                    📑 บัญชีย่อย: <strong className="text-emerald-950">{alloc.sub_account_code}</strong>
+                                                                </span>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setEditingCentralAllocation(alloc);
+                                                                        setCentralAllocationData({
+                                                                            fiscal_year: alloc.fiscal_year,
+                                                                            document_number: alloc.document_number || '',
+                                                                            budget_code: alloc.budget_code || '',
+                                                                            activity_code: alloc.activity_code || '',
+                                                                            sub_account_code: alloc.sub_account_code || '',
+                                                                            title: alloc.title,
+                                                                            funding_source_id: alloc.funding_source_id,
+                                                                            amount: alloc.amount,
+                                                                            description: alloc.description || '',
+                                                                        });
+                                                                        setIsCentralAllocationModalOpen(true);
+                                                                    }}
+                                                                    className="text-[9.5px] bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium px-1.5 py-0.5 rounded border border-amber-200 inline-block transition-colors"
+                                                                    title="คลิกเพื่อระบุรหัสบัญชีย่อย 7 หลักเพิ่มเติม"
+                                                                >
+                                                                    📑 บัญชีย่อย: <span className="italic underline">ยังไม่ระบุ (คลิกเพื่อเติม)</span>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        {alloc.description && <p className="text-[10px] text-gray-400 mt-1">{alloc.description}</p>}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right font-bold text-gray-800 font-mono text-xs">
+                                                        {new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(amt)}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-center space-x-1 whitespace-nowrap">
+                                                        {isPlanHeadOrAdmin && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setEditingCentralAllocation(alloc);
+                                                                        setCentralAllocationData({
+                                                                            fiscal_year: alloc.fiscal_year,
+                                                                            document_number: alloc.document_number || '',
+                                                                            budget_code: alloc.budget_code || '',
+                                                                            activity_code: alloc.activity_code || '',
+                                                                            sub_account_code: alloc.sub_account_code || '',
+                                                                            title: alloc.title,
+                                                                            funding_source_id: alloc.funding_source_id,
+                                                                            amount: alloc.amount,
+                                                                            description: alloc.description || '',
+                                                                        });
+                                                                        setIsCentralAllocationModalOpen(true);
+                                                                    }}
+                                                                    className="bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                                    title="แก้ไขข้อมูล / เติมรหัส GFMIS เพิ่มเติม"
+                                                                >
+                                                                    ✏️
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleCentralAllocationDelete(alloc.id)}
+                                                                    className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                                    title="ลบ"
+                                                                >
+                                                                    🗑️
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {centralAllocations.length === 0 && (
+                                            <tr>
+                                                <td colSpan="4" className="text-center py-8 text-gray-400">ยังไม่มีบันทึกรับงบจัดสรรจากส่วนกลางในระบบ</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div 
+                                onClick={() => setIsCentralHistoryExpanded(true)}
+                                className="p-4 bg-purple-50/40 hover:bg-purple-50/70 border border-dashed border-purple-200 rounded-2xl flex items-center justify-between cursor-pointer transition-all text-xs text-purple-900 group"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <span className="text-base">📁</span>
+                                    <span className="font-medium">ตารางประวัติรับจัดสรรถูกย่อไว้ ({centralAllocations.length} รายการ)</span>
+                                </span>
+                                <span className="font-bold text-purple-700 underline group-hover:text-purple-900">
+                                    คลิกเพื่อขยายดูรายละเอียด 🔽
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Modal: Edit Central Allocation & Fill GFMIS Codes */}
@@ -12833,7 +12888,7 @@ ${itemsListText}
 
                 {/* 3. Interactive Section: Routine Budgets Management */}
                 <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-gray-100 pb-3">
                         <div>
                             <h3 className="font-extrabold text-gray-800 text-sm md:text-base flex items-center gap-2">
                                 <span>📋</span> รายการแผนงบประมาณประจำปีทั้งหมดในระบบ
@@ -12842,163 +12897,220 @@ ${itemsListText}
                                 แผนงบดำเนินงานตามภารกิจประจำ จัดเรียงตามหมวด 1 - 8 (จากน้อยไปหามาก) พร้อมหัวข้อหลักและยอดรวมแต่ละหมวด
                             </p>
                         </div>
-                        <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1 rounded-full w-fit">
-                            {routineGroups.length} หมวดหลัก / {routinePlans.length} รายการ
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-xl">
+                                {routineGroups.length} หมวดหลัก / {routinePlans.length} รายการ
+                            </span>
+                            {/* Expand / Collapse All Category Groups Buttons */}
+                            <button
+                                type="button"
+                                onClick={expandAllRoutineGroups}
+                                className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-xl transition-all shadow-2xs hover:scale-[1.02] active:scale-95 cursor-pointer"
+                                title="ขยายเปิดทุกหมวดเพื่อดูรายการทั้งหมด"
+                            >
+                                📂 ขยายทุกหมวด
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => collapseAllRoutineGroups(routineGroups)}
+                                className="text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-xl transition-all shadow-2xs hover:scale-[1.02] active:scale-95 cursor-pointer"
+                                title="ย่อพับทุกหมวด (ดูเฉพาะยอดสรุปหมวดหลัก)"
+                            >
+                                📁 ยุบทุกหมวด
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsRoutinePlansTableExpanded(!isRoutinePlansTableExpanded)}
+                                className="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 px-3.5 py-1.5 rounded-xl transition-all shadow-2xs hover:scale-[1.02] active:scale-95 cursor-pointer"
+                                title={isRoutinePlansTableExpanded ? 'คลิกเพื่อยุบทั้งตาราง' : 'คลิกเพื่อขยายตาราง'}
+                            >
+                                <span>{isRoutinePlansTableExpanded ? '🔼 ยุบทั้งตาราง' : '🔽 ขยายดูตาราง'}</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
-                                    <th className="py-2.5 px-3">หมวดงบประจำปี / สังกัด</th>
-                                    <th className="py-2.5 px-3 text-right">จัดสรร</th>
-                                    <th className="py-2.5 px-3 text-right">เบิกจ่าย</th>
-                                    <th className="py-2.5 px-3 text-right">คงเหลือ</th>
-                                    <th className="py-2.5 px-3 text-center">การจัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50 text-[11px]">
-                                {routineGroups.map((group) => (
-                                    <Fragment key={`group-${group.key}`}>
-                                        {/* หัวข้อหลัก พร้อมรวมงบประจำหมวด */}
-                                        <tr className="bg-slate-100/90 border-t-2 border-b border-slate-300 font-bold text-slate-900">
-                                            <td className="py-2.5 px-3">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-base">📁</span>
-                                                    <span className="font-black text-slate-950 text-xs sm:text-sm tracking-tight">
-                                                        {group.title}
-                                                    </span>
-                                                    <span className="text-[10px] sm:text-[11px] font-bold text-purple-900 bg-white border border-purple-200 px-2.5 py-0.5 rounded-full shadow-2xs">
-                                                        รวม {group.items.length} รายการ
+                    {isRoutinePlansTableExpanded ? (
+                        <div className="overflow-x-auto animate-in fade-in duration-200">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-gray-100 text-gray-400 text-[11px] font-bold">
+                                        <th className="py-2.5 px-3">หมวดงบประจำปี / สังกัด</th>
+                                        <th className="py-2.5 px-3 text-right">จัดสรร</th>
+                                        <th className="py-2.5 px-3 text-right">เบิกจ่าย</th>
+                                        <th className="py-2.5 px-3 text-right">คงเหลือ</th>
+                                        <th className="py-2.5 px-3 text-center">การจัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 text-[11px]">
+                                    {routineGroups.map((group) => {
+                                        const isGroupCollapsed = !!collapsedRoutineGroups[group.key];
+                                        return (
+                                            <Fragment key={`group-${group.key}`}>
+                                                {/* หัวข้อหลัก พร้อมรวมงบประจำหมวด (คลิกเพื่อ ยุบ / ขยาย รายการในหมวดนี้ได้) */}
+                                                <tr 
+                                                    onClick={() => toggleRoutineGroup(group.key)}
+                                                    className="bg-slate-100/95 hover:bg-slate-200/90 border-t-2 border-b border-slate-300 font-bold text-slate-900 cursor-pointer transition-colors select-none group/hdr"
+                                                    title={isGroupCollapsed ? `คลิกเพื่อขยายดู ${group.items.length} รายการในหมวดนี้` : 'คลิกเพื่อยุบซ่อนรายการในหมวดนี้'}
+                                                >
+                                                    <td className="py-2.5 px-3">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="text-xs text-purple-700 font-bold transition-transform duration-200">
+                                                                {isGroupCollapsed ? '▶' : '▼'}
+                                                            </span>
+                                                            <span className="text-base">
+                                                                {isGroupCollapsed ? '📁' : '📂'}
+                                                            </span>
+                                                            <span className="font-black text-slate-950 text-xs sm:text-sm tracking-tight group-hover/hdr:text-purple-950">
+                                                                {group.title}
+                                                            </span>
+                                                            <span className="text-[10px] sm:text-[11px] font-bold text-purple-900 bg-white border border-purple-200 px-2.5 py-0.5 rounded-full shadow-2xs">
+                                                                รวม {group.items.length} รายการ
+                                                            </span>
+                                                            <span className="text-[10px] font-normal text-slate-500 italic">
+                                                                {isGroupCollapsed ? '(คลิกเพื่อขยายดู)' : '(คลิกเพื่อยุบ)'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-right font-black font-mono text-slate-950 text-xs sm:text-sm whitespace-nowrap bg-slate-50/60">
+                                                        ฿{group.allocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-right font-black font-mono text-rose-700 text-xs sm:text-sm whitespace-nowrap bg-rose-50/40">
+                                                        ฿{group.spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-right font-black font-mono text-emerald-800 text-xs sm:text-sm whitespace-nowrap bg-emerald-50/40">
+                                                        ฿{group.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-center">
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-black tracking-wider uppercase text-purple-900 bg-white rounded border border-purple-200 shadow-2xs group-hover/hdr:border-purple-400">
+                                                            <span>{isGroupCollapsed ? '🔽 ดูรายการ' : '🔼 ยุบหมวด'}</span>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+
+                                                {/* รายการย่อยในหมวด (จะแสดงเมื่อหมวดไม่ได้ถูกยุบ) */}
+                                                {!isGroupCollapsed && group.items.map((plan) => {
+                                                    const alloc = parseFloat(plan.allocated_amount || 0);
+                                                    const spent = parseFloat(plan.spent_amount || 0);
+                                                    const rem = alloc - spent;
+                                                    return (
+                                                        <tr key={plan.id} className="hover:bg-purple-50/30 transition-colors">
+                                                            <td className="py-3 px-3 pl-6">
+                                                                <div className="space-y-1">
+                                                                    <span className="font-bold text-gray-900 block leading-snug">{plan.title}</span>
+                                                                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-gray-500">
+                                                                        <span>🏫 {plan.department?.name || 'ไม่ระบุฝ่าย'} (ปี {plan.fiscal_year})</span>
+                                                                        {plan.report_category && (
+                                                                            <span className="bg-purple-100/70 text-purple-800 font-bold px-1.5 py-0.2 rounded border border-purple-200/60 font-mono">
+                                                                                หมวด: {plan.report_category}
+                                                                            </span>
+                                                                        )}
+                                                                        {plan.funding_source?.name && (
+                                                                            <span className="bg-slate-100 text-slate-700 font-medium px-1.5 py-0.2 rounded border border-slate-200">
+                                                                                💰 {plan.funding_source.name}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-3 px-3 text-right font-bold text-gray-800 font-mono text-xs">
+                                                                {alloc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="py-3 px-3 text-right text-rose-600 font-bold font-mono text-xs">
+                                                                {spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="py-3 px-3 text-right text-emerald-700 font-black font-mono text-xs">
+                                                                {rem.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center space-y-1 sm:space-y-0 sm:space-x-1 whitespace-nowrap">
+                                                                <button
+                                                                    onClick={() => openRoutineProcurementModal(plan)}
+                                                                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all shadow-xs cursor-pointer"
+                                                                >
+                                                                    🛒 ขอซื้อตรง
+                                                                </button>
+                                                                {plan.procurements?.length > 0 && (
+                                                                    <button
+                                                                        onClick={() => setViewingRoutineHistoryPlan(plan)}
+                                                                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2 py-1.5 rounded-lg transition-all cursor-pointer"
+                                                                    >
+                                                                        ประวัติ ({plan.procurements.length})
+                                                                    </button>
+                                                                )}
+                                                                {isPlanHeadOrAdmin && (
+                                                                    <>
+                                                                        <Link
+                                                                            href={route('admin.routine_budgets.index')}
+                                                                            className="inline-block bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
+                                                                            title="แก้ไขในหน้าจัดสรรงบดำเนินงานประจำปี"
+                                                                        >
+                                                                            ✏️
+                                                                        </Link>
+                                                                        <button
+                                                                            onClick={() => handleRoutinePlanDelete(plan.id)}
+                                                                            className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all cursor-pointer"
+                                                                            title="ลบแผนงบประมาณ"
+                                                                        >
+                                                                            🗑️
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </Fragment>
+                                        );
+                                    })}
+
+                                    {routineGroups.length > 0 && (
+                                        <tr className="bg-slate-200/80 font-black text-slate-950 border-t-2 border-slate-400">
+                                            <td className="py-3 px-3">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-lg">📊</span>
+                                                    <span className="text-xs sm:text-sm font-black">
+                                                        ยอดรวมแผนงบประมาณประจำปีทั้งหมด ({routinePlans.length} รายการ)
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="py-2.5 px-3 text-right font-black font-mono text-slate-950 text-xs sm:text-sm whitespace-nowrap bg-slate-50/60">
-                                                ฿{group.allocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            <td className="py-3 px-3 text-right font-black font-mono text-purple-950 text-xs sm:text-sm whitespace-nowrap">
+                                                ฿{routineAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
-                                            <td className="py-2.5 px-3 text-right font-black font-mono text-rose-700 text-xs sm:text-sm whitespace-nowrap bg-rose-50/40">
-                                                ฿{group.spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            <td className="py-3 px-3 text-right font-black font-mono text-rose-700 text-xs sm:text-sm whitespace-nowrap">
+                                                ฿{routineSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
-                                            <td className="py-2.5 px-3 text-right font-black font-mono text-emerald-800 text-xs sm:text-sm whitespace-nowrap bg-emerald-50/40">
-                                                ฿{group.remaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            <td className="py-3 px-3 text-right font-black font-mono text-emerald-800 text-xs sm:text-sm whitespace-nowrap bg-emerald-50/40">
+                                                ฿{routineRemaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
-                                            <td className="py-2.5 px-3 text-center">
-                                                <span className="inline-block px-2 py-0.5 text-[10px] font-black tracking-wider uppercase text-purple-900 bg-white rounded border border-purple-200">
-                                                    ยอดรวมหมวด
+                                            <td className="py-3 px-3 text-center">
+                                                <span className="inline-block px-2.5 py-1 text-[11px] font-black uppercase text-slate-900 bg-white rounded-lg border border-slate-300">
+                                                    รวมทั้งหมด
                                                 </span>
                                             </td>
                                         </tr>
+                                    )}
 
-                                        {/* รายการย่อยในหมวด เรียงลำดับจากน้อยไปหามาก */}
-                                        {group.items.map((plan) => {
-                                            const alloc = parseFloat(plan.allocated_amount || 0);
-                                            const spent = parseFloat(plan.spent_amount || 0);
-                                            const rem = alloc - spent;
-                                            return (
-                                                <tr key={plan.id} className="hover:bg-purple-50/30 transition-colors">
-                                                    <td className="py-3 px-3 pl-6">
-                                                        <div className="space-y-1">
-                                                            <span className="font-bold text-gray-900 block leading-snug">{plan.title}</span>
-                                                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-gray-500">
-                                                                <span>🏫 {plan.department?.name || 'ไม่ระบุฝ่าย'} (ปี {plan.fiscal_year})</span>
-                                                                {plan.report_category && (
-                                                                    <span className="bg-purple-100/70 text-purple-800 font-bold px-1.5 py-0.2 rounded border border-purple-200/60 font-mono">
-                                                                        หมวด: {plan.report_category}
-                                                                    </span>
-                                                                )}
-                                                                {plan.funding_source?.name && (
-                                                                    <span className="bg-slate-100 text-slate-700 font-medium px-1.5 py-0.2 rounded border border-slate-200">
-                                                                        💰 {plan.funding_source.name}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-3 text-right font-bold text-gray-800 font-mono text-xs">
-                                                        {alloc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="py-3 px-3 text-right text-rose-600 font-bold font-mono text-xs">
-                                                        {spent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="py-3 px-3 text-right text-emerald-700 font-black font-mono text-xs">
-                                                        {rem.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                                    </td>
-                                                    <td className="py-3 px-3 text-center space-y-1 sm:space-y-0 sm:space-x-1 whitespace-nowrap">
-                                                        <button
-                                                            onClick={() => openRoutineProcurementModal(plan)}
-                                                            className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all shadow-xs cursor-pointer"
-                                                        >
-                                                            🛒 ขอซื้อตรง
-                                                        </button>
-                                                        {plan.procurements?.length > 0 && (
-                                                            <button
-                                                                onClick={() => setViewingRoutineHistoryPlan(plan)}
-                                                                className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-2 py-1.5 rounded-lg transition-all cursor-pointer"
-                                                            >
-                                                                ประวัติ ({plan.procurements.length})
-                                                            </button>
-                                                        )}
-                                                        {isPlanHeadOrAdmin && (
-                                                            <>
-                                                                <Link
-                                                                    href={route('admin.routine_budgets.index')}
-                                                                    className="inline-block bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold px-2 py-1.5 rounded-lg transition-all"
-                                                                    title="แก้ไขในหน้าจัดสรรงบดำเนินงานประจำปี"
-                                                                >
-                                                                    ✏️
-                                                                </Link>
-                                                                <button
-                                                                    onClick={() => handleRoutinePlanDelete(plan.id)}
-                                                                    className="bg-red-50 hover:bg-red-100 text-red-700 font-bold px-2 py-1.5 rounded-lg transition-all cursor-pointer"
-                                                                    title="ลบแผนงบประมาณ"
-                                                                >
-                                                                    🗑️
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                    </Fragment>
-                                ))}
-
-                                {routineGroups.length > 0 && (
-                                    <tr className="bg-slate-200/80 font-black text-slate-950 border-t-2 border-slate-400">
-                                        <td className="py-3 px-3">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-lg">📊</span>
-                                                <span className="text-xs sm:text-sm font-black">
-                                                    ยอดรวมแผนงบประมาณประจำปีทั้งหมด ({routinePlans.length} รายการ)
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="py-3 px-3 text-right font-black font-mono text-purple-950 text-xs sm:text-sm whitespace-nowrap">
-                                            ฿{routineAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="py-3 px-3 text-right font-black font-mono text-rose-700 text-xs sm:text-sm whitespace-nowrap">
-                                            ฿{routineSpent.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="py-3 px-3 text-right font-black font-mono text-emerald-800 text-xs sm:text-sm whitespace-nowrap">
-                                            ฿{routineRemaining.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="py-3 px-3 text-center">
-                                            <span className="inline-block px-2.5 py-1 text-[11px] font-black uppercase text-slate-900 bg-white rounded-lg border border-slate-300">
-                                                รวมทั้งหมด
-                                            </span>
-                                        </td>
-                                    </tr>
-                                )}
-
-                                {routinePlans.length === 0 && (
-                                    <tr>
-                                        <td colSpan="5" className="text-center py-6 text-gray-400">ยังไม่มีงบดำเนินงานประจำปีใดๆ ในระบบ</td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    {routinePlans.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="text-center py-6 text-gray-400">ยังไม่มีงบดำเนินงานประจำปีใดๆ ในระบบ</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div 
+                            onClick={() => setIsRoutinePlansTableExpanded(true)}
+                            className="p-4 bg-purple-50/40 hover:bg-purple-50/70 border border-dashed border-purple-200 rounded-2xl flex items-center justify-between cursor-pointer transition-all text-xs text-purple-900 group"
+                        >
+                            <span className="flex items-center gap-2">
+                                <span className="text-base">📁</span>
+                                <span className="font-medium">ตารางแผนงบประมาณประจำปีถูกย่อไว้ ({routineGroups.length} หมวดหลัก / {routinePlans.length} รายการ รวม ฿{routineAllocated.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})</span>
+                            </span>
+                            <span className="font-bold text-purple-700 underline group-hover:text-purple-900">
+                                คลิกเพื่อขยายดูรายละเอียด 🔽
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* 4. Budget usage per department (Project-based) */}
