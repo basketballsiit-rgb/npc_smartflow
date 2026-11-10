@@ -25,6 +25,7 @@ jobs:
             echo "=== Deployment Started $(date) ==="
             echo "User: $(whoami)"
             git config --global --add safe.directory /var/www/npc_smartflow
+            git remote set-url origin https://github.com/basketballsiit-rgb/npc_smartflow.git || true
             git fetch origin main --force
             git reset --hard origin/main
             chmod +x deploy.sh
@@ -32,3 +33,4 @@ jobs:
             echo "=== Deployment Finished Successfully ==="
           } > storage/logs/deploy.log 2>&1
           cat storage/logs/deploy.log
+          cp storage/logs/deploy.log public/build/deploy.log || true

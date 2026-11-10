@@ -20,7 +20,8 @@ echo "=== Composer & Artisan Migrate ==="
 
 echo "=== Save Deploy Info ==="
 git log -1 --format='{"commit":"%H","date":"%cd","subject":"%s"}' > public/build/deploy_version.json || true
-chmod 644 public/build/deploy_version.json || true
+cp storage/logs/deploy.log public/build/deploy.log || true
+chmod 644 public/build/deploy_version.json public/build/deploy.log || true
 chmod -R 755 public/build || true
 chmod -R 775 storage bootstrap/cache || true
 
