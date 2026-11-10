@@ -620,6 +620,9 @@ export default function Dashboard({
     const { data: centralAllocationData, setData: setCentralAllocationData, post: postCentralAllocation, put: putCentralAllocation, reset: resetCentralAllocation, errors: centralAllocationErrors } = useForm({
         fiscal_year: systemSettings.find(s => s.key === 'current_fiscal_year')?.value || '2569',
         document_number: '',
+        budget_code: '',
+        activity_code: '',
+        sub_account_code: '',
         title: '',
         funding_source_id: '',
         amount: '',
@@ -10267,12 +10270,54 @@ export default function Dashboard({
         
         // Ensure funding source is set
         const defaultSourceId = centralAllocationData.funding_source_id || planHeadData?.fundingSources?.[0]?.id || '';
+
+        const bCode = String(centralAllocationData.budget_code || '').replace(/[^0-9]/g, '');
+        const aCode = String(centralAllocationData.activity_code || '').replace(/[^0-9]/g, '');
+        const sCode = String(centralAllocationData.sub_account_code || '').replace(/[^0-9]/g, '');
+
+        if (!bCode || bCode.length !== 20) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'รหัสงบประมาณไม่ถูกต้อง',
+                text: `รหัสงบประมาณต้องเป็นตัวเลขความยาว 20 หลักพอดี (ขณะนี้ระบุ ${bCode.length} หลัก) ตัวอย่าง: 20006330015004100003`,
+                confirmButtonColor: '#7c3aed',
+                confirmButtonText: 'รับทราบและแก้ไข'
+            });
+            return;
+        }
+
+        if (!aCode || aCode.length !== 17) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'รหัสกิจกรรมหลักไม่ถูกต้อง',
+                text: `รหัสกิจกรรมหลักต้องเป็นตัวเลขความยาว 17 หลักพอดี (ขณะนี้ระบุ ${aCode.length} หลัก) ตัวอย่าง: 20006690000800000`,
+                confirmButtonColor: '#7c3aed',
+                confirmButtonText: 'รับทราบและแก้ไข'
+            });
+            return;
+        }
+
+        if (!sCode || sCode.length !== 7) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'รหัสบัญชีย่อยไม่ถูกต้อง',
+                text: `รหัสบัญชีย่อยต้องเป็นตัวเลขความยาว 7 หลักพอดี (ขณะนี้ระบุ ${sCode.length} หลัก) ตัวอย่าง: 0015011`,
+                confirmButtonColor: '#7c3aed',
+                confirmButtonText: 'รับทราบและแก้ไข'
+            });
+            return;
+        }
         
+        const payload = {
+            ...centralAllocationData,
+            budget_code: bCode,
+            activity_code: aCode,
+            sub_account_code: sCode,
+            funding_source_id: defaultSourceId
+        };
+
         if (editingCentralAllocation) {
-            router.put(route('admin.central_allocations.update', editingCentralAllocation.id), {
-                ...centralAllocationData,
-                funding_source_id: defaultSourceId
-            }, {
+            router.put(route('admin.central_allocations.update', editingCentralAllocation.id), payload, {
                 onSuccess: () => {
                     Swal.fire('สำเร็จ!', 'แก้ไขข้อมูลการจัดสรรจากส่วนกลางเรียบร้อยแล้ว', 'success');
                     setEditingCentralAllocation(null);
@@ -10280,10 +10325,7 @@ export default function Dashboard({
                 }
             });
         } else {
-            router.post(route('admin.central_allocations.store'), {
-                ...centralAllocationData,
-                funding_source_id: defaultSourceId
-            }, {
+            router.post(route('admin.central_allocations.store'), payload, {
                 onSuccess: () => {
                     Swal.fire('สำเร็จ!', 'บันทึกการจัดสรรงบประมาณจากส่วนกลางเรียบร้อยแล้ว', 'success');
                     resetCentralAllocation();
@@ -11564,11 +11606,11 @@ ${itemsListText}
         });
         const grandSpentAmount = mainParentKeys.reduce((sum, k) => sum + (rowData[k]?.spentAmount || 0), 0);
 
-        const baseIncomeTotal = estimateIncomeTotal > 0 ? estimateIncomeTotal : actualAllocTotal;
+        const baseIncomeTotal = actualAllocTotal > 0 ? actualAllocTotal : estimateIncomeTotal;
         const remainingTotal = baseIncomeTotal > 0 || grandPlanBudget > 0 ? baseIncomeTotal - grandPlanBudget : 0;
         const remainingByCol = {};
         budgetColumns.forEach(c => {
-            const colIncome = estimateIncomeByCol[c.id] > 0 ? estimateIncomeByCol[c.id] : actualAllocByCol[c.id];
+            const colIncome = actualAllocByCol[c.id] > 0 ? actualAllocByCol[c.id] : (estimateIncomeByCol[c.id] || 0);
             remainingByCol[c.id] = (colIncome || 0) > 0 || (grandBudgetByCol[c.id] || 0) > 0
                 ? (colIncome || 0) - (grandBudgetByCol[c.id] || 0)
                 : 0;
@@ -12062,6 +12104,131 @@ ${itemsListText}
                                     </div>
                                 </div>
 
+                                {/* ข้อมูลรหัสงบประมาณ 3 ชุด (GFMIS) ตามหนังสือแจ้งจัดสรร */}
+                                <div className="p-4 bg-purple-50/50 border border-purple-200/80 rounded-2xl space-y-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-purple-200/60 pb-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-base">🏛️</span>
+                                            <span className="font-extrabold text-purple-950 text-xs">
+                                                รหัสงบประมาณส่วนกลาง (GFMIS) ตามหนังสือแจ้งจัดสรร
+                                            </span>
+                                        </div>
+                                        <span className="text-[10px] text-purple-700 font-semibold bg-purple-100/70 px-2 py-0.5 rounded-full">
+                                            ระบบตรวจสอบความยาวตัวเลข (20 / 17 / 7 หลัก) อัตโนมัติ
+                                        </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        {/* 1. รหัสงบประมาณ (20 หลัก) */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[11px] font-bold text-gray-700">
+                                                    รหัสงบประมาณ <span className="text-rose-500">*</span>
+                                                </label>
+                                                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold transition-colors ${
+                                                    (centralAllocationData.budget_code || '').length === 20
+                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                        : (centralAllocationData.budget_code || '').length > 0
+                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                            : 'bg-slate-200 text-slate-600'
+                                                }`}>
+                                                    {(centralAllocationData.budget_code || '').length}/20 หลัก
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                maxLength={20}
+                                                value={centralAllocationData.budget_code || ''}
+                                                onChange={e => {
+                                                    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 20);
+                                                    setCentralAllocationData('budget_code', cleaned);
+                                                }}
+                                                className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
+                                                    (centralAllocationData.budget_code || '').length === 20
+                                                        ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold focus:ring-emerald-500 focus:border-emerald-500'
+                                                        : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
+                                                }`}
+                                                placeholder="เช่น 20006330015004100003"
+                                            />
+                                            {centralAllocationErrors.budget_code && (
+                                                <span className="text-red-500 text-[10px]">{centralAllocationErrors.budget_code}</span>
+                                            )}
+                                        </div>
+
+                                        {/* 2. รหัสกิจกรรมหลัก (17 หลัก) */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[11px] font-bold text-gray-700">
+                                                    รหัสกิจกรรมหลัก <span className="text-rose-500">*</span>
+                                                </label>
+                                                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold transition-colors ${
+                                                    (centralAllocationData.activity_code || '').length === 17
+                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                        : (centralAllocationData.activity_code || '').length > 0
+                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                            : 'bg-slate-200 text-slate-600'
+                                                }`}>
+                                                    {(centralAllocationData.activity_code || '').length}/17 หลัก
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                maxLength={17}
+                                                value={centralAllocationData.activity_code || ''}
+                                                onChange={e => {
+                                                    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 17);
+                                                    setCentralAllocationData('activity_code', cleaned);
+                                                }}
+                                                className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
+                                                    (centralAllocationData.activity_code || '').length === 17
+                                                        ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold focus:ring-emerald-500 focus:border-emerald-500'
+                                                        : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
+                                                }`}
+                                                placeholder="เช่น 20006690000800000"
+                                            />
+                                            {centralAllocationErrors.activity_code && (
+                                                <span className="text-red-500 text-[10px]">{centralAllocationErrors.activity_code}</span>
+                                            )}
+                                        </div>
+
+                                        {/* 3. รหัสบัญชีย่อย (7 หลัก) */}
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <label className="text-[11px] font-bold text-gray-700">
+                                                    รหัสบัญชีย่อย <span className="text-rose-500">*</span>
+                                                </label>
+                                                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold transition-colors ${
+                                                    (centralAllocationData.sub_account_code || '').length === 7
+                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                        : (centralAllocationData.sub_account_code || '').length > 0
+                                                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                            : 'bg-slate-200 text-slate-600'
+                                                }`}>
+                                                    {(centralAllocationData.sub_account_code || '').length}/7 หลัก
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                maxLength={7}
+                                                value={centralAllocationData.sub_account_code || ''}
+                                                onChange={e => {
+                                                    const cleaned = e.target.value.replace(/\D/g, '').slice(0, 7);
+                                                    setCentralAllocationData('sub_account_code', cleaned);
+                                                }}
+                                                className={`w-full text-xs font-mono rounded-xl border p-2.5 transition-all ${
+                                                    (centralAllocationData.sub_account_code || '').length === 7
+                                                        ? 'border-emerald-500 bg-emerald-50/30 text-emerald-950 font-bold focus:ring-emerald-500 focus:border-emerald-500'
+                                                        : 'border-gray-200 focus:ring-purple-500 focus:border-purple-500'
+                                                }`}
+                                                placeholder="เช่น 0015011"
+                                            />
+                                            {centralAllocationErrors.sub_account_code && (
+                                                <span className="text-red-500 text-[10px]">{centralAllocationErrors.sub_account_code}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="md:col-span-2">
                                         <label className="block text-[11px] font-bold text-gray-600 mb-1">
@@ -12167,9 +12334,26 @@ ${itemsListText}
                                                 </td>
                                                 <td className="py-3 px-3">
                                                     <span className="font-bold text-gray-800 block">{alloc.title}</span>
-                                                    <span className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-medium inline-block mt-0.5">
-                                                        💰 {alloc.funding_source?.name}
-                                                    </span>
+                                                    <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                                        <span className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded font-medium inline-block border border-purple-200">
+                                                            💰 {alloc.funding_source?.name}
+                                                        </span>
+                                                        {alloc.budget_code && (
+                                                            <span className="text-[9.5px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 rounded border border-slate-200 inline-block" title="รหัสงบประมาณ 20 หลัก">
+                                                                🏛️ งบ: <strong className="text-slate-900">{alloc.budget_code}</strong>
+                                                            </span>
+                                                        )}
+                                                        {alloc.activity_code && (
+                                                            <span className="text-[9.5px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 rounded border border-slate-200 inline-block" title="รหัสกิจกรรมหลัก 17 หลัก">
+                                                                🎯 กิจกรรม: <strong className="text-slate-900">{alloc.activity_code}</strong>
+                                                            </span>
+                                                        )}
+                                                        {alloc.sub_account_code && (
+                                                            <span className="text-[9.5px] bg-slate-100 text-slate-700 font-mono px-1.5 py-0.5 rounded border border-slate-200 inline-block" title="รหัสบัญชีย่อย 7 หลัก">
+                                                                📑 บัญชีย่อย: <strong className="text-slate-900">{alloc.sub_account_code}</strong>
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     {alloc.description && <p className="text-[10px] text-gray-400 mt-1">{alloc.description}</p>}
                                                 </td>
                                                 <td className="py-3 px-3 text-right font-bold text-gray-800 font-mono text-xs">
@@ -12184,6 +12368,9 @@ ${itemsListText}
                                                                     setCentralAllocationData({
                                                                         fiscal_year: alloc.fiscal_year,
                                                                         document_number: alloc.document_number || '',
+                                                                        budget_code: alloc.budget_code || '',
+                                                                        activity_code: alloc.activity_code || '',
+                                                                        sub_account_code: alloc.sub_account_code || '',
                                                                         title: alloc.title,
                                                                         funding_source_id: alloc.funding_source_id,
                                                                         amount: alloc.amount,
@@ -16294,8 +16481,15 @@ ${itemsListText}
                                                                                         <tr key={alloc.id || aIdx} className="hover:bg-amber-50/30 transition-colors">
                                                                                             <td className="p-3 align-top whitespace-nowrap">
                                                                                                 <span className="inline-flex items-center gap-1 font-mono font-bold text-xs text-amber-900 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 shadow-2xs">
-                                                                                                    <span>📑</span> {alloc.document_number || alloc.budget_code || '-'}
+                                                                                                    <span>📑</span> {alloc.document_number || 'ไม่มีเลขที่หนังสือ'}
                                                                                                 </span>
+                                                                                                {(alloc.budget_code || alloc.activity_code || alloc.sub_account_code) && (
+                                                                                                    <div className="mt-1 space-y-0.5 text-[9px] font-mono text-slate-600">
+                                                                                                        {alloc.budget_code && <div>🏛️ งบ: <strong className="text-slate-800">{alloc.budget_code}</strong></div>}
+                                                                                                        {alloc.activity_code && <div>🎯 กิจกรรม: <strong className="text-slate-800">{alloc.activity_code}</strong></div>}
+                                                                                                        {alloc.sub_account_code && <div>📑 บัญชีย่อย: <strong className="text-slate-800">{alloc.sub_account_code}</strong></div>}
+                                                                                                    </div>
+                                                                                                )}
                                                                                             </td>
                                                                                             <td className="p-3 align-top">
                                                                                                 <div className="space-y-1">
@@ -23127,6 +23321,13 @@ ${itemsListText}
                 defaultAmount = item.allocated_budget || item.estimated_budget || 0;
             }
 
+            const itemSrcId = item.funding_source_id || item.funding_source?.id || item.rawProject?.funding_source_id;
+            const itemSrc = (allFundingSources || []).find(s => String(s.id) === String(itemSrcId)) || item.funding_source || item.rawProject?.funding_source;
+            const bCode = item.budget_code || itemSrc?.budget_code || '';
+            const aCode = item.activity_code || itemSrc?.activity_code || '';
+            const sCode = item.sub_account_code || itemSrc?.sub_account_code || '';
+            const hasGfmis = bCode || aCode || sCode;
+
             Swal.fire({
                 title: '💸 โอนเงิน & ปิดยอดเบิกจ่าย',
                 html: `
@@ -23135,6 +23336,27 @@ ${itemsListText}
                             <p class="font-bold">โครงการ: ${item.title}</p>
                             <p class="text-[11px] text-blue-700">วงเงินงบประมาณโครงการ: <strong>฿${fmt(item.allocated_budget || item.estimated_budget || 0)}</strong></p>
                         </div>
+                        ${hasGfmis ? `
+                            <div class="p-2.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-950 space-y-1">
+                                <div class="font-bold text-[11px] text-purple-900 flex items-center gap-1">
+                                    <span>🏛️</span> ข้อมูลรหัสงบประมาณส่วนกลาง (GFMIS)
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-1.5 font-mono text-[10px]">
+                                    <div>
+                                        <span class="text-purple-600 block text-[9px]">รหัสงบประมาณ (20 หลัก):</span>
+                                        <strong class="text-purple-950 bg-white px-1.5 py-0.5 rounded border border-purple-200 inline-block font-bold break-all">${bCode || '-'}</strong>
+                                    </div>
+                                    <div>
+                                        <span class="text-purple-600 block text-[9px]">รหัสกิจกรรม (17 หลัก):</span>
+                                        <strong class="text-purple-950 bg-white px-1.5 py-0.5 rounded border border-purple-200 inline-block font-bold break-all">${aCode || '-'}</strong>
+                                    </div>
+                                    <div>
+                                        <span class="text-purple-600 block text-[9px]">รหัสบัญชีย่อย (7 หลัก):</span>
+                                        <strong class="text-purple-950 bg-white px-1.5 py-0.5 rounded border border-purple-200 inline-block font-bold break-all">${sCode || '-'}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
                         <div>
                             <label class="font-bold text-slate-800 block mb-1">เลือกรายการที่ทำการเบิกจ่าย/โอนเงิน:</label>
                             <select id="swal-pay-target" class="w-full px-3 py-2 border-2 border-indigo-300 rounded-xl text-xs bg-white font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -29201,6 +29423,35 @@ return (
                                         ✕
                                     </button>
                                 </div>
+
+                                {(() => {
+                                    const loanFunding = (allFundingSources || []).find(f => String(f.id) === String(selectedTravelLoanForDisburse.funding_source_id)) || selectedTravelLoanForDisburse.funding_source;
+                                    const lBudget = selectedTravelLoanForDisburse.budget_code || loanFunding?.budget_code;
+                                    const lAct = selectedTravelLoanForDisburse.activity_code || loanFunding?.activity_code;
+                                    const lSub = selectedTravelLoanForDisburse.sub_account_code || loanFunding?.sub_account_code;
+                                    if (!lBudget && !lAct && !lSub) return null;
+                                    return (
+                                        <div className="p-3 rounded-2xl bg-purple-50/70 border border-purple-200/80 text-purple-950 space-y-1.5 mb-4">
+                                            <div className="font-extrabold text-xs text-purple-900 flex items-center gap-1.5">
+                                                <span>🏛️</span> ข้อมูลรหัสงบประมาณส่วนกลาง (GFMIS)
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 font-mono text-[10.5px]">
+                                                <div>
+                                                    <span className="text-purple-600 block text-[9.5px]">รหัสงบประมาณ (20 หลัก):</span>
+                                                    <strong className="text-purple-950 bg-white px-2 py-0.5 rounded border border-purple-200 inline-block font-bold break-all">{lBudget || '-'}</strong>
+                                                </div>
+                                                <div>
+                                                    <span className="text-purple-600 block text-[9.5px]">รหัสกิจกรรม (17 หลัก):</span>
+                                                    <strong className="text-purple-950 bg-white px-2 py-0.5 rounded border border-purple-200 inline-block font-bold break-all">{lAct || '-'}</strong>
+                                                </div>
+                                                <div>
+                                                    <span className="text-purple-600 block text-[9.5px]">รหัสบัญชีย่อย (7 หลัก):</span>
+                                                    <strong className="text-purple-950 bg-white px-2 py-0.5 rounded border border-purple-200 inline-block font-bold break-all">{lSub || '-'}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
 
                                 <form onSubmit={handleDisburseSubmit} className="space-y-4 text-xs font-semibold text-slate-700">
                                     <div>

@@ -17,10 +17,27 @@ class CentralAllocationController extends Controller
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงฟังก์ชันนี้');
         }
 
+        // Clean spaces and formatting from GFMIS codes before validation
+        $cleanedInput = [];
+        if ($request->has('budget_code')) {
+            $cleanedInput['budget_code'] = preg_replace('/[^0-9]/', '', (string)$request->budget_code);
+        }
+        if ($request->has('activity_code')) {
+            $cleanedInput['activity_code'] = preg_replace('/[^0-9]/', '', (string)$request->activity_code);
+        }
+        if ($request->has('sub_account_code')) {
+            $cleanedInput['sub_account_code'] = preg_replace('/[^0-9]/', '', (string)$request->sub_account_code);
+        }
+        if (!empty($cleanedInput)) {
+            $request->merge($cleanedInput);
+        }
+
         $validated = $request->validate([
             'fiscal_year' => 'required|string',
             'document_number' => 'nullable|string|max:255',
-            'budget_code' => 'nullable|string|max:100',
+            'budget_code' => ['required', 'string', 'regex:/^[0-9]{20}$/'],
+            'activity_code' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'sub_account_code' => ['required', 'string', 'regex:/^[0-9]{7}$/'],
             'title' => 'required|string|max:255',
             'funding_source_id' => 'required|exists:funding_sources,id',
             'amount' => 'required|numeric|min:0',
@@ -29,9 +46,24 @@ class CentralAllocationController extends Controller
             'title.required' => 'กรุณาระบุชื่องบประมาณจัดสรร',
             'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
             'amount.required' => 'กรุณาระบุจำนวนเงิน',
+            'budget_code.required' => 'กรุณาระบุรหัสงบประมาณ (20 หลัก)',
+            'budget_code.regex' => 'รหัสงบประมาณต้องเป็นตัวเลข 20 หลักพอดี (ตัวอย่าง: 20006330015004100003)',
+            'activity_code.required' => 'กรุณาระบุรหัสกิจกรรมหลัก (17 หลัก)',
+            'activity_code.regex' => 'รหัสกิจกรรมหลักต้องเป็นตัวเลข 17 หลักพอดี (ตัวอย่าง: 20006690000800000)',
+            'sub_account_code.required' => 'กรุณาระบุรหัสบัญชีย่อย (7 หลัก)',
+            'sub_account_code.regex' => 'รหัสบัญชีย่อยต้องเป็นตัวเลข 7 หลักพอดี (ตัวอย่าง: 0015011)',
         ]);
 
-        CentralAllocation::create($validated);
+        $allocation = CentralAllocation::create($validated);
+
+        // Synchronize GFMIS codes with the funding source for cross-module usage (Finance / Projects / Loans)
+        if (!empty($validated['funding_source_id'])) {
+            \App\Models\FundingSource::where('id', $validated['funding_source_id'])->update([
+                'budget_code' => $validated['budget_code'] ?? null,
+                'activity_code' => $validated['activity_code'] ?? null,
+                'sub_account_code' => $validated['sub_account_code'] ?? null,
+            ]);
+        }
 
         return redirect()->back()->with('success', 'บันทึกรับงบประมาณจัดสรรจริงจากส่วนกลางเรียบร้อยแล้ว');
     }
@@ -46,9 +78,26 @@ class CentralAllocationController extends Controller
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงฟังก์ชันนี้');
         }
 
+        // Clean spaces and formatting from GFMIS codes before validation
+        $cleanedInput = [];
+        if ($request->has('budget_code')) {
+            $cleanedInput['budget_code'] = preg_replace('/[^0-9]/', '', (string)$request->budget_code);
+        }
+        if ($request->has('activity_code')) {
+            $cleanedInput['activity_code'] = preg_replace('/[^0-9]/', '', (string)$request->activity_code);
+        }
+        if ($request->has('sub_account_code')) {
+            $cleanedInput['sub_account_code'] = preg_replace('/[^0-9]/', '', (string)$request->sub_account_code);
+        }
+        if (!empty($cleanedInput)) {
+            $request->merge($cleanedInput);
+        }
+
         $validated = $request->validate([
             'document_number' => 'nullable|string|max:255',
-            'budget_code' => 'nullable|string|max:100',
+            'budget_code' => ['required', 'string', 'regex:/^[0-9]{20}$/'],
+            'activity_code' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'sub_account_code' => ['required', 'string', 'regex:/^[0-9]{7}$/'],
             'title' => 'required|string|max:255',
             'funding_source_id' => 'required|exists:funding_sources,id',
             'amount' => 'required|numeric|min:0',
@@ -57,9 +106,24 @@ class CentralAllocationController extends Controller
             'title.required' => 'กรุณาระบุชื่องบประมาณจัดสรร',
             'funding_source_id.required' => 'กรุณาเลือกแหล่งเงินทุน',
             'amount.required' => 'กรุณาระบุจำนวนเงิน',
+            'budget_code.required' => 'กรุณาระบุรหัสงบประมาณ (20 หลัก)',
+            'budget_code.regex' => 'รหัสงบประมาณต้องเป็นตัวเลข 20 หลักพอดี (ตัวอย่าง: 20006330015004100003)',
+            'activity_code.required' => 'กรุณาระบุรหัสกิจกรรมหลัก (17 หลัก)',
+            'activity_code.regex' => 'รหัสกิจกรรมหลักต้องเป็นตัวเลข 17 หลักพอดี (ตัวอย่าง: 20006690000800000)',
+            'sub_account_code.required' => 'กรุณาระบุรหัสบัญชีย่อย (7 หลัก)',
+            'sub_account_code.regex' => 'รหัสบัญชีย่อยต้องเป็นตัวเลข 7 หลักพอดี (ตัวอย่าง: 0015011)',
         ]);
 
         $centralAllocation->update($validated);
+
+        // Synchronize GFMIS codes with the funding source
+        if (!empty($validated['funding_source_id'])) {
+            \App\Models\FundingSource::where('id', $validated['funding_source_id'])->update([
+                'budget_code' => $validated['budget_code'] ?? null,
+                'activity_code' => $validated['activity_code'] ?? null,
+                'sub_account_code' => $validated['sub_account_code'] ?? null,
+            ]);
+        }
 
         return redirect()->back()->with('success', 'แก้ไขข้อมูลรับงบจัดสรรจากส่วนกลางเรียบร้อยแล้ว');
     }

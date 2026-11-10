@@ -10,6 +10,8 @@ class CentralAllocation extends Model
         'fiscal_year',
         'document_number',
         'budget_code',
+        'activity_code',
+        'sub_account_code',
         'title',
         'funding_source_id',
         'amount',
