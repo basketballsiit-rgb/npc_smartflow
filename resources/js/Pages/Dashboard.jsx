@@ -25827,16 +25827,23 @@ return (
                                                 className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs bg-white focus:ring-2 focus:ring-emerald-500 font-semibold"
                                                 required
                                             >
-                                                <optgroup label="หมวด 4. วัสดุการศึกษา / วัสดุฝึก (ยอดนิยม)">
-                                                    <option value="4.2">4.2 สาขาวิชาช่างยนต์</option>
-                                                    <option value="4.3">4.3 สาขาวิชาไฟฟ้ากำลัง</option>
-                                                    <option value="4.4">4.4 สาขาวิชาเทคนิคพื้นฐาน</option>
-                                                    <option value="4.5">4.5 สาขาวิชาอิเล็กทรอนิกส์</option>
-                                                    <option value="4.6">4.6 สาขาวิชาการบัญชี</option>
-                                                    <option value="4.7">4.7 สาขาวิชาการตลาด</option>
-                                                    <option value="4.8">4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ</option>
-                                                    <option value="4.9">4.9 แผนกสามัญสัมพันธ์</option>
-                                                    <option value="4.1">4.1 หลักสูตรวิชาชีพระยะสั้น</option>
+                                                <option value="">-- เลือกหมวดรายจ่ายในแผนปฏิบัติราชการ --</option>
+                                                <optgroup label="หมวด 1. งบบุคลากร">
+                                                    <option value="1.1">1.1 ครูอัตราจ้าง</option>
+                                                    <option value="1.2">1.2 ประกันสังคมครูอัตราจ้าง</option>
+                                                    <option value="1.3">1.3 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                                    <option value="1.4">1.4 สมทบประกันสังคมเจ้าหน้าที่</option>
+                                                </optgroup>
+                                                <optgroup label="หมวด 2. งบดำเนินงาน">
+                                                    <option value="2.1.1">2.1.1 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                                    <option value="2.1.2">2.1.2 ค่าตอบแทนสอนเกินภาระงานครู</option>
+                                                    <option value="2.1.3">2.1.3 ค่าตอบแทนครูสอนระยะสั้น</option>
+                                                    <option value="2.1.4">2.1.4 ค่าตอบแทนครูสอนระยะสั้นนอกเวลาราชการ</option>
+                                                    <option value="2.1.5">2.1.5 ค่าตอบแทนธุรการนอกเวลา</option>
+                                                    <option value="2.2.1">2.2.1 ค่าเดินทางไปราชการ</option>
+                                                    <option value="2.2.2">2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง</option>
+                                                    <option value="2.2.3">2.2.3 ค่าซ่อมแซมครุภัณฑ์</option>
+                                                    <option value="2.2.4">2.2.4 ค่าโฆษณาและเผยแพร่</option>
                                                 </optgroup>
                                                 <optgroup label="หมวด 3. ค่าวัสดุ">
                                                     <option value="3.1">3.1 วัสดุงานอาคาร</option>
@@ -25846,26 +25853,30 @@ return (
                                                     <option value="3.2.4">3.2.4 วัสดุสำนักงาน (ฝ่ายแผนงานฯ)</option>
                                                     <option value="3.3">3.3 วัสดุเชื้อเพลิงและหล่อลื่น</option>
                                                 </optgroup>
-                                                <optgroup label="หมวด 2. งบดำเนินงาน">
-                                                    <option value="2.1.1">2.1.1 จ้างเหมาบริการเจ้าหน้าที่</option>
-                                                    <option value="2.1.2">2.1.2 ค่าตอบแทนสอนเกินภาระงานครู</option>
-                                                    <option value="2.1.3">2.1.3 ค่าตอบแทนครูสอนระยะสั้น</option>
-                                                    <option value="2.2.1">2.2.1 ค่าเดินทางไปราชการ</option>
-                                                    <option value="2.2.2">2.2.2 ค่าซ่อมแซมพาหนะและค่าขนส่ง</option>
-                                                    <option value="2.2.3">2.2.3 ค่าซ่อมแซมครุภัณฑ์</option>
-                                                    <option value="2.2.4">2.2.4 ค่าโฆษณาและเผยแพร่</option>
+                                                <optgroup label="หมวด 4. วัสดุการศึกษา / วัสดุฝึก">
+                                                    <option value="4.1">4.1 หลักสูตรวิชาชีพระยะสั้น</option>
+                                                    <option value="4.2">4.2 สาขาวิชาช่างยนต์</option>
+                                                    <option value="4.3">4.3 สาขาวิชาไฟฟ้ากำลัง</option>
+                                                    <option value="4.4">4.4 สาขาวิชาเทคนิคพื้นฐาน</option>
+                                                    <option value="4.5">4.5 สาขาวิชาอิเล็กทรอนิกส์</option>
+                                                    <option value="4.6">4.6 สาขาวิชาการบัญชี</option>
+                                                    <option value="4.7">4.7 สาขาวิชาการตลาด</option>
+                                                    <option value="4.8">4.8 สาขาวิชาเทคโนโลยีสารสนเทศฯ</option>
+                                                    <option value="4.9">4.9 แผนกสามัญสัมพันธ์</option>
                                                 </optgroup>
                                                 <optgroup label="หมวด 5. ค่าสาธารณูปโภค">
                                                     <option value="5.1">5.1 ค่าไฟฟ้า</option>
                                                     <option value="5.2">5.2 ค่าน้ำประปา</option>
                                                     <option value="5.3">5.3 ค่าโทรศัพท์ / สื่อสารโทรคมนาคม</option>
                                                     <option value="5.4">5.4 ค่าไปรษณีย์</option>
+                                                    <option value="5.5">5.5 ค่าบริการด้านสื่อสารโทรคมนาคม</option>
                                                     <option value="5.6">5.6 ค่าขยะและสิ่งปฏิกูล</option>
                                                 </optgroup>
-                                                <optgroup label="หมวด 1. งบบุคลากร">
-                                                    <option value="1.1">1.1 ครูอัตราจ้าง</option>
-                                                    <option value="1.2">1.2 ประกันสังคมครูอัตราจ้าง</option>
-                                                    <option value="1.3">1.3 จ้างเหมาบริการเจ้าหน้าที่</option>
+                                                <optgroup label="หมวด 6. โครงการ">
+                                                    <option value="6.1">6.1 โครงการฝ่ายวิชาการ</option>
+                                                    <option value="6.2">6.2 โครงการฝ่ายกิจการนักเรียนนักศึกษา</option>
+                                                    <option value="6.3">6.3 โครงการฝ่ายบริหารทรัพยากร</option>
+                                                    <option value="6.4">6.4 โครงการฝ่ายยุทธศาสตร์และแผนงาน</option>
                                                 </optgroup>
                                                 <optgroup label="หมวด 7. เรียนฟรี 15 ปี / อื่นๆ">
                                                     <option value="7.1">7.1 ค่าหนังสือ</option>
@@ -25951,9 +25962,28 @@ return (
                                                 <option value="">-- เลือกโครงการที่ต้องการตัดยอดงบ --</option>
                                                 {(allProjectsMaster || [])
                                                     .filter(p => p.status === 'approved' || p.status === 'budget_approved' || p.status === 'in_progress' || p.status === 'preliminary')
+                                                    .map(p => {
+                                                        const mainDiv = getMainDivision(p.main_division_id || p.department_id, p.main_division_name || p.department_name || p.department?.name);
+                                                        const faction = mainDiv?.name || p.faction_name || p.main_division_name || p.department?.parent?.name || p.department?.name || p.department_name || (
+                                                            p.report_category === '6.1' ? 'ฝ่ายวิชาการ' :
+                                                            p.report_category === '6.2' ? 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา' :
+                                                            p.report_category === '6.3' ? 'ฝ่ายบริหารทรัพยากร' :
+                                                            p.report_category === '6.4' ? 'ฝ่ายยุทธศาสตร์และแผนงาน' : 'ฝ่ายงาน'
+                                                        );
+                                                        return {
+                                                            ...p,
+                                                            resolvedFaction: faction
+                                                        };
+                                                    })
+                                                    .sort((a, b) => {
+                                                        if (a.resolvedFaction.localeCompare(b.resolvedFaction, 'th') !== 0) {
+                                                            return a.resolvedFaction.localeCompare(b.resolvedFaction, 'th');
+                                                        }
+                                                        return (a.title || '').localeCompare(b.title || '', 'th');
+                                                    })
                                                     .map(p => (
                                                         <option key={p.id} value={p.id}>
-                                                            [{p.department?.name || 'ไม่ระบุฝ่าย'}] {p.title} (วงเงิน ฿{new Intl.NumberFormat('th-TH').format(p.allocated_budget || p.estimated_budget || 0)})
+                                                            [{p.resolvedFaction}] {p.title} (วงเงิน ฿{new Intl.NumberFormat('th-TH').format(p.allocated_budget || p.estimated_budget || 0)})
                                                         </option>
                                                     ))}
                                             </select>

@@ -928,6 +928,12 @@ class DashboardController extends Controller
                     }
                     $allocAmt = (float)($p->allocated_budget ?: ($p->budget?->allocated_amount ?? 0));
                     $dept = $p->department;
+                    if (!$dept && $p->department_id) {
+                        $dept = Department::with('parent')->find($p->department_id);
+                    }
+                    if (!$dept && $p->user?->department) {
+                        $dept = $p->user->department;
+                    }
                     $parentDept = $dept?->parent;
                     if (!$parentDept && $dept) {
                         $resolvedCat = Project::resolveCategoryForDepartment($dept);
@@ -947,6 +953,13 @@ class DashboardController extends Controller
                     }
                     $mainDivId = $parentDept ? $parentDept->id : ($dept?->id ?? null);
                     $mainDivName = $parentDept ? $parentDept->name : ($dept?->name ?? 'ฝ่ายงานทั่วไป');
+                    if ($mainDivName === 'ฝ่ายงานทั่วไป' || empty($mainDivName)) {
+                        $cat = $p->resolveReportCategory();
+                        if ($cat === '6.1') $mainDivName = 'ฝ่ายวิชาการ';
+                        elseif ($cat === '6.2') $mainDivName = 'ฝ่ายพัฒนากิจการนักเรียนนักศึกษา';
+                        elseif ($cat === '6.3') $mainDivName = 'ฝ่ายบริหารทรัพยากร';
+                        elseif ($cat === '6.4') $mainDivName = 'ฝ่ายยุทธศาสตร์และแผนงาน';
+                    }
                     // Auto-detect disbursement_type if not explicitly set
                     $disbType = $p->disbursement_type;
                     if (!$disbType) {
@@ -1109,11 +1122,21 @@ class DashboardController extends Controller
                         'created_at' => $p->created_at ? $p->created_at->format('Y-m-d H:i') : '',
                         'proposer_name' => $p->user?->name ?? 'ไม่ระบุชื่อ',
                         'proposer_email' => $p->user?->email ?? '',
-                        'department_name' => $dept?->name ?? 'ฝ่ายงานทั่วไป',
-                        'department_id' => $p->department_id,
+                        'department' => $dept ? [
+                            'id' => $dept->id,
+                            'name' => $dept->name,
+                            'parent_id' => $dept->parent_id,
+                            'parent' => $parentDept ? [
+                                'id' => $parentDept->id,
+                                'name' => $parentDept->name,
+                            ] : null,
+                        ] : null,
+                        'department_name' => $dept?->name ?? $mainDivName,
+                        'department_id' => $p->department_id ?: $dept?->id,
                         'parent_department_id' => $parentDept?->id,
                         'main_division_id' => $mainDivId,
                         'main_division_name' => $mainDivName,
+                        'faction_name' => $mainDivName,
                         'funding_source_name' => $fundingName,
                         'funding_source_id' => $fundingId,
                         'budgets' => $p->budgets ? $p->budgets->map(function ($b) {
