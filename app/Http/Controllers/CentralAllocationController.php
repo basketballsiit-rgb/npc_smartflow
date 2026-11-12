@@ -8,10 +8,49 @@ use Illuminate\Http\Request;
 class CentralAllocationController extends Controller
 {
     /**
+     * Ensure required GFMIS columns exist in SQLite/MySQL tables.
+     */
+    private function ensureColumnsExist(): void
+    {
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('central_allocations')) {
+                \Illuminate\Support\Facades\Schema::table('central_allocations', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('central_allocations', 'budget_code')) {
+                        $table->string('budget_code', 100)->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('central_allocations', 'activity_code')) {
+                        $table->string('activity_code', 30)->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('central_allocations', 'sub_account_code')) {
+                        $table->string('sub_account_code', 20)->nullable();
+                    }
+                });
+            }
+            if (\Illuminate\Support\Facades\Schema::hasTable('funding_sources')) {
+                \Illuminate\Support\Facades\Schema::table('funding_sources', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('funding_sources', 'budget_code')) {
+                        $table->string('budget_code', 50)->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('funding_sources', 'activity_code')) {
+                        $table->string('activity_code', 30)->nullable();
+                    }
+                    if (!\Illuminate\Support\Facades\Schema::hasColumn('funding_sources', 'sub_account_code')) {
+                        $table->string('sub_account_code', 20)->nullable();
+                    }
+                });
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('ensureColumnsExist warning: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * Store a newly created central budget allocation.
      */
     public function store(Request $request)
     {
+        $this->ensureColumnsExist();
+
         $user = auth()->user();
         if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isExecutive()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงฟังก์ชันนี้');
@@ -96,6 +135,8 @@ class CentralAllocationController extends Controller
      */
     public function update(Request $request, CentralAllocation $centralAllocation)
     {
+        $this->ensureColumnsExist();
+
         $user = auth()->user();
         if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isExecutive()) {
             abort(403, 'คุณไม่มีสิทธิ์เข้าถึงฟังก์ชันนี้');
