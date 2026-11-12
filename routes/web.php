@@ -206,6 +206,7 @@ Route::middleware('auth')->group(function () {
     // Central Budget Allocation Routes
     Route::post('/admin/central-allocations', [CentralAllocationController::class, 'store'])->name('admin.central_allocations.store');
     Route::put('/admin/central-allocations/{centralAllocation}', [CentralAllocationController::class, 'update'])->name('admin.central_allocations.update');
+    Route::delete('/admin/central-allocations/{centralAllocation}', [CentralAllocationController::class, 'destroy'])->name('admin.central_allocations.destroy');
 
     // Special Dedicated Project Budget Routes (งบเฉพาะกิจโครงการ)
     Route::post('/admin/special-project-budgets', [\App\Http\Controllers\SpecialProjectBudgetController::class, 'store'])->name('admin.special_project_budgets.store');
