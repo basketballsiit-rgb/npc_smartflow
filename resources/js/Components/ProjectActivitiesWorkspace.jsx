@@ -887,6 +887,14 @@ export default function ProjectActivitiesWorkspace({
                                             </div>
 
                                             <div className="flex flex-wrap items-center gap-1.5">
+                                                <a
+                                                    href={route('projects.activities.memo', [project.id, act.id])}
+                                                    target="_blank"
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[11px] font-extrabold rounded-lg shadow-2xs transition cursor-pointer"
+                                                    title="พิมพ์บันทึกข้อความขออนุญาตดำเนินกิจกรรม (ปะหน้า) ด้วยแบบฟอร์มราชการ Sarabun + AI"
+                                                >
+                                                    <span>🖨️</span> บันทึกข้อความขออนุญาต (AI)
+                                                </a>
                                                 {canManageSetsForActivity && (
                                                     <>
                                                         <button

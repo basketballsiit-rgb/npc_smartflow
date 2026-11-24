@@ -1793,5 +1793,122 @@ Write the report in Thai. Include sections for:
             'cost' => 'การใช้จ่ายงบประมาณเป็นไปตามระเบียบของทางราชการ คุ้มค่า และไม่เกินวงเงินที่ได้รับจัดสรร ร้อยละ 100'
         ];
     }
+
+    /**
+     * Draft official Thai government memorandum (บันทึกข้อความขออนุญาตดำเนินกิจกรรม)
+     * in Saraban style using Gemini AI, with high-quality bureaucratic fallback.
+     */
+    public function draftActivityPermissionMemo(array $data): array
+    {
+        $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
+        $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
+
+        $collegeName = trim($data['college_name'] ?? 'วิทยาลัยสารพัดช่างน่าน');
+        $divisionName = trim($data['division_name'] ?? 'ฝ่ายวิชาการ');
+        $activityName = trim($data['activity_name'] ?? 'กิจกรรมพัฒนาทักษะวิชาชีพ');
+        $projectTitle = trim($data['project_title'] ?? '');
+        $objectives = trim($data['objectives'] ?? '');
+        $rationale = trim($data['background_rationale'] ?? '');
+        $benefits = trim($data['expected_benefits'] ?? '');
+        $targetGroup = trim($data['target_group'] ?? '');
+        $dateText = trim($data['date_text'] ?? 'ตามกำหนดการที่แนบ');
+        $location = trim($data['location'] ?? $collegeName);
+        $budgetAmount = (float) ($data['budget_amount'] ?? 0);
+        $budgetText = $budgetAmount > 0 ? number_format($budgetAmount, 2) . ' บาท' : '';
+        $hasProcurements = (bool) ($data['has_procurements'] ?? false);
+        $hasLoans = (bool) ($data['has_loans'] ?? false);
+
+        $docAttachText = 'รายละเอียดการดำเนินกิจกรรม กำหนดการ';
+        if ($hasProcurements && $hasLoans) {
+            $docAttachText .= ' เอกสารจัดซื้อจัดจ้าง และสัญญายืมเงินทดรองราชการ';
+        } elseif ($hasProcurements) {
+            $docAttachText .= ' และเอกสารจัดซื้อจัดจ้างที่เกี่ยวข้อง';
+        } elseif ($hasLoans) {
+            $docAttachText .= ' และสัญญายืมเงินทดรองราชการที่เกี่ยวข้อง';
+        } else {
+            $docAttachText .= ' และเอกสารที่เกี่ยวข้อง';
+        }
+
+        if ($aiEnabled && !empty($apiKey)) {
+            $model = self::getActiveModel();
+            $temp = (float) SystemSetting::get('ai_temperature', 0.35);
+
+            $prompt = <<<PROMPT
+คุณคือเจ้าหน้าที่สารบรรณและงานแผนงานมืออาชีพของสถานศึกษาอาชีวศึกษาไทย ({$collegeName})
+จงร่างเนื้อหา "บันทึกข้อความขออนุญาตดำเนินกิจกรรม" ตามระเบียบงานสารบรรณของทางราชการไทย ให้สละสลวย กระชับ ถูกต้องตามรูปแบบหนังสือราชการ
+
+ข้อมูลกิจกรรม:
+- ฝ่าย/งานเจ้าของเรื่อง: {$divisionName} {$collegeName}
+- ชื่อกิจกรรม: {$activityName}
+- ภายใต้โครงการ: {$projectTitle}
+- หลักการและเหตุผล: {$rationale}
+- วัตถุประสงค์: {$objectives}
+- กลุ่มเป้าหมาย: {$targetGroup}
+- ผลลัพธ์/ประโยชน์ที่คาดว่าจะได้รับ: {$benefits}
+- วันเวลาที่ดำเนินการ: {$dateText}
+- สถานที่: {$location}
+- วงเงินงบประมาณที่ใช้: {$budgetText}
+- เอกสารแนบ: {$docAttachText}
+
+ข้อกำหนดรูปแบบการตอบ:
+ให้ตอบเป็น JSON object เท่านั้น (ห้ามมีข้อความอื่นนอก JSON) โดยมี 2 คีย์คือ:
+{
+  "paragraph1": "ย่อหน้าที่ 1 ขึ้นต้นด้วย 'ด้วย {$divisionName} {$collegeName} มีความประสงค์จะดำเนินกิจกรรม \"{$activityName}\" ภายใต้โครงการ \"{$projectTitle}\" เพื่อ...' สรุปเหตุผล วัตถุประสงค์ และประโยชน์ที่ผู้เข้าร่วมจะได้รับให้สละสลวย 1 ย่อหน้า (ประมาณ 3-4 บรรทัด)",
+  "paragraph2": "ย่อหน้าที่ 2 ขึ้นต้นด้วย 'ในการนี้ จึงขออนุญาตดำเนินกิจกรรมดังกล่าว' ระบุวันเวลา ({$dateText}) ณ สถานที่ ({$location}) และหากมีงบประมาณ ({$budgetText}) ให้ระบุว่าใช้งบประมาณที่ได้รับจัดสรรจากโครงการดังกล่าว พร้อมอ้างถึง{$docAttachText}ตามที่แนบมาพร้อมนี้ (ประมาณ 2-3 บรรทัด)"
+}
+PROMPT;
+
+            try {
+                $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                    ->withoutVerifying()
+                    ->timeout(20)
+                    ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}", [
+                        'contents' => [['parts' => [['text' => $prompt]]]],
+                        'generationConfig' => ['temperature' => $temp, 'maxOutputTokens' => 1000]
+                    ]);
+
+                if ($response->successful()) {
+                    $body = $response->json();
+                    $text = $body['candidates'][0]['content']['parts'][0]['text'] ?? '';
+                    $clean = preg_replace('/```(?:json)?\s*([\s\S]*?)\s*```/', '$1', trim($text));
+                    $decoded = json_decode($clean, true);
+                    if (is_array($decoded) && !empty($decoded['paragraph1']) && !empty($decoded['paragraph2'])) {
+                        return [
+                            'paragraph1' => trim($decoded['paragraph1']),
+                            'paragraph2' => trim($decoded['paragraph2']),
+                            'source' => 'ai',
+                        ];
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Gemini draftActivityPermissionMemo error: ' . $e->getMessage());
+            }
+        }
+
+        // High-quality Thai Official Saraban Fallback
+        $purposeClause = !empty($objectives)
+            ? preg_replace('/^[\d๐-๙]+[\.\)\s]+/u', '', preg_replace('/\r?\n+/', ' และ', $objectives))
+            : 'ส่งเสริมและพัฒนาทักษะความรู้ความสามารถให้แก่ผู้เข้าร่วมกิจกรรม ตลอดจนนำความรู้และทักษะไปประยุกต์ใช้ในการเรียน การปฏิบัติงาน และการประกอบอาชีพได้อย่างมีประสิทธิภาพ';
+        $purposeClause = mb_strimwidth(trim($purposeClause), 0, 260, '');
+        if (!str_starts_with($purposeClause, 'เพื่อ')) {
+            $purposeClause = 'เพื่อ' . $purposeClause;
+        }
+
+        $p1 = "ด้วย {$divisionName} {$collegeName} มีความประสงค์จะดำเนินกิจกรรม \"{$activityName}\" ภายใต้โครงการ \"{$projectTitle}\" {$purposeClause}" .
+            (!empty($targetGroup) ? " โดยมีกลุ่มเป้าหมายคือ {$targetGroup}" : '') .
+            ' ให้บรรลุตามวัตถุประสงค์และเป้าหมายของโครงการอย่างมีประสิทธิภาพ';
+
+        $budgetClause = $budgetAmount > 0
+            ? " โดยใช้งบประมาณที่ได้รับจัดสรรจากโครงการดังกล่าว จำนวนเงิน {$budgetText}"
+            : '';
+
+        $p2 = "ในการนี้ จึงขออนุญาตดำเนินกิจกรรมดังกล่าว {$dateText} ณ {$location}{$budgetClause} โดยมี{$docAttachText}ตามที่แนบมาพร้อมนี้";
+
+        return [
+            'paragraph1' => $p1,
+            'paragraph2' => $p2,
+            'source' => 'template',
+        ];
+    }
 }
 

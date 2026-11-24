@@ -5584,5 +5584,276 @@ class ProjectController extends Controller
 
         return redirect()->back()->with('message', 'ลบกิจกรรมย่อย "' . $targetName . '" เรียบร้อยแล้ว');
     }
+
+    /**
+     * Build shared context data for an Activity Permission Memorandum (บันทึกข้อความขออนุญาตดำเนินกิจกรรม).
+     */
+    private function buildActivityMemoContext(Project $project, string $activityId): array
+    {
+        $project->load(['user', 'department.parent', 'procurements.items']);
+        $activities = is_array($project->activities) ? array_values($project->activities) : [];
+        $targetIndex = null;
+        $activity = null;
+
+        foreach ($activities as $idx => &$act) {
+            if (empty($act['id'])) {
+                $act['id'] = 'act_legacy_' . ($idx + 1);
+            }
+            if ((string)$act['id'] === (string)$activityId) {
+                $targetIndex = $idx;
+                $activity = $act;
+            }
+        }
+        unset($act);
+
+        if (!$activity) {
+            abort(404, 'ไม่พบกิจกรรมย่อยที่ต้องการพิมพ์บันทึกข้อความ');
+        }
+
+        $actName = $activity['name'] ?? 'กิจกรรมย่อย';
+        $linkedSets = $project->procurements->filter(function ($p) use ($activityId, $actName) {
+            return (string)$p->activity_id === (string)$activityId
+                || (empty($p->activity_id) && !empty($p->activity_name) && trim($p->activity_name) === trim($actName));
+        });
+
+        $hasProcurements = $linkedSets->contains(fn($s) => ($s->set_type ?? 'procurement') !== 'loan');
+        $hasLoans = $linkedSets->contains(fn($s) => ($s->set_type ?? 'procurement') === 'loan');
+        $setsTotal = (float) $linkedSets->sum(fn($s) => (float) $s->items->sum('total_price'));
+        $budgetAmount = $setsTotal > 0 ? $setsTotal : (float) ($activity['budget'] ?? 0);
+
+        $collegeName = \App\Models\SystemSetting::where('key', 'college_name')->value('value') ?: 'วิทยาลัยสารพัดช่างน่าน';
+        $dept = $project->department;
+        $parentDept = $dept?->parent;
+        $divisionName = $parentDept?->name ?: ($dept?->name ?: 'ฝ่ายวิชาการ');
+
+        // Format Thai date string for activity
+        $thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+        $formatThaiDate = function (?string $dateStr) use ($thaiMonths) {
+            if (!$dateStr) return null;
+            try {
+                $c = \Carbon\Carbon::parse($dateStr);
+                return $c->day . ' ' . $thaiMonths[$c->month] . ' ' . ($c->year + 543);
+            } catch (\Throwable $e) {
+                return $dateStr;
+            }
+        };
+
+        $dateText = trim($activity['operation_period_text'] ?? '');
+        if (empty($dateText)) {
+            $sDate = $formatThaiDate($activity['start_date'] ?? null);
+            $eDate = $formatThaiDate($activity['end_date'] ?? null);
+            if ($sDate && $eDate && $sDate !== $eDate) {
+                try {
+                    $sc = \Carbon\Carbon::parse($activity['start_date']);
+                    $ec = \Carbon\Carbon::parse($activity['end_date']);
+                    if ($sc->month === $ec->month && $sc->year === $ec->year) {
+                        $dateText = 'ในวันที่ ' . $sc->day . ' - ' . $ec->day . ' ' . $thaiMonths[$ec->month] . ' ' . ($ec->year + 543);
+                    } else {
+                        $dateText = "ระหว่างวันที่ {$sDate} ถึงวันที่ {$eDate}";
+                    }
+                } catch (\Throwable $e) {
+                    $dateText = "ระหว่างวันที่ {$sDate} ถึงวันที่ {$eDate}";
+                }
+            } elseif ($sDate) {
+                $dateText = "ในวันที่ {$sDate}";
+            } else {
+                $dateText = 'ตามกำหนดการที่แนบ';
+            }
+        } elseif (!str_starts_with($dateText, 'ในวันที่') && !str_starts_with($dateText, 'ระหว่าง') && !str_starts_with($dateText, 'วันที่')) {
+            $dateText = 'ในวันที่ ' . $dateText;
+        }
+
+        // Resolve 5 Official Signers
+        $cleanName = fn(?string $n) => trim(preg_replace('/\s+/', ' ', str_replace(['(', ')'], '', (string)$n)));
+
+        // 1. Activity Responsible Person (ผู้รับผิดชอบกิจกรรม / ผู้กรอกข้อมูล)
+        $fillerUser = null;
+        if (!empty($activity['assigned_user_ids']) && is_array($activity['assigned_user_ids'])) {
+            $fillerUser = \App\Models\User::find($activity['assigned_user_ids'][0]);
+        }
+        if (!$fillerUser && !empty($activity['created_by'])) {
+            $fillerUser = \App\Models\User::find($activity['created_by']);
+        }
+        if (!$fillerUser) {
+            $fillerUser = auth()->user();
+        }
+        $actResponsibleName = !empty($activity['responsible_person'])
+            ? $cleanName($activity['responsible_person'])
+            : ($fillerUser ? $cleanName($fillerUser->name) : '........................................');
+        $actResponsiblePos = trim(($fillerUser?->position_level ?: $fillerUser?->position ?: '') . ' ผู้รับผิดชอบกิจกรรม');
+        if (str_contains($actResponsiblePos, 'ผู้รับผิดชอบกิจกรรม ผู้รับผิดชอบกิจกรรม')) {
+            $actResponsiblePos = str_replace('ผู้รับผิดชอบกิจกรรม ผู้รับผิดชอบกิจกรรม', 'ผู้รับผิดชอบกิจกรรม', $actResponsiblePos);
+        }
+
+        // 2. Project Responsible Person (ผู้รับผิดชอบโครงการ)
+        $projOwner = $project->user;
+        $projResponsibleName = !empty($project->responsible_person)
+            ? $cleanName($project->responsible_person)
+            : ($projOwner ? $cleanName($projOwner->name) : '........................................');
+        $projResponsiblePos = trim(($projOwner?->position_level ?: $projOwner?->position ?: '') . ' ผู้รับผิดชอบโครงการ');
+
+        // 3. Deputy Director of Project's Division (รองฝ่ายผู้รับผิดชอบโครงการ)
+        $resolveDeputy = function (string $keyword, string $defaultTitle, string $defaultName) use ($cleanName) {
+            $deptRow = \App\Models\Department::whereNull('parent_id')
+                ->where('name', 'like', "%{$keyword}%")
+                ->first();
+            $name = $deptRow?->deputy_director_name;
+            if (empty($name)) {
+                $userRow = \App\Models\User::where('position', 'like', '%รองผู้อำนวยการ%')
+                    ->where('position', 'like', "%{$keyword}%")
+                    ->first();
+                $name = $userRow?->name;
+            }
+            return [
+                'name' => $cleanName($name ?: $defaultName),
+                'title' => $defaultTitle,
+            ];
+        };
+
+        $divCombined = ($parentDept?->name ?? '') . ' ' . ($dept?->name ?? '');
+        if (str_contains($divCombined, 'ยุทธศาสตร์') || str_contains($divCombined, 'แผนงาน')) {
+            $projDeputy = $resolveDeputy('ยุทธศาสตร์', 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน', 'นายนิพนธ์ ร่องพืช');
+        } elseif (str_contains($divCombined, 'กิจการนักเรียน')) {
+            $projDeputy = $resolveDeputy('กิจการนักเรียน', 'รองผู้อำนวยการฝ่ายพัฒนากิจการนักเรียนนักศึกษา', 'นายนิพนธ์ ร่องพืช');
+        } elseif (str_contains($divCombined, 'บริหารทรัพยากร')) {
+            $projDeputy = $resolveDeputy('บริหารทรัพยากร', 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร', 'นายจักรพงศ์ พรหมสกุลปัญญา');
+        } else {
+            $projDeputy = $resolveDeputy('วิชาการ', 'รองผู้อำนวยการฝ่ายวิชาการ', 'นายนิพนธ์ ร่องพืช');
+        }
+
+        // 4. Deputy Director of Strategy & Planning (รองฝ่ายยุทธศาสตร์และแผนงาน)
+        $planDeputy = $resolveDeputy('ยุทธศาสตร์', 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน', 'นายนิพนธ์ ร่องพืช');
+
+        // 5. College Director (ผู้อำนวยการ)
+        $directorName = \App\Models\SystemSetting::where('key', 'director_name')->value('value');
+        if (empty($directorName)) {
+            $dirUser = \App\Models\User::where('position', 'like', '%ผู้อำนวยการ%')
+                ->where('position', 'not like', '%รองผู้อำนวยการ%')
+                ->first();
+            $directorName = $dirUser?->name ?: 'นายกเชษฐ์ กิ่งชนะ';
+        }
+        $directorName = $cleanName($directorName);
+
+        return [
+            'activities' => $activities,
+            'targetIndex' => $targetIndex,
+            'activity' => $activity,
+            'collegeName' => $collegeName,
+            'divisionName' => $divisionName,
+            'dateText' => $dateText,
+            'location' => trim($activity['location'] ?? ($project->location ?: $collegeName)),
+            'budgetAmount' => $budgetAmount,
+            'hasProcurements' => $hasProcurements,
+            'hasLoans' => $hasLoans,
+            'linkedSets' => $linkedSets,
+            'signers' => [
+                'activity_responsible' => ['name' => $actResponsibleName, 'title' => $actResponsiblePos],
+                'project_responsible' => ['name' => $projResponsibleName, 'title' => $projResponsiblePos],
+                'project_deputy' => $projDeputy,
+                'plan_deputy' => $planDeputy,
+                'director' => ['name' => $directorName, 'title' => 'ผู้อำนวยการ' . $collegeName],
+            ],
+        ];
+    }
+
+    /**
+     * Render Official Thai Saraban Cover Memo for a Project Sub-Activity (with AI-drafted prose).
+     */
+    public function printActivityMemo(Project $project, string $activityId, \App\Services\GeminiService $geminiService)
+    {
+        $ctx = $this->buildActivityMemoContext($project, $activityId);
+        $activity = $ctx['activity'];
+
+        $paragraph1 = $activity['memo_paragraph_1'] ?? '';
+        $paragraph2 = $activity['memo_paragraph_2'] ?? '';
+        $aiSource = !empty($paragraph1) ? 'saved' : 'ai';
+
+        if (empty($paragraph1) || empty($paragraph2)) {
+            $draft = $geminiService->draftActivityPermissionMemo([
+                'college_name' => $ctx['collegeName'],
+                'division_name' => $ctx['divisionName'],
+                'activity_name' => $activity['name'] ?? '',
+                'project_title' => $project->title,
+                'objectives' => $activity['objectives'] ?: ($project->objectives ?? ''),
+                'background_rationale' => $activity['background_rationale'] ?: ($project->background_rationale ?? ''),
+                'expected_benefits' => $activity['expected_benefits'] ?: ($project->expected_benefits ?? ''),
+                'target_group' => $activity['target_group'] ?? '',
+                'date_text' => $ctx['dateText'],
+                'location' => $ctx['location'],
+                'budget_amount' => $ctx['budgetAmount'],
+                'has_procurements' => $ctx['hasProcurements'],
+                'has_loans' => $ctx['hasLoans'],
+            ]);
+
+            $paragraph1 = $draft['paragraph1'];
+            $paragraph2 = $draft['paragraph2'];
+            $aiSource = $draft['source'] ?? 'template';
+
+            // Cache generated draft onto the activity so subsequent opens are instant
+            $activities = $ctx['activities'];
+            $activities[$ctx['targetIndex']]['memo_paragraph_1'] = $paragraph1;
+            $activities[$ctx['targetIndex']]['memo_paragraph_2'] = $paragraph2;
+            $project->activities = $activities;
+            $project->save();
+        }
+
+        $garudaPath = public_path('images/garuda.png');
+        $garudaBase64 = file_exists($garudaPath)
+            ? 'data:image/png;base64,' . base64_encode(file_get_contents($garudaPath))
+            : null;
+
+        return view('projects.activity_memo', [
+            'project' => $project,
+            'activity' => $activity,
+            'activityId' => $activityId,
+            'collegeName' => $ctx['collegeName'],
+            'divisionName' => $ctx['divisionName'],
+            'budgetAmount' => $ctx['budgetAmount'],
+            'linkedSets' => $ctx['linkedSets'],
+            'signers' => $ctx['signers'],
+            'paragraph1' => $paragraph1,
+            'paragraph2' => $paragraph2,
+            'aiSource' => $aiSource,
+            'garudaBase64' => $garudaBase64,
+        ]);
+    }
+
+    /**
+     * Regenerate AI-drafted official Thai Saraban prose for an Activity Cover Memo.
+     */
+    public function aiDraftActivityMemo(Request $request, Project $project, string $activityId, \App\Services\GeminiService $geminiService)
+    {
+        $ctx = $this->buildActivityMemoContext($project, $activityId);
+        $activity = $ctx['activity'];
+
+        $draft = $geminiService->draftActivityPermissionMemo([
+            'college_name' => $ctx['collegeName'],
+            'division_name' => $ctx['divisionName'],
+            'activity_name' => $activity['name'] ?? '',
+            'project_title' => $project->title,
+            'objectives' => $activity['objectives'] ?: ($project->objectives ?? ''),
+            'background_rationale' => $activity['background_rationale'] ?: ($project->background_rationale ?? ''),
+            'expected_benefits' => $activity['expected_benefits'] ?: ($project->expected_benefits ?? ''),
+            'target_group' => $activity['target_group'] ?? '',
+            'date_text' => $ctx['dateText'],
+            'location' => $ctx['location'],
+            'budget_amount' => $ctx['budgetAmount'],
+            'has_procurements' => $ctx['hasProcurements'],
+            'has_loans' => $ctx['hasLoans'],
+        ]);
+
+        $activities = $ctx['activities'];
+        $activities[$ctx['targetIndex']]['memo_paragraph_1'] = $draft['paragraph1'];
+        $activities[$ctx['targetIndex']]['memo_paragraph_2'] = $draft['paragraph2'];
+        $project->activities = $activities;
+        $project->save();
+
+        return response()->json([
+            'success' => true,
+            'paragraph1' => $draft['paragraph1'],
+            'paragraph2' => $draft['paragraph2'],
+            'source' => $draft['source'] ?? 'ai',
+        ]);
+    }
 }
 

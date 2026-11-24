@@ -284,6 +284,8 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/activities', [ProjectController::class, 'storeActivity'])->name('projects.activities.store');
     Route::put('projects/{project}/activities/{activityId}', [ProjectController::class, 'updateActivity'])->name('projects.activities.update');
     Route::delete('projects/{project}/activities/{activityId}', [ProjectController::class, 'destroyActivity'])->name('projects.activities.destroy');
+    Route::get('projects/{project}/activities/{activityId}/memo', [ProjectController::class, 'printActivityMemo'])->name('projects.activities.memo');
+    Route::post('projects/{project}/activities/{activityId}/memo/ai-draft', [ProjectController::class, 'aiDraftActivityMemo'])->name('projects.activities.memo_ai_draft');
 
     // Budget & Procurement DO phase routes
     Route::post('budgets/{budget}/clear', [BudgetController::class, 'clear'])->name('budgets.clear');
