@@ -5772,6 +5772,18 @@ class ProjectController extends Controller
             'academic_deputy_position' => \App\Models\SystemSetting::where('key', 'academic_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายวิชาการ',
             'resource_deputy_name' => \App\Models\SystemSetting::where('key', 'resource_deputy_name')->value('value') ?: 'นายจักรพงศ์ พรหมสกุลปัญญา',
             'resource_deputy_position' => \App\Models\SystemSetting::where('key', 'resource_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
+            'plan_deputy_name' => \App\Models\SystemSetting::where('key', 'plan_deputy_name')->value('value') ?: 'นายนิพนธ์ ร่องพืช',
+            'plan_deputy_position' => \App\Models\SystemSetting::where('key', 'plan_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน',
+            'academic_deputy_signature' => \App\Models\SystemSetting::where('key', 'academic_deputy_signature')->value('value')
+                ?: (\App\Models\User::where('name', 'like', '%นิพนธ์%')->value('signature_data') ?: null),
+            'plan_head_signature' => \App\Models\SystemSetting::where('key', 'plan_head_signature')->value('value')
+                ?: (\App\Models\User::where('name', 'like', '%พิพัฒน์%')->value('signature_data') ?: null),
+            'plan_deputy_signature' => \App\Models\SystemSetting::where('key', 'plan_deputy_signature')->value('value')
+                ?: (\App\Models\User::where('name', 'like', '%นิพนธ์%')->value('signature_data') ?: null),
+            'resource_deputy_signature' => \App\Models\SystemSetting::where('key', 'resource_deputy_signature')->value('value')
+                ?: (\App\Models\User::where('name', 'like', '%จักรพงศ์%')->value('signature_data') ?: null),
+            'director_signature' => \App\Models\SystemSetting::where('key', 'director_signature')->value('value')
+                ?: (\App\Models\User::where('name', 'like', '%กเชษฐ์%')->value('signature_data') ?: null),
         ];
 
         // Parse individual positions for users who hold multiple positions (e.g. separated by /)

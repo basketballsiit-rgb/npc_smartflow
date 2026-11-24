@@ -65,34 +65,111 @@
     $sig5 = $approvalsByStep[5] ?? null;
     $sig6 = $approvalsByStep[6] ?? null;
 
-    $sig1Name = $sig1?->user?->name ?: $signers['project_responsible']['name'];
+    $isFastTrackApproval = function ($sig) {
+        if (!$sig) return false;
+        if (($sig->signature_type ?? '') === 'fast_track' || ($sig->signature_type ?? '') === 'admin') return true;
+        $comments = $sig->comments ?? '';
+        if (str_contains($comments, 'รวดเดียว') || str_contains($comments, 'Fast-Track') || str_contains($comments, 'fast-track') || str_contains($comments, 'อนุมัติโดยผู้ดูแลระบบ')) {
+            return true;
+        }
+        return false;
+    };
+
+    // Uniform signing date matching Image 2 & Print.jsx
+    $uniformSourceDate = $sig6?->signed_at ?: ($sig1?->signed_at ?: $project->created_at);
+    $sigDateUniform = $formatSignatureDate($uniformSourceDate);
+
+    // 1. ผู้เสนอโครงการ
+    $sig1Name = (!empty($sig1?->user?->name) && !$isFastTrackApproval($sig1))
+        ? $cleanPersonName($sig1->user->name)
+        : $signers['project_responsible']['name'];
     $sig1Pos = $defaultProjPos;
-    $sig1Date = $formatSignatureDate($sig1?->signed_at ?: $project->created_at);
+    $sig1Img = $sig1?->signature_data ?: ($project->user?->signature_data ?: ($signers['project_responsible']['signature_data'] ?? null));
+    $sig1Date = $sigDateUniform;
 
-    $sig2Name = $sig2?->user?->name ?: ($resolvedHead['name'] ?? '........................................');
-    $sig2Pos = $sig2?->acting_position_text ?: ($resolvedHead['position'] ?? 'หัวหน้างาน / หัวหน้าแผนกวิชา');
-    $sig2Date = $formatSignatureDate($sig2?->signed_at);
+    // 2. หัวหน้างาน / หัวหน้าแผนกวิชา
+    $sig2Name = (!empty($sig2?->user?->name) && !$isFastTrackApproval($sig2))
+        ? $cleanPersonName($sig2->user->name)
+        : ($resolvedHead['name'] ?? '........................................');
+    $sig2Pos = (!$isFastTrackApproval($sig2) && $sig2?->acting_position_text)
+        ? $sig2->acting_position_text
+        : ($resolvedHead['position'] ?? 'หัวหน้างาน / หัวหน้าแผนกวิชา');
+    $sig2Img = ($sig2?->signature_data && !$isFastTrackApproval($sig2)) ? $sig2->signature_data : null;
+    $sig2Date = $sigDateUniform;
 
-    $sig3Name = $sig3?->user?->name ?: ($collegeSettings['plan_head_name'] ?? 'นายพิพัฒน์ สีมา');
-    $sig3Pos = $sig3?->acting_position_text ?: ($collegeSettings['plan_head_position'] ?? 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ');
-    $sig3Date = $formatSignatureDate($sig3?->signed_at);
+    // 4. ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่กำกับดูแล
+    $parentName = $project->department?->parent?->name ?? '';
+    $curDeptName = $project->department?->name ?? '';
+    $combinedDept = "{$parentName} {$curDeptName}";
 
-    $sig4Name = $sig4?->acting_signatory_name ?: ($sig4?->user?->name ?: $signers['project_deputy']['name']);
-    $sig4Pos = $sig4?->acting_position_text ?: $signers['project_deputy']['title'];
-    $sig4Date = $formatSignatureDate($sig4?->signed_at);
+    $sig4Name = (!empty($sig4?->user?->name) && !$isFastTrackApproval($sig4) && $sig4->user_id !== $project->user_id)
+        ? $cleanPersonName($sig4->user->name)
+        : ($project->department?->deputy_director_name
+            ?: (str_contains($combinedDept, 'บริหารทรัพยากร')
+                ? ($collegeSettings['resource_deputy_name'] ?? 'นายจักรพงศ์ พรหมสกุลปัญญา')
+                : ($collegeSettings['academic_deputy_name'] ?? 'นายนิพนธ์ ร่องพืช')));
 
-    $sig5Name = $sig5?->user?->name ?: $signers['plan_deputy']['name'];
-    $sig5Pos = $sig5?->acting_position_text ?: $signers['plan_deputy']['title'];
-    $sig5Date = $formatSignatureDate($sig5?->signed_at);
+    $sig4Pos = (!$isFastTrackApproval($sig4) && $sig4?->acting_position_text)
+        ? $sig4->acting_position_text
+        : ($project->department?->deputy_director_position
+            ?: (str_contains($combinedDept, 'บริหารทรัพยากร')
+                ? ($collegeSettings['resource_deputy_position'] ?? 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร')
+                : ($collegeSettings['academic_deputy_position'] ?? 'รองผู้อำนวยการฝ่ายวิชาการ')));
 
-    $resourceDeputySig = $resourceDeputySig ?? null;
-    $resourceDeputyName = $resourceDeputySig?->user?->name ?: ($collegeSettings['resource_deputy_name'] ?? 'นายจักรพงศ์ พรหมสกุลปัญญา');
-    $resourceDeputyPos = $resourceDeputySig?->acting_position_text ?: ($collegeSettings['resource_deputy_position'] ?? 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร');
-    $resourceDeputyDate = $formatSignatureDate($resourceDeputySig?->signed_at);
+    $sig4Img = ($sig4?->signature_data && !$isFastTrackApproval($sig4) && $sig4->user_id !== $project->user_id)
+        ? $sig4->signature_data
+        : (str_contains($combinedDept, 'บริหารทรัพยากร')
+            ? ($collegeSettings['resource_deputy_signature'] ?? null)
+            : ($collegeSettings['academic_deputy_signature'] ?? null));
+    $sig4Date = $sigDateUniform;
 
-    $sig6Name = $sig6?->user?->name ?: $signers['director']['name'];
-    $sig6Pos = $sig6?->acting_position_text ?: $signers['director']['title'];
-    $sig6Date = $formatSignatureDate($sig6?->signed_at);
+    // 3. ผู้ตรวจสอบโครงการ: หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ
+    $sig3Name = (!empty($sig3?->user?->name) && !$isFastTrackApproval($sig3))
+        ? $cleanPersonName($sig3->user->name)
+        : ($collegeSettings['plan_head_name'] ?? 'นายพิพัฒน์ สีมา');
+    $sig3Pos = (!$isFastTrackApproval($sig3) && $sig3?->acting_position_text)
+        ? $sig3->acting_position_text
+        : ($collegeSettings['plan_head_position'] ?? 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ');
+    $sig3Img = ($sig3?->signature_data && !$isFastTrackApproval($sig3))
+        ? $sig3->signature_data
+        : ($collegeSettings['plan_head_signature'] ?? null);
+    $sig3Date = $sigDateUniform;
+
+    // 5. ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน
+    $sig5Name = (!empty($sig5?->user?->name) && !$isFastTrackApproval($sig5) && $sig5->user_id !== $project->user_id)
+        ? $cleanPersonName($sig5->user->name)
+        : ($collegeSettings['plan_deputy_name'] ?? 'นายนิพนธ์ ร่องพืช');
+    $sig5Pos = (!$isFastTrackApproval($sig5) && $sig5?->acting_position_text)
+        ? $sig5->acting_position_text
+        : ($collegeSettings['plan_deputy_position'] ?? 'รองผู้อำนวยการฝ่ายยุทธศาสตร์และแผนงาน');
+    $sig5Img = ($sig5?->signature_data && !$isFastTrackApproval($sig5) && $sig5->user_id !== $project->user_id)
+        ? $sig5->signature_data
+        : ($collegeSettings['plan_deputy_signature'] ?? null);
+    $sig5Date = $sigDateUniform;
+
+    // Resource Deputy: ผู้เห็นชอบโครงการ (รองผู้อำนวยการฝ่ายบริหารทรัพยากร)
+    $resourceDeputyName = ($resourceDeputySig && !$isFastTrackApproval($resourceDeputySig) && $resourceDeputySig->user?->name)
+        ? $cleanPersonName($resourceDeputySig->user->name)
+        : ($collegeSettings['resource_deputy_name'] ?? 'นายจักรพงศ์ พรหมสกุลปัญญา');
+    $resourceDeputyPos = ($resourceDeputySig && !$isFastTrackApproval($resourceDeputySig) && $resourceDeputySig->acting_position_text)
+        ? $resourceDeputySig->acting_position_text
+        : ($collegeSettings['resource_deputy_position'] ?? 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร');
+    $resourceDeputyImg = ($resourceDeputySig && !$isFastTrackApproval($resourceDeputySig) && $resourceDeputySig->signature_data)
+        ? $resourceDeputySig->signature_data
+        : ($collegeSettings['resource_deputy_signature'] ?? null);
+    $resourceDeputyDate = $sigDateUniform;
+
+    // 6. ผู้อนุมัติโครงการ: ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน
+    $sig6Name = (!empty($sig6?->user?->name) && !$isFastTrackApproval($sig6))
+        ? $cleanPersonName($sig6->user->name)
+        : ($collegeSettings['director_name'] ?? 'นายกเชษฐ์ กิ่งชนะ');
+    $sig6Pos = (!$isFastTrackApproval($sig6) && $sig6?->acting_position_text)
+        ? $sig6->acting_position_text
+        : ($collegeSettings['director_position'] ?? ('ผู้อำนวยการ' . $collegeName));
+    $sig6Img = ($sig6?->signature_data && !$isFastTrackApproval($sig6))
+        ? $sig6->signature_data
+        : ($collegeSettings['director_signature'] ?? null);
+    $sig6Date = $sigDateUniform;
 
     // Categories
     $getSelectedCategoryItems = function ($cat) use ($project) {
@@ -339,6 +416,11 @@
             box-sizing: border-box;
         }
 
+        .table-page-break {
+            page-break-before: always;
+            break-before: page;
+        }
+
         /* PART 1: Cover Memo STRICT 1-PAGE RULE */
         #sectionPart1 {
             width: 210mm;
@@ -578,6 +660,14 @@
                 overflow: hidden !important;
                 page-break-after: always !important;
                 break-after: page !important;
+            }
+            .table-page-break {
+                page-break-before: always !important;
+                break-before: page !important;
+            }
+            .official-table {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
             }
             .editable:hover, .editable:focus {
                 background: transparent !important;
@@ -903,7 +993,7 @@
             @endif
         </div>
 
-        <div class="sec-title">10. ตัวชี้วัดเป้าหมายโครงการ</div>
+        <div class="sec-title table-page-break" style="page-break-before: always; break-before: page;">10. ตัวชี้วัดเป้าหมายโครงการ</div>
         <table class="official-table">
             <thead>
                 <tr>
@@ -1018,7 +1108,7 @@
             </tbody>
         </table>
 
-        <div class="sec-title">11. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</div>
+        <div class="sec-title table-page-break" style="page-break-before: always; break-before: page;">11. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</div>
         <table class="official-table" style="font-size: 12.5pt; text-align: center;">
             <thead>
                 <tr>
@@ -1071,8 +1161,8 @@
             </tbody>
         </table>
 
-        <!-- 12. การอนุมัติโครงการ (Official 6 Approvals Matching Image 5 & Print.jsx lines 1345-1598) -->
-        <div class="sec-title" style="margin-top: 24px;">12. การอนุมัติโครงการ: {{ $project->title }}</div>
+        <!-- 12. การอนุมัติโครงการ (Official 6 Approvals Matching Image 2, Image 5 & Print.jsx lines 1345-1598) -->
+        <div class="sec-title table-page-break" style="page-break-before: always; break-before: page; margin-top: 24px;">12. การอนุมัติโครงการ: {{ $project->title }}</div>
         
         <div style="margin-top: 20px; font-size: 15pt; line-height: 1.35;">
             <!-- Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่กำกับดูแล (ขวา) -->
@@ -1083,8 +1173,8 @@
                         <div style="position: relative; display: flex; align-items: center; justify-content: center;">
                             <span style="position: absolute; right: 100%; margin-right: 8px; white-space: nowrap; bottom: 2px;">ลงชื่อ</span>
                             <div style="display: inline-flex; flex-direction: column; align-items: center;">
-                                @if(!empty($sig1?->signature_data) || !empty($project->user?->signature_data))
-                                    <img src="{{ $sig1?->signature_data ?: $project->user?->signature_data }}" class="signature-img" alt="ลายมือชื่อผู้เสนอ">
+                                @if(!empty($sig1Img))
+                                    <img src="{{ $sig1Img }}" class="signature-img" alt="ลายมือชื่อผู้เสนอ">
                                 @else
                                     <div style="height: 24px;"></div>
                                 @endif
@@ -1104,8 +1194,8 @@
                         <div style="position: relative; display: flex; align-items: center; justify-content: center;">
                             <span style="position: absolute; right: 100%; margin-right: 8px; white-space: nowrap; bottom: 2px;">ลงชื่อ</span>
                             <div style="display: inline-flex; flex-direction: column; align-items: center;">
-                                @if(!empty($sig4?->signature_data) || !empty($collegeSettings['academic_deputy_signature']))
-                                    <img src="{{ $sig4?->signature_data ?: $collegeSettings['academic_deputy_signature'] }}" class="signature-img" alt="ลายมือชื่อรองฝ่าย">
+                                @if(!empty($sig4Img))
+                                    <img src="{{ $sig4Img }}" class="signature-img" alt="ลายมือชื่อรองฝ่าย">
                                 @else
                                     <div style="height: 24px;"></div>
                                 @endif
@@ -1128,8 +1218,8 @@
                         <div style="position: relative; display: flex; align-items: center; justify-content: center;">
                             <span style="position: absolute; right: 100%; margin-right: 8px; white-space: nowrap; bottom: 2px;">ลงชื่อ</span>
                             <div style="display: inline-flex; flex-direction: column; align-items: center;">
-                                @if(!empty($sig3?->signature_data) || !empty($collegeSettings['plan_head_signature']))
-                                    <img src="{{ $sig3?->signature_data ?: $collegeSettings['plan_head_signature'] }}" class="signature-img" alt="ลายมือชื่อผู้ตรวจสอบ">
+                                @if(!empty($sig3Img))
+                                    <img src="{{ $sig3Img }}" class="signature-img" alt="ลายมือชื่อผู้ตรวจสอบ">
                                 @else
                                     <div style="height: 24px;"></div>
                                 @endif
@@ -1149,8 +1239,8 @@
                         <div style="position: relative; display: flex; align-items: center; justify-content: center;">
                             <span style="position: absolute; right: 100%; margin-right: 8px; white-space: nowrap; bottom: 2px;">ลงชื่อ</span>
                             <div style="display: inline-flex; flex-direction: column; align-items: center;">
-                                @if(!empty($sig5?->signature_data) || !empty($collegeSettings['plan_deputy_signature']))
-                                    <img src="{{ $sig5?->signature_data ?: $collegeSettings['plan_deputy_signature'] }}" class="signature-img" alt="ลายมือชื่อรองแผน">
+                                @if(!empty($sig5Img))
+                                    <img src="{{ $sig5Img }}" class="signature-img" alt="ลายมือชื่อรองแผน">
                                 @else
                                     <div style="height: 24px;"></div>
                                 @endif
@@ -1171,8 +1261,8 @@
                     <div style="position: relative; display: flex; align-items: center; justify-content: center;">
                         <span style="position: absolute; right: 100%; margin-right: 8px; white-space: nowrap; bottom: 2px;">ลงชื่อ</span>
                         <div style="display: inline-flex; flex-direction: column; align-items: center;">
-                            @if(!empty($resourceDeputySig?->signature_data) || !empty($collegeSettings['resource_deputy_signature']))
-                                <img src="{{ $resourceDeputySig?->signature_data ?: $collegeSettings['resource_deputy_signature'] }}" class="signature-img" alt="ลายมือชื่อรองบริหาร">
+                            @if(!empty($resourceDeputyImg))
+                                <img src="{{ $resourceDeputyImg }}" class="signature-img" alt="ลายมือชื่อรองบริหาร">
                             @else
                                 <div style="height: 24px;"></div>
                             @endif
@@ -1192,8 +1282,8 @@
                     <div style="position: relative; display: flex; align-items: center; justify-content: center;">
                         <span style="position: absolute; right: 100%; margin-right: 8px; white-space: nowrap; bottom: 2px;">ลงชื่อ</span>
                         <div style="display: inline-flex; flex-direction: column; align-items: center;">
-                            @if(!empty($sig6?->signature_data) || !empty($collegeSettings['director_signature']))
-                                <img src="{{ $sig6?->signature_data ?: $collegeSettings['director_signature'] }}" class="signature-img" alt="ลายมือชื่อผู้อำนวยการ">
+                            @if(!empty($sig6Img))
+                                <img src="{{ $sig6Img }}" class="signature-img" alt="ลายมือชื่อผู้อำนวยการ">
                             @else
                                 <div style="height: 24px;"></div>
                             @endif
@@ -1369,7 +1459,7 @@
             </tbody>
         </table>
 
-        <div class="sec-title">11. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</div>
+        <div class="sec-title table-page-break" style="page-break-before: always; break-before: page;">11. สรุปขั้นตอน/วิธีดำเนินการ และหมวดเงินที่ใช้</div>
         <table class="official-table" style="font-size: 12.5pt; text-align: center;">
             <thead>
                 <tr>
@@ -1471,7 +1561,6 @@
                 </div>
                 <p style="font-weight: 700; margin-top: 8px; white-space: nowrap;">({{ $signers['activity_responsible']['name'] }})</p>
                 <p class="act-pos-display" style="margin: 2px 0 0 0; color: #1e293b;">{{ $signers['activity_responsible']['title'] }}</p>
-                <p style="margin: 2px 0 0 0; color: #475569; white-space: nowrap;">{{ $todayDateOfficial }}</p>
             </div>
         </div>
     </div>
