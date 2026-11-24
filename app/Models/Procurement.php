@@ -11,6 +11,7 @@ class Procurement extends Model
         'routine_budget_plan_id',
         'department_id',
         'created_by',
+        'signer_id',
         'set_name',
         'set_type',
         'activity_name',
@@ -61,6 +62,14 @@ class Procurement extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the designated signing user for this procurement/loan set.
+     */
+    public function signer()
+    {
+        return $this->belongsTo(User::class, 'signer_id');
     }
 
     /**

@@ -913,8 +913,13 @@ class ProcurementController extends Controller
         if ($procurement->department) {
             $project->department = $procurement->department;
         }
-        if ($procurement->creator) {
-            $project->user = $procurement->creator;
+        $signer = $procurement->signer ?: $procurement->creator;
+        if ($signer) {
+            $project->user = $signer;
+            $project->responsible_person = $signer->name;
+            if ($signer->position) {
+                $project->position = $signer->position;
+            }
         }
 
         $purchasingCommittee = $procurement->purchasingCommittee()->get();
@@ -978,6 +983,7 @@ class ProcurementController extends Controller
             'set_name' => 'required|string|max:255',
             'set_type' => 'nullable|string|in:procurement,loan',
             'department_id' => 'nullable|exists:departments,id',
+            'signer_id' => 'nullable|exists:users,id',
             'activity_id' => 'nullable|string|max:64',
             'activity_name' => 'nullable|string|max:255',
             'tor_specifications' => 'nullable|string',
@@ -991,6 +997,27 @@ class ProcurementController extends Controller
             'items.required' => 'กรุณาระบุรายการอย่างน้อย 1 รายการ',
             'items.*.description.required' => 'กรุณาระบุชื่อรายการ',
         ]);
+
+        // Resolve signer: verify non-staff requirement
+        $signerUser = null;
+        if (!empty($validated['signer_id'])) {
+            $candidate = \App\Models\User::find($validated['signer_id']);
+            if ($candidate) {
+                $candPos = ($candidate->position ?? '') . ' ' . ($candidate->position_level ?? '');
+                if (str_contains($candPos, 'เจ้าหน้าที่')) {
+                    return redirect()->back()->with('error', 'ไม่สามารถเลือกผู้ลงนามนี้ได้: บุคลากรตำแหน่งเจ้าหน้าที่ (' . $candidate->name . ') ไม่สามารถเป็นผู้ลงนามในสัญญาจัดซื้อจัดจ้างหรือสัญญายืมเงินได้ กรุณาเลือกครู หรือหัวหน้างานเป็นผู้ลงนามแทน');
+                }
+                $signerUser = $candidate;
+            }
+        }
+
+        if (!$signerUser) {
+            $userPos = ($user->position ?? '') . ' ' . ($user->position_level ?? '');
+            if (str_contains($userPos, 'เจ้าหน้าที่')) {
+                return redirect()->back()->with('error', 'กรุณาระบุผู้ลงนามแทน: เนื่องจากท่านดำรงตำแหน่งเจ้าหน้าที่ จึงไม่สามารถลงนามในสัญญาจัดซื้อจัดจ้างหรือสัญญายืมเงินได้ กรุณาเลือกครู หรือหัวหน้างานเป็นผู้ลงนามแทน');
+            }
+            $signerUser = $user;
+        }
 
         $setType = $validated['set_type'] ?? 'procurement';
         $activityId = $validated['activity_id'] ?? null;
@@ -1050,6 +1077,7 @@ class ProcurementController extends Controller
             'project_id' => $project->id,
             'department_id' => $departmentId,
             'created_by' => $user->id,
+            'signer_id' => $signerUser?->id,
             'set_name' => $validated['set_name'],
             'set_type' => $setType,
             'activity_id' => $activityId,
@@ -1125,6 +1153,7 @@ class ProcurementController extends Controller
             'set_name' => 'required|string|max:255',
             'set_type' => 'nullable|string|in:procurement,loan',
             'department_id' => 'nullable|exists:departments,id',
+            'signer_id' => 'nullable|exists:users,id',
             'activity_id' => 'nullable|string|max:64',
             'activity_name' => 'nullable|string|max:255',
             'tor_specifications' => 'nullable|string',
@@ -1134,6 +1163,17 @@ class ProcurementController extends Controller
             'items.*.unit' => 'required|string|max:50',
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
+
+        if (!empty($validated['signer_id'])) {
+            $candidate = \App\Models\User::find($validated['signer_id']);
+            if ($candidate) {
+                $candPos = ($candidate->position ?? '') . ' ' . ($candidate->position_level ?? '');
+                if (str_contains($candPos, 'เจ้าหน้าที่')) {
+                    return redirect()->back()->with('error', 'ไม่สามารถเลือกผู้ลงนามนี้ได้: บุคลากรตำแหน่งเจ้าหน้าที่ (' . $candidate->name . ') ไม่สามารถเป็นผู้ลงนามในสัญญาจัดซื้อจัดจ้างหรือสัญญายืมเงินได้ กรุณาเลือกครู หรือหัวหน้างานเป็นผู้ลงนามแทน');
+                }
+                $procurement->signer_id = $candidate->id;
+            }
+        }
 
         $setType = $validated['set_type'] ?? ($procurement->set_type ?: 'procurement');
         $activityId = array_key_exists('activity_id', $validated) ? $validated['activity_id'] : $procurement->activity_id;

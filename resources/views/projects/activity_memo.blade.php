@@ -1,8 +1,24 @@
 @php
-    $toThaiDigits = function ($str) {
+    $formatValue = function ($val) {
+        if (is_array($val)) {
+            $items = [];
+            foreach ($val as $k => $v) {
+                if (is_string($v) || is_numeric($v)) {
+                    $items[] = (is_numeric($k) ? '• ' : '') . trim((string)$v);
+                } elseif (is_array($v)) {
+                    $items[] = json_encode($v, JSON_UNESCAPED_UNICODE);
+                }
+            }
+            return implode("\n", $items);
+        }
+        return (string)($val ?? '');
+    };
+
+    $toThaiDigits = function ($str) use ($formatValue) {
+        $str = $formatValue($str);
         $arabic = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
         $thai   = ['๐', '๑', '๒', '๓', '๔', '๕', '๖', '๗', '๘', '๙'];
-        return str_replace($arabic, $thai, (string)$str);
+        return str_replace($arabic, $thai, $str);
     };
 
     $fiscalYear = $project->academic_year ?: (date('Y') + 543);

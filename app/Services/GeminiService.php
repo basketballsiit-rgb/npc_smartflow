@@ -1803,16 +1803,29 @@ Write the report in Thai. Include sections for:
         $apiKey = SystemSetting::get('gemini_api_key', env('GEMINI_API_KEY'));
         $aiEnabled = SystemSetting::get('enable_ai_features', true) || SystemSetting::get('enable_ai_recommendations', true);
 
-        $collegeName = trim($data['college_name'] ?? 'วิทยาลัยสารพัดช่างน่าน');
-        $divisionName = trim($data['division_name'] ?? 'ฝ่ายวิชาการ');
-        $activityName = trim($data['activity_name'] ?? 'กิจกรรมพัฒนาทักษะวิชาชีพ');
-        $projectTitle = trim($data['project_title'] ?? '');
-        $objectives = trim($data['objectives'] ?? '');
-        $rationale = trim($data['background_rationale'] ?? '');
-        $benefits = trim($data['expected_benefits'] ?? '');
-        $targetGroup = trim($data['target_group'] ?? '');
-        $dateText = trim($data['date_text'] ?? 'ตามกำหนดการที่แนบ');
-        $location = trim($data['location'] ?? $collegeName);
+        $toCleanString = function ($v, $glue = "\n") {
+            if (is_array($v)) {
+                $items = [];
+                foreach ($v as $item) {
+                    if (is_string($item) || is_numeric($item)) {
+                        $items[] = trim((string)$item);
+                    }
+                }
+                return implode($glue, $items);
+            }
+            return trim((string)($v ?? ''));
+        };
+
+        $collegeName = $toCleanString($data['college_name'] ?? 'วิทยาลัยสารพัดช่างน่าน');
+        $divisionName = $toCleanString($data['division_name'] ?? 'ฝ่ายวิชาการ');
+        $activityName = $toCleanString($data['activity_name'] ?? 'กิจกรรมพัฒนาทักษะวิชาชีพ');
+        $projectTitle = $toCleanString($data['project_title'] ?? '');
+        $objectives = $toCleanString($data['objectives'] ?? '', ' และ ');
+        $rationale = $toCleanString($data['background_rationale'] ?? '');
+        $benefits = $toCleanString($data['expected_benefits'] ?? '', ' และ ');
+        $targetGroup = $toCleanString($data['target_group'] ?? '', ', ');
+        $dateText = $toCleanString($data['date_text'] ?? 'ตามกำหนดการที่แนบ');
+        $location = $toCleanString($data['location'] ?? $collegeName);
         $budgetAmount = (float) ($data['budget_amount'] ?? 0);
         $budgetText = $budgetAmount > 0 ? number_format($budgetAmount, 2) . ' บาท' : '';
         $hasProcurements = (bool) ($data['has_procurements'] ?? false);

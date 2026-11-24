@@ -1105,7 +1105,7 @@ class ProjectController extends Controller
             'iqaStrategy', 'ovecStrategy', 'approvals.user', 'approvals.delegatedFromUser',
             'approvals.roleDelegation', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource',
             'procurement.committees', 'procurement.items',
-            'procurements.committees', 'procurements.items', 'procurements.department', 'procurements.creator',
+            'procurements.committees', 'procurements.items', 'procurements.department', 'procurements.creator', 'procurements.signer',
             'auditLogs.user'
         ]);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
@@ -1135,7 +1135,7 @@ class ProjectController extends Controller
             'strategyCategories' => $allCategories,
             'fundingSources' => \App\Models\FundingSource::orderBy('id', 'asc')->get(),
             'allDepartments' => \App\Models\Department::orderBy('id', 'asc')->get(['id', 'name', 'parent_id']),
-            'allUsers' => \App\Models\User::orderBy('name')->get(['id', 'name', 'email']),
+            'allUsers' => \App\Models\User::orderBy('name')->get(['id', 'name', 'email', 'position', 'position_level', 'department_id']),
             'canApprove' => $canApprove,
             'actingDelegation' => $actingDelegation ? [
                 'id' => $actingDelegation->id,

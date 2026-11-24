@@ -351,16 +351,43 @@ export default function ProjectActivitiesWorkspace({
         });
     };
 
-    // --- Modal 2: Create / Edit Procurement Set or Loan Set ---
+    // Modal 2: Create / Edit Procurement Set or Loan Set
     const [setModalOpen, setSetModalOpen] = useState(false);
     const [editingSet, setEditingSet] = useState(null);
     const [savingSet, setSavingSet] = useState(false);
+
+    const isStaffUser = (u) => {
+        if (!u) return false;
+        const pos = `${u.position || ''} ${u.position_level || ''}`;
+        return pos.includes('เจ้าหน้าที่');
+    };
+
+    const currentUser = useMemo(() => {
+        if (!currentUserId) return null;
+        return allUsers.find((u) => Number(u.id) === Number(currentUserId));
+    }, [allUsers, currentUserId]);
+
+    const currentUserIsStaff = useMemo(() => {
+        return isStaffUser(currentUser);
+    }, [currentUser]);
+
+    const eligibleSigners = useMemo(() => {
+        return [...allUsers].sort((a, b) => {
+            const aStaff = isStaffUser(a);
+            const bStaff = isStaffUser(b);
+            if (aStaff && !bStaff) return 1;
+            if (!aStaff && bStaff) return -1;
+            return (a.name || '').localeCompare(b.name || '');
+        });
+    }, [allUsers]);
+
     const [setForm, setSetForm] = useState({
         set_type: 'procurement',
         activity_id: '',
         activity_name: '',
         set_name: '',
         department_id: project.department_id || '',
+        signer_id: '',
         tor_specifications: '',
         items: [{ description: '', quantity: 1, unit: 'รายการ', unit_price: 0 }],
     });
@@ -373,12 +400,31 @@ export default function ProjectActivitiesWorkspace({
                 ? `สัญญายืมเงิน${act ? ` - ${act.name}` : ''} (ชุดที่ ${existingForAct + 1})`
                 : `จัดซื้อวัสดุ/จ้างเหมา${act ? ` - ${act.name}` : ''} (ชุดที่ ${existingForAct + 1})`;
 
+        let defaultSignerId = '';
+        if (currentUser && !currentUserIsStaff) {
+            defaultSignerId = String(currentUser.id);
+        } else {
+            if (act && Array.isArray(act.assigned_user_ids)) {
+                const nonStaffAssigned = allUsers.find(
+                    (u) => act.assigned_user_ids.includes(Number(u.id)) && !isStaffUser(u)
+                );
+                if (nonStaffAssigned) defaultSignerId = String(nonStaffAssigned.id);
+            }
+            if (!defaultSignerId) {
+                const projOwner = allUsers.find(
+                    (u) => Number(u.id) === Number(project.user_id) && !isStaffUser(u)
+                );
+                if (projOwner) defaultSignerId = String(projOwner.id);
+            }
+        }
+
         setSetForm({
             set_type: type,
             activity_id: act ? act.id : '',
             activity_name: act ? act.name : '',
             set_name: defaultName,
             department_id: project.department_id || '',
+            signer_id: defaultSignerId,
             tor_specifications:
                 type === 'procurement'
                     ? `1. วัตถุประสงค์\nเพื่อจัดหาวัสดุอุปกรณ์สนับสนุนการดำเนินงานกิจกรรม "${act ? act.name : project.title}" ภายใต้โครงการ "${project.title}"\n\n2. ระยะเวลาส่งมอบ\nภายใน 7 วัน นับถัดจากวันที่ได้รับใบสั่งซื้อสั่งจ้าง`
@@ -400,12 +446,34 @@ export default function ProjectActivitiesWorkspace({
 
     const openEditSetModal = (setObj) => {
         setEditingSet(setObj);
+        let initSignerId = '';
+        if (setObj.signer_id) {
+            initSignerId = String(setObj.signer_id);
+        } else if (setObj.created_by) {
+            const creatorUser = allUsers.find((u) => Number(u.id) === Number(setObj.created_by));
+            if (creatorUser && !isStaffUser(creatorUser)) {
+                initSignerId = String(creatorUser.id);
+            }
+        }
+        if (!initSignerId) {
+            const act = activities.find((a) => String(a.id) === String(setObj.activity_id) || (setObj.activity_name && a.name === setObj.activity_name));
+            if (act && Array.isArray(act.assigned_user_ids)) {
+                const nonStaff = allUsers.find((u) => act.assigned_user_ids.includes(Number(u.id)) && !isStaffUser(u));
+                if (nonStaff) initSignerId = String(nonStaff.id);
+            }
+            if (!initSignerId) {
+                const projOwner = allUsers.find((u) => Number(u.id) === Number(project.user_id) && !isStaffUser(u));
+                if (projOwner) initSignerId = String(projOwner.id);
+            }
+        }
+
         setSetForm({
             set_type: setObj.set_type || 'procurement',
             activity_id: setObj.activity_id || '',
             activity_name: setObj.activity_name || '',
             set_name: setObj.set_name || '',
             department_id: setObj.department_id || project.department_id || '',
+            signer_id: initSignerId,
             tor_specifications: setObj.tor_specifications || '',
             items:
                 setObj.items && setObj.items.length > 0
@@ -467,6 +535,24 @@ export default function ProjectActivitiesWorkspace({
                 'ยอดเงินเกินงบประมาณคงเหลือ!',
                 `ยอดรวมชุดนี้ (${formatCurrency(currentSetTotal)}) เกินวงเงินคงเหลือที่อนุญาต (${formatCurrency(effectiveMaxForSet)}) กรุณาปรับลดจำนวนหรือราคาต่อหน่วย`,
                 'error'
+            );
+            return;
+        }
+
+        const chosenSigner = allUsers.find((u) => Number(u.id) === Number(setForm.signer_id));
+        if (isStaffUser(chosenSigner)) {
+            Swal.fire(
+                'ตำแหน่งเจ้าหน้าที่ไม่อนุญาตให้ลงนาม',
+                `บุคลากร "${chosenSigner?.name}" ดำรงตำแหน่งเจ้าหน้าที่ จึงไม่สามารถเป็นผู้ลงนามในสัญญาจัดซื้อจัดจ้างหรือสัญญายืมเงินได้ตามระเบียบ กรุณาเลือกครู หรือหัวหน้างานเป็นผู้ลงนามแทน`,
+                'warning'
+            );
+            return;
+        }
+        if (currentUserIsStaff && !setForm.signer_id) {
+            Swal.fire(
+                'กรุณาเลือกผู้ลงนามแทน',
+                'เนื่องจากท่านดำรงตำแหน่งเจ้าหน้าที่ จึงไม่สามารถลงนามในสัญญาหรือเอกสารจัดซื้อจัดจ้างได้ กรุณาเลือกครู หรือหัวหน้างานเป็นผู้ลงนามแทน',
+                'warning'
             );
             return;
         }
@@ -641,6 +727,27 @@ export default function ProjectActivitiesWorkspace({
                         )}
                     </div>
                 </div>
+
+                {/* Designated Signer Info */}
+                {(() => {
+                    const signerUser = setObj.signer || allUsers?.find((u) => Number(u.id) === Number(setObj.signer_id || setObj.created_by));
+                    if (!signerUser) return null;
+                    const staff = isStaffUser(signerUser);
+                    return (
+                        <div className="flex flex-wrap items-center gap-2 text-xs bg-slate-50/90 px-3 py-1.5 rounded-lg border border-slate-200">
+                            <span className="font-bold text-slate-700">✍️ ผู้ลงนาม:</span>
+                            <span className="font-extrabold text-indigo-950">{signerUser.name}</span>
+                            {signerUser.position && (
+                                <span className="text-slate-500 font-medium">({signerUser.position})</span>
+                            )}
+                            {staff && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                                    ⚠️ จำเป็นต้องมอบหมายผู้ลงนามแทน (ระเบียบไม่อนุญาตให้เจ้าหน้าที่ลงนาม)
+                                </span>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 {/* Items Preview */}
                 {setObj.items && setObj.items.length > 0 && (
@@ -1628,6 +1735,45 @@ export default function ProjectActivitiesWorkspace({
                                         ))}
                                     </select>
                                 </div>
+                            </div>
+
+                            {/* Signer Selection */}
+                            <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-3.5 space-y-2">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                        <span>✍️</span> ผู้ลงนามเอกสาร ({setForm.set_type === 'loan' ? 'ผู้ยืมเงินในสัญญา กค. 101' : 'ผู้ขอซื้อ/จ้าง / เจ้าของความต้องการ'}):
+                                        <span className="text-rose-500">*</span>
+                                    </label>
+                                    {currentUserIsStaff && (
+                                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                                            ⚠️ ตำแหน่งเจ้าหน้าที่ไม่สามารถลงนามได้ กรุณาเลือกครูหรือหัวหน้างานเป็นผู้ลงนามแทน
+                                        </span>
+                                    )}
+                                </div>
+                                <select
+                                    value={setForm.signer_id}
+                                    onChange={(e) => setSetForm({ ...setForm, signer_id: e.target.value })}
+                                    className="w-full rounded-xl border-slate-300 text-xs font-semibold focus:ring-purple-500 bg-white"
+                                    required
+                                >
+                                    <option value="">-- กรุณาเลือกผู้ลงนามที่มีอำนาจ (เช่น ครู, หัวหน้างาน) --</option>
+                                    {eligibleSigners.map((u) => {
+                                        const isStaff = isStaffUser(u);
+                                        return (
+                                            <option
+                                                key={u.id}
+                                                value={u.id}
+                                                disabled={isStaff}
+                                                className={isStaff ? 'text-slate-400 bg-slate-100 italic' : 'text-slate-800 font-medium'}
+                                            >
+                                                {u.name} {u.position ? `(${u.position})` : ''} {isStaff ? '⛔ [ตำแหน่งเจ้าหน้าที่ - ไม่อนุญาตให้ลงนาม]' : ''}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                                <p className="text-[11px] text-slate-500 leading-relaxed">
+                                    * ตามระเบียบพัสดุและการเงิน เจ้าหน้าที่ผู้ปฏิบัติงานสามารถบันทึกข้อมูลได้ แต่การลงนามในเอกสารขอซื้อ/จ้าง หรือสัญญายืมเงินจะต้องลงนามโดยข้าราชการ/ครู/หัวหน้างานที่ได้รับมอบหมาย
+                                </p>
                             </div>
 
                             {/* Items Table */}
