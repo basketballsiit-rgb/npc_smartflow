@@ -1100,7 +1100,14 @@ class ProjectController extends Controller
             ]);
         }
 
-        $project->load(['user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment', 'iqaStrategy', 'ovecStrategy', 'approvals.user', 'approvals.delegatedFromUser', 'approvals.roleDelegation', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource', 'procurement.committees', 'procurement.items', 'auditLogs.user']);
+        $project->load([
+            'user', 'department.parent', 'userPosition.department', 'userPosition.subDepartment',
+            'iqaStrategy', 'ovecStrategy', 'approvals.user', 'approvals.delegatedFromUser',
+            'approvals.roleDelegation', 'fundingSource', 'budget.fundingSource', 'budgets.fundingSource',
+            'procurement.committees', 'procurement.items',
+            'procurements.committees', 'procurements.items', 'procurements.department', 'procurements.creator',
+            'auditLogs.user'
+        ]);
         $project->append(['iqa_strategies', 'ovec_strategies', 'national_strategies', 'provincial_strategies']);
         
         // Deduplicate approvals and sort by step (latest record per step with signature details)
@@ -1127,6 +1134,7 @@ class ProjectController extends Controller
             'project' => $project,
             'strategyCategories' => $allCategories,
             'fundingSources' => \App\Models\FundingSource::orderBy('id', 'asc')->get(),
+            'allDepartments' => \App\Models\Department::orderBy('id', 'asc')->get(['id', 'name', 'parent_id']),
             'allUsers' => \App\Models\User::orderBy('name')->get(['id', 'name', 'email']),
             'canApprove' => $canApprove,
             'actingDelegation' => $actingDelegation ? [
@@ -5297,6 +5305,229 @@ class ProjectController extends Controller
         }
 
         return redirect()->back()->with('message', 'บันทึกสถานะการจัดทำรูปเล่มสมบูรณ์เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Add a dynamic sub-activity (โครงการย่อย / กิจกรรมย่อย) to an approved project.
+     */
+    public function storeActivity(Request $request, Project $project)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isProcurementStaff() && $user->id !== $project->user_id) {
+            abort(403, 'คุณไม่มีสิทธิ์เพิ่มกิจกรรมย่อยในโครงการนี้');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'objectives' => 'nullable|string|max:2000',
+            'description' => 'nullable|string|max:3000',
+            'target_group' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'responsible_person' => 'nullable|string|max:255',
+            'budget' => 'nullable|numeric|min:0',
+            'disbursement_type' => 'nullable|string|in:procurement,loan,both',
+        ], [
+            'name.required' => 'กรุณาระบุชื่อกิจกรรมย่อย',
+            'budget.numeric' => 'วงเงินงบประมาณต้องเป็นตัวเลข',
+            'budget.min' => 'วงเงินงบประมาณต้องไม่ติดลบ',
+        ]);
+
+        $activities = is_array($project->activities) ? array_values($project->activities) : [];
+        // Ensure legacy activities have stable IDs
+        foreach ($activities as $idx => &$act) {
+            if (empty($act['id'])) {
+                $act['id'] = 'act_legacy_' . ($idx + 1);
+            }
+        }
+        unset($act);
+
+        $newBudget = (float) ($validated['budget'] ?? 0);
+        $projectTotalBudget = $project->getTotalAllocatedBudget();
+        $existingActivitiesBudgetSum = 0.0;
+        foreach ($activities as $act) {
+            $existingActivitiesBudgetSum += (float) ($act['budget'] ?? 0);
+        }
+
+        if ($newBudget > 0 && $projectTotalBudget > 0 && ($existingActivitiesBudgetSum + $newBudget) > ($projectTotalBudget + 0.01)) {
+            $remaining = max(0, $projectTotalBudget - $existingActivitiesBudgetSum);
+            return redirect()->back()->with('error', 'ไม่สามารถเพิ่มกิจกรรมได้: วงเงินกิจกรรม (' . number_format($newBudget, 2) . ' บาท) เกินวงเงินคงเหลือที่ยังไม่ได้จัดสรรให้กิจกรรมอื่น (' . number_format($remaining, 2) . ' บาท จากวงเงินโครงการหลัก ' . number_format($projectTotalBudget, 2) . ' บาท)');
+        }
+
+        $newActivity = [
+            'id' => 'act_' . uniqid(),
+            'name' => trim($validated['name']),
+            'objectives' => $validated['objectives'] ?? '',
+            'description' => $validated['description'] ?? '',
+            'target_group' => $validated['target_group'] ?? '',
+            'location' => $validated['location'] ?? ($project->location ?? ''),
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
+            'responsible_person' => $validated['responsible_person'] ?? ($project->responsible_person ?: ($user->name ?? '')),
+            'budget' => $newBudget,
+            'disbursement_type' => $validated['disbursement_type'] ?? 'both',
+            'created_by' => $user->id,
+            'created_at' => now()->toDateTimeString(),
+        ];
+
+        $activities[] = $newActivity;
+        $project->activities = $activities;
+        $project->save();
+
+        return redirect()->back()->with('message', 'เพิ่มกิจกรรมย่อย "' . $newActivity['name'] . '" เข้าสู่โครงการเรียบร้อยแล้ว');
+    }
+
+    /**
+     * Update an existing sub-activity in a project.
+     */
+    public function updateActivity(Request $request, Project $project, string $activityId)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isProcurementStaff() && $user->id !== $project->user_id) {
+            abort(403, 'คุณไม่มีสิทธิ์แก้ไขกิจกรรมย่อยในโครงการนี้');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'objectives' => 'nullable|string|max:2000',
+            'description' => 'nullable|string|max:3000',
+            'target_group' => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'responsible_person' => 'nullable|string|max:255',
+            'budget' => 'nullable|numeric|min:0',
+            'disbursement_type' => 'nullable|string|in:procurement,loan,both',
+        ]);
+
+        $activities = is_array($project->activities) ? array_values($project->activities) : [];
+        $targetIndex = null;
+        $otherBudgetSum = 0.0;
+
+        foreach ($activities as $idx => &$act) {
+            if (empty($act['id'])) {
+                $act['id'] = 'act_legacy_' . ($idx + 1);
+            }
+            if ((string)$act['id'] === (string)$activityId) {
+                $targetIndex = $idx;
+            } else {
+                $otherBudgetSum += (float) ($act['budget'] ?? 0);
+            }
+        }
+        unset($act);
+
+        if ($targetIndex === null) {
+            return redirect()->back()->with('error', 'ไม่พบกิจกรรมย่อยที่ต้องการแก้ไข');
+        }
+
+        $newBudget = (float) ($validated['budget'] ?? 0);
+        $projectTotalBudget = $project->getTotalAllocatedBudget();
+
+        if ($newBudget > 0 && $projectTotalBudget > 0 && ($otherBudgetSum + $newBudget) > ($projectTotalBudget + 0.01)) {
+            $remaining = max(0, $projectTotalBudget - $otherBudgetSum);
+            return redirect()->back()->with('error', 'ไม่สามารถบันทึกได้: วงเงินกิจกรรม (' . number_format($newBudget, 2) . ' บาท) เกินวงเงินคงเหลือของโครงการหลัก (' . number_format($remaining, 2) . ' บาท)');
+        }
+
+        // Check that new budget is not lower than already committed procurement/loan sets in this activity
+        $oldName = $activities[$targetIndex]['name'] ?? '';
+        $linkedSetsSum = $project->procurements()
+            ->with('items')
+            ->where(function ($q) use ($activityId, $oldName) {
+                $q->where('activity_id', $activityId);
+                if (!empty($oldName)) {
+                    $q->orWhere('activity_name', $oldName);
+                }
+            })
+            ->get()
+            ->sum(fn($p) => (float) $p->items->sum('total_price'));
+
+        if ($newBudget > 0 && $linkedSetsSum > ($newBudget + 0.01)) {
+            return redirect()->back()->with('error', 'ไม่สามารถปรับลดวงเงินกิจกรรมต่ำกว่ายอดจัดซื้อจัดจ้าง/สัญญายืมเงินที่มีอยู่แล้วในกิจกรรมนี้ (' . number_format($linkedSetsSum, 2) . ' บาท)');
+        }
+
+        $activities[$targetIndex] = array_merge($activities[$targetIndex], [
+            'name' => trim($validated['name']),
+            'objectives' => $validated['objectives'] ?? '',
+            'description' => $validated['description'] ?? '',
+            'target_group' => $validated['target_group'] ?? '',
+            'location' => $validated['location'] ?? '',
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
+            'responsible_person' => $validated['responsible_person'] ?? '',
+            'budget' => $newBudget,
+            'disbursement_type' => $validated['disbursement_type'] ?? ($activities[$targetIndex]['disbursement_type'] ?? 'both'),
+            'updated_at' => now()->toDateTimeString(),
+        ]);
+
+        // Sync activity_name on linked procurement sets if renamed
+        if ($oldName !== trim($validated['name'])) {
+            $project->procurements()
+                ->where(function ($q) use ($activityId, $oldName) {
+                    $q->where('activity_id', $activityId);
+                    if (!empty($oldName)) {
+                        $q->orWhere('activity_name', $oldName);
+                    }
+                })
+                ->update([
+                    'activity_id' => $activityId,
+                    'activity_name' => trim($validated['name']),
+                ]);
+        }
+
+        $project->activities = $activities;
+        $project->save();
+
+        return redirect()->back()->with('message', 'อัปเดตข้อมูลกิจกรรมย่อย "' . trim($validated['name']) . '" เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Delete a sub-activity if it has no locked/disbursed procurement sets.
+     */
+    public function destroyActivity(Request $request, Project $project, string $activityId)
+    {
+        $user = auth()->user();
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isProcurementStaff() && $user->id !== $project->user_id) {
+            abort(403, 'คุณไม่มีสิทธิ์ลบกิจกรรมย่อยในโครงการนี้');
+        }
+
+        $activities = is_array($project->activities) ? array_values($project->activities) : [];
+        $targetIndex = null;
+        $targetName = '';
+
+        foreach ($activities as $idx => &$act) {
+            if (empty($act['id'])) {
+                $act['id'] = 'act_legacy_' . ($idx + 1);
+            }
+            if ((string)$act['id'] === (string)$activityId) {
+                $targetIndex = $idx;
+                $targetName = $act['name'] ?? '';
+            }
+        }
+        unset($act);
+
+        if ($targetIndex === null) {
+            return redirect()->back()->with('error', 'ไม่พบกิจกรรมย่อยที่ต้องการลบ');
+        }
+
+        $linkedSets = $project->procurements()
+            ->where(function ($q) use ($activityId, $targetName) {
+                $q->where('activity_id', $activityId);
+                if (!empty($targetName)) {
+                    $q->orWhere('activity_name', $targetName);
+                }
+            })
+            ->get();
+
+        if ($linkedSets->isNotEmpty()) {
+            return redirect()->back()->with('error', 'ไม่สามารถลบกิจกรรมนี้ได้ เนื่องจากมีชุดจัดซื้อจัดจ้างหรือสัญญายืมเงินผูกอยู่ (' . $linkedSets->count() . ' ชุด) กรุณาลบชุดเอกสารดังกล่าวก่อน');
+        }
+
+        array_splice($activities, $targetIndex, 1);
+        $project->activities = array_values($activities);
+        $project->save();
+
+        return redirect()->back()->with('message', 'ลบกิจกรรมย่อย "' . $targetName . '" เรียบร้อยแล้ว');
     }
 }
 

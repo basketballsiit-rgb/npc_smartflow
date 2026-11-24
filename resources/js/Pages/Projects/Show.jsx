@@ -5,8 +5,9 @@ import Swal from 'sweetalert2';
 import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
 import AuditTrailSection from '@/Components/AuditTrailSection';
 import TorStudioModal from '@/Components/TorStudioModal';
+import ProjectActivitiesWorkspace from '@/Components/ProjectActivitiesWorkspace';
 
-export default function Show({ project, strategyCategories = [], fundingSources = [], allUsers = [], canApprove, actingDelegation = null }) {
+export default function Show({ project, strategyCategories = [], fundingSources = [], allDepartments = [], allUsers = [], canApprove, actingDelegation = null }) {
     const { auth, college_settings } = usePage().props;
     const [actingPositionText, setActingPositionText] = useState(actingDelegation?.acting_title || '');
     const { data, setData, post, processing } = useForm({
@@ -25,7 +26,15 @@ export default function Show({ project, strategyCategories = [], fundingSources 
         });
     };
 
-    const [activeTab, setActiveTab] = useState('plan');
+    const [activeTab, setActiveTab] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const t = params.get('tab');
+            if (t === 'do' || t === 'procurement') return 'do';
+            if (t === 'audit') return 'audit';
+        }
+        return 'plan';
+    });
     const [torModalOpen, setTorModalOpen] = useState(false);
 
     // Procurement Items & Committee Form State
@@ -36,23 +45,23 @@ export default function Show({ project, strategyCategories = [], fundingSources 
     );
 
     const [purchasingChair, setPurchasingChair] = useState(
-        project.procurement?.committees?.find(c => c.pivot?.committee_type === 'purchasing' && c.pivot?.role === 'chairperson')?.id || (allUsers?.[0]?.id || '')
+        project.procurement?.committees?.find(c => c.pivot?.committee_type === 'purchasing' && c.pivot?.role === 'chairperson')?.id || ''
     );
     const [purchasingMember1, setPurchasingMember1] = useState(
-        project.procurement?.committees?.filter(c => c.pivot?.committee_type === 'purchasing' && c.pivot?.role === 'member')?.[0]?.id || (allUsers?.[1]?.id || '')
+        project.procurement?.committees?.filter(c => c.pivot?.committee_type === 'purchasing' && c.pivot?.role === 'member')?.[0]?.id || ''
     );
     const [purchasingMember2, setPurchasingMember2] = useState(
-        project.procurement?.committees?.filter(c => c.pivot?.committee_type === 'purchasing' && c.pivot?.role === 'member')?.[1]?.id || (allUsers?.[2]?.id || '')
+        project.procurement?.committees?.filter(c => c.pivot?.committee_type === 'purchasing' && c.pivot?.role === 'member')?.[1]?.id || ''
     );
 
     const [inspectionChair, setInspectionChair] = useState(
-        project.procurement?.committees?.find(c => c.pivot?.committee_type === 'inspection' && c.pivot?.role === 'chairperson')?.id || (allUsers?.[1]?.id || '')
+        project.procurement?.committees?.find(c => c.pivot?.committee_type === 'inspection' && c.pivot?.role === 'chairperson')?.id || ''
     );
     const [inspectionMember1, setInspectionMember1] = useState(
-        project.procurement?.committees?.filter(c => c.pivot?.committee_type === 'inspection' && c.pivot?.role === 'member')?.[0]?.id || (allUsers?.[3]?.id || '')
+        project.procurement?.committees?.filter(c => c.pivot?.committee_type === 'inspection' && c.pivot?.role === 'member')?.[0]?.id || ''
     );
     const [inspectionMember2, setInspectionMember2] = useState(
-        project.procurement?.committees?.filter(c => c.pivot?.committee_type === 'inspection' && c.pivot?.role === 'member')?.[1]?.id || (allUsers?.[4]?.id || '')
+        project.procurement?.committees?.filter(c => c.pivot?.committee_type === 'inspection' && c.pivot?.role === 'member')?.[1]?.id || ''
     );
 
     const defaultTorText = `1. วัตถุประสงค์\nวิทยาลัยสารพัดช่างน่าน แผนกวิชา ${project.department?.name || ''} มีความประสงค์จัดหาวัสดุอุปกรณ์พัสดุ เพื่อนำไปใช้สนับสนุนการจัดกิจกรรมและกระบวนการเรียนการสอนของโครงการ "${project.title}"\n\n2. คุณลักษณะเฉพาะและขอบเขตงาน\nพัสดุและรายการวัสดุที่จัดหาต้องมีคุณลักษณะที่เหมาะสมกับการใช้งานการเรียนการสอน ตามเกณฑ์มาตรฐานสายอาชีวศึกษา โดยประกอบด้วยรายการพัสดุระบุตามบัญชีเอกสารแนบเสนอซื้อเสนอจ้าง\n\n3. ระยะเวลาการส่งมอบและเงื่อนไขการส่งมอบ\nผู้จำหน่ายหรือผู้รับจ้างจะต้องส่งมอบพัสดุทั้งหมด ณ วิทยาลัยสารพัดช่างน่าน ภายในกำหนดเวลา 7 วัน นับถัดจากวันที่ได้รับใบสั่งซื้อสั่งจ้างจากทางวิทยาลัย\n\n4. การตรวจรับพัสดุ\nการตรวจรับจะดำเนินการโดยคณะกรรมการตรวจรับพัสดุที่วิทยาลัยแต่งตั้งขึ้น โดยต้องตรวจรับพัสดุให้ถูกต้องตรงตามเอกสารประมาณการและใบเสนอซื้อเสนอจ้างทุกประการ`;
@@ -137,7 +146,13 @@ ${itemsListText}
         }
     };
 
-    const allocatedBudget = parseFloat(project.budget?.allocated_amount || project.estimated_budget || 0);
+    const allocatedBudget = (() => {
+        if (Array.isArray(project.budgets) && project.budgets.length > 0) {
+            const multiSum = project.budgets.reduce((s, b) => s + (parseFloat(b.allocated_amount) || 0), 0);
+            if (multiSum > 0) return multiSum;
+        }
+        return parseFloat(project.allocated_budget || project.budget?.allocated_amount || project.estimated_budget || 0);
+    })();
     const totalProcurementSum = procurementItems.reduce((acc, item) => acc + ((parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0)), 0);
     const isOverBudget = totalProcurementSum > (allocatedBudget + 0.01);
     const budgetDifference = Math.abs(allocatedBudget - totalProcurementSum);
@@ -180,16 +195,48 @@ ${itemsListText}
     );
     const isProcStaffOrAdmin = Boolean(
         auth?.user?.is_admin || 
+        auth?.user?.is_procurement_head ||
+        auth?.user?.is_procurement_staff ||
         auth?.user?.role?.name === 'admin' || 
         auth?.user?.role === 'admin' || 
         auth?.user?.role === 'superadmin' || 
         auth?.user?.role?.name === 'procurement_head' || 
         auth?.user?.role === 'procurement_head' || 
+        auth?.user?.role?.name === 'procurement_staff' || 
+        auth?.user?.role === 'procurement_staff' || 
         (auth?.user?.department && (auth?.user?.department.name?.includes('พัสดุ') || auth?.user?.department.code === 'PROC')) || 
         auth?.user?.position?.includes('พัสดุ') ||
         auth?.user?.position?.includes('ผู้ดูแลระบบ')
     );
     const isProposer = Boolean(auth?.user?.id && project.user_id === auth?.user?.id);
+    const canManageActivities = Boolean(isProposer || isPlanStaffOrAdmin || isProcStaffOrAdmin);
+    const [editingCommitteesOnly, setEditingCommitteesOnly] = useState(false);
+    const [savingCommitteesOnly, setSavingCommitteesOnly] = useState(false);
+
+    const handleSaveCommitteesOnly = () => {
+        if (!isProcStaffOrAdmin || savingCommitteesOnly) return;
+        const targetProcId = project.procurement?.id;
+        if (!targetProcId) {
+            handleSaveProcurement();
+            return;
+        }
+        setSavingCommitteesOnly(true);
+        router.post(route('procurements.assign_set_committees', targetProcId), {
+            purchasing_chair: purchasingChair,
+            purchasing_member1: purchasingMember1,
+            purchasing_member2: purchasingMember2,
+            inspection_chair: inspectionChair,
+            inspection_member1: inspectionMember1,
+            inspection_member2: inspectionMember2,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setEditingCommitteesOnly(false);
+                Swal.fire('บันทึกคณะกรรมการสำเร็จ!', 'แต่งตั้งคณะกรรมการจัดซื้อจัดจ้างและตรวจรับพัสดุเรียบร้อยแล้ว', 'success');
+            },
+            onFinish: () => setSavingCommitteesOnly(false),
+        });
+    };
 
     // Auto-detect disbursement type: 'loan', 'procurement', or 'both'
     const disbType = (() => {
@@ -1976,6 +2023,17 @@ ${itemsListText}
                                 )}
                             </div>
 
+                            {/* Dynamic Sub-Activities & Per-Activity Procurement / Loan Workspace */}
+                            <ProjectActivitiesWorkspace
+                                project={project}
+                                allocatedBudget={allocatedBudget}
+                                allUsers={allUsers}
+                                allDepartments={allDepartments}
+                                isProcStaffOrAdmin={isProcStaffOrAdmin}
+                                canManageActivities={canManageActivities}
+                                formatCurrency={formatCurrency}
+                            />
+
                             {disbType === 'loan' ? (
                                 <div className="border border-amber-200 bg-gradient-to-br from-amber-50/70 via-orange-50/30 to-amber-50/50 rounded-2xl p-6 space-y-4 shadow-sm">
                                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-amber-200/80 pb-4">
@@ -2196,15 +2254,51 @@ ${itemsListText}
                                 </div>
                             </div>
 
-                            {/* Section 2: Committee Appointment Form (Visible ONLY to Procurement Staff & Admin) */}
-                            {isProcStaffOrAdmin && (
+                            {/* Section 2: Committee Appointment Form (Editable ONLY by Procurement Staff / Head / Admin; Read-Only for others) */}
                             <div className="border border-purple-100 rounded-2xl p-5 bg-purple-50/20 space-y-4">
-                                <div className="flex items-center gap-2">
-                                    <h4 className="text-sm font-extrabold text-purple-950">👥 แต่งตั้งคณะกรรมการจัดซื้อจัดจ้าง และตรวจรับพัสดุ (Committees)</h4>
-                                    {!isEditingProcurement && (
-                                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
-                                            🔒 ดูอย่างเดียว
-                                        </span>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h4 className="text-sm font-extrabold text-purple-950">👥 แต่งตั้งคณะกรรมการจัดซื้อจัดจ้าง และตรวจรับพัสดุ (Committees)</h4>
+                                        {!isProcStaffOrAdmin ? (
+                                            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                                                🔒 กำหนดโดยงานพัสดุเท่านั้น (ดูอย่างเดียว)
+                                            </span>
+                                        ) : (!isEditingProcurement && !editingCommitteesOnly) ? (
+                                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-purple-100 text-purple-800">
+                                                🛡️ สิทธิ์งานพัสดุ
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                    {isProcStaffOrAdmin && !isEditingProcurement && (
+                                        <div className="flex items-center gap-2">
+                                            {editingCommitteesOnly ? (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleSaveCommitteesOnly}
+                                                        disabled={savingCommitteesOnly}
+                                                        className="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-purple-700 hover:bg-purple-800 text-white shadow-xs cursor-pointer"
+                                                    >
+                                                        {savingCommitteesOnly ? 'กำลังบันทึก...' : '💾 บันทึกคณะกรรมการ (สิทธิ์งานพัสดุ)'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setEditingCommitteesOnly(false)}
+                                                        className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-200 hover:bg-slate-300 text-slate-700 cursor-pointer"
+                                                    >
+                                                        ยกเลิก
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setEditingCommitteesOnly(true)}
+                                                    className="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-purple-700 hover:bg-purple-800 text-white shadow-xs cursor-pointer"
+                                                >
+                                                    ✏️ แต่งตั้ง / แก้ไขคณะกรรมการ (สิทธิ์งานพัสดุ)
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2213,7 +2307,7 @@ ${itemsListText}
                                         <h5 className="text-xs font-bold text-purple-900 border-b border-purple-100 pb-1.5 flex items-center gap-1.5">
                                             <span>📋</span> 1. คณะกรรมการจัดซื้อ/จัดจ้าง
                                         </h5>
-                                        {isEditingProcurement ? (
+                                        {(isProcStaffOrAdmin && (isEditingProcurement || editingCommitteesOnly)) ? (
                                             <>
                                                 <div>
                                                     <label className="block text-[11px] font-bold text-slate-700 mb-1">ประธานกรรมการจัดซื้อ</label>
@@ -2222,6 +2316,7 @@ ${itemsListText}
                                                         onChange={(e) => setPurchasingChair(e.target.value)}
                                                         className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
                                                     >
+                                                        <option value="">-- เลือกบุคลากร --</option>
                                                         {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                                                     </select>
                                                 </div>
@@ -2232,6 +2327,7 @@ ${itemsListText}
                                                         onChange={(e) => setPurchasingMember1(e.target.value)}
                                                         className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
                                                     >
+                                                        <option value="">-- เลือกบุคลากร --</option>
                                                         {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                                                     </select>
                                                 </div>
@@ -2242,6 +2338,7 @@ ${itemsListText}
                                                         onChange={(e) => setPurchasingMember2(e.target.value)}
                                                         className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
                                                     >
+                                                        <option value="">-- เลือกบุคลากร --</option>
                                                         {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                                                     </select>
                                                 </div>
@@ -2250,15 +2347,15 @@ ${itemsListText}
                                             <div className="space-y-2 text-xs">
                                                 <div className="p-2 bg-purple-50/40 rounded-lg flex items-center justify-between">
                                                     <span className="text-slate-500">ประธานกรรมการ:</span>
-                                                    <span className="font-extrabold text-purple-950">{allUsers.find(u => String(u.id) === String(purchasingChair))?.name || 'ไม่ระบุ'}</span>
+                                                    <span className="font-extrabold text-purple-950">{allUsers.find(u => String(u.id) === String(purchasingChair))?.name || 'รองานพัสดุกำหนด'}</span>
                                                 </div>
                                                 <div className="p-2 bg-purple-50/40 rounded-lg flex items-center justify-between">
                                                     <span className="text-slate-500">กรรมการ (คนที่ 1):</span>
-                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(purchasingMember1))?.name || 'ไม่ระบุ'}</span>
+                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(purchasingMember1))?.name || 'รองานพัสดุกำหนด'}</span>
                                                 </div>
                                                 <div className="p-2 bg-purple-50/40 rounded-lg flex items-center justify-between">
                                                     <span className="text-slate-500">กรรมการ (คนที่ 2):</span>
-                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(purchasingMember2))?.name || 'ไม่ระบุ'}</span>
+                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(purchasingMember2))?.name || 'รองานพัสดุกำหนด'}</span>
                                                 </div>
                                             </div>
                                         )}
@@ -2269,7 +2366,7 @@ ${itemsListText}
                                         <h5 className="text-xs font-bold text-emerald-900 border-b border-purple-100 pb-1.5 flex items-center gap-1.5">
                                             <span>🔍</span> 2. คณะกรรมการตรวจรับพัสดุ
                                         </h5>
-                                        {isEditingProcurement ? (
+                                        {(isProcStaffOrAdmin && (isEditingProcurement || editingCommitteesOnly)) ? (
                                             <>
                                                 <div>
                                                     <label className="block text-[11px] font-bold text-slate-700 mb-1">ประธานกรรมการตรวจรับ</label>
@@ -2278,6 +2375,7 @@ ${itemsListText}
                                                         onChange={(e) => setInspectionChair(e.target.value)}
                                                         className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
                                                     >
+                                                        <option value="">-- เลือกบุคลากร --</option>
                                                         {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                                                     </select>
                                                 </div>
@@ -2288,6 +2386,7 @@ ${itemsListText}
                                                         onChange={(e) => setInspectionMember1(e.target.value)}
                                                         className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
                                                     >
+                                                        <option value="">-- เลือกบุคลากร --</option>
                                                         {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                                                     </select>
                                                 </div>
@@ -2298,6 +2397,7 @@ ${itemsListText}
                                                         onChange={(e) => setInspectionMember2(e.target.value)}
                                                         className="w-full rounded-lg border-purple-200 text-xs focus:ring-purple-500 focus:border-purple-500"
                                                     >
+                                                        <option value="">-- เลือกบุคลากร --</option>
                                                         {allUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                                                     </select>
                                                 </div>
@@ -2306,22 +2406,21 @@ ${itemsListText}
                                             <div className="space-y-2 text-xs">
                                                 <div className="p-2 bg-emerald-50/40 rounded-lg flex items-center justify-between">
                                                     <span className="text-slate-500">ประธานกรรมการ:</span>
-                                                    <span className="font-extrabold text-emerald-950">{allUsers.find(u => String(u.id) === String(inspectionChair))?.name || 'ไม่ระบุ'}</span>
+                                                    <span className="font-extrabold text-emerald-950">{allUsers.find(u => String(u.id) === String(inspectionChair))?.name || 'รองานพัสดุกำหนด'}</span>
                                                 </div>
                                                 <div className="p-2 bg-emerald-50/40 rounded-lg flex items-center justify-between">
                                                     <span className="text-slate-500">กรรมการ (คนที่ 1):</span>
-                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(inspectionMember1))?.name || 'ไม่ระบุ'}</span>
+                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(inspectionMember1))?.name || 'รองานพัสดุกำหนด'}</span>
                                                 </div>
                                                 <div className="p-2 bg-emerald-50/40 rounded-lg flex items-center justify-between">
                                                     <span className="text-slate-500">กรรมการ (คนที่ 2):</span>
-                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(inspectionMember2))?.name || 'ไม่ระบุ'}</span>
+                                                    <span className="font-bold text-slate-800">{allUsers.find(u => String(u.id) === String(inspectionMember2))?.name || 'รองานพัสดุกำหนด'}</span>
                                                 </div>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            )}
 
                             {/* Section 3: TOR Specifications Text Editor */}
                             <div className="border border-purple-100 rounded-2xl p-5 bg-purple-50/20 space-y-3 font-sans">

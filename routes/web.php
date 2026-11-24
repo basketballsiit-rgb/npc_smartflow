@@ -281,6 +281,9 @@ Route::middleware('auth')->group(function () {
     Route::post('projects/{project}/update-funding-source', [ProjectController::class, 'updateFundingSource'])->name('projects.update_funding_source');
     Route::post('projects/{project}/set-disbursement-type', [ProjectController::class, 'setDisbursementType'])->name('projects.set_disbursement_type');
     Route::post('projects/{project}/unlock-for-edit', [ProjectController::class, 'unlockForEdit'])->name('projects.unlock_for_edit');
+    Route::post('projects/{project}/activities', [ProjectController::class, 'storeActivity'])->name('projects.activities.store');
+    Route::put('projects/{project}/activities/{activityId}', [ProjectController::class, 'updateActivity'])->name('projects.activities.update');
+    Route::delete('projects/{project}/activities/{activityId}', [ProjectController::class, 'destroyActivity'])->name('projects.activities.destroy');
 
     // Budget & Procurement DO phase routes
     Route::post('budgets/{budget}/clear', [BudgetController::class, 'clear'])->name('budgets.clear');
@@ -303,6 +306,7 @@ Route::middleware('auth')->group(function () {
     Route::get('projects/{project}/procurement/document/{type}', [ProcurementController::class, 'downloadDocument'])->name('procurements.download_document');
     Route::post('projects/{project}/procurement-sets', [ProcurementController::class, 'createProcurementSet'])->name('procurements.create_set');
     Route::post('procurement-sets/{procurement}/update', [ProcurementController::class, 'updateProcurementSet'])->name('procurements.update_set');
+    Route::post('procurement-sets/{procurement}/committees', [ProcurementController::class, 'assignSetCommittees'])->name('procurements.assign_set_committees');
     Route::delete('procurement-sets/{procurement}', [ProcurementController::class, 'deleteProcurementSet'])->name('procurements.delete_set');
     Route::post('procurement-sets/{procurement}/plan-cut', [ProcurementController::class, 'planCutSet'])->name('procurements.plan_cut_set');
     Route::post('procurement-sets/{procurement}/receive', [ProcurementController::class, 'receiveSet'])->name('procurements.receive_set');

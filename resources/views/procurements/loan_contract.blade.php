@@ -266,11 +266,42 @@
     $structuredActivities = [];
     $allLoanItems = [];
 
-    $baseContractNum = (!empty($project->procurement?->plan_loan_cut_at) && !empty($project->procurement?->plan_loan_doc_number))
-        ? $project->procurement->plan_loan_doc_number
-        : '........................................';
+    $baseContractNum = (!empty($procurement?->plan_loan_cut_at) && !empty($procurement?->plan_loan_doc_number))
+        ? $procurement->plan_loan_doc_number
+        : ((!empty($project->procurement?->plan_loan_cut_at) && !empty($project->procurement?->plan_loan_doc_number))
+            ? $project->procurement->plan_loan_doc_number
+            : '........................................');
 
-    if (is_array($activitiesRaw) && count($activitiesRaw) > 0) {
+    // If printing for a specific activity loan set (procurement_id), prioritize its exact items
+    if (request()->has('procurement_id') && isset($procurement) && $procurement->items && $procurement->items->count() > 0) {
+        $setItems = [];
+        $setSum = 0;
+        $flatIdx = 1;
+        foreach ($procurement->items as $i) {
+            $qty = floatval($i->quantity ?? 1);
+            $price = floatval($i->unit_price ?? 0);
+            $tot = $qty * $price;
+            $setSum += $tot;
+            $itemObj = [
+                'description' => formatThaiLoanItemDesc($i->description, $flatIdx),
+                'quantity' => $qty,
+                'unit' => $i->unit ?? 'รายการ',
+                'unit_price' => $price,
+                'total_price' => $tot,
+            ];
+            $setItems[] = $itemObj;
+            $allLoanItems[] = $itemObj;
+            $flatIdx++;
+        }
+        $structuredActivities[] = [
+            'index' => 1,
+            'name' => $procurement->activity_name ?: ($procurement->set_name ?: $project->title),
+            'contract_no' => $baseContractNum,
+            'items' => $setItems,
+            'total_amount' => $setSum,
+            'baht_text' => convertToThaiBahtTextLoan($setSum),
+        ];
+    } elseif (is_array($activitiesRaw) && count($activitiesRaw) > 0) {
         foreach ($activitiesRaw as $actIdx => $act) {
             $actName = trim($act['name'] ?? ('กิจกรรมที่ ' . ($actIdx + 1)));
             $actItems = [];
@@ -310,7 +341,7 @@
     }
 
     // Build flattened all items with sequential Thai numbers
-    if (!empty($structuredActivities)) {
+    if (empty($allLoanItems) && !empty($structuredActivities)) {
         $flatIdx = 1;
         foreach ($structuredActivities as $act) {
             foreach ($act['items'] as $it) {

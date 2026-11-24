@@ -7,20 +7,21 @@ use App\Models\Procurement;
 use App\Models\ProcurementItem;
 use App\Models\RoutineBudgetPlan;
 use App\Models\AuditLog;
+use App\Models\AppNotification;
 use App\Services\DocumentNumberService;
 use App\Services\GeminiService;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 
 class ProcurementController extends Controller
 {
     /**
-     * Assign committees for the project procurement pipeline.
+     * Assign committees for the project procurement pipeline (Procurement Staff / Head / Admin ONLY).
      */
     public function assignCommittees(Request $request, Project $project)
     {
-        // Procurement Head, Admin, or Project Owner can assign committees & items
-        if (!auth()->user()->isProcurementHead() && !auth()->user()->isAdmin() && auth()->id() !== $project->user_id) {
-            abort(403, 'เฉพาะเจ้าหน้าที่พัสดุ ผู้ดูแลระบบ หรือผู้เสนอโครงการเท่านั้นที่สามารถดำเนินการพัสดุได้');
+        if (!auth()->user()->isProcurementStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่หรือหัวหน้างานพัสดุเท่านั้นที่สามารถแต่งตั้งคณะกรรมการจัดซื้อจัดจ้างและตรวจรับพัสดุได้');
         }
 
         $validated = $request->validate([
@@ -116,33 +117,39 @@ class ProcurementController extends Controller
             $procurement->save();
         }
 
-        // Sync Committees
-        $syncData = [];
-        if (!empty($validated['purchasing_chair'])) {
-            $syncData[$validated['purchasing_chair']] = ['committee_type' => 'purchasing', 'role' => 'chairperson'];
-        }
-        if (!empty($validated['purchasing_member1'])) {
-            $syncData[$validated['purchasing_member1']] = ['committee_type' => 'purchasing', 'role' => 'member'];
-        }
-        if (!empty($validated['purchasing_member2'])) {
-            $syncData[$validated['purchasing_member2']] = ['committee_type' => 'purchasing', 'role' => 'member'];
-        }
-        if (!empty($validated['inspection_chair'])) {
-            $syncData[$validated['inspection_chair']] = ['committee_type' => 'inspection', 'role' => 'chairperson'];
-        }
-        if (!empty($validated['inspection_member1'])) {
-            $syncData[$validated['inspection_member1']] = ['committee_type' => 'inspection', 'role' => 'member'];
-        }
-        if (!empty($validated['inspection_member2'])) {
-            $syncData[$validated['inspection_member2']] = ['committee_type' => 'inspection', 'role' => 'member'];
+        // Sync Committees ONLY if current user is Procurement Staff / Head / Admin
+        if (auth()->user()->isProcurementStaff()) {
+            $hasAnyCommittee = !empty($validated['purchasing_chair']) || !empty($validated['purchasing_member1']) || !empty($validated['purchasing_member2'])
+                || !empty($validated['inspection_chair']) || !empty($validated['inspection_member1']) || !empty($validated['inspection_member2']);
+
+            if ($hasAnyCommittee) {
+                $procurement->committees()->detach();
+                if (!empty($validated['purchasing_chair'])) {
+                    $procurement->committees()->attach($validated['purchasing_chair'], ['committee_type' => 'purchasing', 'role' => 'chairperson']);
+                }
+                if (!empty($validated['purchasing_member1'])) {
+                    $procurement->committees()->attach($validated['purchasing_member1'], ['committee_type' => 'purchasing', 'role' => 'member']);
+                }
+                if (!empty($validated['purchasing_member2'])) {
+                    $procurement->committees()->attach($validated['purchasing_member2'], ['committee_type' => 'purchasing', 'role' => 'member']);
+                }
+                if (!empty($validated['inspection_chair'])) {
+                    $procurement->committees()->attach($validated['inspection_chair'], ['committee_type' => 'inspection', 'role' => 'chairperson']);
+                }
+                if (!empty($validated['inspection_member1'])) {
+                    $procurement->committees()->attach($validated['inspection_member1'], ['committee_type' => 'inspection', 'role' => 'member']);
+                }
+                if (!empty($validated['inspection_member2'])) {
+                    $procurement->committees()->attach($validated['inspection_member2'], ['committee_type' => 'inspection', 'role' => 'member']);
+                }
+                AppNotification::where('reference_id', 'proc_committee_' . $procurement->id)
+                    ->whereNull('read_at')
+                    ->update(['read_at' => now()]);
+            }
         }
 
-        if (!empty($syncData)) {
-            $procurement->committees()->sync($syncData);
-        }
-
-        // Validate total procurement items sum against approved allocated budget
-        $allocatedBudget = $project->budget ? floatval($project->budget->allocated_amount) : floatval($project->estimated_budget);
+        // Validate total procurement items sum against approved allocated budget (multi-source safe)
+        $allocatedBudget = $project->getTotalAllocatedBudget();
         
         if (!empty($request->input('items'))) {
             $totalProcurementSum = 0;
@@ -175,6 +182,11 @@ class ProcurementController extends Controller
                 'unit_price' => $project->budget ? $project->budget->allocated_amount : $project->estimated_budget,
                 'total_price' => $project->budget ? $project->budget->allocated_amount : $project->estimated_budget,
             ]);
+        }
+
+        // Notify Procurement Staff & Head if committees are not yet appointed
+        if (($procurement->set_type ?? 'procurement') !== 'loan' && $procurement->committees()->count() === 0) {
+            NotificationService::notifyProcurementCommitteeNeeded($project, $procurement);
         }
 
         // Auto-advance project status to 'in_progress' (PDCA Do phase / Step 4)
@@ -955,7 +967,9 @@ class ProcurementController extends Controller
 
         $validated = $request->validate([
             'set_name' => 'required|string|max:255',
+            'set_type' => 'nullable|string|in:procurement,loan',
             'department_id' => 'nullable|exists:departments,id',
+            'activity_id' => 'nullable|string|max:64',
             'activity_name' => 'nullable|string|max:255',
             'tor_specifications' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -964,34 +978,62 @@ class ProcurementController extends Controller
             'items.*.unit' => 'required|string|max:50',
             'items.*.unit_price' => 'required|numeric|min:0',
         ], [
-            'set_name.required' => 'กรุณาระบุชื่อชุดจัดซื้อจัดจ้าง',
-            'items.required' => 'กรุณาระบุรายการพัสดุอย่างน้อย 1 รายการ',
-            'items.*.description.required' => 'กรุณาระบุชื่อรายการพัสดุ',
+            'set_name.required' => 'กรุณาระบุชื่อชุดจัดซื้อจัดจ้าง / สัญญายืมเงิน',
+            'items.required' => 'กรุณาระบุรายการอย่างน้อย 1 รายการ',
+            'items.*.description.required' => 'กรุณาระบุชื่อรายการ',
         ]);
+
+        $setType = $validated['set_type'] ?? 'procurement';
+        $activityId = $validated['activity_id'] ?? null;
+        $activityName = $validated['activity_name'] ?? null;
 
         $setTotal = 0;
         foreach ($validated['items'] as $item) {
             $setTotal += (floatval($item['quantity']) * floatval($item['unit_price']));
         }
 
-        // Shared Budget Pool Validation
-        $projectBudget = floatval($project->allocated_budget ?: $project->estimated_budget);
+        // Shared Budget Pool Validation (multi-source safe)
+        $projectBudget = $project->getTotalAllocatedBudget();
         $existingProcurementsSum = 0;
-        foreach ($project->procurements as $existingProc) {
-            $existingProcurementsSum += $existingProc->items->sum('total_price');
+        $existingActivitySum = 0;
+        foreach ($project->procurements()->with('items')->get() as $existingProc) {
+            $procSum = (float) $existingProc->items->sum('total_price');
+            $existingProcurementsSum += $procSum;
+            if ($activityId && ($existingProc->activity_id === $activityId || (!empty($activityName) && $existingProc->activity_name === $activityName))) {
+                $existingActivitySum += $procSum;
+            }
         }
 
         $remainingBudget = max(0, $projectBudget - $existingProcurementsSum);
         if ($projectBudget > 0 && $remainingBudget <= 0.001) {
-            return redirect()->back()->with('error', 'ไม่สามารถสร้างชุดจัดซื้อจัดจ้างเพิ่มเติมได้: โครงการนี้ได้จัดทำชุดจัดซื้อจัดจ้างครบตามวงเงินงบประมาณที่ได้รับจัดสรรแล้ว (' . number_format($projectBudget, 2) . ' บาท)');
+            return redirect()->back()->with('error', 'ไม่สามารถสร้างชุดเอกสารเพิ่มเติมได้: โครงการนี้ได้ใช้จ่ายครบตามวงเงินงบประมาณที่ได้รับจัดสรรแล้ว (' . number_format($projectBudget, 2) . ' บาท)');
         }
 
-        if (($existingProcurementsSum + $setTotal) > ($projectBudget + 0.01)) {
-            return redirect()->back()->with('error', 'ไม่สามารถสร้างชุดจัดซื้อได้: ยอดเงินชุดจัดซื้อนี้ (' . number_format($setTotal, 2) . ' บาท) เกินวงเงินคงเหลือของโครงการ (' . number_format($remainingBudget, 2) . ' บาท จากวงเงินโครงการทั้งหมด ' . number_format($projectBudget, 2) . ' บาท)');
+        if ($projectBudget > 0 && ($existingProcurementsSum + $setTotal) > ($projectBudget + 0.01)) {
+            return redirect()->back()->with('error', 'ไม่สามารถสร้างชุดเอกสารได้: ยอดเงินชุดนี้ (' . number_format($setTotal, 2) . ' บาท) เกินวงเงินคงเหลือของโครงการ (' . number_format($remainingBudget, 2) . ' บาท จากวงเงินโครงการทั้งหมด ' . number_format($projectBudget, 2) . ' บาท)');
+        }
+
+        // Activity-level budget cap validation (if activity has explicit budget > 0)
+        if ($activityId && is_array($project->activities)) {
+            foreach ($project->activities as $idx => $act) {
+                $actKey = $act['id'] ?? ('act_legacy_' . ($idx + 1));
+                if ((string)$actKey === (string)$activityId) {
+                    $actBudget = (float) ($act['budget'] ?? 0);
+                    if ($actBudget > 0 && ($existingActivitySum + $setTotal) > ($actBudget + 0.01)) {
+                        $actRemaining = max(0, $actBudget - $existingActivitySum);
+                        return redirect()->back()->with('error', 'ไม่สามารถสร้างชุดเอกสารได้: ยอดเงินชุดนี้ (' . number_format($setTotal, 2) . ' บาท) เกินวงเงินคงเหลือของกิจกรรม "' . ($act['name'] ?? $activityName) . '" (คงเหลือ ' . number_format($actRemaining, 2) . ' บาท จากกรอบกิจกรรม ' . number_format($actBudget, 2) . ' บาท)');
+                    }
+                    if (empty($activityName) && !empty($act['name'])) {
+                        $activityName = $act['name'];
+                    }
+                    break;
+                }
+            }
         }
 
         $setCount = $project->procurements()->count() + 1;
-        $procurementNumber = 'PR-' . $project->id . '-' . str_pad($setCount, 2, '0', STR_PAD_LEFT);
+        $prefix = $setType === 'loan' ? 'LN-' : 'PR-';
+        $procurementNumber = $prefix . $project->id . '-' . str_pad($setCount, 2, '0', STR_PAD_LEFT);
 
         $departmentId = !empty($validated['department_id']) ? $validated['department_id'] : ($user->department_id ?: $project->department_id);
 
@@ -1000,12 +1042,15 @@ class ProcurementController extends Controller
             'department_id' => $departmentId,
             'created_by' => $user->id,
             'set_name' => $validated['set_name'],
-            'activity_name' => $validated['activity_name'] ?? null,
+            'set_type' => $setType,
+            'activity_id' => $activityId,
+            'activity_name' => $activityName,
             'procurement_number' => $procurementNumber,
             'tor_specifications' => $validated['tor_specifications'] ?? null,
             'status' => 'pending',
+            'loan_status' => $setType === 'loan' ? 'pending' : null,
             'memo_date' => now(),
-            'memo_subject' => $validated['set_name'] . ' (' . $project->title . ')',
+            'memo_subject' => $validated['set_name'] . ($activityName ? ' [' . $activityName . ']' : '') . ' (' . $project->title . ')',
         ]);
 
         foreach ($validated['items'] as $item) {
@@ -1018,13 +1063,21 @@ class ProcurementController extends Controller
             ]);
         }
 
+        // Notify Procurement Staff & Head to appoint committees for procurement sets
+        if ($setType !== 'loan') {
+            NotificationService::notifyProcurementCommitteeNeeded($project, $procurement);
+        }
+
         // Auto-advance project status to 'in_progress' (PDCA Do phase)
         if ($project->status === 'approved') {
             $project->status = 'in_progress';
             $project->save();
         }
 
-        return redirect()->back()->with('message', 'สร้างชุดจัดซื้อจัดจ้าง "' . $validated['set_name'] . '" ยอดเงิน ฿' . number_format($setTotal, 2) . ' เรียบร้อยแล้ว (อยู่ภายใต้งบประมาณโครงการรวม)');
+        $typeLabel = $setType === 'loan' ? 'ชุดสัญญายืมเงิน (กค. 101)' : 'ชุดจัดซื้อจัดจ้าง';
+        $extraNote = $setType === 'loan' ? '' : ' และส่งแจ้งเตือนไปยังเจ้าหน้าที่/หัวหน้างานพัสดุเพื่อแต่งตั้งคณะกรรมการแล้ว';
+
+        return redirect()->back()->with('message', 'สร้าง' . $typeLabel . ' "' . $validated['set_name'] . '" ยอดเงิน ฿' . number_format($setTotal, 2) . ' เรียบร้อยแล้ว' . $extraNote);
     }
 
     /**
@@ -1038,7 +1091,7 @@ class ProcurementController extends Controller
             return redirect()->back()->with('error', 'ไม่พบข้อมูลโครงการ');
         }
 
-        if (!$user->isAdmin() && !$user->isProcurementHead() && $user->id !== $project->user_id && $user->id !== $procurement->created_by) {
+        if (!$user->isAdmin() && !$user->isProcurementStaff() && $user->id !== $project->user_id && $user->id !== $procurement->created_by) {
             abort(403, 'คุณไม่มีสิทธิ์แก้ไขชุดจัดซื้อจัดจ้างนี้');
         }
 
@@ -1048,7 +1101,9 @@ class ProcurementController extends Controller
 
         $validated = $request->validate([
             'set_name' => 'required|string|max:255',
+            'set_type' => 'nullable|string|in:procurement,loan',
             'department_id' => 'nullable|exists:departments,id',
+            'activity_id' => 'nullable|string|max:64',
             'activity_name' => 'nullable|string|max:255',
             'tor_specifications' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -1058,32 +1113,58 @@ class ProcurementController extends Controller
             'items.*.unit_price' => 'required|numeric|min:0',
         ]);
 
+        $setType = $validated['set_type'] ?? ($procurement->set_type ?: 'procurement');
+        $activityId = array_key_exists('activity_id', $validated) ? $validated['activity_id'] : $procurement->activity_id;
+        $activityName = array_key_exists('activity_name', $validated) ? $validated['activity_name'] : $procurement->activity_name;
+
         $setTotal = 0;
         foreach ($validated['items'] as $item) {
             $setTotal += (floatval($item['quantity']) * floatval($item['unit_price']));
         }
 
-        // Shared Budget Pool Validation
-        $projectBudget = floatval($project->allocated_budget ?: $project->estimated_budget);
+        // Shared Budget Pool Validation (multi-source safe)
+        $projectBudget = $project->getTotalAllocatedBudget();
         $otherProcurementsSum = 0;
-        foreach ($project->procurements as $otherProc) {
+        $otherActivitySum = 0;
+        foreach ($project->procurements()->with('items')->get() as $otherProc) {
             if ($otherProc->id !== $procurement->id) {
-                $otherProcurementsSum += $otherProc->items->sum('total_price');
+                $procSum = (float) $otherProc->items->sum('total_price');
+                $otherProcurementsSum += $procSum;
+                if ($activityId && ($otherProc->activity_id === $activityId || (!empty($activityName) && $otherProc->activity_name === $activityName))) {
+                    $otherActivitySum += $procSum;
+                }
             }
         }
 
-        if (($otherProcurementsSum + $setTotal) > ($projectBudget + 0.01)) {
+        if ($projectBudget > 0 && ($otherProcurementsSum + $setTotal) > ($projectBudget + 0.01)) {
             $remainingBudget = max(0, $projectBudget - $otherProcurementsSum);
-            return redirect()->back()->with('error', 'ไม่สามารถบันทึกได้: ยอดเงินชุดจัดซื้อนี้ (' . number_format($setTotal, 2) . ' บาท) รวมกับชุดอื่นจะเกินวงเงินโครงการคงเหลือ (' . number_format($remainingBudget, 2) . ' บาท จากวงเงินโครงการทั้งหมด ' . number_format($projectBudget, 2) . ' บาท)');
+            return redirect()->back()->with('error', 'ไม่สามารถบันทึกได้: ยอดเงินชุดนี้ (' . number_format($setTotal, 2) . ' บาท) รวมกับชุดอื่นจะเกินวงเงินโครงการคงเหลือ (' . number_format($remainingBudget, 2) . ' บาท จากวงเงินโครงการทั้งหมด ' . number_format($projectBudget, 2) . ' บาท)');
+        }
+
+        // Activity-level budget cap validation
+        if ($activityId && is_array($project->activities)) {
+            foreach ($project->activities as $idx => $act) {
+                $actKey = $act['id'] ?? ('act_legacy_' . ($idx + 1));
+                if ((string)$actKey === (string)$activityId) {
+                    $actBudget = (float) ($act['budget'] ?? 0);
+                    if ($actBudget > 0 && ($otherActivitySum + $setTotal) > ($actBudget + 0.01)) {
+                        $actRemaining = max(0, $actBudget - $otherActivitySum);
+                        return redirect()->back()->with('error', 'ไม่สามารถบันทึกได้: ยอดเงินชุดนี้ (' . number_format($setTotal, 2) . ' บาท) เกินวงเงินคงเหลือของกิจกรรม "' . ($act['name'] ?? $activityName) . '" (คงเหลือ ' . number_format($actRemaining, 2) . ' บาท)');
+                    }
+                    break;
+                }
+            }
         }
 
         $procurement->set_name = $validated['set_name'];
+        $procurement->set_type = $setType;
         if (!empty($validated['department_id'])) {
             $procurement->department_id = $validated['department_id'];
         }
-        $procurement->activity_name = $validated['activity_name'] ?? null;
+        $procurement->activity_id = $activityId;
+        $procurement->activity_name = $activityName;
         $procurement->tor_specifications = $validated['tor_specifications'] ?? null;
-        $procurement->memo_subject = $validated['set_name'] . ' (' . $project->title . ')';
+        $procurement->memo_subject = $validated['set_name'] . ($activityName ? ' [' . $activityName . ']' : '') . ' (' . $project->title . ')';
         $procurement->save();
 
         // Recreate items
@@ -1098,7 +1179,58 @@ class ProcurementController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('message', 'อัปเดตข้อมูลชุดจัดซื้อจัดจ้าง "' . $validated['set_name'] . '" เรียบร้อยแล้ว');
+        if ($setType !== 'loan' && $procurement->committees()->count() === 0) {
+            NotificationService::notifyProcurementCommitteeNeeded($project, $procurement);
+        }
+
+        return redirect()->back()->with('message', 'อัปเดตข้อมูลชุดเอกสาร "' . $validated['set_name'] . '" เรียบร้อยแล้ว');
+    }
+
+    /**
+     * Assign or update committees for a specific procurement set (Procurement Staff / Head / Admin ONLY).
+     */
+    public function assignSetCommittees(Request $request, Procurement $procurement)
+    {
+        if (!auth()->user()->isProcurementStaff()) {
+            abort(403, 'เฉพาะเจ้าหน้าที่หรือหัวหน้างานพัสดุเท่านั้นที่สามารถแต่งตั้งคณะกรรมการจัดซื้อจัดจ้างและตรวจรับพัสดุได้');
+        }
+
+        $validated = $request->validate([
+            'purchasing_chair' => 'nullable|exists:users,id',
+            'purchasing_member1' => 'nullable|exists:users,id',
+            'purchasing_member2' => 'nullable|exists:users,id',
+            'inspection_chair' => 'nullable|exists:users,id',
+            'inspection_member1' => 'nullable|exists:users,id',
+            'inspection_member2' => 'nullable|exists:users,id',
+        ]);
+
+        $procurement->committees()->detach();
+
+        if (!empty($validated['purchasing_chair'])) {
+            $procurement->committees()->attach($validated['purchasing_chair'], ['committee_type' => 'purchasing', 'role' => 'chairperson']);
+        }
+        if (!empty($validated['purchasing_member1'])) {
+            $procurement->committees()->attach($validated['purchasing_member1'], ['committee_type' => 'purchasing', 'role' => 'member']);
+        }
+        if (!empty($validated['purchasing_member2'])) {
+            $procurement->committees()->attach($validated['purchasing_member2'], ['committee_type' => 'purchasing', 'role' => 'member']);
+        }
+        if (!empty($validated['inspection_chair'])) {
+            $procurement->committees()->attach($validated['inspection_chair'], ['committee_type' => 'inspection', 'role' => 'chairperson']);
+        }
+        if (!empty($validated['inspection_member1'])) {
+            $procurement->committees()->attach($validated['inspection_member1'], ['committee_type' => 'inspection', 'role' => 'member']);
+        }
+        if (!empty($validated['inspection_member2'])) {
+            $procurement->committees()->attach($validated['inspection_member2'], ['committee_type' => 'inspection', 'role' => 'member']);
+        }
+
+        // Mark pending committee notifications for this set as read
+        AppNotification::where('reference_id', 'proc_committee_' . $procurement->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return redirect()->back()->with('message', 'บันทึกคำสั่งแต่งตั้งคณะกรรมการจัดซื้อจัดจ้างและตรวจรับพัสดุสำหรับชุด "' . ($procurement->set_name ?: $procurement->procurement_number) . '" เรียบร้อยแล้ว');
     }
 
     /**

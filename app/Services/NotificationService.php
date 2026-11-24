@@ -180,6 +180,23 @@ class NotificationService
     }
 
     /**
+     * Notify Procurement Staff & Head when a project or activity procurement set needs committee assignment.
+     */
+    public static function notifyProcurementCommitteeNeeded(Project $project, \App\Models\Procurement $procurement): void
+    {
+        $procUsers = User::all()->filter(fn($u) => $u->isProcurementHead() || $u->isProcurementStaff());
+        if ($procUsers->isEmpty()) return;
+
+        $setLabel = $procurement->set_name ?: ($procurement->activity_name ?: $procurement->procurement_number ?: 'ชุดจัดซื้อจัดจ้าง');
+        $totalAmount = (float) $procurement->items()->sum('total_price');
+        $title = "👥 รอแต่งตั้งคณะกรรมการจัดซื้อจัดจ้างและตรวจรับพัสดุ";
+        $message = "โครงการ \"{$project->title}\" — {$setLabel} (วงเงิน " . number_format($totalAmount, 2) . " บาท) กรุณาเข้ามากำหนดรายชื่อคณะกรรมการจัดซื้อ/จัดจ้าง และคณะกรรมการตรวจรับพัสดุ";
+        $actionUrl = route('projects.show', ['project' => $project->id, 'tab' => 'do']);
+
+        self::send($procUsers->pluck('id'), $title, $message, $actionUrl, 'procurement_committee', '👥', 'purple', 'proc_committee_' . $procurement->id);
+    }
+
+    /**
      * Notify Finance Staff when a loan budget has been cut and is ready for disbursement.
      */
     public static function notifyFinanceDisbursementNeeded(TravelLoan $loan): void
@@ -331,6 +348,42 @@ class NotificationService
                         'action_url' => route('dashboard', ['tab' => 'clearings']),
                         'icon' => '💰',
                         'color' => 'emerald',
+                        'reference_id' => $refId,
+                    ]);
+                }
+            }
+        }
+
+        // 4. Procurement sets pending committee assignment (for Procurement Staff & Head)
+        if ($user->isProcurementHead() || $user->isProcurementStaff() || $user->isAdmin()) {
+            $pendingCommitteeProcs = \App\Models\Procurement::with(['project', 'items'])
+                ->whereNotNull('project_id')
+                ->where(function ($q) {
+                    $q->whereNull('set_type')->orWhere('set_type', '!=', 'loan');
+                })
+                ->whereDoesntHave('committees')
+                ->latest()
+                ->take(8)
+                ->get();
+
+            foreach ($pendingCommitteeProcs as $proc) {
+                if (!$proc->project) continue;
+                $refId = 'proc_committee_' . $proc->id;
+                $exists = AppNotification::where('user_id', $user->id)
+                    ->where('reference_id', $refId)
+                    ->exists();
+
+                if (!$exists) {
+                    $setLabel = $proc->set_name ?: ($proc->activity_name ?: $proc->procurement_number ?: 'ชุดจัดซื้อจัดจ้าง');
+                    $amt = (float) $proc->items->sum('total_price');
+                    AppNotification::create([
+                        'user_id' => $user->id,
+                        'title' => '👥 รอแต่งตั้งคณะกรรมการจัดซื้อจัดจ้างและตรวจรับพัสดุ',
+                        'message' => "โครงการ \"{$proc->project->title}\" ({$setLabel} • ฿" . number_format($amt, 2) . ") รอเจ้าหน้าที่พัสดุกำหนดคณะกรรมการ",
+                        'type' => 'procurement_committee',
+                        'action_url' => route('projects.show', ['project' => $proc->project->id, 'tab' => 'do']),
+                        'icon' => '👥',
+                        'color' => 'purple',
                         'reference_id' => $refId,
                     ]);
                 }

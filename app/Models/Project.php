@@ -254,6 +254,26 @@ class Project extends Model
     }
 
     /**
+     * Calculate the true total allocated budget across all funding sources (multi-source safe).
+     */
+    public function getTotalAllocatedBudget(): float
+    {
+        $budgetsCollection = $this->relationLoaded('budgets') ? $this->budgets : $this->budgets()->get();
+        $multiSum = (float) $budgetsCollection->sum('allocated_amount');
+        if ($multiSum > 0) {
+            return $multiSum;
+        }
+        if ((float) $this->allocated_budget > 0) {
+            return (float) $this->allocated_budget;
+        }
+        $singleBudget = $this->relationLoaded('budget') ? $this->budget : $this->budget()->first();
+        if ($singleBudget && (float) $singleBudget->allocated_amount > 0) {
+            return (float) $singleBudget->allocated_amount;
+        }
+        return (float) ($this->estimated_budget ?: 0);
+    }
+
+    /**
      * Get the procurement details for this project.
      */
     public function procurement()
