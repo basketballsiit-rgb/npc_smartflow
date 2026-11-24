@@ -5364,6 +5364,16 @@ class ProjectController extends Controller
 
         $assignedUserIds = array_values(array_unique(array_map('intval', $validated['assigned_user_ids'] ?? [])));
 
+        // Resolve responsible_person: prioritize explicit input, then first assigned user, then creator
+        $resolvedResponsible = trim($validated['responsible_person'] ?? '');
+        if (empty($resolvedResponsible) && !empty($assignedUserIds)) {
+            $firstAssigned = \App\Models\User::find($assignedUserIds[0]);
+            $resolvedResponsible = $firstAssigned?->name ?? '';
+        }
+        if (empty($resolvedResponsible)) {
+            $resolvedResponsible = $project->responsible_person ?: ($user->name ?? '');
+        }
+
         $newActivity = [
             'id' => 'act_' . uniqid(),
             'name' => trim($validated['name']),
@@ -5374,11 +5384,11 @@ class ProjectController extends Controller
             'indicators' => $validated['indicators'] ?? '',
             'expected_benefits' => $validated['expected_benefits'] ?? '',
             'description' => $validated['description'] ?? '',
-            'location' => $validated['location'] ?? ($project->location ?? ''),
+            'location' => $validated['location'] ?? '',
             'start_date' => $validated['start_date'] ?? null,
             'end_date' => $validated['end_date'] ?? null,
             'operation_period_text' => $validated['operation_period_text'] ?? '',
-            'responsible_person' => $validated['responsible_person'] ?? ($project->responsible_person ?: ($user->name ?? '')),
+            'responsible_person' => $resolvedResponsible,
             'assigned_user_ids' => $assignedUserIds,
             'budget' => $newBudget,
             'disbursement_type' => $validated['disbursement_type'] ?? 'both',
@@ -5590,7 +5600,10 @@ class ProjectController extends Controller
      */
     private function buildActivityMemoContext(Project $project, string $activityId): array
     {
-        $project->load(['user', 'department.parent', 'procurements.items']);
+        $project->load(['user', 'department.parent', 'budgets.fundingSource', 'budget.fundingSource', 'approvals.user', 'procurements.items']);
+        $uniqueApprovals = $project->approvals->sortByDesc('id')->unique('step_number')->sortBy('step_number')->values();
+        $project->setRelation('approvals', $uniqueApprovals);
+
         $activities = is_array($project->activities) ? array_values($project->activities) : [];
         $targetIndex = null;
         $activity = null;
@@ -5734,6 +5747,17 @@ class ProjectController extends Controller
         }
         $directorName = $cleanName($directorName);
 
+        $assignedUsersList = !empty($activity['assigned_user_ids']) && is_array($activity['assigned_user_ids'])
+            ? \App\Models\User::whereIn('id', $activity['assigned_user_ids'])->get(['id', 'name', 'position', 'signature_data'])
+            : collect();
+
+        $approvalsByStep = [];
+        foreach ($project->approvals as $ap) {
+            if (in_array($ap->status, ['approved', 'submitted'])) {
+                $approvalsByStep[(int)$ap->step_number] = $ap;
+            }
+        }
+
         return [
             'activities' => $activities,
             'targetIndex' => $targetIndex,
@@ -5746,9 +5770,20 @@ class ProjectController extends Controller
             'hasProcurements' => $hasProcurements,
             'hasLoans' => $hasLoans,
             'linkedSets' => $linkedSets,
+            'assignedUsers' => $assignedUsersList,
+            'approvalsByStep' => $approvalsByStep,
+            'totalProjectBudget' => $project->getTotalAllocatedBudget(),
             'signers' => [
-                'activity_responsible' => ['name' => $actResponsibleName, 'title' => $actResponsiblePos],
-                'project_responsible' => ['name' => $projResponsibleName, 'title' => $projResponsiblePos],
+                'activity_responsible' => [
+                    'name' => $actResponsibleName,
+                    'title' => $actResponsiblePos,
+                    'signature_data' => $fillerUser?->signature_data ?? null,
+                ],
+                'project_responsible' => [
+                    'name' => $projResponsibleName,
+                    'title' => $projResponsiblePos,
+                    'signature_data' => ($approvalsByStep[1]?->signature_data) ?: ($projOwner?->signature_data ?? null),
+                ],
                 'project_deputy' => $projDeputy,
                 'plan_deputy' => $planDeputy,
                 'director' => ['name' => $directorName, 'title' => 'ผู้อำนวยการ' . $collegeName],
@@ -5808,8 +5843,13 @@ class ProjectController extends Controller
             'activityId' => $activityId,
             'collegeName' => $ctx['collegeName'],
             'divisionName' => $ctx['divisionName'],
+            'dateText' => $ctx['dateText'],
+            'location' => $ctx['location'],
             'budgetAmount' => $ctx['budgetAmount'],
+            'totalProjectBudget' => $ctx['totalProjectBudget'],
             'linkedSets' => $ctx['linkedSets'],
+            'assignedUsers' => $ctx['assignedUsers'],
+            'approvalsByStep' => $ctx['approvalsByStep'],
             'signers' => $ctx['signers'],
             'paragraph1' => $paragraph1,
             'paragraph2' => $paragraph2,

@@ -136,11 +136,11 @@ export default function ProjectActivitiesWorkspace({
             indicators: '',
             expected_benefits: '',
             description: '',
-            location: project.location || '',
-            start_date: project.start_date ? String(project.start_date).slice(0, 10) : '',
-            end_date: project.end_date ? String(project.end_date).slice(0, 10) : '',
+            location: '',
+            start_date: '',
+            end_date: '',
             operation_period_text: '',
-            responsible_person: project.responsible_person || project.user?.name || '',
+            responsible_person: '',
             assigned_user_ids: [],
             budget: '',
             disbursement_type: 'both',
@@ -200,7 +200,13 @@ export default function ProjectActivitiesWorkspace({
             const nextIds = exists
                 ? prev.assigned_user_ids.filter((id) => id !== numId)
                 : [...prev.assigned_user_ids, numId];
-            return { ...prev, assigned_user_ids: nextIds };
+            // Automatically sync responsible_person with the first selected assigned user when adding
+            const firstUser = nextIds.length > 0 ? allUsers.find((u) => Number(u.id) === nextIds[0]) : null;
+            return {
+                ...prev,
+                assigned_user_ids: nextIds,
+                responsible_person: !editingActivity ? (firstUser?.name || '') : (prev.responsible_person || firstUser?.name || ''),
+            };
         });
     };
 
@@ -232,6 +238,10 @@ export default function ProjectActivitiesWorkspace({
         if (savingActivity) return;
         if (!actForm.name.trim()) {
             Swal.fire('กรุณากรอกชื่อกิจกรรม', 'กรุณาระบุชื่อกิจกรรม', 'warning');
+            return;
+        }
+        if (!editingActivity && actForm.assigned_user_ids.length === 0) {
+            Swal.fire('กรุณาเลือกผู้รับผิดชอบกิจกรรม', 'กรุณาเลือกผู้รับผิดชอบ / ผู้เกี่ยวข้องอย่างน้อย 1 คน เพื่อรับการแจ้งเตือนและเข้ามากรอกรายละเอียดกิจกรรม', 'warning');
             return;
         }
         if (isActBudgetOver) {
@@ -822,6 +832,11 @@ export default function ProjectActivitiesWorkspace({
                                                         ✨ คุณรับผิดชอบกิจกรรมนี้
                                                     </span>
                                                 )}
+                                                {!hasRichDetails && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                                        ⏳ รอผู้รับผิดชอบกิจกรรมกรอกรายละเอียด
+                                                    </span>
+                                                )}
                                             </div>
 
                                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600 pt-0.5">
@@ -891,9 +906,9 @@ export default function ProjectActivitiesWorkspace({
                                                     href={route('projects.activities.memo', [project.id, act.id])}
                                                     target="_blank"
                                                     className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-[11px] font-extrabold rounded-lg shadow-2xs transition cursor-pointer"
-                                                    title="พิมพ์บันทึกข้อความขออนุญาตดำเนินกิจกรรม (ปะหน้า) ด้วยแบบฟอร์มราชการ Sarabun + AI"
+                                                    title="พิมพ์ครบชุด: บันทึกข้อความขออนุญาต + โครงการหลักที่มีลายเซ็นต์ + รายละเอียดกิจกรรม"
                                                 >
-                                                    <span>🖨️</span> บันทึกข้อความขออนุญาต (AI)
+                                                    <span>🖨️</span> พิมพ์ชุดขออนุญาตกิจกรรม (AI)
                                                 </a>
                                                 {canManageSetsForActivity && (
                                                     <>
@@ -1010,17 +1025,19 @@ export default function ProjectActivitiesWorkspace({
                 </div>
             )}
 
-            {/* MODAL 1: Add / Edit Sub-Activity (Full Activity Form mirroring Main Project) */}
+            {/* MODAL 1: Add Activity (Quick: Name + Assignee ONLY) OR Edit Activity (Full Form for Responsible Person) */}
             {activityModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-                    <div className="bg-white rounded-2xl shadow-2xl border border-indigo-200 w-full max-w-3xl overflow-hidden my-6">
+                    <div className={`bg-white rounded-2xl shadow-2xl border border-indigo-200 w-full overflow-hidden my-6 ${editingActivity ? 'max-w-3xl' : 'max-w-xl'}`}>
                         <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-5 py-4 text-white flex items-center justify-between">
                             <div>
                                 <h3 className="text-base font-black">
-                                    {editingActivity ? '📝 แบบฟอร์มกรอก/แก้ไขรายละเอียดกิจกรรม' : '➕ เพิ่มกิจกรรมใหม่ภายใต้โครงการหลัก'}
+                                    {editingActivity ? '📝 แบบฟอร์มกรอก/แก้ไขรายละเอียดกิจกรรม' : '➕ เพิ่มกิจกรรมใหม่และมอบหมายผู้รับผิดชอบ'}
                                 </h3>
                                 <p className="text-[11px] text-indigo-100">
-                                    งบโครงการหลัก: {formatCurrency(allocatedBudget)} | คงเหลือสำหรับจัดสรรกรอบกิจกรรม: {formatCurrency(maxBudgetForActivity)}
+                                    {editingActivity
+                                        ? `งบโครงการหลัก: ${formatCurrency(allocatedBudget)} | คงเหลือสำหรับจัดสรรกรอบกิจกรรม: ${formatCurrency(maxBudgetForActivity)}`
+                                        : 'ระบุเพียงชื่อกิจกรรมและเลือกผู้รับผิดชอบ ระบบจะแจ้งเตือนให้ผู้รับผิดชอบเข้ามากรอกรายละเอียดและจัดทำเอกสารต่อเอง'}
                                 </p>
                             </div>
                             <button
@@ -1042,7 +1059,7 @@ export default function ProjectActivitiesWorkspace({
                                     type="text"
                                     value={actForm.name}
                                     onChange={(e) => setActForm({ ...actForm, name: e.target.value })}
-                                    placeholder="เช่น กิจกรรมอบรมเชิงปฏิบัติการพัฒนาทักษะวิชาชีพ รุ่นที่ 1"
+                                    placeholder="เช่น การพัฒนาทักษะและสมรรถนะวิชาชีพกำลังคน หลักสูตรวิชาชีพระยะสั้น รายวิชา (รำไทย)"
                                     className="w-full rounded-xl border-slate-300 text-xs font-semibold focus:ring-indigo-500 focus:border-indigo-500"
                                     required
                                 />
@@ -1052,7 +1069,7 @@ export default function ProjectActivitiesWorkspace({
                             <div className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-3.5 space-y-2.5">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                                     <label className="text-xs font-extrabold text-indigo-950">
-                                        2. ผู้เกี่ยวข้อง / ผู้รับผิดชอบดำเนินกิจกรรม (ระบบแจ้งเตือนอัตโนมัติ):
+                                        2. ผู้รับผิดชอบ / ผู้เกี่ยวข้องดำเนินกิจกรรม (ระบบแจ้งเตือนอัตโนมัติ): {!editingActivity && <span className="text-rose-500">*</span>}
                                     </label>
                                     {!canAddActivities && (
                                         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
@@ -1088,7 +1105,7 @@ export default function ProjectActivitiesWorkspace({
                                         })}
                                     </div>
                                 ) : (
-                                    <p className="text-[11px] text-slate-500 italic">ยังไม่ได้เลือกผู้เกี่ยวข้องรับผิดชอบกิจกรรม</p>
+                                    <p className="text-[11px] text-slate-500 italic">ยังไม่ได้เลือกผู้รับผิดชอบกิจกรรม (ค้นหาและติ๊กเลือกด้านล่าง)</p>
                                 )}
 
                                 {canAddActivities && (
@@ -1097,10 +1114,10 @@ export default function ProjectActivitiesWorkspace({
                                             type="text"
                                             value={userSearchTerm}
                                             onChange={(e) => setUserSearchTerm(e.target.value)}
-                                            placeholder="🔍 ค้นหาชื่อบุคลากรเพื่อเพิ่มเป็นผู้รับผิดชอบกิจกรรม..."
+                                            placeholder="🔍 พิมพ์ชื่อบุคลากรเพื่อค้นหาและเลือกผู้รับผิดชอบกิจกรรม..."
                                             className="w-full rounded-lg border-indigo-200 text-xs bg-white focus:ring-indigo-500"
                                         />
-                                        <div className="max-h-32 overflow-y-auto bg-white border border-indigo-100 rounded-lg divide-y divide-slate-100">
+                                        <div className="max-h-36 overflow-y-auto bg-white border border-indigo-100 rounded-lg divide-y divide-slate-100">
                                             {filteredUsersForPicker.map((u) => {
                                                 const checked = actForm.assigned_user_ids.includes(Number(u.id));
                                                 return (
@@ -1125,23 +1142,55 @@ export default function ProjectActivitiesWorkspace({
                                             })}
                                         </div>
                                         <p className="text-[10px] text-indigo-800">
-                                            🔔 ผู้เกี่ยวข้องที่เลือกจะได้รับแจ้งเตือนทันที และมีสิทธิ์เข้ามากรอกรายละเอียดกิจกรรม รวมถึงสร้างชุดจัดซื้อจัดจ้าง/สัญญายืมเงินของกิจกรรมนี้ได้
+                                            🔔 เมื่อบันทึก ระบบจะแจ้งเตือนไปยังผู้รับผิดชอบที่เลือก เพื่อให้เข้ามากรอกรายละเอียดกิจกรรม จัดทำชุดจัดซื้อจัดจ้าง/สัญญายืมเงิน และพิมพ์ชุดเอกสารขออนุญาตได้ด้วยตนเอง
                                         </p>
                                     </div>
                                 )}
 
-                                <div className="pt-1">
-                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">ชื่อผู้รับผิดชอบกิจกรรมหลัก (สำหรับแสดงในเอกสาร):</label>
-                                    <input
-                                        type="text"
-                                        value={actForm.responsible_person}
-                                        onChange={(e) => setActForm({ ...actForm, responsible_person: e.target.value })}
-                                        placeholder="ชื่อ-สกุล ผู้รับผิดชอบกิจกรรม"
-                                        className="w-full rounded-lg border-slate-300 text-xs bg-white focus:ring-indigo-500"
-                                    />
-                                </div>
+                                {editingActivity && (
+                                    <div className="pt-1">
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">ชื่อผู้รับผิดชอบกิจกรรมหลัก (สำหรับแสดงในเอกสาร):</label>
+                                        <input
+                                            type="text"
+                                            value={actForm.responsible_person}
+                                            onChange={(e) => setActForm({ ...actForm, responsible_person: e.target.value })}
+                                            placeholder="ชื่อ-สกุล ผู้รับผิดชอบกิจกรรม"
+                                            className="w-full rounded-lg border-slate-300 text-xs bg-white focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                )}
                             </div>
 
+                            {/* Optional Budget Cap when adding (compact) */}
+                            {!editingActivity && (
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                                        กรอบวงเงินกิจกรรม (บาท) <span className="text-slate-400 font-normal">(ไม่บังคับ — เว้นว่างเพื่อให้ตัดจากงบโครงการหลัก {formatCurrency(maxBudgetForActivity)})</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        value={actForm.budget}
+                                        onChange={(e) => setActForm({ ...actForm, budget: e.target.value })}
+                                        placeholder={`สูงสุดไม่เกิน ${maxBudgetForActivity.toLocaleString('th-TH')} บาท`}
+                                        className={`w-full rounded-xl text-xs font-black ${
+                                            isActBudgetOver
+                                                ? 'border-rose-500 bg-rose-50 text-rose-700 focus:ring-rose-500'
+                                                : 'border-emerald-300 text-emerald-800 focus:ring-emerald-500'
+                                        }`}
+                                    />
+                                    {isActBudgetOver && (
+                                        <p className="text-[11px] font-bold text-rose-600 mt-1">
+                                            ⚠️ เกินงบคงเหลือโครงการ ({formatCurrency(maxBudgetForActivity)})
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Full Activity Details Fields — ONLY shown when editing/filling in activity details */}
+                            {editingActivity && (
+                            <>
                             {/* 3. งบประมาณและรูปแบบการเบิกจ่ายของกิจกรรม */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
@@ -1435,6 +1484,8 @@ export default function ProjectActivitiesWorkspace({
                                     className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
                                 />
                             </div>
+                            </>
+                            )}
 
                             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                                 <button
@@ -1449,7 +1500,7 @@ export default function ProjectActivitiesWorkspace({
                                     disabled={savingActivity || isActBudgetOver}
                                     className="px-5 py-2 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white shadow-md cursor-pointer"
                                 >
-                                    {savingActivity ? 'กำลังบันทึก...' : editingActivity ? '💾 บันทึกรายละเอียดกิจกรรม' : '➕ บันทึกและเพิ่มกิจกรรม'}
+                                    {savingActivity ? 'กำลังบันทึก...' : editingActivity ? '💾 บันทึกรายละเอียดกิจกรรม' : '➕ บันทึกและแจ้งเตือนผู้รับผิดชอบกิจกรรม'}
                                 </button>
                             </div>
                         </form>
