@@ -5821,6 +5821,15 @@ class ProjectController extends Controller
         $actResponsiblePos = trim($defaultActPos . ' ผู้รับผิดชอบกิจกรรม');
         $projResponsiblePos = trim($defaultProjPos . ' ผู้รับผิดชอบโครงการ');
 
+        $resourceDeputySig = $project->approvals->first(function ($a) use ($project) {
+            if (in_array($a->status, ['approved', 'submitted']) && $a->step_number > 1 && $a->step_number != 6 && $a->user_id != $project->user_id) {
+                $uName = $a->user?->name ?? '';
+                $uPos = $a->acting_position_text ?: ($a->user?->position ?? '');
+                return str_contains($uName, 'จักรพงศ์') || str_contains($uPos, 'บริหารทรัพยากร');
+            }
+            return false;
+        });
+
         return [
             'activities' => $activities,
             'targetIndex' => $targetIndex,
@@ -5835,6 +5844,7 @@ class ProjectController extends Controller
             'linkedSets' => $linkedSets,
             'assignedUsers' => $assignedUsersList,
             'approvalsByStep' => $approvalsByStep,
+            'resourceDeputySig' => $resourceDeputySig,
             'totalProjectBudget' => $project->getTotalAllocatedBudget(),
             'signers' => [
                 'activity_responsible' => [
@@ -5889,15 +5899,15 @@ class ProjectController extends Controller
                 'division_name' => $ctx['divisionName'],
                 'activity_name' => $activity['name'] ?? '',
                 'project_title' => $project->title,
-                'objectives' => $activity['objectives'] ?: ($project->objectives ?? ''),
-                'background_rationale' => $activity['background_rationale'] ?: ($project->background_rationale ?? ''),
-                'expected_benefits' => $activity['expected_benefits'] ?: ($project->expected_benefits ?? ''),
+                'objectives' => (!empty($activity['objectives'])) ? $activity['objectives'] : ($project->objectives ?? ''),
+                'background_rationale' => (!empty($activity['background_rationale'])) ? $activity['background_rationale'] : ($project->background_rationale ?? ''),
+                'expected_benefits' => (!empty($activity['expected_benefits'])) ? $activity['expected_benefits'] : ($project->expected_benefits ?? ''),
                 'target_group' => $activity['target_group'] ?? '',
                 'date_text' => $ctx['dateText'],
                 'location' => $ctx['location'],
                 'budget_amount' => $ctx['budgetAmount'],
                 'has_procurements' => $ctx['hasProcurements'],
-                'has_loans' => $ctx['hasLoans'],
+                'hasLoans' => $ctx['hasLoans'],
             ]);
 
             $paragraph1 = $draft['paragraph1'];
@@ -5941,9 +5951,9 @@ class ProjectController extends Controller
             'division_name' => $ctx['divisionName'],
             'activity_name' => $activity['name'] ?? '',
             'project_title' => $project->title,
-            'objectives' => $activity['objectives'] ?: ($project->objectives ?? ''),
-            'background_rationale' => $activity['background_rationale'] ?: ($project->background_rationale ?? ''),
-            'expected_benefits' => $activity['expected_benefits'] ?: ($project->expected_benefits ?? ''),
+            'objectives' => (!empty($activity['objectives'])) ? $activity['objectives'] : ($project->objectives ?? ''),
+            'background_rationale' => (!empty($activity['background_rationale'])) ? $activity['background_rationale'] : ($project->background_rationale ?? ''),
+            'expected_benefits' => (!empty($activity['expected_benefits'])) ? $activity['expected_benefits'] : ($project->expected_benefits ?? ''),
             'target_group' => $activity['target_group'] ?? '',
             'date_text' => $ctx['dateText'],
             'location' => $ctx['location'],
