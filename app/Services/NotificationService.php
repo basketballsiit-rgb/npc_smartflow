@@ -195,7 +195,11 @@ class NotificationService
         $byText = $assignerName ? " โดย {$assignerName}" : '';
         $title = "🎯 ท่านได้รับมอบหมายให้รับผิดชอบกิจกรรมย่อย";
         $message = "กิจกรรม \"{$actName}\" ภายใต้โครงการ \"{$project->title}\"{$budgetText}{$byText} — คลิกเพื่อเข้ากรอกรายละเอียดกิจกรรมและดำเนินการจัดซื้อจัดจ้าง/ยืมเงิน";
-        $actionUrl = route('projects.show', ['project' => $project->id, 'tab' => 'do']);
+        $actionUrl = route('projects.show', [
+            'project' => $project->id,
+            'tab' => 'do',
+            'activity_id' => $actId,
+        ]);
 
         self::send($cleanIds, $title, $message, $actionUrl, 'activity_assigned', '🎯', 'indigo', 'act_assign_' . $project->id . '_' . $actId);
     }

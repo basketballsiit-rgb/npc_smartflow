@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 
@@ -26,6 +26,7 @@ export default function ProjectActivitiesWorkspace({
     isProcStaffOrAdmin = false,
     canAddActivities = false,
     formatCurrency,
+    targetActivityId = null,
 }) {
     // Normalize activities from project.activities JSON
     const activities = useMemo(() => {
@@ -171,6 +172,51 @@ export default function ProjectActivitiesWorkspace({
         });
         setActivityModalOpen(true);
     };
+
+    // Auto-open edit modal if targetActivityId is provided or if assigned user lands from notification
+    useEffect(() => {
+        let actToOpen = null;
+        if (targetActivityId) {
+            actToOpen = activities.find((a) => String(a.id) === String(targetActivityId));
+        }
+
+        if (!actToOpen && currentUserId) {
+            const myAssigned = activities.filter((a) => a.assigned_user_ids.includes(Number(currentUserId)));
+            // If user has exactly 1 assigned activity and URL indicates do tab or activity intent
+            if (myAssigned.length === 1 && typeof window !== 'undefined') {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('tab') === 'do' || params.has('activity_id')) {
+                    actToOpen = myAssigned[0];
+                }
+            }
+        }
+
+        if (actToOpen) {
+            setExpandedActivityIds((prev) => ({ ...prev, [actToOpen.id]: true }));
+            openEditActivityModal(actToOpen);
+            setTimeout(() => {
+                const el = document.getElementById(`activity-${actToOpen.id}`) || document.getElementById('activities-workspace');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
+
+        // Listen for open-edit-activity custom event from the top banner or other buttons
+        const handleCustomOpen = (e) => {
+            const actId = e.detail?.activityId;
+            const found = activities.find((a) => String(a.id) === String(actId));
+            if (found) {
+                setExpandedActivityIds((prev) => ({ ...prev, [found.id]: true }));
+                openEditActivityModal(found);
+                setTimeout(() => {
+                    const el = document.getElementById(`activity-${found.id}`) || document.getElementById('activities-workspace');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 200);
+            }
+        };
+
+        window.addEventListener('open-edit-activity', handleCustomOpen);
+        return () => window.removeEventListener('open-edit-activity', handleCustomOpen);
+    }, [targetActivityId, activities, currentUserId]);
 
     // Helper: append a selected line from main project into an activity textarea field
     const appendLineToField = (fieldKey, rawLine) => {
@@ -717,7 +763,7 @@ export default function ProjectActivitiesWorkspace({
     };
 
     return (
-        <div className="border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/40 rounded-2xl p-5 space-y-5 shadow-sm">
+        <div id="activities-workspace" className="border-2 border-indigo-200 bg-gradient-to-br from-indigo-50/40 via-white to-purple-50/40 rounded-2xl p-5 space-y-5 shadow-sm scroll-mt-20">
             {/* Section Header + Add Activity Button */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-100 pb-4">
                 <div>
@@ -809,8 +855,17 @@ export default function ProjectActivitiesWorkspace({
                             act.background_rationale || act.objectives || act.targets || act.indicators || act.expected_benefits || act.description
                         );
 
+                        const isTarget = targetActivityId && String(act.id) === String(targetActivityId);
                         return (
-                            <div key={act.id} className="bg-white rounded-2xl border border-indigo-200/90 shadow-xs overflow-hidden">
+                            <div
+                                key={act.id}
+                                id={`activity-${act.id}`}
+                                className={`bg-white rounded-2xl border ${
+                                    isTarget || isAssignedToMe
+                                        ? 'border-2 border-indigo-500 shadow-lg ring-2 ring-indigo-200'
+                                        : 'border-indigo-200/90 shadow-xs'
+                                } overflow-hidden transition-all duration-300 scroll-mt-24`}
+                            >
                                 {/* Activity Header */}
                                 <div className="bg-gradient-to-r from-indigo-50/90 via-purple-50/70 to-white px-5 py-4 border-b border-indigo-100">
                                     <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-3">
@@ -934,10 +989,15 @@ export default function ProjectActivitiesWorkspace({
                                                     <button
                                                         type="button"
                                                         onClick={() => openEditActivityModal(act)}
-                                                        className="px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 text-[11px] font-bold rounded-lg cursor-pointer"
+                                                        className={`px-3 py-1.5 text-[11px] font-black rounded-lg cursor-pointer transition flex items-center gap-1 ${
+                                                            isAssignedToMe
+                                                                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-sm hover:scale-105 active:scale-95'
+                                                                : 'bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200'
+                                                        }`}
                                                         title="กรอก/แก้ไขรายละเอียดกิจกรรม"
                                                     >
-                                                        📝 กรอก/แก้ไขรายละเอียดกิจกรรม
+                                                        <span>✏️</span>
+                                                        <span>{isAssignedToMe ? 'กรอก/แก้ไขรายละเอียดกิจกรรมของคุณ' : 'กรอก/แก้ไขรายละเอียดกิจกรรม'}</span>
                                                     </button>
                                                 )}
                                                 {canAddActivities && actSets.length === 0 && (
@@ -1031,12 +1091,12 @@ export default function ProjectActivitiesWorkspace({
                     <div className={`bg-white rounded-2xl shadow-2xl border border-indigo-200 w-full overflow-hidden my-6 ${editingActivity ? 'max-w-3xl' : 'max-w-xl'}`}>
                         <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-5 py-4 text-white flex items-center justify-between">
                             <div>
-                                <h3 className="text-base font-black">
-                                    {editingActivity ? '📝 แบบฟอร์มกรอก/แก้ไขรายละเอียดกิจกรรม' : '➕ เพิ่มกิจกรรมใหม่และมอบหมายผู้รับผิดชอบ'}
+                                <h3 className="text-base font-black truncate max-w-xl">
+                                    {editingActivity ? `📝 แบบฟอร์มกรอก/แก้ไขรายละเอียดกิจกรรม: ${editingActivity.name}` : '➕ เพิ่มกิจกรรมใหม่และมอบหมายผู้รับผิดชอบ'}
                                 </h3>
                                 <p className="text-[11px] text-indigo-100">
                                     {editingActivity
-                                        ? `งบโครงการหลัก: ${formatCurrency(allocatedBudget)} | คงเหลือสำหรับจัดสรรกรอบกิจกรรม: ${formatCurrency(maxBudgetForActivity)}`
+                                        ? `ผู้รับผิดชอบกิจกรรมสามารถกรอกหลักการ วัตถุประสงค์ เป้าหมาย ตัวชี้วัด ผลลัพธ์ และขั้นตอนดำเนินงาน หรือดึงข้อมูลจากโครงการหลักมาปรับใช้ได้ทันที`
                                         : 'ระบุเพียงชื่อกิจกรรมและเลือกผู้รับผิดชอบ ระบบจะแจ้งเตือนให้ผู้รับผิดชอบเข้ามากรอกรายละเอียดและจัดทำเอกสารต่อเอง'}
                                 </p>
                             </div>

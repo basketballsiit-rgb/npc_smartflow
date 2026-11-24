@@ -1147,6 +1147,8 @@ class ProjectController extends Controller
                 'order_number' => $actingDelegation->order_number,
                 'reason' => $actingDelegation->reason,
             ] : null,
+            'initialTab' => request('tab', request('activity_id') ? 'do' : 'plan'),
+            'targetActivityId' => request('activity_id'),
         ]);
     }
 

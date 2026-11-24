@@ -1,13 +1,23 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm, usePage, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import DigitalSignatureModal from '@/Components/DigitalSignatureModal';
 import AuditTrailSection from '@/Components/AuditTrailSection';
 import TorStudioModal from '@/Components/TorStudioModal';
 import ProjectActivitiesWorkspace from '@/Components/ProjectActivitiesWorkspace';
 
-export default function Show({ project, strategyCategories = [], fundingSources = [], allDepartments = [], allUsers = [], canApprove, actingDelegation = null }) {
+export default function Show({
+    project,
+    strategyCategories = [],
+    fundingSources = [],
+    allDepartments = [],
+    allUsers = [],
+    canApprove,
+    actingDelegation = null,
+    initialTab = 'plan',
+    targetActivityId = null,
+}) {
     const { auth, college_settings } = usePage().props;
     const [actingPositionText, setActingPositionText] = useState(actingDelegation?.acting_title || '');
     const { data, setData, post, processing } = useForm({
@@ -26,15 +36,47 @@ export default function Show({ project, strategyCategories = [], fundingSources 
         });
     };
 
+    const myAssignedActivities = useMemo(() => {
+        const raw = Array.isArray(project.activities) ? project.activities : [];
+        if (!auth?.user?.id) return [];
+        return raw.filter((a) => {
+            const uids = Array.isArray(a.assigned_user_ids) ? a.assigned_user_ids.map(Number) : [];
+            return uids.includes(Number(auth.user.id));
+        });
+    }, [project.activities, auth?.user?.id]);
+
+    const effectiveTargetActivityId = targetActivityId || (myAssignedActivities.length === 1 ? myAssignedActivities[0]?.id : null);
+
+    const shouldStartOnDo = initialTab === 'do' || Boolean(targetActivityId) || (() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('tab') === 'do' || params.get('tab') === 'procurement' || params.has('activity_id');
+        }
+        return false;
+    })();
+
     const [activeTab, setActiveTab] = useState(() => {
+        if (shouldStartOnDo) return 'do';
+        if (initialTab === 'audit') return 'audit';
         if (typeof window !== 'undefined') {
             const params = new URLSearchParams(window.location.search);
             const t = params.get('tab');
-            if (t === 'do' || t === 'procurement') return 'do';
             if (t === 'audit') return 'audit';
         }
         return 'plan';
     });
+
+    useEffect(() => {
+        if (targetActivityId || initialTab === 'do') {
+            setActiveTab('do');
+        } else if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const t = params.get('tab');
+            if (t === 'do' || t === 'procurement' || params.has('activity_id')) {
+                setActiveTab('do');
+            }
+        }
+    }, [targetActivityId, initialTab]);
     const [torModalOpen, setTorModalOpen] = useState(false);
 
     // Procurement Items & Committee Form State
@@ -1414,6 +1456,48 @@ ${itemsListText}
                         </div>
                     </div>
 
+                    {/* Quick-action banner for assigned user of sub-activity */}
+                    {myAssignedActivities.length > 0 && (
+                        <div className="mb-6 p-4 sm:p-5 rounded-2xl border-2 border-indigo-400 bg-gradient-to-r from-indigo-950 via-purple-900 to-indigo-900 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 font-sans animate-in fade-in duration-300">
+                            <div className="flex items-center gap-3.5">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-400 text-purple-950 flex items-center justify-center text-2xl font-black shrink-0 shadow-md">
+                                    🎯
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] font-black tracking-wide uppercase px-2.5 py-0.5 rounded-full bg-amber-400 text-purple-950">
+                                            งานที่ท่านได้รับมอบหมาย
+                                        </span>
+                                        <span className="text-xs text-indigo-200">
+                                            ({myAssignedActivities.length} กิจกรรมย่อย)
+                                        </span>
+                                    </div>
+                                    <h4 className="text-sm sm:text-base font-black text-white mt-1">
+                                        {myAssignedActivities.map((a) => a.name).join(' / ')}
+                                    </h4>
+                                    <p className="text-xs text-indigo-200 mt-0.5">
+                                        ท่านได้รับมอบหมายให้รับผิดชอบกิจกรรมนี้ — คลิกเพื่อเปิดกรอกรายละเอียดกิจกรรม จัดทำชุดจัดซื้อ/ยืมเงิน และพิมพ์บันทึกข้อความขออนุมัติ
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setActiveTab('do');
+                                    const targetAct = myAssignedActivities[0];
+                                    if (targetAct) {
+                                        window.dispatchEvent(new CustomEvent('open-edit-activity', { detail: { activityId: targetAct.id } }));
+                                    }
+                                }}
+                                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-300 hover:from-amber-300 hover:to-yellow-200 px-5 py-2.5 text-xs font-black text-purple-950 shadow-lg hover:scale-105 active:scale-95 transition-all whitespace-nowrap shrink-0 cursor-pointer"
+                            >
+                                <span>✏️</span>
+                                <span>เปิดกรอกข้อมูลกิจกรรมทันที</span>
+                                <span>➔</span>
+                            </button>
+                        </div>
+                    )}
+
                     {/* แสดงการแจ้งเตือนไปจัดซื้อจัดจ้าง เฉพาะเมื่อเพิ่งอนุมัติโครงการ และยังไม่ได้ส่งต่อการเงิน/ยังไม่เริ่มดำเนินงาน */}
                     {project.status === 'approved' && project.procurement?.status !== 'forwarded_to_finance' && project.procurement?.status !== 'completed' && (
                         <div className="mb-6 p-4 rounded-2xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm font-sans">
@@ -1748,6 +1832,50 @@ ${itemsListText}
                         ) : (
                         <div className="rounded-2xl border border-purple-100 bg-white p-6 shadow-sm space-y-6 font-sans">
 
+                            {/* Jump bar to sub-activities workspace */}
+                            {Array.isArray(project.activities) && project.activities.length > 0 && (
+                                <div className="p-3.5 bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border border-indigo-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                                    <div className="flex items-center gap-2.5 text-xs font-bold text-indigo-950">
+                                        <span className="text-xl">🎯</span>
+                                        <div>
+                                            <span>โครงการนี้มีกิจกรรมย่อย <b>{project.activities.length}</b> กิจกรรม (แยกจัดซื้อจัดจ้าง/สัญญายืมเงินตามกิจกรรม)</span>
+                                            {myAssignedActivities.length > 0 && (
+                                                <p className="text-[11px] text-indigo-700 font-normal">
+                                                    คุณได้รับมอบหมายให้รับผิดชอบ: <b>{myAssignedActivities.map((a) => a.name).join(', ')}</b>
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {myAssignedActivities.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const targetAct = myAssignedActivities[0];
+                                                    if (targetAct) {
+                                                        window.dispatchEvent(new CustomEvent('open-edit-activity', { detail: { activityId: targetAct.id } }));
+                                                    }
+                                                }}
+                                                className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-black shadow-xs transition cursor-pointer"
+                                            >
+                                                ✏️ เปิดกรอกข้อมูลกิจกรรมของคุณ
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const el = document.getElementById('activities-workspace');
+                                                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                            }}
+                                            className="px-3 py-1.5 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <span>เลื่อนไปส่วนกิจกรรมย่อย</span>
+                                            <span>↓</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Procurement Intake & Status Box */}
                             {(() => {
                                 const isProcReceived = project.procurement?.status === 'received' || (project.procurement?.status === 'processing' && project.procurement?.memo_date);
@@ -2035,6 +2163,7 @@ ${itemsListText}
                                 isProcStaffOrAdmin={isProcStaffOrAdmin}
                                 canAddActivities={canAddActivities}
                                 formatCurrency={formatCurrency}
+                                targetActivityId={effectiveTargetActivityId}
                             />
 
                             {disbType === 'loan' ? (

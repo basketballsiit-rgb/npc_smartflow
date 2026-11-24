@@ -52,6 +52,22 @@ class NotificationController extends Controller
                     }
                 }
 
+                // Auto-heal activity assignment URLs if missing activity_id
+                if (($n->type === 'activity_assigned' || str_starts_with($n->reference_id ?? '', 'act_assign_')) && $n->reference_id) {
+                    if (preg_match('/^act_assign_(\d+)_(.+)$/', $n->reference_id, $m)) {
+                        $pId = $m[1];
+                        $actId = $m[2];
+                        if (!str_contains($actionUrl ?? '', 'activity_id=')) {
+                            $sep = str_contains($actionUrl ?? '', '?') ? '&' : '?';
+                            $actionUrl = ($actionUrl ?: route('projects.show', ['project' => $pId, 'tab' => 'do'])) . "{$sep}activity_id={$actId}";
+                        }
+                        if (!str_contains($actionUrl ?? '', 'tab=do')) {
+                            $sep = str_contains($actionUrl ?? '', '?') ? '&' : '?';
+                            $actionUrl .= "{$sep}tab=do";
+                        }
+                    }
+                }
+
                 return [
                     'id' => $n->id,
                     'title' => $n->title,
@@ -86,15 +102,50 @@ class NotificationController extends Controller
 
         $notification->markAsRead();
 
+        $actionUrl = $notification->action_url;
+        if ($actionUrl) {
+            $host = request()->getHost() ?: (request()->header('Host') ?: 'service.npc.ac.th');
+            $isSecure = str_contains($host, 'npc.ac.th') || request()->secure();
+
+            if ($isSecure && str_starts_with($actionUrl, 'http://')) {
+                $actionUrl = preg_replace('#^http://#', 'https://', $actionUrl);
+            }
+
+            if (str_contains($host, 'npc.ac.th')) {
+                if (str_contains($actionUrl, 'localhost')) {
+                    $actionUrl = preg_replace('#^https?://[^/]+#', 'https://service.npc.ac.th', $actionUrl);
+                }
+                if (!str_contains($actionUrl, '/npc_smartflow')) {
+                    $actionUrl = str_replace('service.npc.ac.th/', 'service.npc.ac.th/npc_smartflow/', $actionUrl);
+                }
+            }
+        }
+
+        // Auto-heal activity assignment URLs if missing activity_id
+        if (($notification->type === 'activity_assigned' || str_starts_with($notification->reference_id ?? '', 'act_assign_')) && $notification->reference_id) {
+            if (preg_match('/^act_assign_(\d+)_(.+)$/', $notification->reference_id, $m)) {
+                $pId = $m[1];
+                $actId = $m[2];
+                if (!str_contains($actionUrl ?? '', 'activity_id=')) {
+                    $sep = str_contains($actionUrl ?? '', '?') ? '&' : '?';
+                    $actionUrl = ($actionUrl ?: route('projects.show', ['project' => $pId, 'tab' => 'do'])) . "{$sep}activity_id={$actId}";
+                }
+                if (!str_contains($actionUrl ?? '', 'tab=do')) {
+                    $sep = str_contains($actionUrl ?? '', '?') ? '&' : '?';
+                    $actionUrl .= "{$sep}tab=do";
+                }
+            }
+        }
+
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'action_url' => $notification->action_url,
+                'action_url' => $actionUrl,
             ]);
         }
 
-        if ($notification->action_url) {
-            return redirect()->to($notification->action_url);
+        if ($actionUrl) {
+            return redirect()->to($actionUrl);
         }
 
         return redirect()->back();
