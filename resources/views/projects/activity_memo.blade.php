@@ -31,9 +31,14 @@
         return trim($pos);
     };
 
+    $inputDateParam = request('date') ?: (request('sig_date') ?: date('Y-m-d'));
+    $timestamp = strtotime($inputDateParam) ?: time();
+    $isoDateParam = date('Y-m-d', $timestamp);
+
     $fiscalYear = $project->academic_year ?: (date('Y') + 543);
     $thaiMonths = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-    $todayDateOfficial = 'วันที่ ' . date('j') . ' เดือน ' . $thaiMonths[(int)date('n')] . ' พ.ศ. ' . (date('Y') + 543);
+    $actSigDateInitial = 'วันที่ ' . date('j', $timestamp) . ' เดือน ' . $thaiMonths[(int)date('n', $timestamp)] . ' พ.ศ. ' . (date('Y', $timestamp) + 543);
+    $todayDateOfficial = $actSigDateInitial;
 
     $formatThaiDate = function ($dateVal) use ($thaiMonths) {
         if (!$dateVal) return '-';
@@ -707,28 +712,43 @@
             </div>
         </div>
 
-        <!-- Position Selector Row (When users hold multiple positions) -->
-        <div class="toolbar-positions">
-            @if(count($actUserPositions) > 1)
-                <div class="pos-select-group">
-                    <span class="pos-select-label">🏢 ตำแหน่งผู้รับผิดชอบกิจกรรม (เลือกในนามงานใดงานหนึ่ง):</span>
-                    <select id="selectActPos" class="pos-select" onchange="applyPositionChange('act', this.value)">
-                        @foreach($actUserPositions as $pIdx => $pVal)
-                            <option value="{{ $pVal }}" {{ $pVal === $defaultActPos ? 'selected' : '' }}>{{ $pVal }}</option>
-                        @endforeach
-                    </select>
+        <!-- Position & Date Selector Row -->
+        <div class="toolbar-positions" style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+            <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px;">
+                <div class="date-select-group" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.12); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.25);">
+                    <span class="pos-select-label" style="color: #fde68a;">📅 วันที่ลงนามกิจกรรม:</span>
+                    <input type="date" id="inputActivityDate" class="pos-select" value="{{ $isoDateParam }}" onchange="onActivityDateChange(this.value)" style="padding: 2px 6px; cursor: pointer;">
+                    <button type="button" class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px; line-height: 1;" onclick="setActivityDatePreset('today')" title="ตั้งเป็นวันนี้">วันนี้</button>
+                    <button type="button" class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px; height: 26px; line-height: 1;" onclick="setActivityDatePreset('blank')" title="เว้นว่างให้เขียนด้วยมือ">เว้นว่าง</button>
+                    <label style="color: #cbd5e1; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; cursor: pointer;">
+                        <input type="checkbox" id="syncMemoDate" checked style="cursor: pointer;"> ปรับวันที่ในบันทึกข้อความ (ส่วนที่ 1) ด้วย
+                    </label>
                 </div>
-            @endif
-            @if(count($projUserPositions) > 1)
-                <div class="pos-select-group">
-                    <span class="pos-select-label">🏢 ตำแหน่งผู้รับผิดชอบโครงการ (เลือกในนามงานใดงานหนึ่ง):</span>
-                    <select id="selectProjPos" class="pos-select" onchange="applyPositionChange('proj', this.value)">
-                        @foreach($projUserPositions as $pIdx => $pVal)
-                            <option value="{{ $pVal }}" {{ $pVal === $defaultProjPos ? 'selected' : '' }}>{{ $pVal }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            @endif
+
+                @if(count($actUserPositions) > 1)
+                    <div class="pos-select-group">
+                        <span class="pos-select-label">🏢 ตำแหน่งผู้รับผิดชอบกิจกรรม:</span>
+                        <select id="selectActPos" class="pos-select" onchange="applyPositionChange('act', this.value)">
+                            @foreach($actUserPositions as $pIdx => $pVal)
+                                <option value="{{ $pVal }}" {{ $pVal === $defaultActPos ? 'selected' : '' }}>{{ $pVal }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+                @if(count($projUserPositions) > 1)
+                    <div class="pos-select-group">
+                        <span class="pos-select-label">🏢 ตำแหน่งผู้รับผิดชอบโครงการ:</span>
+                        <select id="selectProjPos" class="pos-select" onchange="applyPositionChange('proj', this.value)">
+                            @foreach($projUserPositions as $pIdx => $pVal)
+                                <option value="{{ $pVal }}" {{ $pVal === $defaultProjPos ? 'selected' : '' }}>{{ $pVal }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+            </div>
+            <div style="font-size: 11px; color: #cbd5e1;">
+                💡 <em>สามารถคลิกแก้ไขวันที่หรือข้อความบนเอกสารได้โดยตรง</em>
+            </div>
         </div>
     </div>
 
@@ -759,7 +779,7 @@
                 </div>
                 <div class="meta-col-right">
                     <span class="meta-label">วันที่</span>
-                    <span class="meta-dotted editable" contenteditable="true">{{ $todayDateOfficial }}</span>
+                    <span class="meta-dotted editable" id="memoDateDisplay" contenteditable="true">{{ $todayDateOfficial }}</span>
                 </div>
             </div>
         </div>
@@ -1561,6 +1581,7 @@
                 </div>
                 <p style="font-weight: 700; margin-top: 8px; white-space: nowrap;">({{ $signers['activity_responsible']['name'] }})</p>
                 <p class="act-pos-display" style="margin: 2px 0 0 0; color: #1e293b;">{{ $signers['activity_responsible']['title'] }}</p>
+                <p id="actSigDateDisplay" class="editable" contenteditable="true" style="margin: 2px 0 0 0; color: #475569; white-space: nowrap;" title="คลิกเพื่อแก้ไขวันที่ได้โดยตรง">{{ $actSigDateInitial }}</p>
             </div>
         </div>
     </div>
@@ -1577,6 +1598,64 @@
         };
 
         let isThaiDigits = false;
+        const thaiMonthsList = ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+        function formatThaiDateJs(isoDateStr) {
+            if (!isoDateStr) return 'วันที่ ........ เดือน .................... พ.ศ. ............';
+            const parts = isoDateStr.split('-');
+            if (parts.length !== 3) return isoDateStr;
+            const year = parseInt(parts[0], 10) + 543;
+            const month = parseInt(parts[1], 10);
+            const day = parseInt(parts[2], 10);
+            const monthName = thaiMonthsList[month] || '';
+            
+            let result = `วันที่ ${day} เดือน ${monthName} พ.ศ. ${year}`;
+            if (isThaiDigits) {
+                result = toThaiDigitsJs(result);
+            }
+            return result;
+        }
+
+        function onActivityDateChange(val) {
+            const formatted = formatThaiDateJs(val);
+            const actDisplay = document.getElementById('actSigDateDisplay');
+            if (actDisplay) {
+                actDisplay.textContent = formatted;
+            }
+            
+            const syncChk = document.getElementById('syncMemoDate');
+            if (syncChk && syncChk.checked) {
+                const memoDateEl = document.getElementById('memoDateDisplay');
+                if (memoDateEl) {
+                    memoDateEl.textContent = formatted;
+                }
+            }
+        }
+
+        function setActivityDatePreset(type) {
+            const dateInput = document.getElementById('inputActivityDate');
+            if (type === 'today') {
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                const iso = `${yyyy}-${mm}-${dd}`;
+                if (dateInput) dateInput.value = iso;
+                onActivityDateChange(iso);
+            } else if (type === 'blank') {
+                if (dateInput) dateInput.value = '';
+                let blankStr = 'วันที่ ........ เดือน .................... พ.ศ. ............';
+                if (isThaiDigits) blankStr = toThaiDigitsJs(blankStr);
+                const actDisplay = document.getElementById('actSigDateDisplay');
+                if (actDisplay) actDisplay.textContent = blankStr;
+                
+                const syncChk = document.getElementById('syncMemoDate');
+                if (syncChk && syncChk.checked) {
+                    const memoDateEl = document.getElementById('memoDateDisplay');
+                    if (memoDateEl) memoDateEl.textContent = blankStr;
+                }
+            }
+        }
 
         function toggleSections() {
             const p1 = document.getElementById('chkPart1').checked;
