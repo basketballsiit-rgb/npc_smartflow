@@ -209,7 +209,9 @@ ${itemsListText}
         auth?.user?.position?.includes('ผู้ดูแลระบบ')
     );
     const isProposer = Boolean(auth?.user?.id && project.user_id === auth?.user?.id);
-    const canManageActivities = Boolean(isProposer || isPlanStaffOrAdmin || isProcStaffOrAdmin);
+    // Strict permission: ONLY Project Owner, Plan Staff, Plan Head, or Admin can add/delete sub-activities
+    const canAddActivities = Boolean(isProposer || isPlanStaffOrAdmin);
+    const canManageActivities = canAddActivities;
     const [editingCommitteesOnly, setEditingCommitteesOnly] = useState(false);
     const [savingCommitteesOnly, setSavingCommitteesOnly] = useState(false);
 
@@ -2029,8 +2031,9 @@ ${itemsListText}
                                 allocatedBudget={allocatedBudget}
                                 allUsers={allUsers}
                                 allDepartments={allDepartments}
+                                currentUserId={auth?.user?.id}
                                 isProcStaffOrAdmin={isProcStaffOrAdmin}
-                                canManageActivities={canManageActivities}
+                                canAddActivities={canAddActivities}
                                 formatCurrency={formatCurrency}
                             />
 

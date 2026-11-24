@@ -5308,34 +5308,41 @@ class ProjectController extends Controller
     }
 
     /**
-     * Add a dynamic sub-activity (โครงการย่อย / กิจกรรมย่อย) to an approved project.
+     * Add a dynamic sub-activity (กิจกรรมย่อย) to a project.
+     * Allowed: Project Owner, Plan Staff, Plan Head, Admin ONLY.
      */
     public function storeActivity(Request $request, Project $project)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isProcurementStaff() && $user->id !== $project->user_id) {
-            abort(403, 'คุณไม่มีสิทธิ์เพิ่มกิจกรรมย่อยในโครงการนี้');
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && $user->id !== $project->user_id) {
+            abort(403, 'เฉพาะเจ้าของโครงการ เจ้าหน้าที่งานแผน หัวหน้างานแผน หรือผู้ดูแลระบบเท่านั้นที่สามารถเพิ่มกิจกรรมย่อยได้');
         }
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'objectives' => 'nullable|string|max:2000',
-            'description' => 'nullable|string|max:3000',
+            'background_rationale' => 'nullable|string|max:5000',
+            'objectives' => 'nullable|string|max:3000',
+            'targets' => 'nullable|string|max:3000',
             'target_group' => 'nullable|string|max:255',
+            'indicators' => 'nullable|string|max:3000',
+            'expected_benefits' => 'nullable|string|max:3000',
+            'description' => 'nullable|string|max:5000',
             'location' => 'nullable|string|max:255',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
+            'operation_period_text' => 'nullable|string|max:255',
             'responsible_person' => 'nullable|string|max:255',
+            'assigned_user_ids' => 'nullable|array',
+            'assigned_user_ids.*' => 'integer|exists:users,id',
             'budget' => 'nullable|numeric|min:0',
             'disbursement_type' => 'nullable|string|in:procurement,loan,both',
         ], [
-            'name.required' => 'กรุณาระบุชื่อกิจกรรมย่อย',
+            'name.required' => 'กรุณาระบุชื่อกิจกรรม',
             'budget.numeric' => 'วงเงินงบประมาณต้องเป็นตัวเลข',
             'budget.min' => 'วงเงินงบประมาณต้องไม่ติดลบ',
         ]);
 
         $activities = is_array($project->activities) ? array_values($project->activities) : [];
-        // Ensure legacy activities have stable IDs
         foreach ($activities as $idx => &$act) {
             if (empty($act['id'])) {
                 $act['id'] = 'act_legacy_' . ($idx + 1);
@@ -5355,16 +5362,24 @@ class ProjectController extends Controller
             return redirect()->back()->with('error', 'ไม่สามารถเพิ่มกิจกรรมได้: วงเงินกิจกรรม (' . number_format($newBudget, 2) . ' บาท) เกินวงเงินคงเหลือที่ยังไม่ได้จัดสรรให้กิจกรรมอื่น (' . number_format($remaining, 2) . ' บาท จากวงเงินโครงการหลัก ' . number_format($projectTotalBudget, 2) . ' บาท)');
         }
 
+        $assignedUserIds = array_values(array_unique(array_map('intval', $validated['assigned_user_ids'] ?? [])));
+
         $newActivity = [
             'id' => 'act_' . uniqid(),
             'name' => trim($validated['name']),
+            'background_rationale' => $validated['background_rationale'] ?? '',
             'objectives' => $validated['objectives'] ?? '',
-            'description' => $validated['description'] ?? '',
+            'targets' => $validated['targets'] ?? '',
             'target_group' => $validated['target_group'] ?? '',
+            'indicators' => $validated['indicators'] ?? '',
+            'expected_benefits' => $validated['expected_benefits'] ?? '',
+            'description' => $validated['description'] ?? '',
             'location' => $validated['location'] ?? ($project->location ?? ''),
             'start_date' => $validated['start_date'] ?? null,
             'end_date' => $validated['end_date'] ?? null,
+            'operation_period_text' => $validated['operation_period_text'] ?? '',
             'responsible_person' => $validated['responsible_person'] ?? ($project->responsible_person ?: ($user->name ?? '')),
+            'assigned_user_ids' => $assignedUserIds,
             'budget' => $newBudget,
             'disbursement_type' => $validated['disbursement_type'] ?? 'both',
             'created_by' => $user->id,
@@ -5375,31 +5390,24 @@ class ProjectController extends Controller
         $project->activities = $activities;
         $project->save();
 
-        return redirect()->back()->with('message', 'เพิ่มกิจกรรมย่อย "' . $newActivity['name'] . '" เข้าสู่โครงการเรียบร้อยแล้ว');
+        // Notify all assigned users (excluding the creator)
+        $notifyIds = array_values(array_filter($assignedUserIds, fn($id) => $id !== (int)$user->id));
+        if (!empty($notifyIds)) {
+            NotificationService::notifyActivityAssigned($project, $newActivity, $notifyIds, $user->name);
+        }
+
+        $notifyMsg = !empty($notifyIds) ? ' และส่งแจ้งเตือนไปยังผู้เกี่ยวข้องที่รับผิดชอบกิจกรรมแล้ว (' . count($notifyIds) . ' คน)' : '';
+        return redirect()->back()->with('message', 'เพิ่มกิจกรรมย่อย "' . $newActivity['name'] . '" เข้าสู่โครงการเรียบร้อยแล้ว' . $notifyMsg);
     }
 
     /**
      * Update an existing sub-activity in a project.
+     * Allowed: Project Owner, Plan Staff, Plan Head, Admin, OR assigned users of this activity.
      */
     public function updateActivity(Request $request, Project $project, string $activityId)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isProcurementStaff() && $user->id !== $project->user_id) {
-            abort(403, 'คุณไม่มีสิทธิ์แก้ไขกิจกรรมย่อยในโครงการนี้');
-        }
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'objectives' => 'nullable|string|max:2000',
-            'description' => 'nullable|string|max:3000',
-            'target_group' => 'nullable|string|max:255',
-            'location' => 'nullable|string|max:255',
-            'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
-            'responsible_person' => 'nullable|string|max:255',
-            'budget' => 'nullable|numeric|min:0',
-            'disbursement_type' => 'nullable|string|in:procurement,loan,both',
-        ]);
+        $isManager = $user->isAdmin() || $user->isPlanHead() || $user->isPlanStaff() || $user->id === $project->user_id;
 
         $activities = is_array($project->activities) ? array_values($project->activities) : [];
         $targetIndex = null;
@@ -5421,7 +5429,37 @@ class ProjectController extends Controller
             return redirect()->back()->with('error', 'ไม่พบกิจกรรมย่อยที่ต้องการแก้ไข');
         }
 
-        $newBudget = (float) ($validated['budget'] ?? 0);
+        $existingAssignedIds = array_map('intval', $activities[$targetIndex]['assigned_user_ids'] ?? []);
+        $isAssignedUser = in_array((int)$user->id, $existingAssignedIds, true);
+
+        if (!$isManager && !$isAssignedUser) {
+            abort(403, 'คุณไม่มีสิทธิ์แก้ไขข้อมูลกิจกรรมย่อยนี้ (อนุญาตเฉพาะเจ้าของโครงการ งานแผน ผู้ดูแลระบบ หรือผู้ที่ได้รับมอบหมายให้รับผิดชอบกิจกรรมนี้)');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'background_rationale' => 'nullable|string|max:5000',
+            'objectives' => 'nullable|string|max:3000',
+            'targets' => 'nullable|string|max:3000',
+            'target_group' => 'nullable|string|max:255',
+            'indicators' => 'nullable|string|max:3000',
+            'expected_benefits' => 'nullable|string|max:3000',
+            'description' => 'nullable|string|max:5000',
+            'location' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date',
+            'operation_period_text' => 'nullable|string|max:255',
+            'responsible_person' => 'nullable|string|max:255',
+            'assigned_user_ids' => 'nullable|array',
+            'assigned_user_ids.*' => 'integer|exists:users,id',
+            'budget' => 'nullable|numeric|min:0',
+            'disbursement_type' => 'nullable|string|in:procurement,loan,both',
+        ]);
+
+        // Only managers can alter budget cap & assigned_user_ids; assigned users keep existing values if omitted
+        $newBudget = $isManager
+            ? (float) ($validated['budget'] ?? 0)
+            : (float) ($activities[$targetIndex]['budget'] ?? 0);
         $projectTotalBudget = $project->getTotalAllocatedBudget();
 
         if ($newBudget > 0 && $projectTotalBudget > 0 && ($otherBudgetSum + $newBudget) > ($projectTotalBudget + 0.01)) {
@@ -5429,7 +5467,6 @@ class ProjectController extends Controller
             return redirect()->back()->with('error', 'ไม่สามารถบันทึกได้: วงเงินกิจกรรม (' . number_format($newBudget, 2) . ' บาท) เกินวงเงินคงเหลือของโครงการหลัก (' . number_format($remaining, 2) . ' บาท)');
         }
 
-        // Check that new budget is not lower than already committed procurement/loan sets in this activity
         $oldName = $activities[$targetIndex]['name'] ?? '';
         $linkedSetsSum = $project->procurements()
             ->with('items')
@@ -5446,15 +5483,25 @@ class ProjectController extends Controller
             return redirect()->back()->with('error', 'ไม่สามารถปรับลดวงเงินกิจกรรมต่ำกว่ายอดจัดซื้อจัดจ้าง/สัญญายืมเงินที่มีอยู่แล้วในกิจกรรมนี้ (' . number_format($linkedSetsSum, 2) . ' บาท)');
         }
 
+        $newAssignedIds = $isManager
+            ? array_values(array_unique(array_map('intval', $validated['assigned_user_ids'] ?? [])))
+            : $existingAssignedIds;
+
         $activities[$targetIndex] = array_merge($activities[$targetIndex], [
             'name' => trim($validated['name']),
+            'background_rationale' => $validated['background_rationale'] ?? '',
             'objectives' => $validated['objectives'] ?? '',
-            'description' => $validated['description'] ?? '',
+            'targets' => $validated['targets'] ?? '',
             'target_group' => $validated['target_group'] ?? '',
+            'indicators' => $validated['indicators'] ?? '',
+            'expected_benefits' => $validated['expected_benefits'] ?? '',
+            'description' => $validated['description'] ?? '',
             'location' => $validated['location'] ?? '',
             'start_date' => $validated['start_date'] ?? null,
             'end_date' => $validated['end_date'] ?? null,
+            'operation_period_text' => $validated['operation_period_text'] ?? '',
             'responsible_person' => $validated['responsible_person'] ?? '',
+            'assigned_user_ids' => $newAssignedIds,
             'budget' => $newBudget,
             'disbursement_type' => $validated['disbursement_type'] ?? ($activities[$targetIndex]['disbursement_type'] ?? 'both'),
             'updated_at' => now()->toDateTimeString(),
@@ -5478,17 +5525,25 @@ class ProjectController extends Controller
         $project->activities = $activities;
         $project->save();
 
-        return redirect()->back()->with('message', 'อัปเดตข้อมูลกิจกรรมย่อย "' . trim($validated['name']) . '" เรียบร้อยแล้ว');
+        // Notify newly added assigned users
+        $newlyAddedIds = array_values(array_diff($newAssignedIds, $existingAssignedIds));
+        $newlyAddedIds = array_values(array_filter($newlyAddedIds, fn($id) => $id !== (int)$user->id));
+        if (!empty($newlyAddedIds)) {
+            NotificationService::notifyActivityAssigned($project, $activities[$targetIndex], $newlyAddedIds, $user->name);
+        }
+
+        return redirect()->back()->with('message', 'อัปเดตข้อมูลกิจกรรม "' . trim($validated['name']) . '" เรียบร้อยแล้ว');
     }
 
     /**
      * Delete a sub-activity if it has no locked/disbursed procurement sets.
+     * Allowed: Project Owner, Plan Staff, Plan Head, Admin ONLY.
      */
     public function destroyActivity(Request $request, Project $project, string $activityId)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isProcurementStaff() && $user->id !== $project->user_id) {
-            abort(403, 'คุณไม่มีสิทธิ์ลบกิจกรรมย่อยในโครงการนี้');
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && $user->id !== $project->user_id) {
+            abort(403, 'เฉพาะเจ้าของโครงการ เจ้าหน้าที่งานแผน หัวหน้างานแผน หรือผู้ดูแลระบบเท่านั้นที่สามารถลบกิจกรรมย่อยได้');
         }
 
         $activities = is_array($project->activities) ? array_values($project->activities) : [];

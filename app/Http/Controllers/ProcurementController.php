@@ -957,7 +957,16 @@ class ProcurementController extends Controller
     public function createProcurementSet(Request $request, Project $project)
     {
         $user = auth()->user();
-        if (!$user->isAdmin() && !$user->isProcurementHead() && $user->id !== $project->user_id && !$user->department_id) {
+        $isAssignedToProjectActivity = false;
+        if (is_array($project->activities)) {
+            foreach ($project->activities as $act) {
+                if (in_array((int)$user->id, array_map('intval', $act['assigned_user_ids'] ?? []), true)) {
+                    $isAssignedToProjectActivity = true;
+                    break;
+                }
+            }
+        }
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isProcurementStaff() && $user->id !== $project->user_id && !$isAssignedToProjectActivity && !$user->department_id) {
             abort(403, 'คุณไม่มีสิทธิ์ในการสร้างชุดจัดซื้อจัดจ้างสำหรับโครงการนี้');
         }
 
@@ -1091,7 +1100,20 @@ class ProcurementController extends Controller
             return redirect()->back()->with('error', 'ไม่พบข้อมูลโครงการ');
         }
 
-        if (!$user->isAdmin() && !$user->isProcurementStaff() && $user->id !== $project->user_id && $user->id !== $procurement->created_by) {
+        $isAssignedToActivity = false;
+        if (is_array($project->activities) && ($procurement->activity_id || $procurement->activity_name)) {
+            foreach ($project->activities as $idx => $act) {
+                $actKey = $act['id'] ?? ('act_legacy_' . ($idx + 1));
+                if ((string)$actKey === (string)$procurement->activity_id || (!empty($procurement->activity_name) && ($act['name'] ?? '') === $procurement->activity_name)) {
+                    if (in_array((int)$user->id, array_map('intval', $act['assigned_user_ids'] ?? []), true)) {
+                        $isAssignedToActivity = true;
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (!$user->isAdmin() && !$user->isPlanHead() && !$user->isPlanStaff() && !$user->isProcurementStaff() && $user->id !== $project->user_id && $user->id !== $procurement->created_by && !$isAssignedToActivity) {
             abort(403, 'คุณไม่มีสิทธิ์แก้ไขชุดจัดซื้อจัดจ้างนี้');
         }
 

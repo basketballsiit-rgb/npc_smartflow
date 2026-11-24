@@ -2,13 +2,29 @@ import { useState, useMemo } from 'react';
 import { router } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 
+// Helper to parse multi-line text from main project into selectable items
+const splitProjectLines = (text) => {
+    if (!text || typeof text !== 'string') return [];
+    return text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+};
+
+// Replace "โครงการ" with "กิจกรรม" when pulling template text from main project
+const adaptTextForActivity = (text) => {
+    if (!text || typeof text !== 'string') return '';
+    return text.replace(/โครงการ/g, 'กิจกรรม');
+};
+
 export default function ProjectActivitiesWorkspace({
     project,
     allocatedBudget = 0,
     allUsers = [],
     allDepartments = [],
+    currentUserId = null,
     isProcStaffOrAdmin = false,
-    canManageActivities = false,
+    canAddActivities = false,
     formatCurrency,
 }) {
     // Normalize activities from project.activities JSON
@@ -20,15 +36,24 @@ export default function ProjectActivitiesWorkspace({
             name: act.name || `กิจกรรมที่ ${idx + 1}`,
             budget: parseFloat(act.budget || 0),
             disbursement_type: act.disbursement_type || 'both',
+            assigned_user_ids: Array.isArray(act.assigned_user_ids)
+                ? act.assigned_user_ids.map((id) => Number(id))
+                : [],
         }));
     }, [project.activities]);
+
+    // Extract selectable lines from Main Project for Objectives, Expected Benefits, Targets, Indicators
+    const mainProjectObjectives = useMemo(() => splitProjectLines(project.objectives), [project.objectives]);
+    const mainProjectBenefits = useMemo(() => splitProjectLines(project.expected_benefits), [project.expected_benefits]);
+    const mainProjectTargets = useMemo(() => splitProjectLines(project.targets), [project.targets]);
+    const mainProjectIndicators = useMemo(() => splitProjectLines(project.indicators), [project.indicators]);
 
     // All procurement & loan sets belonging to this project
     const allSets = useMemo(() => {
         const raw = Array.isArray(project.procurements) ? project.procurements : [];
         return raw.map((s) => {
             const itemsSum = (s.items || []).reduce(
-                (acc, it) => acc + (parseFloat(it.total_price) || ((parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0))),
+                (acc, it) => acc + (parseFloat(it.total_price) || (parseFloat(it.quantity) || 0) * (parseFloat(it.unit_price) || 0)),
                 0
             );
             return {
@@ -69,34 +94,54 @@ export default function ProjectActivitiesWorkspace({
         return allSets.filter((s) => !linkedIds.has(s.id));
     }, [activities, allSets]);
 
-    // --- Modal 1: Add / Edit Sub-Activity ---
+    // Expandable details state per activity
+    const [expandedActivityIds, setExpandedActivityIds] = useState({});
+    const toggleActivityDetails = (actId) => {
+        setExpandedActivityIds((prev) => ({ ...prev, [actId]: !prev[actId] }));
+    };
+
+    // --- Modal 1: Add / Edit Sub-Activity (Form mirrors Main Project, using "กิจกรรม") ---
     const [activityModalOpen, setActivityModalOpen] = useState(false);
     const [editingActivity, setEditingActivity] = useState(null);
     const [savingActivity, setSavingActivity] = useState(false);
+    const [userSearchTerm, setUserSearchTerm] = useState('');
     const [actForm, setActForm] = useState({
         name: '',
+        background_rationale: '',
         objectives: '',
-        description: '',
+        targets: '',
         target_group: '',
+        indicators: '',
+        expected_benefits: '',
+        description: '',
         location: '',
         start_date: '',
         end_date: '',
+        operation_period_text: '',
         responsible_person: '',
+        assigned_user_ids: [],
         budget: '',
         disbursement_type: 'both',
     });
 
     const openAddActivityModal = () => {
         setEditingActivity(null);
+        setUserSearchTerm('');
         setActForm({
             name: '',
+            background_rationale: '',
             objectives: '',
-            description: '',
+            targets: '',
             target_group: '',
+            indicators: '',
+            expected_benefits: '',
+            description: '',
             location: project.location || '',
             start_date: project.start_date ? String(project.start_date).slice(0, 10) : '',
             end_date: project.end_date ? String(project.end_date).slice(0, 10) : '',
+            operation_period_text: '',
             responsible_person: project.responsible_person || project.user?.name || '',
+            assigned_user_ids: [],
             budget: '',
             disbursement_type: 'both',
         });
@@ -105,20 +150,71 @@ export default function ProjectActivitiesWorkspace({
 
     const openEditActivityModal = (act) => {
         setEditingActivity(act);
+        setUserSearchTerm('');
         setActForm({
             name: act.name || '',
+            background_rationale: act.background_rationale || '',
             objectives: act.objectives || '',
-            description: act.description || '',
+            targets: act.targets || '',
             target_group: act.target_group || '',
+            indicators: act.indicators || '',
+            expected_benefits: act.expected_benefits || '',
+            description: act.description || '',
             location: act.location || '',
             start_date: act.start_date ? String(act.start_date).slice(0, 10) : '',
             end_date: act.end_date ? String(act.end_date).slice(0, 10) : '',
+            operation_period_text: act.operation_period_text || '',
             responsible_person: act.responsible_person || '',
+            assigned_user_ids: Array.isArray(act.assigned_user_ids) ? act.assigned_user_ids.map(Number) : [],
             budget: act.budget > 0 ? String(act.budget) : '',
             disbursement_type: act.disbursement_type || 'both',
         });
         setActivityModalOpen(true);
     };
+
+    // Helper: append a selected line from main project into an activity textarea field
+    const appendLineToField = (fieldKey, rawLine) => {
+        const adapted = adaptTextForActivity(rawLine);
+        setActForm((prev) => {
+            const current = (prev[fieldKey] || '').trim();
+            if (current.includes(adapted)) return prev;
+            return {
+                ...prev,
+                [fieldKey]: current ? `${current}\n${adapted}` : adapted,
+            };
+        });
+    };
+
+    const pullWholeFieldFromProject = (fieldKey, projectFieldValue) => {
+        if (!projectFieldValue) return;
+        setActForm((prev) => ({
+            ...prev,
+            [fieldKey]: adaptTextForActivity(projectFieldValue),
+        }));
+    };
+
+    const toggleAssignedUser = (userId) => {
+        const numId = Number(userId);
+        setActForm((prev) => {
+            const exists = prev.assigned_user_ids.includes(numId);
+            const nextIds = exists
+                ? prev.assigned_user_ids.filter((id) => id !== numId)
+                : [...prev.assigned_user_ids, numId];
+            return { ...prev, assigned_user_ids: nextIds };
+        });
+    };
+
+    const filteredUsersForPicker = useMemo(() => {
+        const q = userSearchTerm.trim().toLowerCase();
+        if (!q) return allUsers.slice(0, 30);
+        return allUsers
+            .filter(
+                (u) =>
+                    (u.name || '').toLowerCase().includes(q) ||
+                    (u.email || '').toLowerCase().includes(q)
+            )
+            .slice(0, 30);
+    }, [allUsers, userSearchTerm]);
 
     const otherActivitiesBudget = useMemo(() => {
         if (!editingActivity) return totalAllocatedToActivities;
@@ -135,7 +231,7 @@ export default function ProjectActivitiesWorkspace({
         e.preventDefault();
         if (savingActivity) return;
         if (!actForm.name.trim()) {
-            Swal.fire('กรุณากรอกชื่อกิจกรรม', 'กรุณาระบุชื่อกิจกรรมย่อย', 'warning');
+            Swal.fire('กรุณากรอกชื่อกิจกรรม', 'กรุณาระบุชื่อกิจกรรม', 'warning');
             return;
         }
         if (isActBudgetOver) {
@@ -158,7 +254,7 @@ export default function ProjectActivitiesWorkspace({
                 preserveScroll: true,
                 onSuccess: () => {
                     setActivityModalOpen(false);
-                    Swal.fire('บันทึกสำเร็จ!', 'อัปเดตรายละเอียดกิจกรรมย่อยเรียบร้อยแล้ว', 'success');
+                    Swal.fire('บันทึกสำเร็จ!', 'อัปเดตรายละเอียดกิจกรรมเรียบร้อยแล้ว', 'success');
                 },
                 onFinish: () => setSavingActivity(false),
             });
@@ -167,7 +263,13 @@ export default function ProjectActivitiesWorkspace({
                 preserveScroll: true,
                 onSuccess: () => {
                     setActivityModalOpen(false);
-                    Swal.fire('เพิ่มกิจกรรมสำเร็จ!', 'เพิ่มกิจกรรมย่อยเข้าสู่โครงการเรียบร้อยแล้ว สามารถสร้างชุดจัดซื้อจัดจ้างหรือสัญญายืมเงินได้ทันที', 'success');
+                    Swal.fire(
+                        'เพิ่มกิจกรรมสำเร็จ!',
+                        actForm.assigned_user_ids.length > 0
+                            ? 'เพิ่มกิจกรรมเข้าสู่ระบบและส่งแจ้งเตือนไปยังผู้รับผิดชอบกิจกรรมที่กำหนดเรียบร้อยแล้ว'
+                            : 'เพิ่มกิจกรรมเข้าสู่โครงการเรียบร้อยแล้ว สามารถสร้างชุดจัดซื้อจัดจ้างหรือสัญญายืมเงินได้ทันที',
+                        'success'
+                    );
                 },
                 onFinish: () => setSavingActivity(false),
             });
@@ -176,7 +278,7 @@ export default function ProjectActivitiesWorkspace({
 
     const handleDeleteActivity = (act) => {
         Swal.fire({
-            title: 'ยืนยันการลบกิจกรรมย่อย?',
+            title: 'ยืนยันการลบกิจกรรม?',
             text: `ต้องการลบกิจกรรม "${act.name}" ออกจากโครงการนี้ใช่หรือไม่?`,
             icon: 'warning',
             showCancelButton: true,
@@ -271,7 +373,6 @@ export default function ProjectActivitiesWorkspace({
         [setForm.items]
     );
 
-    // Remaining project budget excluding the set currently being edited
     const maxAllowedByProject = useMemo(() => {
         const otherSum = editingSet
             ? allSets.filter((s) => s.id !== editingSet.id).reduce((sum, s) => sum + s.total_amount, 0)
@@ -279,7 +380,6 @@ export default function ProjectActivitiesWorkspace({
         return Math.max(0, allocatedBudget - otherSum);
     }, [allSets, editingSet, totalUsedAcrossAllSets, allocatedBudget]);
 
-    // Remaining activity budget (if linked activity has an explicit budget > 0)
     const maxAllowedByActivity = useMemo(() => {
         if (!setForm.activity_id) return null;
         const act = activities.find((a) => String(a.id) === String(setForm.activity_id));
@@ -421,7 +521,7 @@ export default function ProjectActivitiesWorkspace({
         return <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">⏳ รอดำเนินการ</span>;
     };
 
-    const renderSetCard = (setObj) => {
+    const renderSetCard = (setObj, canEditThisSet = false) => {
         const isLoan = setObj.set_type === 'loan';
         const comms = setObj.committees || [];
         const hasCommittees = comms.length > 0;
@@ -444,9 +544,7 @@ export default function ProjectActivitiesWorkspace({
                     <div className="flex flex-wrap items-center gap-2">
                         <span
                             className={`px-2.5 py-0.5 rounded-md text-[11px] font-black ${
-                                isLoan
-                                    ? 'bg-amber-200 text-amber-950'
-                                    : 'bg-purple-100 text-purple-900'
+                                isLoan ? 'bg-amber-200 text-amber-950' : 'bg-purple-100 text-purple-900'
                             }`}
                         >
                             {isLoan ? '💵 สัญญายืมเงิน (กค. 101)' : '🛒 ชุดจัดซื้อจัดจ้าง'}
@@ -455,7 +553,7 @@ export default function ProjectActivitiesWorkspace({
                             {setObj.procurement_number || `#${setObj.id}`}
                         </span>
                         <h6 className="text-sm font-extrabold text-slate-900">
-                            {setObj.set_name || 'ชุดเอกสารโครงการ'}
+                            {setObj.set_name || 'ชุดเอกสารกิจกรรม'}
                         </h6>
                         {renderStatusBadge(setObj)}
                     </div>
@@ -463,7 +561,7 @@ export default function ProjectActivitiesWorkspace({
                         <span className={`text-sm font-black ${isLoan ? 'text-amber-800' : 'text-purple-900'}`}>
                             {formatCurrency(setObj.total_amount)}
                         </span>
-                        {canManageActivities && !isLocked && (
+                        {canEditThisSet && !isLocked && (
                             <>
                                 <button
                                     type="button"
@@ -617,16 +715,16 @@ export default function ProjectActivitiesWorkspace({
                         <span>🎯</span> กิจกรรมย่อยและการจัดซื้อจัดจ้าง / สัญญายืมเงิน แยกตามกิจกรรม
                     </h4>
                     <p className="text-xs text-slate-600 mt-0.5">
-                        สามารถเพิ่มกิจกรรมย่อย (คล้ายโครงการย่อย) ได้ตลอดเวลา และแยกชุดจัดซื้อจัดจ้าง / สัญญายืมเงินตามแต่ละกิจกรรม โดยตัดยอดจากงบโครงการหลักที่ได้รับจัดสรรเท่านั้น
+                        เจ้าของโครงการ เจ้าหน้าที่งานแผน หัวหน้างานแผน และผู้ดูแลระบบ สามารถเพิ่มกิจกรรมและมอบหมายผู้เกี่ยวข้องรับผิดชอบแต่ละกิจกรรมได้ พร้อมแจ้งเตือนอัตโนมัติ
                     </p>
                 </div>
-                {canManageActivities && (
+                {canAddActivities && (
                     <button
                         type="button"
                         onClick={openAddActivityModal}
                         className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-extrabold rounded-xl shadow-md hover:scale-[1.02] active:scale-95 transition cursor-pointer whitespace-nowrap"
                     >
-                        <span>➕</span> เพิ่มกิจกรรมย่อย (โครงการย่อย)
+                        <span>➕</span> เพิ่มกิจกรรมย่อย
                     </button>
                 )}
             </div>
@@ -673,9 +771,9 @@ export default function ProjectActivitiesWorkspace({
                     <div className="text-3xl">📋</div>
                     <h5 className="text-sm font-extrabold text-slate-800">ยังไม่มีกิจกรรมย่อยในโครงการนี้</h5>
                     <p className="text-xs text-slate-500 max-w-lg mx-auto">
-                        หากโครงการนี้มีการดำเนินงานแยกเป็นหลายกิจกรรม หรือต้องการแยกชุดจัดซื้อจัดจ้าง / สัญญายืมเงินตามกิจกรรม สามารถกดปุ่มด้านล่างเพื่อเพิ่มกิจกรรมย่อยได้ทันที
+                        เจ้าของโครงการ งานแผน หรือผู้ดูแลระบบ สามารถเพิ่มกิจกรรมย่อย กำหนดรายละเอียดและผู้รับผิดชอบกิจกรรม แล้วแยกชุดจัดซื้อจัดจ้าง/สัญญายืมเงินตามแต่ละกิจกรรมได้ทันที
                     </p>
-                    {canManageActivities && (
+                    {canAddActivities && (
                         <button
                             type="button"
                             onClick={openAddActivityModal}
@@ -692,6 +790,14 @@ export default function ProjectActivitiesWorkspace({
                         const actUsed = actSets.reduce((sum, s) => sum + s.total_amount, 0);
                         const actCap = act.budget > 0 ? act.budget : null;
                         const actRemaining = actCap !== null ? actCap - actUsed : projectRemainingBudget;
+                        const isAssignedToMe = currentUserId && act.assigned_user_ids.includes(Number(currentUserId));
+                        const canEditThisActivity = Boolean(canAddActivities || isAssignedToMe);
+                        const canManageSetsForActivity = Boolean(canAddActivities || isAssignedToMe || isProcStaffOrAdmin);
+                        const assignedUsers = allUsers.filter((u) => act.assigned_user_ids.includes(Number(u.id)));
+                        const isExpanded = Boolean(expandedActivityIds[act.id]);
+                        const hasRichDetails = Boolean(
+                            act.background_rationale || act.objectives || act.targets || act.indicators || act.expected_benefits || act.description
+                        );
 
                         return (
                             <div key={act.id} className="bg-white rounded-2xl border border-indigo-200/90 shadow-xs overflow-hidden">
@@ -711,23 +817,56 @@ export default function ProjectActivitiesWorkspace({
                                                         ? '🛒 เน้นจัดซื้อจัดจ้าง'
                                                         : '🛒💵 จัดซื้อ + ยืมเงิน'}
                                                 </span>
-                                            </div>
-                                            {(act.objectives || act.description) && (
-                                                <p className="text-xs text-slate-600 leading-relaxed">
-                                                    {act.objectives && <span className="font-semibold text-slate-700">วัตถุประสงค์: {act.objectives} </span>}
-                                                    {act.description && <span>{act.description}</span>}
-                                                </p>
-                                            )}
-                                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600 pt-0.5">
-                                                {act.responsible_person && <span>👤 ผู้รับผิดชอบ: <b>{act.responsible_person}</b></span>}
-                                                {act.target_group && <span>🎯 กลุ่มเป้าหมาย: <b>{act.target_group}</b></span>}
-                                                {act.location && <span>📍 สถานที่: <b>{act.location}</b></span>}
-                                                {(act.start_date || act.end_date) && (
-                                                    <span>
-                                                        📅 ระยะเวลา: <b>{act.start_date || '-'} ถึง {act.end_date || '-'}</b>
+                                                {isAssignedToMe && (
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                                        ✨ คุณรับผิดชอบกิจกรรมนี้
                                                     </span>
                                                 )}
                                             </div>
+
+                                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-600 pt-0.5">
+                                                {act.responsible_person && <span>👤 ผู้รับผิดชอบหลัก: <b>{act.responsible_person}</b></span>}
+                                                {act.target_group && <span>🎯 กลุ่มเป้าหมาย: <b>{act.target_group}</b></span>}
+                                                {act.location && <span>📍 สถานที่: <b>{act.location}</b></span>}
+                                                {(act.operation_period_text || act.start_date || act.end_date) && (
+                                                    <span>
+                                                        📅 ประมาณการวันเวลา:{' '}
+                                                        <b>
+                                                            {act.operation_period_text
+                                                                ? act.operation_period_text
+                                                                : `${act.start_date || '-'} ถึง ${act.end_date || '-'}`}
+                                                        </b>
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Assigned team members chips */}
+                                            {assignedUsers.length > 0 && (
+                                                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                                    <span className="text-[11px] font-bold text-indigo-900">👥 ผู้เกี่ยวข้องรับผิดชอบกิจกรรม:</span>
+                                                    {assignedUsers.map((u) => (
+                                                        <span
+                                                            key={u.id}
+                                                            className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-900 border border-indigo-200"
+                                                        >
+                                                            {u.name}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Toggle Full Activity Details */}
+                                            {hasRichDetails && (
+                                                <div className="pt-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => toggleActivityDetails(act.id)}
+                                                        className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 underline cursor-pointer"
+                                                    >
+                                                        {isExpanded ? '▲ ซ่อนรายละเอียดกิจกรรม' : '▼ ดูรายละเอียดกิจกรรม (หลักการฯ / วัตถุประสงค์ / ตัวชี้วัด / ผลลัพธ์)'}
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Activity Budget Summary Pill + Actions */}
@@ -747,46 +886,92 @@ export default function ProjectActivitiesWorkspace({
                                                 </span>
                                             </div>
 
-                                            {canManageActivities && (
-                                                <div className="flex flex-wrap items-center gap-1.5">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openCreateSetModal(act, 'procurement')}
-                                                        disabled={projectRemainingBudget <= 0.01}
-                                                        className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-[11px] font-bold rounded-lg shadow-2xs transition cursor-pointer"
-                                                    >
-                                                        ➕ ชุดจัดซื้อจัดจ้าง
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openCreateSetModal(act, 'loan')}
-                                                        disabled={projectRemainingBudget <= 0.01}
-                                                        className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-[11px] font-bold rounded-lg shadow-2xs transition cursor-pointer"
-                                                    >
-                                                        💵 สัญญายืมเงิน (กค. 101)
-                                                    </button>
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                {canManageSetsForActivity && (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCreateSetModal(act, 'procurement')}
+                                                            disabled={projectRemainingBudget <= 0.01}
+                                                            className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 text-white text-[11px] font-bold rounded-lg shadow-2xs transition cursor-pointer"
+                                                        >
+                                                            ➕ ชุดจัดซื้อจัดจ้าง
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openCreateSetModal(act, 'loan')}
+                                                            disabled={projectRemainingBudget <= 0.01}
+                                                            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white text-[11px] font-bold rounded-lg shadow-2xs transition cursor-pointer"
+                                                        >
+                                                            💵 สัญญายืมเงิน (กค. 101)
+                                                        </button>
+                                                    </>
+                                                )}
+                                                {canEditThisActivity && (
                                                     <button
                                                         type="button"
                                                         onClick={() => openEditActivityModal(act)}
-                                                        className="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-bold rounded-lg cursor-pointer"
-                                                        title="แก้ไขกิจกรรมย่อย"
+                                                        className="px-2.5 py-1.5 bg-white hover:bg-indigo-50 text-indigo-800 border border-indigo-200 text-[11px] font-bold rounded-lg cursor-pointer"
+                                                        title="กรอก/แก้ไขรายละเอียดกิจกรรม"
                                                     >
-                                                        ✏️
+                                                        📝 กรอก/แก้ไขรายละเอียดกิจกรรม
                                                     </button>
-                                                    {actSets.length === 0 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteActivity(act)}
-                                                            className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold rounded-lg cursor-pointer"
-                                                            title="ลบกิจกรรมย่อย"
-                                                        >
-                                                            🗑️
-                                                        </button>
-                                                    )}
+                                                )}
+                                                {canAddActivities && actSets.length === 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDeleteActivity(act)}
+                                                        className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold rounded-lg cursor-pointer"
+                                                        title="ลบกิจกรรม"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Collapsible Rich Activity Details */}
+                                    {isExpanded && hasRichDetails && (
+                                        <div className="mt-3 pt-3 border-t border-indigo-100 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                            {act.background_rationale && (
+                                                <div className="bg-white/90 p-3 rounded-xl border border-indigo-100">
+                                                    <span className="font-extrabold text-indigo-900 block mb-1">📌 หลักการและเหตุผลของกิจกรรม</span>
+                                                    <p className="text-slate-700 whitespace-pre-line">{act.background_rationale}</p>
+                                                </div>
+                                            )}
+                                            {act.objectives && (
+                                                <div className="bg-white/90 p-3 rounded-xl border border-indigo-100">
+                                                    <span className="font-extrabold text-indigo-900 block mb-1">🎯 วัตถุประสงค์ของกิจกรรม</span>
+                                                    <p className="text-slate-700 whitespace-pre-line">{act.objectives}</p>
+                                                </div>
+                                            )}
+                                            {act.targets && (
+                                                <div className="bg-white/90 p-3 rounded-xl border border-indigo-100">
+                                                    <span className="font-extrabold text-indigo-900 block mb-1">📊 เป้าหมายของกิจกรรม</span>
+                                                    <p className="text-slate-700 whitespace-pre-line">{act.targets}</p>
+                                                </div>
+                                            )}
+                                            {act.indicators && (
+                                                <div className="bg-white/90 p-3 rounded-xl border border-indigo-100">
+                                                    <span className="font-extrabold text-indigo-900 block mb-1">📈 ตัวชี้วัดความสำเร็จของกิจกรรม</span>
+                                                    <p className="text-slate-700 whitespace-pre-line">{act.indicators}</p>
+                                                </div>
+                                            )}
+                                            {act.expected_benefits && (
+                                                <div className="bg-white/90 p-3 rounded-xl border border-indigo-100">
+                                                    <span className="font-extrabold text-emerald-900 block mb-1">✨ ผลลัพธ์ / ผลที่คาดว่าจะได้รับของกิจกรรม</span>
+                                                    <p className="text-slate-700 whitespace-pre-line">{act.expected_benefits}</p>
+                                                </div>
+                                            )}
+                                            {act.description && (
+                                                <div className="bg-white/90 p-3 rounded-xl border border-indigo-100">
+                                                    <span className="font-extrabold text-indigo-900 block mb-1">📝 ขั้นตอนและรายละเอียดการดำเนินกิจกรรม</span>
+                                                    <p className="text-slate-700 whitespace-pre-line">{act.description}</p>
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
 
                                 {/* Sets belonging to this Activity */}
@@ -796,7 +981,7 @@ export default function ProjectActivitiesWorkspace({
                                             ยังไม่มีชุดจัดซื้อจัดจ้างหรือสัญญายืมเงินในกิจกรรมนี้ — กดปุ่ม "➕ ชุดจัดซื้อจัดจ้าง" หรือ "💵 สัญญายืมเงิน (กค. 101)" ด้านบนเพื่อเริ่มต้น
                                         </p>
                                     ) : (
-                                        actSets.map((setObj) => renderSetCard(setObj))
+                                        actSets.map((setObj) => renderSetCard(setObj, canManageSetsForActivity))
                                     )}
                                 </div>
                             </div>
@@ -812,19 +997,19 @@ export default function ProjectActivitiesWorkspace({
                         <span>📦</span> ชุดจัดซื้อจัดจ้าง / สัญญายืมเงินทั่วไปของโครงการหลัก ({unlinkedSets.length} ชุด)
                     </h5>
                     <div className="space-y-2.5">
-                        {unlinkedSets.map((setObj) => renderSetCard(setObj))}
+                        {unlinkedSets.map((setObj) => renderSetCard(setObj, Boolean(canAddActivities || isProcStaffOrAdmin)))}
                     </div>
                 </div>
             )}
 
-            {/* MODAL 1: Add / Edit Sub-Activity */}
+            {/* MODAL 1: Add / Edit Sub-Activity (Full Activity Form mirroring Main Project) */}
             {activityModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
-                    <div className="bg-white rounded-2xl shadow-2xl border border-indigo-200 w-full max-w-2xl overflow-hidden my-8">
+                    <div className="bg-white rounded-2xl shadow-2xl border border-indigo-200 w-full max-w-3xl overflow-hidden my-6">
                         <div className="bg-gradient-to-r from-indigo-700 to-purple-700 px-5 py-4 text-white flex items-center justify-between">
                             <div>
                                 <h3 className="text-base font-black">
-                                    {editingActivity ? '✏️ แก้ไขรายละเอียดกิจกรรมย่อย' : '➕ เพิ่มกิจกรรมย่อย (โครงการย่อย)'}
+                                    {editingActivity ? '📝 แบบฟอร์มกรอก/แก้ไขรายละเอียดกิจกรรม' : '➕ เพิ่มกิจกรรมใหม่ภายใต้โครงการหลัก'}
                                 </h3>
                                 <p className="text-[11px] text-indigo-100">
                                     งบโครงการหลัก: {formatCurrency(allocatedBudget)} | คงเหลือสำหรับจัดสรรกรอบกิจกรรม: {formatCurrency(maxBudgetForActivity)}
@@ -839,34 +1024,131 @@ export default function ProjectActivitiesWorkspace({
                             </button>
                         </div>
 
-                        <form onSubmit={handleSaveActivity} className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+                        <form onSubmit={handleSaveActivity} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+                            {/* 1. ชื่อกิจกรรม */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-800 mb-1">
-                                    ชื่อกิจกรรมย่อย / ชื่อโครงการย่อย: <span className="text-rose-500">*</span>
+                                <label className="block text-xs font-extrabold text-slate-800 mb-1">
+                                    1. ชื่อกิจกรรม: <span className="text-rose-500">*</span>
                                 </label>
                                 <input
                                     type="text"
                                     value={actForm.name}
                                     onChange={(e) => setActForm({ ...actForm, name: e.target.value })}
-                                    placeholder="เช่น กิจกรรมอบรมเชิงปฏิบัติการทักษะวิชาชีพ รุ่นที่ 1"
+                                    placeholder="เช่น กิจกรรมอบรมเชิงปฏิบัติการพัฒนาทักษะวิชาชีพ รุ่นที่ 1"
                                     className="w-full rounded-xl border-slate-300 text-xs font-semibold focus:ring-indigo-500 focus:border-indigo-500"
                                     required
                                 />
                             </div>
 
+                            {/* 2. ผู้เกี่ยวข้องรับผิดชอบกิจกรรม + แจ้งเตือน */}
+                            <div className="bg-indigo-50/60 border border-indigo-200 rounded-xl p-3.5 space-y-2.5">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                    <label className="text-xs font-extrabold text-indigo-950">
+                                        2. ผู้เกี่ยวข้อง / ผู้รับผิดชอบดำเนินกิจกรรม (ระบบแจ้งเตือนอัตโนมัติ):
+                                    </label>
+                                    {!canAddActivities && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">
+                                            🔒 กำหนดโดยเจ้าของโครงการ / งานแผน
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Selected Users Chips */}
+                                {actForm.assigned_user_ids.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {actForm.assigned_user_ids.map((uid) => {
+                                            const u = allUsers.find((usr) => Number(usr.id) === Number(uid));
+                                            if (!u) return null;
+                                            return (
+                                                <span
+                                                    key={uid}
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-600 text-white shadow-2xs"
+                                                >
+                                                    <span>👤 {u.name}</span>
+                                                    {canAddActivities && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => toggleAssignedUser(uid)}
+                                                            className="hover:text-amber-200 font-black cursor-pointer"
+                                                            title="นำออก"
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    )}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-[11px] text-slate-500 italic">ยังไม่ได้เลือกผู้เกี่ยวข้องรับผิดชอบกิจกรรม</p>
+                                )}
+
+                                {canAddActivities && (
+                                    <div className="space-y-1.5">
+                                        <input
+                                            type="text"
+                                            value={userSearchTerm}
+                                            onChange={(e) => setUserSearchTerm(e.target.value)}
+                                            placeholder="🔍 ค้นหาชื่อบุคลากรเพื่อเพิ่มเป็นผู้รับผิดชอบกิจกรรม..."
+                                            className="w-full rounded-lg border-indigo-200 text-xs bg-white focus:ring-indigo-500"
+                                        />
+                                        <div className="max-h-32 overflow-y-auto bg-white border border-indigo-100 rounded-lg divide-y divide-slate-100">
+                                            {filteredUsersForPicker.map((u) => {
+                                                const checked = actForm.assigned_user_ids.includes(Number(u.id));
+                                                return (
+                                                    <label
+                                                        key={u.id}
+                                                        className={`flex items-center justify-between px-3 py-1.5 text-xs cursor-pointer hover:bg-indigo-50/70 ${
+                                                            checked ? 'bg-indigo-50 font-bold text-indigo-900' : 'text-slate-700'
+                                                        }`}
+                                                    >
+                                                        <span className="flex items-center gap-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={checked}
+                                                                onChange={() => toggleAssignedUser(u.id)}
+                                                                className="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                                                            />
+                                                            <span>{u.name}</span>
+                                                        </span>
+                                                        {checked && <span className="text-[10px] text-emerald-700 font-bold">✓ เลือกแล้ว</span>}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                        <p className="text-[10px] text-indigo-800">
+                                            🔔 ผู้เกี่ยวข้องที่เลือกจะได้รับแจ้งเตือนทันที และมีสิทธิ์เข้ามากรอกรายละเอียดกิจกรรม รวมถึงสร้างชุดจัดซื้อจัดจ้าง/สัญญายืมเงินของกิจกรรมนี้ได้
+                                        </p>
+                                    </div>
+                                )}
+
+                                <div className="pt-1">
+                                    <label className="block text-[11px] font-bold text-slate-700 mb-1">ชื่อผู้รับผิดชอบกิจกรรมหลัก (สำหรับแสดงในเอกสาร):</label>
+                                    <input
+                                        type="text"
+                                        value={actForm.responsible_person}
+                                        onChange={(e) => setActForm({ ...actForm, responsible_person: e.target.value })}
+                                        placeholder="ชื่อ-สกุล ผู้รับผิดชอบกิจกรรม"
+                                        className="w-full rounded-lg border-slate-300 text-xs bg-white focus:ring-indigo-500"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 3. งบประมาณและรูปแบบการเบิกจ่ายของกิจกรรม */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-800 mb-1">
-                                        กรอบวงเงินกิจกรรม (บาท) <span className="text-slate-400 font-normal">(เว้นว่างเพื่อใช้จากกองกลางโครงการ)</span>
+                                    <label className="block text-xs font-extrabold text-slate-800 mb-1">
+                                        3. กรอบวงเงินงบประมาณของกิจกรรม (บาท)
                                     </label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         min="0"
+                                        disabled={!canAddActivities}
                                         value={actForm.budget}
                                         onChange={(e) => setActForm({ ...actForm, budget: e.target.value })}
-                                        placeholder={`สูงสุดไม่เกิน ${maxBudgetForActivity.toLocaleString('th-TH')}`}
-                                        className={`w-full rounded-xl text-xs font-black ${
+                                        placeholder={`สูงสุดไม่เกิน ${maxBudgetForActivity.toLocaleString('th-TH')} (เว้นว่างเพื่อใช้จากกองกลาง)`}
+                                        className={`w-full rounded-xl text-xs font-black disabled:bg-slate-100 ${
                                             isActBudgetOver
                                                 ? 'border-rose-500 bg-rose-50 text-rose-700 focus:ring-rose-500'
                                                 : 'border-emerald-300 text-emerald-800 focus:ring-emerald-500'
@@ -879,7 +1161,7 @@ export default function ProjectActivitiesWorkspace({
                                     )}
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-slate-800 mb-1">รูปแบบการเบิกจ่ายหลักของกิจกรรม:</label>
+                                    <label className="block text-xs font-extrabold text-slate-800 mb-1">รูปแบบการเบิกจ่ายของกิจกรรม:</label>
                                     <select
                                         value={actForm.disbursement_type}
                                         onChange={(e) => setActForm({ ...actForm, disbursement_type: e.target.value })}
@@ -892,80 +1174,258 @@ export default function ProjectActivitiesWorkspace({
                                 </div>
                             </div>
 
+                            {/* 4. ประมาณการวันเวลา และสถานที่ดำเนินกิจกรรม (แยกอิสระตามกิจกรรม) */}
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-3">
+                                <span className="text-xs font-extrabold text-slate-800 block">
+                                    4. ประมาณการวันเวลา และสถานที่ดำเนินกิจกรรม (กำหนดแยกตามกิจกรรมได้อิสระ):
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">วันที่เริ่มกิจกรรม:</label>
+                                        <input
+                                            type="date"
+                                            value={actForm.start_date}
+                                            onChange={(e) => setActForm({ ...actForm, start_date: e.target.value })}
+                                            className="w-full rounded-lg border-slate-300 text-xs bg-white focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">วันที่สิ้นสุดกิจกรรม:</label>
+                                        <input
+                                            type="date"
+                                            value={actForm.end_date}
+                                            onChange={(e) => setActForm({ ...actForm, end_date: e.target.value })}
+                                            className="w-full rounded-lg border-slate-300 text-xs bg-white focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">ประมาณการวัน/เวลา (ข้อความ):</label>
+                                        <input
+                                            type="text"
+                                            value={actForm.operation_period_text}
+                                            onChange={(e) => setActForm({ ...actForm, operation_period_text: e.target.value })}
+                                            placeholder="เช่น 15-17 ธ.ค. 69 (08.30-16.30 น.)"
+                                            className="w-full rounded-lg border-slate-300 text-xs bg-white focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">สถานที่ดำเนินกิจกรรม:</label>
+                                        <input
+                                            type="text"
+                                            value={actForm.location}
+                                            onChange={(e) => setActForm({ ...actForm, location: e.target.value })}
+                                            placeholder="เช่น ห้องประชุม วิทยาลัยสารพัดช่างน่าน"
+                                            className="w-full rounded-lg border-slate-300 text-xs bg-white focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[11px] font-bold text-slate-700 mb-1">กลุ่มเป้าหมาย / จำนวนผู้เข้าร่วมกิจกรรม:</label>
+                                        <input
+                                            type="text"
+                                            value={actForm.target_group}
+                                            onChange={(e) => setActForm({ ...actForm, target_group: e.target.value })}
+                                            placeholder="เช่น นักเรียน นักศึกษา 50 คน"
+                                            className="w-full rounded-lg border-slate-300 text-xs bg-white focus:ring-indigo-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 5. หลักการและเหตุผลของกิจกรรม */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-800 mb-1">วัตถุประสงค์ของกิจกรรม:</label>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="text-xs font-extrabold text-slate-800">5. หลักการและเหตุผลของกิจกรรม:</label>
+                                    {project.background_rationale && (
+                                        <button
+                                            type="button"
+                                            onClick={() => pullWholeFieldFromProject('background_rationale', project.background_rationale)}
+                                            className="px-2 py-0.5 text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md cursor-pointer"
+                                        >
+                                            📥 ดึงจากโครงการหลัก
+                                        </button>
+                                    )}
+                                </div>
                                 <textarea
                                     rows="2"
-                                    value={actForm.objectives}
-                                    onChange={(e) => setActForm({ ...actForm, objectives: e.target.value })}
-                                    placeholder="ระบุวัตถุประสงค์หรือเป้าหมายที่คาดหวังของกิจกรรมย่อยนี้..."
+                                    value={actForm.background_rationale}
+                                    onChange={(e) => setActForm({ ...actForm, background_rationale: e.target.value })}
+                                    placeholder="ระบุหลักการและเหตุผลของการจัดกิจกรรมนี้..."
                                     className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
                                 />
                             </div>
 
+                            {/* 6. วัตถุประสงค์ของกิจกรรม (เลือกดึงทีละข้อจากโครงการหลักได้) */}
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-extrabold text-slate-800">6. วัตถุประสงค์ของกิจกรรม:</label>
+                                    {project.objectives && (
+                                        <button
+                                            type="button"
+                                            onClick={() => pullWholeFieldFromProject('objectives', project.objectives)}
+                                            className="px-2 py-0.5 text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md cursor-pointer"
+                                        >
+                                            📥 ดึงวัตถุประสงค์ทั้งหมดจากโครงการหลัก
+                                        </button>
+                                    )}
+                                </div>
+                                {mainProjectObjectives.length > 0 && (
+                                    <div className="bg-indigo-50/40 border border-indigo-100 rounded-lg p-2 space-y-1">
+                                        <span className="text-[10px] font-bold text-indigo-800 block">
+                                            คลิกเพื่อเลือกวัตถุประสงค์จากโครงการหลักมาใช้ในกิจกรรมนี้:
+                                        </span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {mainProjectObjectives.map((line, i) => (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => appendLineToField('objectives', line)}
+                                                    className="text-left px-2 py-1 rounded-md text-[10px] font-semibold bg-white hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition cursor-pointer"
+                                                    title="คลิกเพื่อเพิ่มเข้าในวัตถุประสงค์ของกิจกรรม"
+                                                >
+                                                    ➕ {line.length > 85 ? `${line.slice(0, 85)}...` : line}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <textarea
+                                    rows="3"
+                                    value={actForm.objectives}
+                                    onChange={(e) => setActForm({ ...actForm, objectives: e.target.value })}
+                                    placeholder="ระบุวัตถุประสงค์ของกิจกรรม (หรือคลิกเลือกจากโครงการหลักด้านบน)..."
+                                    className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            {/* 7. เป้าหมายและตัวชี้วัดความสำเร็จของกิจกรรม */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-extrabold text-slate-800">7. เป้าหมายของกิจกรรม:</label>
+                                        {project.targets && (
+                                            <button
+                                                type="button"
+                                                onClick={() => pullWholeFieldFromProject('targets', project.targets)}
+                                                className="px-2 py-0.5 text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md cursor-pointer"
+                                            >
+                                                📥 ดึงจากโครงการหลัก
+                                            </button>
+                                        )}
+                                    </div>
+                                    {mainProjectTargets.length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {mainProjectTargets.slice(0, 4).map((line, i) => (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => appendLineToField('targets', line)}
+                                                    className="text-left px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 cursor-pointer"
+                                                >
+                                                    ➕ {line.length > 45 ? `${line.slice(0, 45)}...` : line}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <textarea
+                                        rows="2"
+                                        value={actForm.targets}
+                                        onChange={(e) => setActForm({ ...actForm, targets: e.target.value })}
+                                        placeholder="เป้าหมายเชิงปริมาณ / เชิงคุณภาพของกิจกรรม..."
+                                        className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-extrabold text-slate-800">8. ตัวชี้วัดความสำเร็จของกิจกรรม:</label>
+                                        {project.indicators && (
+                                            <button
+                                                type="button"
+                                                onClick={() => pullWholeFieldFromProject('indicators', project.indicators)}
+                                                className="px-2 py-0.5 text-[10px] font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md cursor-pointer"
+                                            >
+                                                📥 ดึงจากโครงการหลัก
+                                            </button>
+                                        )}
+                                    </div>
+                                    {mainProjectIndicators.length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                            {mainProjectIndicators.slice(0, 4).map((line, i) => (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => appendLineToField('indicators', line)}
+                                                    className="text-left px-1.5 py-0.5 rounded text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 cursor-pointer"
+                                                >
+                                                    ➕ {line.length > 45 ? `${line.slice(0, 45)}...` : line}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <textarea
+                                        rows="2"
+                                        value={actForm.indicators}
+                                        onChange={(e) => setActForm({ ...actForm, indicators: e.target.value })}
+                                        placeholder="เช่น ผู้เข้าร่วมกิจกรรมมีความพึงพอใจไม่น้อยกว่าร้อยละ 80..."
+                                        className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 9. ผลลัพธ์ / ผลที่คาดว่าจะได้รับของกิจกรรม (เลือกดึงทีละข้อจากโครงการหลักได้) */}
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-extrabold text-slate-800">9. ผลลัพธ์ / ผลที่คาดว่าจะได้รับของกิจกรรม:</label>
+                                    {project.expected_benefits && (
+                                        <button
+                                            type="button"
+                                            onClick={() => pullWholeFieldFromProject('expected_benefits', project.expected_benefits)}
+                                            className="px-2 py-0.5 text-[10px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-md cursor-pointer"
+                                        >
+                                            📥 ดึงผลลัพธ์ทั้งหมดจากโครงการหลัก
+                                        </button>
+                                    )}
+                                </div>
+                                {mainProjectBenefits.length > 0 && (
+                                    <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-2 space-y-1">
+                                        <span className="text-[10px] font-bold text-emerald-900 block">
+                                            คลิกเพื่อเลือกผลลัพธ์จากโครงการหลักมาใช้ในกิจกรรมนี้:
+                                        </span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {mainProjectBenefits.map((line, i) => (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => appendLineToField('expected_benefits', line)}
+                                                    className="text-left px-2 py-1 rounded-md text-[10px] font-semibold bg-white hover:bg-emerald-100 text-emerald-950 border border-emerald-200 transition cursor-pointer"
+                                                >
+                                                    ➕ {line.length > 85 ? `${line.slice(0, 85)}...` : line}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                <textarea
+                                    rows="2"
+                                    value={actForm.expected_benefits}
+                                    onChange={(e) => setActForm({ ...actForm, expected_benefits: e.target.value })}
+                                    placeholder="ระบุผลลัพธ์หรือผลที่คาดว่าจะได้รับจากการจัดกิจกรรมนี้..."
+                                    className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
+                                />
+                            </div>
+
+                            {/* 10. ขั้นตอนและรายละเอียดการดำเนินกิจกรรม */}
                             <div>
-                                <label className="block text-xs font-bold text-slate-800 mb-1">รายละเอียดการดำเนินงาน / ขอบเขตกิจกรรม:</label>
+                                <label className="block text-xs font-extrabold text-slate-800 mb-1">10. ขั้นตอนและรายละเอียดการดำเนินกิจกรรม:</label>
                                 <textarea
                                     rows="2"
                                     value={actForm.description}
                                     onChange={(e) => setActForm({ ...actForm, description: e.target.value })}
-                                    placeholder="อธิบายขั้นตอนหรือลักษณะการดำเนินกิจกรรมโดยสังเขป..."
+                                    placeholder="อธิบายขั้นตอน วิธีการ หรือขอบเขตการดำเนินกิจกรรม..."
                                     className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
                                 />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-800 mb-1">กลุ่มเป้าหมาย / จำนวนผู้เข้าร่วม:</label>
-                                    <input
-                                        type="text"
-                                        value={actForm.target_group}
-                                        onChange={(e) => setActForm({ ...actForm, target_group: e.target.value })}
-                                        placeholder="เช่น นักเรียน นักศึกษา 50 คน"
-                                        className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-800 mb-1">ผู้รับผิดชอบกิจกรรม:</label>
-                                    <input
-                                        type="text"
-                                        value={actForm.responsible_person}
-                                        onChange={(e) => setActForm({ ...actForm, responsible_person: e.target.value })}
-                                        placeholder="ชื่อ-สกุล ผู้รับผิดชอบกิจกรรมย่อย"
-                                        className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-800 mb-1">สถานที่ดำเนินการ:</label>
-                                    <input
-                                        type="text"
-                                        value={actForm.location}
-                                        onChange={(e) => setActForm({ ...actForm, location: e.target.value })}
-                                        placeholder="เช่น วิทยาลัยสารพัดช่างน่าน"
-                                        className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-800 mb-1">วันที่เริ่มต้น:</label>
-                                    <input
-                                        type="date"
-                                        value={actForm.start_date}
-                                        onChange={(e) => setActForm({ ...actForm, start_date: e.target.value })}
-                                        className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-800 mb-1">วันที่สิ้นสุด:</label>
-                                    <input
-                                        type="date"
-                                        value={actForm.end_date}
-                                        onChange={(e) => setActForm({ ...actForm, end_date: e.target.value })}
-                                        className="w-full rounded-xl border-slate-300 text-xs focus:ring-indigo-500"
-                                    />
-                                </div>
                             </div>
 
                             <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
@@ -981,7 +1441,7 @@ export default function ProjectActivitiesWorkspace({
                                     disabled={savingActivity || isActBudgetOver}
                                     className="px-5 py-2 rounded-xl text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white shadow-md cursor-pointer"
                                 >
-                                    {savingActivity ? 'กำลังบันทึก...' : editingActivity ? '💾 บันทึกการแก้ไข' : '➕ เพิ่มกิจกรรมย่อย'}
+                                    {savingActivity ? 'กำลังบันทึก...' : editingActivity ? '💾 บันทึกรายละเอียดกิจกรรม' : '➕ บันทึกและเพิ่มกิจกรรม'}
                                 </button>
                             </div>
                         </form>
@@ -1187,7 +1647,6 @@ export default function ProjectActivitiesWorkspace({
                                     </table>
                                 </div>
 
-                                {/* Real-Time Remaining Budget Indicator */}
                                 <div
                                     className={`p-3 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
                                         isSetOverBudget

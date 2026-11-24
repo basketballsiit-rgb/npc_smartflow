@@ -180,6 +180,27 @@ class NotificationService
     }
 
     /**
+     * Notify assigned staff/teachers when they are designated as responsible for a project sub-activity.
+     */
+    public static function notifyActivityAssigned(Project $project, array $activity, array $recipientIds, ?string $assignerName = null): void
+    {
+        $cleanIds = array_values(array_unique(array_filter(array_map('intval', $recipientIds))));
+        if (empty($cleanIds)) return;
+
+        $actName = $activity['name'] ?? 'กิจกรรมย่อย';
+        $actId = $activity['id'] ?? uniqid();
+        $budgetText = !empty($activity['budget']) && (float)$activity['budget'] > 0
+            ? ' (กรอบงบประมาณ ' . number_format((float)$activity['budget'], 2) . ' บาท)'
+            : '';
+        $byText = $assignerName ? " โดย {$assignerName}" : '';
+        $title = "🎯 ท่านได้รับมอบหมายให้รับผิดชอบกิจกรรมย่อย";
+        $message = "กิจกรรม \"{$actName}\" ภายใต้โครงการ \"{$project->title}\"{$budgetText}{$byText} — คลิกเพื่อเข้ากรอกรายละเอียดกิจกรรมและดำเนินการจัดซื้อจัดจ้าง/ยืมเงิน";
+        $actionUrl = route('projects.show', ['project' => $project->id, 'tab' => 'do']);
+
+        self::send($cleanIds, $title, $message, $actionUrl, 'activity_assigned', '🎯', 'indigo', 'act_assign_' . $project->id . '_' . $actId);
+    }
+
+    /**
      * Notify Procurement Staff & Head when a project or activity procurement set needs committee assignment.
      */
     public static function notifyProcurementCommitteeNeeded(Project $project, \App\Models\Procurement $procurement): void
