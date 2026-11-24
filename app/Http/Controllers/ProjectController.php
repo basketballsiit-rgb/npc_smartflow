@@ -5750,7 +5750,7 @@ class ProjectController extends Controller
         $directorName = $cleanName($directorName);
 
         $assignedUsersList = !empty($activity['assigned_user_ids']) && is_array($activity['assigned_user_ids'])
-            ? \App\Models\User::whereIn('id', $activity['assigned_user_ids'])->get(['id', 'name', 'position', 'signature_data'])
+            ? \App\Models\User::whereIn('id', $activity['assigned_user_ids'])->get(['id', 'name', 'position', 'signature_data', 'phone', 'email'])
             : collect();
 
         $approvalsByStep = [];
@@ -5759,6 +5759,67 @@ class ProjectController extends Controller
                 $approvalsByStep[(int)$ap->step_number] = $ap;
             }
         }
+
+        $strategyCategories = \App\Models\StrategyCategory::with(['items'])->orderBy('order_index', 'asc')->get();
+        $resolvedHead = $this->resolveDepartmentHead($project);
+        $collegeSettings = [
+            'name_th' => \App\Models\SystemSetting::where('key', 'college_name_th')->value('value') ?: 'วิทยาลัยสารพัดช่างน่าน',
+            'director_name' => \App\Models\SystemSetting::where('key', 'director_name')->value('value') ?: 'นายกเชษฐ์ กิ่งชนะ',
+            'director_position' => \App\Models\SystemSetting::where('key', 'director_position')->value('value') ?: 'ผู้อำนวยการวิทยาลัยสารพัดช่างน่าน',
+            'plan_head_name' => \App\Models\SystemSetting::where('key', 'plan_head_name')->value('value') ?: 'นายพิพัฒน์ สีมา',
+            'plan_head_position' => \App\Models\SystemSetting::where('key', 'plan_head_position')->value('value') ?: 'หัวหน้างานพัฒนายุทธศาสตร์ แผนงานและงบประมาณ',
+            'academic_deputy_name' => \App\Models\SystemSetting::where('key', 'academic_deputy_name')->value('value') ?: 'นายนิพนธ์ ร่องพืช',
+            'academic_deputy_position' => \App\Models\SystemSetting::where('key', 'academic_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายวิชาการ',
+            'resource_deputy_name' => \App\Models\SystemSetting::where('key', 'resource_deputy_name')->value('value') ?: 'นายจักรพงศ์ พรหมสกุลปัญญา',
+            'resource_deputy_position' => \App\Models\SystemSetting::where('key', 'resource_deputy_position')->value('value') ?: 'รองผู้อำนวยการฝ่ายบริหารทรัพยากร',
+        ];
+
+        // Parse individual positions for users who hold multiple positions (e.g. separated by /)
+        $parsePositions = function ($u, $fallbackDept = '') {
+            if (!$u) return [];
+            $positions = [];
+            $raw = $u->position_level ?: $u->position ?: '';
+            if (!empty($raw)) {
+                $parts = preg_split('/[\/,]/', $raw);
+                foreach ($parts as $part) {
+                    $clean = trim($part);
+                    if ($clean && !in_array($clean, $positions, true)) {
+                        $positions[] = $clean;
+                    }
+                }
+            }
+            if (empty($positions) && !empty($fallbackDept)) {
+                $positions[] = "เจ้าหน้าที่{$fallbackDept}";
+            }
+            return $positions;
+        };
+
+        $actUserPositions = $parsePositions($fillerUser, $dept?->name ?? '');
+        $projUserPositions = $parsePositions($projOwner, $dept?->name ?? '');
+
+        // Smart default: choose the position matching the project's department, or first item
+        $defaultActPos = $actUserPositions[0] ?? ($fillerUser?->position ?? 'เจ้าหน้าที่');
+        if (count($actUserPositions) > 1 && $dept?->name) {
+            foreach ($actUserPositions as $posCandidate) {
+                if (str_contains($posCandidate, $dept->name) || str_contains($posCandidate, str_replace(['งาน', 'แผนกวิชา', 'ฝ่าย'], '', $dept->name))) {
+                    $defaultActPos = $posCandidate;
+                    break;
+                }
+            }
+        }
+
+        $defaultProjPos = $projUserPositions[0] ?? ($projOwner?->position ?? 'เจ้าหน้าที่');
+        if (count($projUserPositions) > 1 && $dept?->name) {
+            foreach ($projUserPositions as $posCandidate) {
+                if (str_contains($posCandidate, $dept->name) || str_contains($posCandidate, str_replace(['งาน', 'แผนกวิชา', 'ฝ่าย'], '', $dept->name))) {
+                    $defaultProjPos = $posCandidate;
+                    break;
+                }
+            }
+        }
+
+        $actResponsiblePos = trim($defaultActPos . ' ผู้รับผิดชอบกิจกรรม');
+        $projResponsiblePos = trim($defaultProjPos . ' ผู้รับผิดชอบโครงการ');
 
         return [
             'activities' => $activities,
@@ -5779,17 +5840,34 @@ class ProjectController extends Controller
                 'activity_responsible' => [
                     'name' => $actResponsibleName,
                     'title' => $actResponsiblePos,
+                    'raw_title' => $defaultActPos,
+                    'positions' => $actUserPositions,
                     'signature_data' => $fillerUser?->signature_data ?? null,
+                    'phone' => $fillerUser?->phone ?? '',
+                    'email' => $fillerUser?->email ?? '',
                 ],
                 'project_responsible' => [
                     'name' => $projResponsibleName,
                     'title' => $projResponsiblePos,
+                    'raw_title' => $defaultProjPos,
+                    'positions' => $projUserPositions,
                     'signature_data' => ($approvalsByStep[1]?->signature_data) ?: ($projOwner?->signature_data ?? null),
+                    'phone' => $projOwner?->phone ?? ($project->phone ?? ''),
+                    'email' => $projOwner?->email ?? ($project->email ?? ''),
                 ],
                 'project_deputy' => $projDeputy,
                 'plan_deputy' => $planDeputy,
                 'director' => ['name' => $directorName, 'title' => 'ผู้อำนวยการ' . $collegeName],
             ],
+            'strategyCategories' => $strategyCategories,
+            'resolvedHead' => $resolvedHead,
+            'collegeSettings' => $collegeSettings,
+            'actUserPositions' => $actUserPositions,
+            'projUserPositions' => $projUserPositions,
+            'defaultActPos' => $defaultActPos,
+            'defaultProjPos' => $defaultProjPos,
+            'fillerUser' => $fillerUser,
+            'projOwner' => $projOwner,
         ];
     }
 
@@ -5839,25 +5917,15 @@ class ProjectController extends Controller
             ? 'data:image/png;base64,' . base64_encode(file_get_contents($garudaPath))
             : null;
 
-        return view('projects.activity_memo', [
+        return view('projects.activity_memo', array_merge($ctx, [
             'project' => $project,
             'activity' => $activity,
             'activityId' => $activityId,
-            'collegeName' => $ctx['collegeName'],
-            'divisionName' => $ctx['divisionName'],
-            'dateText' => $ctx['dateText'],
-            'location' => $ctx['location'],
-            'budgetAmount' => $ctx['budgetAmount'],
-            'totalProjectBudget' => $ctx['totalProjectBudget'],
-            'linkedSets' => $ctx['linkedSets'],
-            'assignedUsers' => $ctx['assignedUsers'],
-            'approvalsByStep' => $ctx['approvalsByStep'],
-            'signers' => $ctx['signers'],
             'paragraph1' => $paragraph1,
             'paragraph2' => $paragraph2,
             'aiSource' => $aiSource,
             'garudaBase64' => $garudaBase64,
-        ]);
+        ]));
     }
 
     /**
