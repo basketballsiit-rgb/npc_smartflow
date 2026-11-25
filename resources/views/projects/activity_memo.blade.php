@@ -281,7 +281,7 @@
     <style>
         @page {
             size: A4 portrait;
-            margin: 0;
+            margin: 18mm 18mm 18mm 22mm;
         }
         * {
             box-sizing: border-box;
@@ -412,7 +412,7 @@
             width: 210mm;
             min-height: 297mm;
             margin: 18px auto 26px auto;
-            padding: 20mm 20mm 18mm 25mm;
+            padding: 18mm 18mm 18mm 22mm;
             background: #ffffff;
             box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
             font-size: 15.5pt;
@@ -431,7 +431,7 @@
             width: 210mm;
             max-height: 297mm;
             overflow: hidden;
-            padding: 12mm 20mm 10mm 25mm !important;
+            padding: 15mm 18mm 15mm 22mm !important;
             font-size: 14.5pt;
             line-height: 1.3;
             page-break-after: always;
@@ -507,7 +507,7 @@
         }
         .meta-dotted {
             flex: 1;
-            border-bottom: 1px dotted #000000;
+            border-bottom: none;
             padding: 0 4px 1px 4px;
             min-height: 20px;
         }
@@ -639,10 +639,22 @@
         }
 
         .signature-img {
-            max-height: 44px;
-            max-width: 140px;
+            height: 54px;
+            max-height: 58px;
+            max-width: 175px;
             object-fit: contain;
             mix-blend-mode: multiply;
+            margin-bottom: -6px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .sig-section-block p {
+            margin: 1px 0 0 0 !important;
+            line-height: 1.25 !important;
+        }
+        .sig-section-block p.sig-name {
+            margin-top: 4px !important;
         }
 
         .hidden-section {
@@ -655,16 +667,21 @@
             .a4-page {
                 margin: 0 !important;
                 box-shadow: none !important;
-                width: 210mm !important;
-                min-height: 297mm !important;
-                padding: 18mm 18mm 16mm 25mm !important;
+                width: 100% !important;
+                min-height: auto !important;
+                padding: 0 !important;
             }
             #sectionPart1 {
-                padding: 12mm 18mm 10mm 25mm !important;
-                max-height: 297mm !important;
+                width: 100% !important;
+                padding: 0 !important;
+                max-height: 260mm !important;
                 overflow: hidden !important;
                 page-break-after: always !important;
                 break-after: page !important;
+            }
+            .sec-title {
+                page-break-after: avoid !important;
+                break-after: avoid !important;
             }
             .table-page-break {
                 page-break-before: always !important;
@@ -1184,7 +1201,7 @@
         <!-- 12. การอนุมัติโครงการ (Official 6 Approvals Matching Image 2, Image 5 & Print.jsx lines 1345-1598) -->
         <div class="sec-title table-page-break" style="page-break-before: always; break-before: page; margin-top: 24px;">12. การอนุมัติโครงการ: {{ $project->title }}</div>
         
-        <div style="margin-top: 20px; font-size: 15pt; line-height: 1.35;">
+        <div class="sig-section-block" style="margin-top: 20px; font-size: 15pt; line-height: 1.35;">
             <!-- Row 1: ผู้เสนอโครงการ (ซ้าย) & ผู้เห็นชอบโครงการ: รองผู้อำนวยการฝ่ายที่กำกับดูแล (ขวา) -->
             <div style="display: flex; justify-content: space-between; margin-bottom: 24px;">
                 <!-- ซ้าย: ผู้เสนอโครงการ -->
@@ -1326,9 +1343,7 @@
         <span class="section-badge-screen">ส่วนที่ 3 / 3 • รายละเอียดการดำเนินกิจกรรม (ลงนามเฉพาะผู้รับผิดชอบกิจกรรม)</span>
 
         <div class="doc-header">
-            <h1>โครงการ/กิจกรรม ตาม พ.ร.บ. งบประมาณ ประจำปีงบประมาณ พ.ศ. {{ $fiscalYear }}</h1>
-            <div class="doc-header-divider"></div>
-            <h2>แบบเสนอรายละเอียดการดำเนินกิจกรรม: {{ $activity['name'] ?? '' }}</h2>
+            <h2 style="font-size: 17pt; margin: 0;">แบบเสนอรายละเอียดการดำเนินกิจกรรม: {{ $activity['name'] ?? '' }}</h2>
             <p style="margin: 4px 0 0 0; font-size: 14pt; font-weight: normal; color: #1e293b;">
                 ภายใต้โครงการ: {{ $project->title }} • {{ $project->department?->name ?: $divisionName }} {{ $collegeName }}
             </p>
@@ -1565,7 +1580,7 @@
         <!-- 12. การลงนามรับผิดชอบการดำเนินกิจกรรม (ลงนามเฉพาะผู้รับผิดชอบกิจกรรมเท่านั้น ตามคำสั่งผู้ใช้งาน) -->
         <div class="sec-title" style="margin-top: 28px;">12. การลงนามรับผิดชอบการดำเนินกิจกรรม: {{ $activity['name'] ?? '' }}</div>
         
-        <div style="display: flex; justify-content: center; margin-top: 24px;">
+        <div class="sig-section-block" style="display: flex; justify-content: center; margin-top: 24px;">
             <div style="text-align: center; position: relative; display: inline-flex; flex-direction: column; align-items: center; font-size: 15pt; line-height: 1.35;">
                 <div style="position: relative; display: flex; align-items: center; justify-content: center;">
                     <span style="position: absolute; right: 100%; margin-right: 8px; white-space: nowrap; bottom: 2px;">ลงชื่อ</span>
